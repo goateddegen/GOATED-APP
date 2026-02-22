@@ -1,4 +1,4 @@
-import React, { useEffect, lazy, Suspense } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { useStore } from './hooks/useStore';
 import Sidebar from './components/Sidebar';
 import Ticker from './components/Ticker';
@@ -27,14 +27,25 @@ function LoadingFallback() {
   );
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return isMobile;
+}
+
 export default function App() {
-  const { page, setPage, sidebar, toggleSidebar, searchOpen, setSearchOpen, keybindsOpen, setKeybindsOpen, aiOpen, setAiOpen, selectedLead, detailOpen, setDetailOpen, setSelectedLead, leads } = useStore();
+  const { page, setPage, sidebar, toggleSidebar, searchOpen, setSearchOpen, keybindsOpen, setKeybindsOpen, aiOpen, setAiOpen, selectedLead, detailOpen, setDetailOpen, setSelectedLead, setMobileMenu } = useStore();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const onKey = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setSearchOpen(true); }
-      if (e.key === 'Escape') { setSearchOpen(false); setKeybindsOpen(false); setDetailOpen(false); setAiOpen(false); }
+      if (e.key === 'Escape') { setSearchOpen(false); setKeybindsOpen(false); setDetailOpen(false); setAiOpen(false); setMobileMenu(false); }
       if (e.key === 's' && !e.metaKey && !e.ctrlKey) { e.preventDefault(); toggleSidebar(); }
       if (e.key === '?') { e.preventDefault(); setKeybindsOpen(true); }
       if (e.key === 'g' && !e.metaKey && !e.ctrlKey) { e.preventDefault(); setAiOpen(!aiOpen); }
@@ -47,11 +58,16 @@ export default function App() {
 
   const selectLead = (l) => { setSelectedLead(l); setDetailOpen(true); };
 
+  const mainML = isMobile ? 0 : (sidebar ? 240 : 72);
+
   return (
     <div className="min-h-screen bg-surface-0 text-slate-100 font-sans">
       <Ticker />
       <Sidebar />
-      <main className="transition-all duration-300 pt-9" style={{ marginLeft: sidebar ? 240 : 72 }}>
+      <main
+        className="transition-all duration-300 pt-0 sm:pt-9"
+        style={{ marginLeft: mainML }}
+      >
         <Suspense fallback={<LoadingFallback />}>
           {page === 'home' && <HomePage />}
           {page === 'dashboard' && <DashboardPage onSelect={selectLead} />}

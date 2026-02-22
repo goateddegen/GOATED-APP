@@ -130,7 +130,7 @@ export default function AIOverlay() {
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setAiOpen(false)} />
       <div ref={overlayRef}
-        className="absolute right-4 bottom-4 top-12 w-full max-w-[420px] rounded-2xl bg-surface-1 border border-white/10 flex flex-col overflow-hidden shadow-2xl"
+        className="absolute inset-0 sm:inset-auto sm:right-4 sm:bottom-4 sm:top-12 w-full sm:max-w-[420px] sm:rounded-2xl bg-surface-1 border-0 sm:border border-white/10 flex flex-col overflow-hidden shadow-2xl"
         style={{ transform: `translate(${position.x}px, ${position.y}px)`, animation: 'slideInRight 0.3s ease-out' }}>
 
         {/* Header */}

@@ -14,7 +14,7 @@ const items = [
 export default function Ticker() {
   const tripled = [...items, ...items, ...items];
   return (
-    <div className="fixed top-0 left-0 right-0 h-9 glass z-50 overflow-hidden border-b border-white/5">
+    <div className="fixed top-0 left-0 right-0 h-9 glass z-50 overflow-hidden border-b border-white/5 hidden sm:block">
       <div className="flex" style={{ animation: 'scroll 35s linear infinite' }}>
         {tripled.map((t, i) => (
           <div key={i} className="flex items-center gap-2 px-5 h-9 whitespace-nowrap text-[13px]">

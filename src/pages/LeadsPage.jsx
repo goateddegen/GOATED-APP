@@ -22,14 +22,14 @@ export default function LeadsPage({ onSelect }) {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
         <div className="flex items-center gap-3">
           <Users size={28} className="text-brand" />
-          <div><h1 className="text-2xl font-bold">Lead Intelligence</h1><p className="text-slate-500">{leads.length.toLocaleString()} leads</p></div>
+          <div><h1 className="text-xl sm:text-2xl font-bold">Lead Intelligence</h1><p className="text-slate-500">{leads.length.toLocaleString()} leads</p></div>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-2 border border-white/10 text-sm"><Download size={16} />Export</button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand text-black font-medium text-sm"><Plus size={16} />Add Lead</button>
+          <button className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-surface-2 border border-white/10 text-sm"><Download size={16} /><span className="hidden sm:inline">Export</span></button>
+          <button className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-brand text-black font-medium text-sm"><Plus size={16} /><span className="hidden sm:inline">Add Lead</span></button>
         </div>
       </div>
 

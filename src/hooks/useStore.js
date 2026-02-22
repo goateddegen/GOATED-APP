@@ -92,9 +92,11 @@ const fmt = (v) => v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `$${(v / 
 export const useStore = create((set, get) => ({
   // Navigation
   page: 'home',
-  setPage: (page) => set({ page }),
+  setPage: (page) => set({ page, mobileMenu: false }),
   sidebar: true,
   toggleSidebar: () => set(s => ({ sidebar: !s.sidebar })),
+  mobileMenu: false,
+  setMobileMenu: (v) => set({ mobileMenu: v }),
 
   // Search
   searchOpen: false,

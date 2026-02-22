@@ -104,7 +104,7 @@ export default function HomePage() {
 
           {/* 3D Goat */}
           <motion.div className="flex justify-center lg:justify-end" variants={fadeUp} style={{ animation: 'floatSlow 6s ease-in-out infinite' }}>
-            <GoatLogo size={400} />
+            <GoatLogo size={typeof window !== 'undefined' && window.innerWidth < 640 ? 250 : 400} />
           </motion.div>
         </div>
       </motion.section>
