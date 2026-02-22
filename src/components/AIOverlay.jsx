@@ -17,6 +17,35 @@ const quickActions = [
   { label: 'Global pulse', icon: Globe },
 ];
 
+// Template-based fallback responses when no API key is configured
+function getTemplateResponse(msg, leads, aiModel) {
+  const lower = msg.toLowerCase();
+
+  if (lower.includes('lead') || lower.includes('find') || lower.includes('top')) {
+    const top = leads.slice(0, 5);
+    let res = `**Top 5 Leads by Score:**\n\n`;
+    top.forEach((l, i) => {
+      res += `**${i + 1}. ${l.name}** — ${l.company}\n`;
+      res += `   Score: ${l.score} | Value: ${fmt(l.dealValue)} | ${l.priority} priority\n`;
+      res += `   Best method: ${l.bestMethod} | Timeline: ${l.decisionTimeline}\n\n`;
+    });
+    res += `\nWant me to draft outreach for any of these?`;
+    return res;
+  } else if (lower.includes('business') || lower.includes('idea') || lower.includes('start')) {
+    return `**Business Idea Generator**\n\nBased on current trends and your pipeline data:\n\n**1. AI Sales Automation SaaS**\nMarket: $12B by 2028 | Entry: Build on GOATED's lead engine\nMonetize: $99-499/mo SaaS + transaction fees\n\n**2. Creator Deal Marketplace**\nMarket: $104B creator economy | Entry: GOATED marketplace\nMonetize: 15% commission on deals\n\n**3. Prediction Market Platform**\nMarket: $50B+ | Entry: GOATED casino module\nMonetize: Platform fees + premium analytics\n\nWhich idea should we deep dive on?`;
+  } else if (lower.includes('trend') || lower.includes('market') || lower.includes('pulse')) {
+    return `**Market Pulse Update**\n\n**AI Sales Automation** — +42% this month (BLAZING)\n**Revenue Intelligence** — +38% (HOT)\n**Creator Economy B2B** — +35% (HOT)\n**Cold Outreach** — -8% (DECLINING)\n\nKey insight: AI-powered outreach is replacing traditional cold email. Companies using AI SDR tools see 3x higher reply rates.\n\nWant me to analyze how this impacts your pipeline?`;
+  } else if (lower.includes('outreach') || lower.includes('email') || lower.includes('draft')) {
+    const lead = leads[0];
+    return `**Draft Outreach for ${lead.name}**\n\nSubject: ${lead.company}'s ${lead.painPoints[0]?.split(' ').slice(0, 3).join(' ')}\n\nHi ${lead.name.split(' ')[0]},\n\nNoticed ${lead.company} is ${lead.buyingSignals[0]?.toLowerCase() || 'scaling fast'}. We help ${lead.industry} companies eliminate ${lead.painPoints[0]?.toLowerCase() || 'manual work'}.\n\nQuick 15-min call this week?\n\nBest,\nGOATED Solutions\n\n---\nConversion probability: ${lead.conversionProbability}%\nRecommended: ${lead.bestMethod}`;
+  } else if (lower.includes('help')) {
+    return `**GOATED AI Commands:**\n\n• "Find top leads" — Show highest-scored leads\n• "Market trends" — Real-time market pulse\n• "Draft outreach" — Auto-generate emails\n• "Business idea" — AI business generator\n• "Analyze [company]" — Deep company intel\n• "Pipeline review" — Full pipeline analysis\n\nUsing model: **${models.find(m => m.id === aiModel)?.name}**`;
+  } else {
+    const model = models.find(m => m.id === aiModel);
+    return `Processing with **${model?.name}** model...\n\nBased on your query, here's what I found:\n\n• Your pipeline has ${leads.length.toLocaleString()} leads worth ${fmt(leads.reduce((s, l) => s + l.dealValue, 0))}\n• ${leads.filter(l => l.priority === 'critical').length} critical leads need attention\n• ${leads.filter(l => l.momentum === 'rising').length} leads have rising momentum\n\nWhat specific analysis do you need?`;
+  }
+}
+
 export default function AIOverlay() {
   const { setAiOpen, leads, aiModel, setAiModel } = useStore();
   const [messages, setMessages] = useState([
@@ -28,6 +57,7 @@ export default function AIOverlay() {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [useAI, setUseAI] = useState(true); // Try real AI first
   const endRef = useRef(null);
   const overlayRef = useRef(null);
 
@@ -47,70 +77,50 @@ export default function AIOverlay() {
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, [dragging, dragStart]);
 
-  const send = () => {
-    if (!input.trim()) return;
+  const send = async () => {
+    if (!input.trim() || typing) return;
     const msg = input.trim();
-    setMessages(p => [...p, { role: 'user', content: msg }]);
+    const newMessages = [...messages, { role: 'user', content: msg }];
+    setMessages(newMessages);
     setInput('');
     setTyping(true);
 
-    setTimeout(() => {
-      let res = '';
-      const lower = msg.toLowerCase();
+    // Build context about pipeline for the AI
+    const pipelineContext = `Pipeline context: ${leads.length} leads, top 5: ${leads.slice(0, 5).map(l => `${l.name} at ${l.company} (score: ${l.score}, value: ${fmt(l.dealValue)}, priority: ${l.priority})`).join('; ')}`;
 
-      if (lower.includes('lead') || lower.includes('find') || lower.includes('top')) {
-        const top = leads.slice(0, 5);
-        res = `**Top 5 Leads by Score:**\n\n`;
-        top.forEach((l, i) => {
-          res += `**${i + 1}. ${l.name}** — ${l.company}\n`;
-          res += `   Score: ${l.score} | Value: ${fmt(l.dealValue)} | ${l.priority} priority\n`;
-          res += `   Best method: ${l.bestMethod} | Timeline: ${l.decisionTimeline}\n\n`;
+    // Try real AI API first
+    if (useAI) {
+      try {
+        const apiMessages = newMessages
+          .filter(m => m.role !== 'system')
+          .map(m => ({ role: m.role, content: m.role === 'user' && m === newMessages[newMessages.length - 1] ? `${m.content}\n\n[${pipelineContext}]` : m.content }));
+
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: apiMessages, model: aiModel }),
         });
-        res += `\nWant me to draft outreach for any of these?`;
-      } else if (lower.includes('business') || lower.includes('idea') || lower.includes('start')) {
-        res = `**Business Idea Generator** 🚀\n\nBased on current trends and your pipeline data:\n\n`;
-        res += `**1. AI Sales Automation SaaS**\nMarket: $12B by 2028 | Entry: Build on GOATED's lead engine\nMonetize: $99-499/mo SaaS + transaction fees\n\n`;
-        res += `**2. Creator Deal Marketplace**\nMarket: $104B creator economy | Entry: GOATED marketplace\nMonetize: 15% commission on deals\n\n`;
-        res += `**3. Prediction Market Platform**\nMarket: $50B+ | Entry: GOATED casino module\nMonetize: Platform fees + premium analytics\n\n`;
-        res += `Which idea should we deep dive on?`;
-      } else if (lower.includes('trend') || lower.includes('market')) {
-        res = `**Market Pulse Update** 📊\n\n`;
-        res += `🔥 **AI Sales Automation** — +42% this month (BLAZING)\n`;
-        res += `📈 **Revenue Intelligence** — +38% (HOT)\n`;
-        res += `🎯 **Creator Economy B2B** — +35% (HOT)\n`;
-        res += `📉 **Cold Outreach** — -8% (DECLINING)\n\n`;
-        res += `Key insight: AI-powered outreach is replacing traditional cold email. Companies using AI SDR tools see 3x higher reply rates.\n\n`;
-        res += `Want me to analyze how this impacts your pipeline?`;
-      } else if (lower.includes('outreach') || lower.includes('email') || lower.includes('draft')) {
-        const lead = leads[0];
-        res = `**Draft Outreach for ${lead.name}** ✉️\n\n`;
-        res += `Subject: ${lead.company}'s ${lead.painPoints[0]?.split(' ').slice(0, 3).join(' ')}\n\n`;
-        res += `Hi ${lead.name.split(' ')[0]},\n\n`;
-        res += `Noticed ${lead.company} is ${lead.buyingSignals[0]?.toLowerCase() || 'scaling fast'}. We help ${lead.industry} companies eliminate ${lead.painPoints[0]?.toLowerCase() || 'manual work'}.\n\n`;
-        res += `Quick 15-min call this week?\n\nBest,\nGOATED Solutions\n\n`;
-        res += `---\nConversion probability: ${lead.conversionProbability}%\nRecommended: ${lead.bestMethod}`;
-      } else if (lower.includes('help')) {
-        res = `**GOATED AI Commands:**\n\n`;
-        res += `• "Find top leads" — Show highest-scored leads\n`;
-        res += `• "Market trends" — Real-time market pulse\n`;
-        res += `• "Draft outreach" — Auto-generate emails\n`;
-        res += `• "Business idea" — AI business generator\n`;
-        res += `• "Analyze [company]" — Deep company intel\n`;
-        res += `• "Pipeline review" — Full pipeline analysis\n\n`;
-        res += `Using model: **${models.find(m => m.id === aiModel)?.name}**`;
-      } else {
-        const model = models.find(m => m.id === aiModel);
-        res = `Processing with **${model?.name}** model...\n\n`;
-        res += `Based on your query, here's what I found:\n\n`;
-        res += `• Your pipeline has ${leads.length.toLocaleString()} leads worth ${fmt(leads.reduce((s, l) => s + l.dealValue, 0))}\n`;
-        res += `• ${leads.filter(l => l.priority === 'critical').length} critical leads need attention\n`;
-        res += `• ${leads.filter(l => l.momentum === 'rising').length} leads have rising momentum\n\n`;
-        res += `What specific analysis do you need?`;
-      }
 
+        const data = await res.json();
+
+        if (!data.fallback && data.content) {
+          setMessages(p => [...p, { role: 'assistant', content: data.content }]);
+          setTyping(false);
+          return;
+        }
+        // If fallback, disable real AI for this session
+        setUseAI(false);
+      } catch {
+        setUseAI(false);
+      }
+    }
+
+    // Fallback to template responses
+    setTimeout(() => {
+      const res = getTemplateResponse(msg, leads, aiModel);
       setMessages(p => [...p, { role: 'assistant', content: res }]);
       setTyping(false);
-    }, 800 + Math.random() * 400);
+    }, 600 + Math.random() * 400);
   };
 
   const currentModel = models.find(m => m.id === aiModel) || models[0];
@@ -139,13 +149,17 @@ export default function AIOverlay() {
             <div className="flex items-center gap-3">
               <div className="text-brand"><GoatIcon /></div>
               <div>
-                <div className="font-bold flex items-center gap-2">GOATED AI <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" /></div>
+                <div className="font-bold flex items-center gap-2">
+                  GOATED AI
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
+                  {useAI && <span className="text-[9px] px-1.5 py-0.5 rounded bg-brand/15 text-brand font-medium">LIVE</span>}
+                </div>
                 <div className="text-xs text-slate-500">Your AI sales copilot</div>
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <button onMouseDown={onDragStart} className="p-1.5 rounded text-slate-500 hover:text-white cursor-grab active:cursor-grabbing"><GripVertical size={16} /></button>
-              <button onClick={() => setMinimized(true)} className="p-1.5 rounded text-slate-500 hover:text-white"><Minimize2 size={16} /></button>
+              <button onMouseDown={onDragStart} className="p-1.5 rounded text-slate-500 hover:text-white cursor-grab active:cursor-grabbing hidden sm:block"><GripVertical size={16} /></button>
+              <button onClick={() => setMinimized(true)} className="p-1.5 rounded text-slate-500 hover:text-white hidden sm:block"><Minimize2 size={16} /></button>
               <button onClick={() => setAiOpen(false)} className="p-1.5 rounded text-slate-500 hover:text-white"><X size={16} /></button>
             </div>
           </div>
@@ -204,8 +218,8 @@ export default function AIOverlay() {
               onKeyDown={e => e.key === 'Enter' && send()}
               placeholder="Ask GOATED AI anything..."
               className="flex-1 px-4 py-2.5 bg-surface-2 border border-white/5 rounded-xl text-sm outline-none focus:border-brand/30 transition-colors placeholder-slate-500" />
-            <button onClick={send}
-              className="px-4 py-2.5 rounded-xl bg-brand text-black font-medium transition-all hover:shadow-lg hover:shadow-brand/20">
+            <button onClick={send} disabled={typing}
+              className="px-4 py-2.5 rounded-xl bg-brand text-black font-medium transition-all hover:shadow-lg hover:shadow-brand/20 disabled:opacity-50">
               <Send size={16} />
             </button>
           </div>
