@@ -1,3 +1,47 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "redirects": [],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "s-maxage=10, stale-while-revalidate=59" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
+        { "key": "Content-Security-Policy", "value": "default-src 'none'; frame-ancestors 'none'" }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" }
+      ]
+    }
+  ],
+  "functions": {
+    "api/leads.js": { "maxDuration": 30 },
+    "api/market-data.js": { "maxDuration": 15 },
+    "api/chat.js": { "maxDuration": 60 },
+    "api/plays.js": { "maxDuration": 10 },
+    "api/intelligence.js": { "maxDuration": 30 },
+    "api/dashboard.js": { "maxDuration": 15 },
+    "api/kalshi.js": { "maxDuration": 15 },
+    "api/polymarket.js": { "maxDuration": 15 },
+    "api/sentiment.js": { "maxDuration": 15 },
+    "api/trends.js": { "maxDuration": 15 },
+    "api/goated-ai.js": { "maxDuration": 30 }
+  }
 }

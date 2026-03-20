@@ -1,0 +1,155 @@
+# LinkedIn Profile & Changelog
+
+---
+
+## LINKEDIN HEADLINE OPTIONS
+
+1. `Founder @ GOATED Solutions | AI Revenue Intelligence | The Free Platform That Takes 10% | From Zero to CEO`
+2. `Building GOATED | AI-Powered Sales + Crypto Intelligence | $0 Cost, 10% Commission | Wolf Mode Activated`
+3. `CEO @ GOATED Solutions | Bloomberg + Apollo + Polymarket in One Free Platform | AI Native Revenue OS`
+
+---
+
+## LINKEDIN DESCRIPTION (About Section)
+
+Building GOATED Solutions — the AI-powered Revenue Operating System for the next generation of closers, traders, and entrepreneurs.
+
+What is GOATED?
+Bloomberg-grade market intelligence + Apollo-quality B2B leads + Polymarket prediction markets — all in one free platform. No subscriptions. No per-seat pricing. We take 10% of deals you close. That's it.
+
+What we're building:
+- Custom AI engine with RSI, MACD, Bollinger Bands, regime detection, and predictive scoring — NOT a wrapper around ChatGPT
+- 500K+ AI-scored B2B leads with pain points, buying signals, and decision timelines
+- Multi-asset market intelligence: crypto, stocks, forex, commodities, prediction markets — all in real-time
+- AI copilot that drafts call scripts, SMS sequences, and closing strategies
+- Built-in VoIP calling, SMS outreach, and voicemail drops
+- Solana-native wallet with USDC settlement
+- DEGEN MODE — toggleable alpha intel overlay with whale radar, intent surges, snipe queue, and high-conviction trade setups
+
+Why now?
+Apollo charges $500/mo for stale data. Salesforce costs $150/seat for software nobody uses. Bloomberg costs $24K/year.
+
+We give you everything. For free. And we only make money when YOU make money.
+
+The 180-degree pivot. The comeback story. The GOATED era starts now.
+
+Currently seeking: Angel investors, technical co-founders, and degen closers who want early access.
+
+DM me or check it out: [Link]
+
+---
+
+## LINKEDIN EXPERIENCE ENTRY
+
+**Founder & CEO**
+GOATED Solutions
+Mar 2026 - Present
+
+Building the AI-powered Revenue Operating System that combines real-time market intelligence, 500K+ B2B leads, prediction markets, and direct outreach tools — all free to use.
+
+Key achievements:
+- Built full-stack platform (React, Node, Solana, AI) as a solo founder
+- Built custom AI engine with technical analysis (RSI, MACD, Bollinger Bands), market regime detection, multi-source sentiment fusion, and predictive scoring — proprietary, not a ChatGPT wrapper
+- Created multi-asset intelligence dashboard covering crypto, stocks, forex, commodities, and 25+ prediction markets
+- Developed "DEGEN MODE" with real alpha intel: whale radar, intent surge alerts, snipe queue, and high-conviction trade setups
+- Pioneered commission-only SaaS model: $0 upfront, 10% on closed deals
+
+Tech stack: React 18, Vite, Zustand, Framer Motion, Three.js, Supabase, Vercel, Solana/Web3, Custom AI Engine, Claude Haiku (chat only)
+
+---
+
+## v4.1 CHANGELOG — MARCH 2026
+
+### New Features
+- **Custom GOATED AI Engine** — Proprietary AI analysis engine (NOT a Claude wrapper): RSI, MACD, Bollinger Bands, EMA, volatility regimes, Wyckoff-inspired market regime detection, multi-source sentiment fusion, cross-asset Pearson correlation matrix, breakout probability scoring with price targets
+- **AI-Powered TrendPulse** — Market Regime panel, AI Sentiment Fusion ring, Portfolio Heat gauge, AI Price Predictions grid (8 coins with 24h/7d targets & GOATED Score), Cross-Asset Correlations
+- **AI-Powered Markets** — Regime banner, per-asset AI prediction panels, GOATED Score integration
+- **DEGEN MODE Alpha Intel** — Real data overlays: Whale Radar (top 20 high-ACV opportunities), Intent Surge alerts, Snipe Queue (high-value early-pipeline leads), Hot Sector breakdown, real alpha ticker data
+- **Multi-Asset Market Dashboard** — Crypto, Stocks, Forex, Commodities, Prediction Markets all in one view with 25+ prediction market events, alpha signals with trade recommendations, spread comparisons vs Kalshi & Polymarket
+- **Degen Picks** — High-conviction trade setups with leverage, entry/target/stop, confidence scores, and reasoning
+
+### Fixes
+- **Navigation Black Screen** — Fixed keybind handler race condition (fall-through if-statements → navMap lookup + else-if chain), removed startTransition wrapper causing Suspense flash, sidebar nav now properly closes lead detail view
+- **Domain Configuration** — Added goated.solutions as custom Vercel domain with proper DNS instructions
+- **Security Hardening** — Removed wildcard CORS `*`, added per-endpoint CORS whitelist, rate limiting on AI/chat endpoints, input validation, CSP headers, HSTS
+
+### SEO
+- Updated meta descriptions to reference custom AI engine capabilities
+- Enhanced JSON-LD structured data with full feature list
+- Fixed commission rate to 10% across all copy
+- Canonical URL set to goated.solutions
+
+---
+
+## v4.0 CHANGELOG — MARCH 2026
+
+### New Features
+- **DEGEN MODE** — Toggleable "Wolf of Wall Street" mode with custom UI, degen-specific analytics, orange/fire theme, meme-worthy ticker data (420/100 DEGEN Score, 100x Leverage, MOON ETA: SOON)
+- **Plays Page** — Full playbook catalog with proven sales strategies, live activity feed, and AI-powered play execution
+- **Comms Page** — Direct outreach command center for VoIP calling, SMS sequences, voicemail drops, and multi-channel campaigns
+- **AI Feature Embedding** — GOATED AI now links directly to platform features (Leads, Dashboard, Trends, Casino, Plays, Comms, Wallet) with clickable navigation from chat responses
+
+### Enhancements
+- **GoatLogo 3D Tracking** — 2x faster mouse tracking (lerp 0.08 -> 0.15), removed per-frame drop-shadow filter that caused GPU stalls and freezing
+- **Ticker Newsfeed** — Cached scroll width measurement prevents jump glitch on data refresh, smoother continuous scroll
+- **Trend Pulse Fallback Data** — Full fallback dataset (8 trending coins, 8 news articles, 6 prediction markets, 8 price entries) ensures page always renders even when APIs are unavailable
+- **AI Overlay Prompts** — Updated Plays prompts to focus on VoIP/cold calling over email, added Comms page prompts for call scripts and SMS campaigns
+- **Sidebar Navigation** — Added Plays (P key) and Comms (M key) to sidebar with keyboard shortcuts
+
+### Security
+- **CORS Configuration** — Replaced hardcoded `goated.solutions` with environment variable `CORS_ORIGIN` across all 7 API files
+- **Port Support** — Added localhost:5174 to all API CORS whitelists for dev flexibility
+- **Vercel Headers** — Updated Access-Control-Allow-Origin to wildcard for API routes
+
+### SEO
+- **Sitemap** — Added Plays and Comms pages, updated lastmod dates
+- **Meta Tags** — Enhanced title, description, keywords covering all platform verticals
+
+### Removed
+- **Email-focused outreach** — Replaced with VoIP/SMS/direct calling throughout (homepage, AI overlay, plays)
+- **Testimonials section** — Removed from homepage (replaced with competitor comparison table)
+- **Per-frame drop-shadow** — Removed dynamic CSS filter on GoatLogo that caused performance issues
+- **Hardcoded CORS origins** — Replaced with env-based configuration
+
+### Technical
+- Build time: 3.23s (1864 modules, zero errors)
+- Total bundle: ~930KB gzipped (across all lazy-loaded chunks)
+- All pages code-split with React.lazy + Suspense
+
+---
+
+## CORE VERTICALS & SELLING POINTS
+
+### Why GOATED is Unique:
+
+1. **Commission-Only Model** — No other platform in the sales intelligence space offers $0 upfront with commission-only pricing. This is the Stripe model applied to sales tools.
+
+2. **DEGEN MODE** — No enterprise software has a "fun mode." This is inherently viral, screenshot-worthy, and creates brand identity that competitors can't replicate without looking ridiculous.
+
+3. **Full-Stack Revenue OS** — Others do one thing: Apollo = leads, Gong = calls, Polymarket = bets. GOATED does ALL of it in one place.
+
+4. **AI-Native Architecture** — Built with AI from day one, not bolted on. The AI copilot isn't a chatbot — it's a deep research agent that can analyze your entire pipeline, generate outreach, and predict close probability.
+
+5. **Crypto + B2B Convergence** — First platform to bridge Web3 finance with B2B sales. Settle commissions on-chain. Trade prediction markets with the same tool you use to close deals.
+
+### Verticals to Conquer:
+
+| Vertical | Why | Revenue Potential |
+|----------|-----|-------------------|
+| **B2B Sales Teams** (SDRs, AEs, Closers) | Core use case, highest commission potential | $5M+ ARR |
+| **Crypto Traders & Degens** | DEGEN MODE, prediction markets, real-time data | $2M+ ARR |
+| **Sales Agencies & Consultants** | White-label, team plans, commission tracking | $1M+ ARR |
+| **Solopreneurs & Indie Hackers** | Free tool, side hustle enabler | $500K+ ARR |
+| **Influencer/Creator Economy** | Deal matching, brand partnerships | $500K+ ARR |
+
+### Existing Startups We Directly Compete With:
+
+1. **Apollo.io** — $100M+ ARR, but expensive and email-focused. We're free and call-focused.
+2. **Outreach.io** — $500M valuation, complex enterprise tool. We're simple and AI-native.
+3. **Gong.io** — $7B valuation, call recording only. We do leads + calls + closing.
+4. **Lusha** — Contact data only. We provide full intelligence + outreach tools.
+5. **Polymarket** — Prediction markets only. We add AI analysis + B2B integration.
+6. **LunarCrush** — Social analytics only. We provide actionable intelligence + trading.
+7. **Whop** — Marketplace only. We provide tools + marketplace + intelligence.
+
+**Strategy:** Don't compete head-to-head. Compete on price ($0), breadth (everything in one), and culture (DEGEN MODE).

@@ -1,73 +1,176 @@
 import React from 'react';
-import { Home, LayoutDashboard, Users, TrendingUp, Play, Store, Dice5, Wallet, Bot, Keyboard, Search, ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
+import { Home, LayoutDashboard, Users, TrendingUp, Zap, BarChart3, Target, Wallet, Bot, Keyboard, Search, ChevronLeft, ChevronRight, Menu, X, Sparkles, User, Shield, Flame, Rocket, Dice5, MessageSquare, Radar } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { GoatIcon } from './GoatLogo';
 
 const nav = [
-  { id: 'home', icon: Home, label: 'Home', key: '1' },
-  { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', key: '2' },
-  { id: 'leads', icon: Users, label: 'Leads', key: '3', badge: '2.5K' },
-  { id: 'trends', icon: TrendingUp, label: 'Trend Pulse', key: '4' },
-  { id: 'plays', icon: Play, label: 'Live Plays', key: '5' },
-  { id: 'market', icon: Store, label: 'Marketplace', key: '6' },
-  { id: 'casino', icon: Dice5, label: 'Casino', key: '7' },
-  { id: 'wallet', icon: Wallet, label: 'Wallet', key: '8' },
+  { id: 'home', icon: Home, label: 'Home', key: 'H' },
+  { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', key: 'D' },
+  { id: 'trends', icon: TrendingUp, label: 'TrendPulse', key: 'T', badge: 'LIVE' },
+  { id: 'market', icon: BarChart3, label: 'Markets', key: 'C', badge: 'ALPHA' },
+  { id: 'leads', icon: Users, label: 'Leads', key: 'L' },
+  { id: 'launchpad', icon: Rocket, label: 'LaunchPad', key: 'R', badge: 'NEW' },
+  { id: 'casino', icon: Dice5, label: 'Casino', key: 'P', badge: 'LIVE' },
+  { id: 'comms', icon: MessageSquare, label: 'Comms', key: 'V' },
+  { id: 'finder', icon: Radar, label: 'Finder', key: 'F' },
+  { id: 'wallet', icon: Wallet, label: 'Wallet', key: 'W' },
+  { id: 'admin', icon: Shield, label: 'Admin', key: 'X', badge: 'PRO' },
 ];
 
 export default function Sidebar() {
-  const { page, setPage, sidebar, toggleSidebar, setAiOpen, setKeybindsOpen, setSearchOpen, mobileMenu, setMobileMenu } = useStore();
+  const page = useStore(s => s.page);
+  const setPage = useStore(s => s.setPage);
+  const sidebar = useStore(s => s.sidebar);
+  const toggleSidebar = useStore(s => s.toggleSidebar);
+  const setAiOpen = useStore(s => s.setAiOpen);
+  const setKeybindsOpen = useStore(s => s.setKeybindsOpen);
+  const setSearchOpen = useStore(s => s.setSearchOpen);
+  const mobileMenu = useStore(s => s.mobileMenu);
+  const setMobileMenu = useStore(s => s.setMobileMenu);
+  const setAccountModalOpen = useStore(s => s.setAccountModalOpen);
+  const isLoggedIn = useStore(s => s.isLoggedIn);
+  const user = useStore(s => s.user);
+  const degenMode = useStore(s => s.degenMode);
+  const toggleDegenMode = useStore(s => s.toggleDegenMode);
+  const triggerConfetti = useStore(s => s.triggerConfetti);
 
   const navContent = (expanded) => (
     <>
-      {/* Logo */}
-      <div className="p-4 border-b border-white/5 flex items-center gap-3">
-        <div className="text-brand flex-shrink-0"><GoatIcon /></div>
+      {/* Logo with neon effect — clickable to homepage */}
+      <button onClick={() => { setPage('home'); setMobileMenu(false); }} aria-label="Go to homepage" className="w-full p-4 border-b border-white/[0.03] flex items-center gap-3 relative overflow-hidden group hover:bg-white/[0.02] transition-colors">
+        {/* Ambient glow behind logo */}
+        <div className="absolute inset-0 bg-gradient-to-r from-brand/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" aria-hidden="true" />
+        <div className="relative text-brand flex-shrink-0" aria-hidden="true">
+          <GoatIcon />
+          {/* Neon ring pulse */}
+          <div className="absolute inset-0 rounded-full border border-brand/30 animate-ping" style={{ animationDuration: '3s' }} />
+        </div>
         {expanded && (
-          <div className="overflow-hidden">
-            <div className="font-bold text-lg tracking-tight">GOATED</div>
-            <div className="text-[10px] text-slate-500 tracking-[3px] uppercase">Degen Business OS</div>
+          <div className="overflow-hidden relative text-left">
+            <div className="font-black text-lg tracking-tight bg-gradient-to-r from-brand via-emerald-300 to-cyan-400 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text' }}>
+              GOATED
+            </div>
+            <div className="text-[10px] text-slate-500 tracking-[3px] uppercase flex items-center gap-1">
+              <Sparkles size={8} className="text-brand" aria-hidden="true" />Solutions
+            </div>
           </div>
         )}
-      </div>
+      </button>
 
       {/* Navigation */}
-      <nav className="p-2 flex-1 overflow-y-auto">
+      <nav className="p-2 flex-1 overflow-y-auto" aria-label="Main navigation">
         {nav.map(n => (
           <button
             key={n.id}
-            onClick={() => setPage(n.id)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 transition-all duration-200 border-l-2 ${
+            onClick={() => { useStore.getState().setDetailOpen(false); setPage(n.id); setMobileMenu(false); }}
+            aria-label={`Navigate to ${n.label}`}
+            aria-current={page === n.id ? 'page' : undefined}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 transition-colors duration-200 relative group ${
               page === n.id
-                ? 'bg-brand/10 text-brand border-brand'
-                : 'text-slate-400 border-transparent hover:bg-white/5 hover:text-slate-200'
+                ? 'bg-brand/10 text-brand'
+                : 'text-slate-400 hover:bg-white/[0.02] hover:text-slate-200'
             }`}
           >
-            <n.icon size={20} className="flex-shrink-0" />
+            {/* Active indicator */}
+            <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r transition-colors ${page === n.id ? 'bg-brand' : 'bg-transparent'}`} aria-hidden="true" />
+            <n.icon size={20} className="flex-shrink-0" aria-hidden="true" />
             {expanded && (
               <>
                 <span className="flex-1 text-left text-sm">{n.label}</span>
-                {n.badge && <span className="text-[11px] bg-brand/15 text-brand px-2 py-0.5 rounded-full">{n.badge}</span>}
-                <span className="text-[10px] text-slate-600">{n.key}</span>
+                {n.badge && <span className="text-[10px] bg-brand/15 text-brand px-2 py-0.5 rounded-full font-medium" aria-label={`${n.label} ${n.badge}`}>{n.badge}</span>}
+                <span className="text-[10px] text-slate-600 font-mono" aria-hidden="true">{n.key}</span>
               </>
             )}
           </button>
         ))}
 
-        <div className="border-t border-white/5 my-3" />
+        <div className="border-t border-white/[0.03] my-3" role="separator" />
 
-        <button onClick={() => { setAiOpen(true); setMobileMenu(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-all">
-          <Bot size={20} className="flex-shrink-0" />
-          {expanded && <><span className="flex-1 text-left text-sm">GOATED AI</span><span className="text-[10px] text-slate-600">G</span></>}
+        <button onClick={() => { setAiOpen(true); setMobileMenu(false); }} aria-label="Open GOATED AI assistant"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-brand/10 hover:text-brand transition-colors group">
+          <Bot size={20} className="flex-shrink-0" aria-hidden="true" />
+          {expanded && (
+            <>
+              <span className="flex-1 text-left text-sm">GOATED AI</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" aria-label="AI is active" />
+              <span className="text-[10px] text-slate-600 font-mono" aria-hidden="true">G</span>
+            </>
+          )}
         </button>
-        <button onClick={() => { setKeybindsOpen(true); setMobileMenu(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-all">
-          <Keyboard size={20} className="flex-shrink-0" />
-          {expanded && <><span className="flex-1 text-left text-sm">Keybinds</span><span className="text-[10px] text-slate-600">?</span></>}
+        <button onClick={() => { setSearchOpen(true); setMobileMenu(false); }} aria-label="Open search (Cmd+K)"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-white/[0.02] hover:text-slate-200 transition-colors">
+          <Search size={20} className="flex-shrink-0" aria-hidden="true" />
+          {expanded && <><span className="flex-1 text-left text-sm">Search</span><span className="text-[10px] text-slate-600 font-mono" aria-hidden="true">{'\u2318'}K</span></>}
         </button>
-        <button onClick={() => { setSearchOpen(true); setMobileMenu(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-all">
-          <Search size={20} className="flex-shrink-0" />
-          {expanded && <><span className="flex-1 text-left text-sm">Search</span><span className="text-[10px] text-slate-600">{'\u2318'}K</span></>}
+        <button onClick={() => { setKeybindsOpen(true); setMobileMenu(false); }} aria-label="View keyboard shortcuts"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-white/[0.02] hover:text-slate-200 transition-colors">
+          <Keyboard size={20} className="flex-shrink-0" aria-hidden="true" />
+          {expanded && <><span className="flex-1 text-left text-sm">Shortcuts</span><span className="text-[10px] text-slate-600 font-mono" aria-hidden="true">?</span></>}
         </button>
       </nav>
+
+      {/* Account button */}
+      <div className="p-2 border-t border-white/[0.03]">
+        <button onClick={() => { setAccountModalOpen(true); setMobileMenu(false); }} aria-label={isLoggedIn && user ? `Account: ${user.name}` : 'Sign in to your account'}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-white/[0.02] hover:text-slate-200 transition-colors">
+          {isLoggedIn && user ? (
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-brand to-cyan-400 flex items-center justify-center text-black text-[10px] font-bold flex-shrink-0" aria-hidden="true">
+              {user.avatar || user.name?.slice(0, 2).toUpperCase() || 'U'}
+            </div>
+          ) : (
+            <User size={20} className="flex-shrink-0" aria-hidden="true" />
+          )}
+          {expanded && (
+            <>
+              <span className="flex-1 text-left text-sm truncate">{isLoggedIn && user ? user.name : 'Account'}</span>
+              <span className="text-[10px] text-slate-600 font-mono" aria-hidden="true">A</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* DEGEN MODE Toggle */}
+      <div className="p-2 border-t border-white/[0.03]">
+        <button
+          onClick={() => {
+            const wasOff = !degenMode;
+            toggleDegenMode();
+            // Screen shake + confetti on activation
+            if (wasOff) {
+              const root = document.querySelector('.min-h-screen');
+              if (root) {
+                root.classList.add('degen-activate');
+                setTimeout(() => root.classList.remove('degen-activate'), 600);
+              }
+              // Delay confetti slightly for dramatic effect
+              setTimeout(() => triggerConfetti(), 200);
+            }
+          }}
+          aria-label={degenMode ? 'Disable DEGEN MODE' : 'Enable DEGEN MODE'}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-300 group ${
+            degenMode
+              ? 'bg-gradient-to-r from-orange-500/20 via-red-500/20 to-yellow-500/20 text-orange-400 border border-orange-500/30'
+              : 'text-slate-500 hover:bg-white/[0.02] hover:text-orange-400'
+          }`}
+        >
+          <Flame size={18} className={`flex-shrink-0 ${degenMode ? 'text-orange-400 animate-pulse' : ''}`} aria-hidden="true" />
+          {expanded && (
+            <>
+              <span className="flex-1 text-left text-xs font-bold tracking-wider uppercase">{degenMode ? 'DEGEN ON' : 'DEGEN'}</span>
+              <div className={`w-8 h-4 rounded-full transition-colors relative ${degenMode ? 'bg-orange-500' : 'bg-zinc-700'}`}>
+                <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${degenMode ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              </div>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Version tag at bottom */}
+      {expanded && (
+        <div className="px-4 py-2 border-t border-white/[0.03]">
+          <div className="text-[10px] text-slate-600 text-center">{degenMode ? 'v4.0 — WOLF MODE ACTIVATED' : 'v4.0 — Intelligence Engine'}</div>
+        </div>
+      )}
     </>
   );
 
@@ -76,18 +179,22 @@ export default function Sidebar() {
       {/* Mobile hamburger button */}
       <button
         onClick={() => setMobileMenu(!mobileMenu)}
-        className="fixed top-2 left-3 z-50 p-2 rounded-lg bg-surface-2 border border-white/10 text-slate-400 hover:text-white transition-colors md:hidden"
+        aria-label={mobileMenu ? 'Close navigation menu' : 'Open navigation menu'}
+        aria-expanded={mobileMenu}
+        className="fixed top-2 left-3 z-50 p-2 rounded-lg bg-black/30 backdrop-blur border border-white/[0.05] text-slate-400 hover:text-white transition-colors md:hidden"
       >
-        {mobileMenu ? <X size={20} /> : <Menu size={20} />}
+        {mobileMenu ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
       </button>
 
       {/* Mobile overlay */}
       {mobileMenu && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden" onClick={() => setMobileMenu(false)} />
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-40 md:hidden" onClick={() => setMobileMenu(false)} aria-hidden="true" />
       )}
 
       {/* Mobile sidebar drawer */}
       <aside
+        role="navigation"
+        aria-label="Mobile navigation"
         className={`fixed left-0 top-0 bottom-0 glass z-40 flex flex-col transition-transform duration-300 md:hidden w-[260px] ${
           mobileMenu ? 'translate-x-0' : '-translate-x-full'
         }`}
@@ -97,7 +204,9 @@ export default function Sidebar() {
 
       {/* Desktop sidebar */}
       <aside
-        className="fixed left-0 top-9 bottom-0 glass z-40 transition-all duration-300 flex-col hidden md:flex"
+        role="navigation"
+        aria-label="Main navigation"
+        className="fixed left-0 top-9 bottom-0 glass z-40 transition-[width] duration-300 flex-col hidden md:flex"
         style={{ width: sidebar ? 240 : 72 }}
       >
         {navContent(sidebar)}
@@ -105,9 +214,11 @@ export default function Sidebar() {
         {/* Collapse toggle */}
         <button
           onClick={toggleSidebar}
+          aria-label={sidebar ? 'Collapse sidebar' : 'Expand sidebar'}
+          aria-expanded={sidebar}
           className="m-3 p-2 rounded-lg bg-surface-2 text-slate-400 hover:text-slate-200 transition-colors self-end"
         >
-          {sidebar ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+          {sidebar ? <ChevronLeft size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
         </button>
       </aside>
     </>

@@ -1,0 +1,134 @@
+// =============================================================================
+// GOATED Solutions - VoIP & SMS Communication Engine
+// =============================================================================
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Virtual number pool
+const VIRTUAL_NUMBERS = [
+  { number: '+1 (415) 555-0101', area: 'San Francisco', type: 'local', available: true },
+  { number: '+1 (212) 555-0102', area: 'New York', type: 'local', available: true },
+  { number: '+1 (512) 555-0103', area: 'Austin', type: 'local', available: true },
+  { number: '+1 (206) 555-0104', area: 'Seattle', type: 'local', available: true },
+  { number: '+1 (617) 555-0105', area: 'Boston', type: 'local', available: true },
+  { number: '+1 (305) 555-0106', area: 'Miami', type: 'local', available: true },
+  { number: '+1 (312) 555-0107', area: 'Chicago', type: 'local', available: true },
+  { number: '+1 (303) 555-0108', area: 'Denver', type: 'local', available: true },
+  { number: '+1 (800) 555-0201', area: 'National', type: 'toll-free', available: true },
+  { number: '+1 (888) 555-0202', area: 'National', type: 'toll-free', available: true },
+];
+
+// Call log storage (in-memory for demo, would be Supabase in production)
+const callLogs = [];
+const smsLogs = [];
+
+// AI call script templates
+const AI_SCRIPTS = {
+  discovery: {
+    name: 'Discovery Call',
+    steps: [
+      { type: 'opener', text: 'Hi {name}, this is {agent} from GOATED Solutions. I noticed {company} has been {signal}. Do you have 2 minutes?' },
+      { type: 'qualify', text: 'Quick question - what\'s your current biggest challenge with {painPoint}?' },
+      { type: 'pitch', text: 'We help {industry} companies like {company} increase qualified pipeline by 3-5x while cutting manual work by 80%.' },
+      { type: 'close', text: 'Based on what you shared, I think a 15-min demo would be valuable. Does {suggestedTime} work?' },
+    ],
+  },
+  followUp: {
+    name: 'Follow-Up Call',
+    steps: [
+      { type: 'opener', text: 'Hi {name}, this is {agent} following up on our conversation about {topic}. How are things going?' },
+      { type: 'value', text: 'I wanted to share a quick case study - we helped a similar {industry} company {result}.' },
+      { type: 'objection', text: 'I understand your concern about {objection}. Here\'s how we address that...' },
+      { type: 'next', text: 'Would it make sense to schedule a demo with your team? I can also send over the ROI calculator.' },
+    ],
+  },
+  coldCall: {
+    name: 'Cold Call',
+    steps: [
+      { type: 'opener', text: 'Hi {name}, I know this is out of the blue. I\'m {agent} with GOATED. We specialize in {industry} revenue automation. Quick 30 seconds?' },
+      { type: 'hook', text: 'We just helped {similarCompany} go from {before} to {after} in 90 days using AI-powered lead gen.' },
+      { type: 'ask', text: 'Is optimizing your sales pipeline something you\'re looking at this quarter?' },
+      { type: 'book', text: 'Great. Let me send you a calendar link for a quick 15-minute walkthrough. What email works best?' },
+    ],
+  },
+};
+
+// SMS templates
+const SMS_TEMPLATES = {
+  intro: 'Hi {name}! {agent} from GOATED here. We help {industry} companies 3x their pipeline with AI. Worth a quick chat? Reply YES for a demo link.',
+  followUp: 'Hey {name}, following up on {topic}. Our {industry} clients are seeing {metric} improvements. Free to chat this week?',
+  demo: 'Hi {name}! Your demo with GOATED is confirmed for {time}. Join here: {link}. See you there!',
+  value: '{name} - just published a case study on how {company} increased revenue {percent}% with AI sales automation. Want the link?',
+  reEngage: 'Hey {name}, it\'s been a while! We just launched {feature} that\'s perfect for {industry} companies like {company}. Interested?',
+};
+
+export default async function handler(req, res) {
+  if (req.method === 'OPTIONS') { res.writeHead(204, CORS_HEADERS); return res.end(); }
+  Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
+
+  const body = req.method === 'POST' ? (typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {}) : {};
+  const { action } = { ...req.query, ...body };
+
+  // GET available numbers
+  if (req.method === 'GET' && !action) {
+    return res.status(200).json({
+      numbers: VIRTUAL_NUMBERS,
+      callScripts: Object.entries(AI_SCRIPTS).map(([key, s]) => ({ id: key, name: s.name, steps: s.steps.length })),
+      smsTemplates: Object.entries(SMS_TEMPLATES).map(([key, t]) => ({ id: key, preview: t.slice(0, 60) + '...' })),
+      stats: { totalCalls: callLogs.length, totalSMS: smsLogs.length, activeNumbers: VIRTUAL_NUMBERS.filter(n => !n.available).length },
+      _meta: { generatedAt: new Date().toISOString(), engine: 'goated-voip-v1', twilioAvailable: !!process.env.TWILIO_ACCOUNT_SID },
+    });
+  }
+
+  // Initiate call
+  if (action === 'call') {
+    const { to, from, leadId, scriptId, leadData } = body;
+    const script = AI_SCRIPTS[scriptId || 'coldCall'];
+    const callId = `call_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    
+    // In production, this would use Twilio/Vonage API
+    const hasTwilio = !!process.env.TWILIO_ACCOUNT_SID;
+    const call = {
+      id: callId, to, from: from || VIRTUAL_NUMBERS[0].number,
+      leadId, status: hasTwilio ? 'connecting' : 'simulated',
+      script: script ? { name: script.name, steps: script.steps.map(s => ({
+        ...s, text: s.text.replace('{name}', leadData?.name || 'there').replace('{company}', leadData?.company || 'your company')
+          .replace('{industry}', leadData?.industry || 'your industry').replace('{agent}', 'GOATED AI')
+          .replace('{signal}', leadData?.buyingSignals?.[0] || 'growing rapidly')
+          .replace('{painPoint}', leadData?.painPoints?.[0] || 'lead generation'),
+      })) } : null,
+      startedAt: new Date().toISOString(), duration: 0,
+    };
+    callLogs.push(call);
+
+    return res.status(200).json({ call, message: hasTwilio ? 'Call initiated via Twilio' : 'Call simulated (add TWILIO_ACCOUNT_SID for live calls)', _meta: { generatedAt: new Date().toISOString() } });
+  }
+
+  // Send SMS
+  if (action === 'sms') {
+    const { to, from, templateId, leadData, customMessage } = body;
+    const template = SMS_TEMPLATES[templateId || 'intro'];
+    const message = customMessage || (template || '').replace('{name}', leadData?.name || 'there')
+      .replace('{company}', leadData?.company || 'your company').replace('{industry}', leadData?.industry || 'your industry')
+      .replace('{agent}', 'GOATED AI').replace('{topic}', 'our last conversation').replace('{metric}', '3x pipeline')
+      .replace('{time}', 'tomorrow at 2pm').replace('{link}', 'https://goated.app/demo').replace('{feature}', 'AI Deal Coach')
+      .replace('{percent}', '240').replace('{before}', '$50K/mo pipeline').replace('{after}', '$200K/mo pipeline');
+
+    const smsId = `sms_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const hasTwilio = !!process.env.TWILIO_ACCOUNT_SID;
+    const sms = { id: smsId, to, from: from || VIRTUAL_NUMBERS[0].number, message, status: hasTwilio ? 'sent' : 'simulated', sentAt: new Date().toISOString() };
+    smsLogs.push(sms);
+
+    return res.status(200).json({ sms, message: hasTwilio ? 'SMS sent via Twilio' : 'SMS simulated (add TWILIO_ACCOUNT_SID for live SMS)', _meta: { generatedAt: new Date().toISOString() } });
+  }
+
+  // Get call/SMS logs
+  if (action === 'logs') {
+    return res.status(200).json({ calls: callLogs.slice(-50), sms: smsLogs.slice(-50), _meta: { generatedAt: new Date().toISOString() } });
+  }
+
+  return res.status(400).json({ error: 'Unknown action. Use: call, sms, logs, or GET for available numbers.' });
+}

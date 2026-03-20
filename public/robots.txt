@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Sitemap: https://goated.solutions/sitemap.xml
+
+# Disallow API routes from indexing
+Disallow: /api/

@@ -1,0 +1,427 @@
+// =============================================================================
+// GOATED Solutions - Webhook Receiver API
+// =============================================================================
+// Endpoint: POST /api/webhook
+//
+// Query Parameters:
+//   - source: "stripe" | "apollo" | "github" | "slack" | "custom"
+//
+// Receives webhooks from external integrations and processes them.
+// Each source has its own signature validation and event handling.
+//
+// API Keys / Secrets Required:
+//   - STRIPE_WEBHOOK_SECRET -> https://dashboard.stripe.com/webhooks
+//   - APOLLO_WEBHOOK_SECRET -> https://app.apollo.io/ (webhook settings)
+//   - GITHUB_WEBHOOK_SECRET -> Set in your GitHub repo webhook settings
+//   - SLACK_SIGNING_SECRET  -> https://api.slack.com/apps (Basic Information)
+//
+// Security: In production, ALWAYS validate webhook signatures to prevent
+// spoofed requests. See commented-out validation code for each source.
+// =============================================================================
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Stripe-Signature, X-Hub-Signature-256, X-Slack-Signature, X-Slack-Request-Timestamp',
+};
+
+// ---------------------------------------------------------------------------
+// In-memory webhook event log
+// In production, persist these to a database or message queue (e.g., Redis,
+// AWS SQS, RabbitMQ) for reliable processing.
+// ---------------------------------------------------------------------------
+const webhookLog = [];
+const MAX_LOG_SIZE = 500;
+
+// ---------------------------------------------------------------------------
+// Stripe webhook signature validation (commented out)
+// ---------------------------------------------------------------------------
+/*
+import Stripe from 'stripe';
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+function validateStripeSignature(req) {
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!sig || !webhookSecret) {
+    throw new Error('Missing Stripe signature or webhook secret');
+  }
+
+  // IMPORTANT: For Vercel, you need the raw body.
+  // In vercel.json, set: "functions": { "api/webhook.js": { "maxDuration": 30 } }
+  // And configure the route to pass raw body:
+  //   export const config = { api: { bodyParser: false } };
+  //
+  // Then read raw body:
+  //   const chunks = [];
+  //   for await (const chunk of req) { chunks.push(chunk); }
+  //   const rawBody = Buffer.concat(chunks).toString('utf8');
+
+  const event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+  return event;
+}
+
+async function handleStripeEvent(event) {
+  switch (event.type) {
+    case 'checkout.session.completed': {
+      const session = event.data.object;
+      console.log(`Payment completed: ${session.id}, amount: ${session.amount_total}`);
+      // Update user subscription in your database
+      // await db.users.update({ stripeCustomerId: session.customer }, { plan: 'pro' });
+      break;
+    }
+    case 'customer.subscription.updated': {
+      const subscription = event.data.object;
+      console.log(`Subscription updated: ${subscription.id}, status: ${subscription.status}`);
+      // Sync subscription status
+      break;
+    }
+    case 'customer.subscription.deleted': {
+      const subscription = event.data.object;
+      console.log(`Subscription cancelled: ${subscription.id}`);
+      // Downgrade user to free plan
+      break;
+    }
+    case 'invoice.payment_failed': {
+      const invoice = event.data.object;
+      console.log(`Payment failed: ${invoice.id}`);
+      // Send payment failure notification
+      break;
+    }
+    default:
+      console.log(`Unhandled Stripe event: ${event.type}`);
+  }
+}
+*/
+
+// ---------------------------------------------------------------------------
+// GitHub webhook signature validation (commented out)
+// ---------------------------------------------------------------------------
+/*
+import crypto from 'crypto';
+
+function validateGitHubSignature(req, rawBody) {
+  const signature = req.headers['x-hub-signature-256'];
+  const secret = process.env.GITHUB_WEBHOOK_SECRET;
+
+  if (!signature || !secret) {
+    throw new Error('Missing GitHub signature or webhook secret');
+  }
+
+  const hmac = crypto.createHmac('sha256', secret);
+  const digest = 'sha256=' + hmac.update(rawBody).digest('hex');
+
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest))) {
+    throw new Error('Invalid GitHub webhook signature');
+  }
+
+  return true;
+}
+
+async function handleGitHubEvent(event, payload) {
+  switch (event) {
+    case 'push':
+      console.log(`Push to ${payload.repository?.full_name}: ${payload.commits?.length} commits`);
+      break;
+    case 'pull_request':
+      console.log(`PR ${payload.action}: ${payload.pull_request?.title}`);
+      break;
+    case 'issues':
+      console.log(`Issue ${payload.action}: ${payload.issue?.title}`);
+      break;
+    default:
+      console.log(`GitHub event: ${event}`);
+  }
+}
+*/
+
+// ---------------------------------------------------------------------------
+// Slack webhook signature validation (commented out)
+// ---------------------------------------------------------------------------
+/*
+import crypto from 'crypto';
+
+function validateSlackSignature(req, rawBody) {
+  const timestamp = req.headers['x-slack-request-timestamp'];
+  const signature = req.headers['x-slack-signature'];
+  const signingSecret = process.env.SLACK_SIGNING_SECRET;
+
+  if (!timestamp || !signature || !signingSecret) {
+    throw new Error('Missing Slack signature headers or signing secret');
+  }
+
+  // Check timestamp is within 5 minutes to prevent replay attacks
+  const fiveMinutesAgo = Math.floor(Date.now() / 1000) - (60 * 5);
+  if (parseInt(timestamp, 10) < fiveMinutesAgo) {
+    throw new Error('Slack request timestamp too old');
+  }
+
+  const sigBaseString = `v0:${timestamp}:${rawBody}`;
+  const mySignature = 'v0=' + crypto
+    .createHmac('sha256', signingSecret)
+    .update(sigBaseString)
+    .digest('hex');
+
+  if (!crypto.timingSafeEqual(Buffer.from(mySignature), Buffer.from(signature))) {
+    throw new Error('Invalid Slack webhook signature');
+  }
+
+  return true;
+}
+*/
+
+// ---------------------------------------------------------------------------
+// Apollo.io webhook handler (commented out)
+// ---------------------------------------------------------------------------
+/*
+async function handleApolloEvent(payload) {
+  // Apollo webhook events typically include:
+  // - contact.created
+  // - contact.updated
+  // - sequence.completed
+  // - email.opened
+  // - email.replied
+
+  const eventType = payload.event_type || payload.type;
+
+  switch (eventType) {
+    case 'contact.created':
+      console.log(`New Apollo contact: ${payload.data?.email}`);
+      // Sync new lead to your database
+      break;
+    case 'email.replied':
+      console.log(`Email reply from: ${payload.data?.email}`);
+      // Update lead status to "replied"
+      break;
+    case 'sequence.completed':
+      console.log(`Sequence completed for: ${payload.data?.email}`);
+      // Mark sequence as complete, schedule follow-up
+      break;
+    default:
+      console.log(`Apollo event: ${eventType}`);
+  }
+}
+*/
+
+// ---------------------------------------------------------------------------
+// Generic event processor (used for mock/demo mode)
+// ---------------------------------------------------------------------------
+function processWebhookEvent(source, payload, headers) {
+  const event = {
+    id: `wh_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+    source,
+    receivedAt: new Date().toISOString(),
+    eventType: payload.type || payload.event || payload.event_type || 'unknown',
+    payload: sanitizePayload(payload),
+    headers: {
+      contentType: headers['content-type'],
+      userAgent: headers['user-agent'],
+      // Capture relevant signature headers (but not the actual signatures for security)
+      hasStripeSignature: !!headers['stripe-signature'],
+      hasGitHubSignature: !!headers['x-hub-signature-256'],
+      hasSlackSignature: !!headers['x-slack-signature'],
+    },
+    processed: true,
+    processingTimeMs: 0,
+  };
+
+  return event;
+}
+
+// Remove sensitive fields from payload before logging
+function sanitizePayload(payload) {
+  const sanitized = { ...payload };
+  const sensitiveFields = ['password', 'secret', 'token', 'api_key', 'apiKey', 'credit_card', 'ssn'];
+
+  for (const field of sensitiveFields) {
+    if (sanitized[field]) {
+      sanitized[field] = '[REDACTED]';
+    }
+  }
+
+  return sanitized;
+}
+
+// ---------------------------------------------------------------------------
+// Main handler
+// ---------------------------------------------------------------------------
+export default async function handler(req, res) {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, CORS_HEADERS);
+    return res.end();
+  }
+
+  Object.entries(CORS_HEADERS).forEach(([key, value]) => {
+    res.setHeader(key, value);
+  });
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({
+      error: 'Method not allowed. Use POST.',
+      usage: {
+        method: 'POST',
+        queryParams: {
+          source: 'stripe | apollo | github | slack | custom',
+        },
+        body: 'JSON payload from the external service',
+        examples: {
+          stripe: 'POST /api/webhook?source=stripe (with Stripe-Signature header)',
+          apollo: 'POST /api/webhook?source=apollo',
+          github: 'POST /api/webhook?source=github (with X-Hub-Signature-256 header)',
+          custom: 'POST /api/webhook?source=custom (any JSON body)',
+        },
+      },
+    });
+  }
+
+  const startTime = Date.now();
+
+  try {
+    const { source = 'custom' } = req.query;
+    const payload = req.body || {};
+    const validSources = ['stripe', 'apollo', 'github', 'slack', 'custom'];
+
+    if (!validSources.includes(source)) {
+      return res.status(400).json({
+        error: `Invalid source "${source}". Valid sources: ${validSources.join(', ')}`,
+      });
+    }
+
+    // -------------------------------------------------------------------
+    // Source-specific validation and handling
+    // In production, uncomment the validation functions above and use them.
+    // -------------------------------------------------------------------
+
+    let signatureValid = false;
+    let signatureChecked = false;
+
+    switch (source) {
+      case 'stripe': {
+        // In production:
+        // const event = validateStripeSignature(req);
+        // await handleStripeEvent(event);
+        // signatureValid = true;
+        // signatureChecked = true;
+
+        const secret = process.env.STRIPE_WEBHOOK_SECRET;
+        signatureChecked = !!secret;
+        signatureValid = false; // Not actually validated in mock mode
+        console.log(`[Webhook] Stripe event received: ${payload.type || 'unknown'}`);
+        break;
+      }
+
+      case 'apollo': {
+        // In production:
+        // await handleApolloEvent(payload);
+
+        console.log(`[Webhook] Apollo event received: ${payload.event_type || payload.type || 'unknown'}`);
+        break;
+      }
+
+      case 'github': {
+        // In production:
+        // validateGitHubSignature(req, JSON.stringify(payload));
+        // const event = req.headers['x-github-event'] || 'unknown';
+        // await handleGitHubEvent(event, payload);
+
+        const secret = process.env.GITHUB_WEBHOOK_SECRET;
+        signatureChecked = !!secret;
+        signatureValid = false;
+        console.log(`[Webhook] GitHub event received: ${req.headers['x-github-event'] || payload.action || 'unknown'}`);
+        break;
+      }
+
+      case 'slack': {
+        // In production:
+        // validateSlackSignature(req, JSON.stringify(payload));
+
+        // Slack URL verification challenge
+        if (payload.type === 'url_verification' && payload.challenge) {
+          return res.status(200).json({ challenge: payload.challenge });
+        }
+
+        const secret = process.env.SLACK_SIGNING_SECRET;
+        signatureChecked = !!secret;
+        signatureValid = false;
+        console.log(`[Webhook] Slack event received: ${payload.event?.type || payload.type || 'unknown'}`);
+        break;
+      }
+
+      case 'custom':
+      default:
+        console.log(`[Webhook] Custom event received`);
+        break;
+    }
+
+    // Process and log the event
+    const event = processWebhookEvent(source, payload, req.headers);
+    event.processingTimeMs = Date.now() - startTime;
+    event.signatureValidation = {
+      checked: signatureChecked,
+      valid: signatureValid,
+      note: signatureChecked
+        ? 'Signature validation configured but running in mock mode'
+        : 'No webhook secret configured for this source',
+    };
+
+    // Add to in-memory log
+    webhookLog.push(event);
+    if (webhookLog.length > MAX_LOG_SIZE) {
+      webhookLog.splice(0, webhookLog.length - MAX_LOG_SIZE);
+    }
+
+    return res.status(200).json({
+      received: true,
+      eventId: event.id,
+      source,
+      eventType: event.eventType,
+      processedAt: event.receivedAt,
+      processingTimeMs: event.processingTimeMs,
+      signatureValidation: event.signatureValidation,
+      _meta: {
+        totalEventsLogged: webhookLog.length,
+        storageType: 'in-memory',
+        note: 'Webhook events are logged in-memory. Connect a database or message queue for production use.',
+        secretsNeeded: {
+          stripe: {
+            envVar: 'STRIPE_WEBHOOK_SECRET',
+            configured: !!process.env.STRIPE_WEBHOOK_SECRET,
+            getKeyAt: 'https://dashboard.stripe.com/webhooks',
+          },
+          apollo: {
+            envVar: 'APOLLO_WEBHOOK_SECRET',
+            configured: !!process.env.APOLLO_WEBHOOK_SECRET,
+            getKeyAt: 'https://app.apollo.io/',
+          },
+          github: {
+            envVar: 'GITHUB_WEBHOOK_SECRET',
+            configured: !!process.env.GITHUB_WEBHOOK_SECRET,
+            getKeyAt: 'Set in GitHub repo Settings -> Webhooks',
+          },
+          slack: {
+            envVar: 'SLACK_SIGNING_SECRET',
+            configured: !!process.env.SLACK_SIGNING_SECRET,
+            getKeyAt: 'https://api.slack.com/apps',
+          },
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Webhook processing error:', error);
+
+    // For signature validation failures, return 401
+    if (error.message.includes('signature') || error.message.includes('Signature')) {
+      return res.status(401).json({
+        error: 'Webhook signature validation failed',
+        message: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+    });
+  }
+}

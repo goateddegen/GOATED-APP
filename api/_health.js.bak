@@ -1,0 +1,218 @@
+// =============================================================================
+// GOATED Solutions - System Health Check API
+// =============================================================================
+// Endpoint: GET /api/health
+//
+// Returns real system health data including:
+//   - API response time (self-check)
+//   - Memory usage (process.memoryUsage())
+//   - Uptime (process.uptime())
+//   - Environment variable status (which API keys are configured)
+//   - Node.js version and platform info
+//
+// No API keys required. This is a diagnostic endpoint.
+// =============================================================================
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// ---------------------------------------------------------------------------
+// List of environment variables the app cares about
+// ---------------------------------------------------------------------------
+const ENV_VARS_TO_CHECK = [
+  { name: 'ANTHROPIC_API_KEY', label: 'Anthropic (Claude AI)', required: true, getKeyAt: 'https://console.anthropic.com/' },
+  { name: 'APOLLO_API_KEY', label: 'Apollo.io (Lead Data)', required: false, getKeyAt: 'https://app.apollo.io/' },
+  { name: 'ZOOMINFO_API_KEY', label: 'ZoomInfo (Lead Data)', required: false, getKeyAt: 'https://www.zoominfo.com/' },
+  { name: 'CLEARBIT_API_KEY', label: 'Clearbit (Lead Data)', required: false, getKeyAt: 'https://dashboard.clearbit.com/' },
+  { name: 'STRIPE_SECRET_KEY', label: 'Stripe (Payments)', required: false, getKeyAt: 'https://dashboard.stripe.com/apikeys' },
+  { name: 'STRIPE_WEBHOOK_SECRET', label: 'Stripe Webhook Signing', required: false, getKeyAt: 'https://dashboard.stripe.com/webhooks' },
+  { name: 'TWITTER_BEARER_TOKEN', label: 'Twitter/X (Trends)', required: false, getKeyAt: 'https://developer.twitter.com/' },
+  { name: 'SERPAPI_KEY', label: 'SerpAPI (Google Trends)', required: false, getKeyAt: 'https://serpapi.com/' },
+  { name: 'TIKTOK_API_KEY', label: 'TikTok (Trends)', required: false, getKeyAt: 'https://developers.tiktok.com/' },
+  { name: 'DATABASE_URL', label: 'Database Connection', required: false, getKeyAt: null },
+  { name: 'REDIS_URL', label: 'Redis (Caching)', required: false, getKeyAt: null },
+];
+
+// ---------------------------------------------------------------------------
+// Format bytes to human-readable
+// ---------------------------------------------------------------------------
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+}
+
+// ---------------------------------------------------------------------------
+// Format seconds to human-readable
+// ---------------------------------------------------------------------------
+function formatUptime(seconds) {
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  const parts = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  parts.push(`${secs}s`);
+
+  return parts.join(' ');
+}
+
+// ---------------------------------------------------------------------------
+// Main handler
+// ---------------------------------------------------------------------------
+export default async function handler(req, res) {
+  const startTime = Date.now();
+
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, CORS_HEADERS);
+    return res.end();
+  }
+
+  Object.entries(CORS_HEADERS).forEach(([key, value]) => {
+    res.setHeader(key, value);
+  });
+
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed. Use GET.' });
+  }
+
+  try {
+    // -----------------------------------------------------------------------
+    // Memory usage
+    // -----------------------------------------------------------------------
+    const memUsage = process.memoryUsage();
+    const memory = {
+      rss: {
+        bytes: memUsage.rss,
+        formatted: formatBytes(memUsage.rss),
+        description: 'Resident Set Size - total memory allocated for the process',
+      },
+      heapTotal: {
+        bytes: memUsage.heapTotal,
+        formatted: formatBytes(memUsage.heapTotal),
+        description: 'Total size of the allocated heap',
+      },
+      heapUsed: {
+        bytes: memUsage.heapUsed,
+        formatted: formatBytes(memUsage.heapUsed),
+        description: 'Actual memory used during execution',
+      },
+      external: {
+        bytes: memUsage.external,
+        formatted: formatBytes(memUsage.external),
+        description: 'Memory used by C++ objects bound to JS objects',
+      },
+      arrayBuffers: {
+        bytes: memUsage.arrayBuffers || 0,
+        formatted: formatBytes(memUsage.arrayBuffers || 0),
+        description: 'Memory allocated for ArrayBuffers and SharedArrayBuffers',
+      },
+      heapUsagePercent: parseFloat(((memUsage.heapUsed / memUsage.heapTotal) * 100).toFixed(1)),
+    };
+
+    // -----------------------------------------------------------------------
+    // Uptime
+    // -----------------------------------------------------------------------
+    const uptimeSeconds = process.uptime();
+    const uptime = {
+      seconds: parseFloat(uptimeSeconds.toFixed(2)),
+      formatted: formatUptime(uptimeSeconds),
+    };
+
+    // -----------------------------------------------------------------------
+    // Environment variable checks (never expose actual values)
+    // -----------------------------------------------------------------------
+    const envStatus = ENV_VARS_TO_CHECK.map((envVar) => {
+      const isSet = !!process.env[envVar.name];
+      const value = process.env[envVar.name];
+      return {
+        name: envVar.name,
+        label: envVar.label,
+        configured: isSet,
+        required: envVar.required,
+        // Show masked preview (first 4 chars only) for configured keys
+        preview: isSet && value ? `${value.substring(0, 4)}...` : null,
+        getKeyAt: envVar.getKeyAt,
+        status: isSet ? 'ok' : envVar.required ? 'missing (required)' : 'not configured (optional)',
+      };
+    });
+
+    const requiredConfigured = envStatus.filter((e) => e.required && e.configured).length;
+    const requiredTotal = envStatus.filter((e) => e.required).length;
+    const optionalConfigured = envStatus.filter((e) => !e.required && e.configured).length;
+    const optionalTotal = envStatus.filter((e) => !e.required).length;
+
+    // -----------------------------------------------------------------------
+    // Runtime info
+    // -----------------------------------------------------------------------
+    const runtime = {
+      nodeVersion: process.version,
+      platform: process.platform,
+      arch: process.arch,
+      pid: process.pid,
+      env: process.env.VERCEL_ENV || process.env.NODE_ENV || 'development',
+      region: process.env.VERCEL_REGION || 'unknown',
+    };
+
+    // -----------------------------------------------------------------------
+    // Response time (self-check)
+    // -----------------------------------------------------------------------
+    const responseTimeMs = Date.now() - startTime;
+
+    // -----------------------------------------------------------------------
+    // Overall health determination
+    // -----------------------------------------------------------------------
+    const issues = [];
+
+    if (requiredConfigured < requiredTotal) {
+      issues.push(`${requiredTotal - requiredConfigured} required environment variable(s) missing`);
+    }
+    if (memory.heapUsagePercent > 90) {
+      issues.push(`High heap usage: ${memory.heapUsagePercent}%`);
+    }
+    if (responseTimeMs > 1000) {
+      issues.push(`Slow response time: ${responseTimeMs}ms`);
+    }
+
+    const overallStatus = issues.length === 0 ? 'healthy' : 'degraded';
+
+    return res.status(200).json({
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      responseTimeMs,
+      issues: issues.length > 0 ? issues : null,
+      checks: {
+        memory,
+        uptime,
+        environment: {
+          summary: {
+            required: `${requiredConfigured}/${requiredTotal} configured`,
+            optional: `${optionalConfigured}/${optionalTotal} configured`,
+          },
+          variables: envStatus,
+        },
+        runtime,
+      },
+      version: {
+        app: '1.0.0',
+        api: '1.0.0',
+      },
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    return res.status(500).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      responseTimeMs: Date.now() - startTime,
+      error: error.message,
+    });
+  }
+}
