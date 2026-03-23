@@ -6,8 +6,7 @@ import { GoatIcon } from './GoatLogo';
 const nav = [
   { id: 'home', icon: Home, label: 'Home', key: 'H' },
   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', key: 'D' },
-  { id: 'trends', icon: TrendingUp, label: 'TrendPulse', key: 'T', badge: 'LIVE' },
-  { id: 'market', icon: BarChart3, label: 'Markets', key: 'C', badge: 'ALPHA' },
+  { id: 'trends', icon: TrendingUp, label: 'TrendPulse & Markets', key: 'T', badge: 'ALPHA' },
   { id: 'leads', icon: Users, label: 'Leads', key: 'L' },
   { id: 'launchpad', icon: Rocket, label: 'LaunchPad', key: 'R', badge: 'NEW' },
   { id: 'casino', icon: Dice5, label: 'Casino', key: 'P', badge: 'LIVE' },

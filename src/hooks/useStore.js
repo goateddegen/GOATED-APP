@@ -384,7 +384,7 @@ function generateLeads(count = DEFAULT_LEAD_COUNT) {
     const status = statuses[(rand() * statLen) | 0];
     const score = (rand() * 100) | 0;
     const engagementScore = (rand() * 100) | 0;
-    const dealValue = ((rand() * 115000) | 0) + 5000;
+    const dealValue = ((rand() * 41500) | 0) + 8500;
     const employees = ((rand() * 495) | 0) + 5;
     const revenue = ((rand() * 19900000) | 0) + 100000;
 
