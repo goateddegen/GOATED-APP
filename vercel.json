@@ -30,18 +30,5 @@
         { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" }
       ]
     }
-  ],
-  "functions": {
-    "api/leads.js": { "maxDuration": 30 },
-    "api/market-data.js": { "maxDuration": 15 },
-    "api/chat.js": { "maxDuration": 60 },
-    "api/plays.js": { "maxDuration": 10 },
-    "api/intelligence.js": { "maxDuration": 30 },
-    "api/dashboard.js": { "maxDuration": 15 },
-    "api/kalshi.js": { "maxDuration": 15 },
-    "api/polymarket.js": { "maxDuration": 15 },
-    "api/sentiment.js": { "maxDuration": 15 },
-    "api/trends.js": { "maxDuration": 15 },
-    "api/goated-ai.js": { "maxDuration": 30 }
-  }
+  ]
 }
