@@ -21,7 +21,7 @@ export default function SearchModal() {
       leads: leads.filter(l => l.name.toLowerCase().includes(query) || l.company.toLowerCase().includes(query) || l.industry.toLowerCase().includes(query)).slice(0, 8),
       pages: [
         { id: 'home', name: 'Home' }, { id: 'dashboard', name: 'Dashboard' }, { id: 'leads', name: 'Leads' },
-        { id: 'trends', name: 'Trend Pulse' }, { id: 'market', name: 'Markets' },
+        { id: 'trends', name: 'TrendPulse & Markets' },
         { id: 'wallet', name: 'Wallet' }, { id: 'launchpad', name: 'LaunchPad' }, { id: 'casino', name: 'Casino' }, { id: 'admin', name: 'Admin' },
       ].filter(p => p.name.toLowerCase().includes(query)),
       actions: [

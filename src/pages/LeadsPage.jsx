@@ -493,13 +493,13 @@ function RevenueIntelligencePanel({ leads, allLeads }) {
   const [reportLeadIdx, setReportLeadIdx] = useState(null);
 
   const stats = useMemo(() => {
-    const totalPipeline = allLeads.reduce((s, l) => s + (l.dealValue || 0), 0);
-    const lostLeads = allLeads.filter(l => l.status === 'lost' || l.status === 'unresponsive');
-    const lostRevenue = lostLeads.reduce((s, l) => s + (l.dealValue || 0), 0);
-    const wonLeads = allLeads.filter(l => l.status === 'won');
-    const totalDecided = wonLeads.length + lostLeads.length;
-    const closeRate = totalDecided > 0 ? Math.round((wonLeads.length / totalDecided) * 100) : 0;
-    const revenuePerDeal = wonLeads.length > 0 ? Math.round(wonLeads.reduce((s, l) => s + (l.dealValue || 0), 0) / wonLeads.length) : 0;
+    // PRE-REVENUE: All revenue/pipeline figures are $0 until real transactions flow
+    const totalPipeline = 0;
+    const lostRevenue = 0;
+    const closeRate = 0;
+    const revenuePerDeal = 0;
+    const wonLeads = [];
+    const lostLeads = [];
 
     // Aggregate deficit data across visible leads
     let totalMonthlyDeficit = 0;
@@ -733,8 +733,9 @@ function MoneyMachinePanel({ allLeads, onSelect }) {
 
   const toggleStep = (key) => setCheckedSteps(prev => ({ ...prev, [key]: !prev[key] }));
 
-  const wonDeals = useMemo(() => allLeads.filter(l => l.status === 'won'), [allLeads]);
-  const currentMRR = useMemo(() => wonDeals.reduce((s, l) => s + (l.dealValue || 0) * 0.12, 0), [wonDeals]);
+  // PRE-REVENUE: $0 MRR until real transactions flow
+  const wonDeals = useMemo(() => [], [allLeads]);
+  const currentMRR = 0;
   const mrrGoal = 25000;
   const mrrPct = Math.min(100, (currentMRR / mrrGoal) * 100);
 
@@ -1961,34 +1962,34 @@ function DataSourceBadge({ source }) {
 // Multiplayer Closing Ecosystem — Mock Data
 // ---------------------------------------------------------------------------
 const CLOSER_LEADERBOARD = [
-  { id: 1, username: '@closerking', avatar: 'CK', deals: 47, revenue: 823500, closeRate: 94, streak: 12, isCurrentUser: false },
-  { id: 2, username: '@degenalpha', avatar: 'DA', deals: 41, revenue: 712000, closeRate: 91, streak: 8, isCurrentUser: false },
-  { id: 3, username: '@wolfofdeals', avatar: 'WD', deals: 38, revenue: 695000, closeRate: 89, streak: 15, isCurrentUser: false },
-  { id: 4, username: '@salesgoat', avatar: 'SG', deals: 35, revenue: 580000, closeRate: 87, streak: 6, isCurrentUser: true },
-  { id: 5, username: '@pipeline_god', avatar: 'PG', deals: 33, revenue: 545000, closeRate: 85, streak: 10, isCurrentUser: false },
-  { id: 6, username: '@commission_queen', avatar: 'CQ', deals: 31, revenue: 498000, closeRate: 83, streak: 4, isCurrentUser: false },
-  { id: 7, username: '@deal_surgeon', avatar: 'DS', deals: 28, revenue: 462000, closeRate: 81, streak: 7, isCurrentUser: false },
-  { id: 8, username: '@rev_hunter', avatar: 'RH', deals: 26, revenue: 415000, closeRate: 79, streak: 3, isCurrentUser: false },
-  { id: 9, username: '@cold_call_king', avatar: 'CC', deals: 24, revenue: 388000, closeRate: 77, streak: 5, isCurrentUser: false },
-  { id: 10, username: '@quota_crusher', avatar: 'QC', deals: 22, revenue: 351000, closeRate: 75, streak: 2, isCurrentUser: false },
+  { id: 1, username: '@closerking', avatar: 'CK', deals: 0, revenue: 0, closeRate: 0, streak: 0, isCurrentUser: false },
+  { id: 2, username: '@degenalpha', avatar: 'DA', deals: 0, revenue: 0, closeRate: 0, streak: 0, isCurrentUser: false },
+  { id: 3, username: '@wolfofdeals', avatar: 'WD', deals: 0, revenue: 0, closeRate: 0, streak: 0, isCurrentUser: false },
+  { id: 4, username: '@salesgoat', avatar: 'SG', deals: 0, revenue: 0, closeRate: 0, streak: 0, isCurrentUser: true },
+  { id: 5, username: '@pipeline_god', avatar: 'PG', deals: 0, revenue: 0, closeRate: 0, streak: 0, isCurrentUser: false },
+  { id: 6, username: '@commission_queen', avatar: 'CQ', deals: 0, revenue: 0, closeRate: 0, streak: 0, isCurrentUser: false },
+  { id: 7, username: '@deal_surgeon', avatar: 'DS', deals: 0, revenue: 0, closeRate: 0, streak: 0, isCurrentUser: false },
+  { id: 8, username: '@rev_hunter', avatar: 'RH', deals: 0, revenue: 0, closeRate: 0, streak: 0, isCurrentUser: false },
+  { id: 9, username: '@cold_call_king', avatar: 'CC', deals: 0, revenue: 0, closeRate: 0, streak: 0, isCurrentUser: false },
+  { id: 10, username: '@quota_crusher', avatar: 'QC', deals: 0, revenue: 0, closeRate: 0, streak: 0, isCurrentUser: false },
 ];
 
 const CLOSING_FEED_TEMPLATES = [
-  { username: '@closerking', amount: 15000, company: 'Flowstate.io' },
-  { username: '@degenalpha', amount: 22000, company: 'NimbusOps' },
-  { username: '@wolfofdeals', amount: 8500, company: 'BrightPath Labs' },
-  { username: '@pipeline_god', amount: 31000, company: 'QuantumLeap' },
-  { username: '@commission_queen', amount: 12000, company: 'SyncWave' },
-  { username: '@salesgoat', amount: 45000, company: 'MetricFlow' },
-  { username: '@deal_surgeon', amount: 19500, company: 'EdgeSync' },
-  { username: '@rev_hunter', amount: 7800, company: 'GridPoint' },
-  { username: '@cold_call_king', amount: 28000, company: 'VelocityAI' },
-  { username: '@quota_crusher', amount: 11200, company: 'PrismLogic' },
-  { username: '@closerking', amount: 52000, company: 'Apex Plumbing' },
-  { username: '@degenalpha', amount: 16500, company: 'Summit Marketing' },
-  { username: '@wolfofdeals', amount: 38000, company: 'TerraNode' },
-  { username: '@pipeline_god', amount: 9200, company: 'Ironclad Creative' },
-  { username: '@commission_queen', amount: 27000, company: 'HyperLoop Labs' },
+  { username: '@closerking', amount: 0, company: 'Flowstate.io' },
+  { username: '@degenalpha', amount: 0, company: 'NimbusOps' },
+  { username: '@wolfofdeals', amount: 0, company: 'BrightPath Labs' },
+  { username: '@pipeline_god', amount: 0, company: 'QuantumLeap' },
+  { username: '@commission_queen', amount: 0, company: 'SyncWave' },
+  { username: '@salesgoat', amount: 0, company: 'MetricFlow' },
+  { username: '@deal_surgeon', amount: 0, company: 'EdgeSync' },
+  { username: '@rev_hunter', amount: 0, company: 'GridPoint' },
+  { username: '@cold_call_king', amount: 0, company: 'VelocityAI' },
+  { username: '@quota_crusher', amount: 0, company: 'PrismLogic' },
+  { username: '@closerking', amount: 0, company: 'Apex Plumbing' },
+  { username: '@degenalpha', amount: 0, company: 'Summit Marketing' },
+  { username: '@wolfofdeals', amount: 0, company: 'TerraNode' },
+  { username: '@pipeline_god', amount: 0, company: 'Ironclad Creative' },
+  { username: '@commission_queen', amount: 0, company: 'HyperLoop Labs' },
 ];
 
 const BET_ODDS = [
@@ -2020,9 +2021,9 @@ function rankIcon(rank) {
 // CloserLeaderboard Component
 // ---------------------------------------------------------------------------
 function CloserLeaderboard({ degenMode, showToast }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [bets, setBets] = useState({}); // { closerId: 'yes' | 'no' }
-  const [goatBalance] = useState(24750); // Simulated GOAT token balance
+  const [goatBalance] = useState(0); // Pre-revenue: no GOAT tokens yet
 
   const handleBet = (closerId, side) => {
     setBets(prev => ({ ...prev, [closerId]: prev[closerId] === side ? null : side }));
@@ -2188,7 +2189,7 @@ function SocialClosingFeed({ showToast }) {
     }
     return initial;
   });
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const nextIdRef = useRef(100);
 
   useEffect(() => {
@@ -2863,17 +2864,6 @@ export default function LeadsPage({ onSelect }) {
         </div>
       )}
 
-      {/* Revenue Intelligence Panel */}
-      <RevenueIntelligencePanel leads={leads} allLeads={activeLeads} />
-
-      {/* GOATED Money Machine */}
-      <MoneyMachinePanel allLeads={activeLeads} onSelect={handleSelectLead} />
-
-      {/* ── Multiplayer Closing Ecosystem ── */}
-      <CloserLeaderboard degenMode={degenMode} showToast={showToast} />
-      <SocialClosingFeed showToast={showToast} />
-      <CreatorProgramBanner showToast={showToast} />
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <div className="flex items-center gap-3">
@@ -3342,6 +3332,21 @@ export default function LeadsPage({ onSelect }) {
           </div>
         </div>
       </div>
+
+      {/* Revenue Intelligence Panel — collapsed by default */}
+      <RevenueIntelligencePanel leads={leads} allLeads={activeLeads} />
+
+      {/* GOATED Money Machine — collapsed by default */}
+      <MoneyMachinePanel allLeads={activeLeads} onSelect={handleSelectLead} />
+
+      {/* ── Multiplayer Closing Ecosystem (degen mode only, collapsed by default) ── */}
+      {degenMode && (
+        <>
+          <CloserLeaderboard degenMode={degenMode} showToast={showToast} />
+          <SocialClosingFeed showToast={showToast} />
+          <CreatorProgramBanner showToast={showToast} />
+        </>
+      )}
     </div>
   );
 }

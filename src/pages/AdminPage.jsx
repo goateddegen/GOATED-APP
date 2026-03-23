@@ -859,27 +859,27 @@ export default function AdminPage() {
     }));
   }, []);
 
-  // User analytics mock data
+  // User analytics — PRE-REVENUE: all zeros until real analytics are connected
   const userAnalytics = useMemo(() => ({
-    dau: 12847,
-    wau: 48293,
-    mau: 156420,
-    dauTrend: generateSparkData(12847, 2000),
-    wauTrend: generateSparkData(48293, 5000),
-    mauTrend: generateSparkData(156420, 10000),
+    dau: 0,
+    wau: 0,
+    mau: 0,
+    dauTrend: generateSparkData(0, 0),
+    wauTrend: generateSparkData(0, 0),
+    mauTrend: generateSparkData(0, 0),
     funnel: [
-      { stage: 'Visitors', count: 284300, pct: 100 },
-      { stage: 'Signups', count: 42645, pct: 15 },
-      { stage: 'Active', count: 12847, pct: 4.5 },
-      { stage: 'Paid', count: 3854, pct: 1.35 },
+      { stage: 'Visitors', count: 0, pct: 0 },
+      { stage: 'Signups', count: 0, pct: 0 },
+      { stage: 'Active', count: 0, pct: 0 },
+      { stage: 'Paid', count: 0, pct: 0 },
     ],
     topPages: [
-      { path: '/dashboard', views: 89420, pct: 31.4 },
-      { path: '/leads', views: 72310, pct: 25.4 },
-      { path: '/market', views: 45890, pct: 16.1 },
-      { path: '/trends', views: 34200, pct: 12.0 },
-      { path: '/wallet', views: 24680, pct: 8.7 },
-      { path: '/admin', views: 18100, pct: 6.4 },
+      { path: '/dashboard', views: 0, pct: 0 },
+      { path: '/leads', views: 0, pct: 0 },
+      { path: '/market', views: 0, pct: 0 },
+      { path: '/trends', views: 0, pct: 0 },
+      { path: '/wallet', views: 0, pct: 0 },
+      { path: '/admin', views: 0, pct: 0 },
     ],
   }), []);
 
@@ -1142,14 +1142,14 @@ export default function AdminPage() {
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* 3. USER ANALYTICS                                                    */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
-      <Section title="User Analytics" icon={Users} delay={0.06} badge={`${fmt(userAnalytics.dau)} DAU`}>
+      <Section title="User Analytics" icon={Users} delay={0.06} badge="Pre-Revenue">
         <div className="space-y-5">
           {/* DAU / WAU / MAU */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {[
-              { label: 'Daily Active Users', value: fmt(userAnalytics.dau), trend: userAnalytics.dauTrend, color: '#10b981', change: '+4.2%' },
-              { label: 'Weekly Active Users', value: fmt(userAnalytics.wau), trend: userAnalytics.wauTrend, color: '#3b82f6', change: '+7.8%' },
-              { label: 'Monthly Active Users', value: fmt(userAnalytics.mau), trend: userAnalytics.mauTrend, color: '#a855f7', change: '+12.3%' },
+              { label: 'Daily Active Users', value: fmt(userAnalytics.dau), trend: userAnalytics.dauTrend, color: '#10b981', change: 'No Data' },
+              { label: 'Weekly Active Users', value: fmt(userAnalytics.wau), trend: userAnalytics.wauTrend, color: '#3b82f6', change: 'No Data' },
+              { label: 'Monthly Active Users', value: fmt(userAnalytics.mau), trend: userAnalytics.mauTrend, color: '#a855f7', change: 'No Data' },
             ].map((m, i) => (
               <motion.div key={m.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}
                 className="px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">

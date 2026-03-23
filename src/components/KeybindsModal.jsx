@@ -9,8 +9,7 @@ const sections = [
     keys: [
       { key: 'H', label: 'Home', icon: Home, color: '#10b981' },
       { key: 'D', label: 'Dashboard', icon: LayoutDashboard, color: '#06b6d4' },
-      { key: 'T', label: 'TrendPulse', icon: TrendingUp, color: '#a855f7' },
-      { key: 'C', label: 'Markets', icon: BarChart3, color: '#f97316' },
+      { key: 'T/C', label: 'TrendPulse & Markets', icon: TrendingUp, color: '#a855f7' },
       { key: 'L', label: 'Leads', icon: Users, color: '#f59e0b' },
       { key: 'R', label: 'LaunchPad', icon: Rocket, color: '#ec4899' },
       { key: 'P', label: 'Casino', icon: Dice5, color: '#eab308' },

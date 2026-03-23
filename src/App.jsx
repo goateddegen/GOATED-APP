@@ -354,7 +354,7 @@ export default function App() {
       // If keybinds modal is open, handle navigation keys then close
       if (state.keybindsOpen) {
         e.preventDefault();
-        const keybindNav = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'market', w: 'wallet', x: 'admin', u: 'whop', p: 'casino', m: 'market', r: 'launchpad' };
+        const keybindNav = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', u: 'whop', p: 'casino', m: 'trends', r: 'launchpad' };
         const target = keybindNav[key];
         setKeybindsOpen(false);
         if (target) { navTo(target); }
@@ -382,7 +382,7 @@ export default function App() {
       if (hasModifier) return;
 
       // Navigation map — single lookup
-      const navMap = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'market', w: 'wallet', x: 'admin', u: 'whop', r: 'launchpad', p: 'casino' };
+      const navMap = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', u: 'whop', r: 'launchpad', p: 'casino' };
       const navTarget = navMap[key];
       if (navTarget) {
         e.preventDefault();
@@ -410,7 +410,7 @@ export default function App() {
       case 'dashboard': return <DashboardPage onSelect={selectLead} />;
       case 'leads': return <LeadsPage onSelect={selectLead} />;
       case 'trends': return <TrendsPage />;
-      case 'market': return <TrendsPage />;
+      case 'market': return <TrendsPage />; // legacy route — C key now maps to trends
       case 'wallet': return <WalletPage />;
       case 'admin': return <AdminPage />;
       case 'builder': return <BuilderPage />;

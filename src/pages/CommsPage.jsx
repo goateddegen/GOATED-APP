@@ -85,14 +85,14 @@ const INBOX_CONVERSATIONS = [
 ];
 
 const CHAT_MESSAGES = [
-  { id: 'm1', sender: CONTACTS[0], text: 'Hey team, just closed the TechVault deal! $185K ARR', time: generateTimestamp(120), reactions: [{ emoji: '\u{1F389}', count: 5 }, { emoji: '\u{1F525}', count: 3 }], thread: 2 },
+  { id: 'm1', sender: CONTACTS[0], text: 'Hey team, just onboarded TechVault for the pilot program!', time: generateTimestamp(120), reactions: [{ emoji: '\u{1F389}', count: 5 }, { emoji: '\u{1F525}', count: 3 }], thread: 2 },
   { id: 'm2', sender: CONTACTS[1], text: 'Amazing work Sarah! What was the key differentiator?', time: generateTimestamp(115), reactions: [], thread: null },
   { id: 'm3', sender: CONTACTS[0], text: 'The AI lead scoring was a game changer. They loved how it predicted churn risk.', time: generateTimestamp(110), reactions: [{ emoji: '\u{1F44F}', count: 2 }], thread: null },
   { id: 'm4', sender: CONTACTS[4], text: 'Speaking of AI features, has anyone tested the new auto-follow-up sequences?', time: generateTimestamp(90), reactions: [], thread: 4 },
   { id: 'm5', sender: CONTACTS[6], text: 'Yes! Set one up for our Q1 campaign. Open rates are up 34% compared to manual outreach.', time: generateTimestamp(85), reactions: [{ emoji: '\u{1F4C8}', count: 1 }], thread: null },
   { id: 'm6', sender: CONTACTS[7], text: 'Can we get a walkthrough of the new dialer integration? My team needs to set up call recording.', time: generateTimestamp(60), reactions: [], thread: 3 },
   { id: 'm7', sender: CONTACTS[1], text: '@Ahmed sure thing - I\'ll set up a 15 min session. The transcription quality is excellent.', time: generateTimestamp(55), reactions: [{ emoji: '\u{1F44D}', count: 1 }], thread: null },
-  { id: 'm8', sender: CONTACTS[8], text: 'Quick update: Velocity Partners renewal is confirmed. $520K for 2 years!', time: generateTimestamp(30), reactions: [{ emoji: '\u{1F389}', count: 8 }, { emoji: '\u{1F4B0}', count: 4 }, { emoji: '\u{1F680}', count: 6 }], thread: null },
+  { id: 'm8', sender: CONTACTS[8], text: 'Quick update: Velocity Partners confirmed interest in the beta program!', time: generateTimestamp(30), reactions: [{ emoji: '\u{1F389}', count: 8 }, { emoji: '\u{1F4B0}', count: 4 }, { emoji: '\u{1F680}', count: 6 }], thread: null },
   { id: 'm9', sender: CONTACTS[2], text: 'Congrats Rachel! We should feature this in the next all-hands.', time: generateTimestamp(25), reactions: [], thread: null },
   { id: 'm10', sender: CONTACTS[5], text: 'Don\'t forget team standup in 10 minutes. Agenda: pipeline review, new feature demo, Q1 targets.', time: generateTimestamp(10), reactions: [{ emoji: '\u{2705}', count: 6 }], thread: null },
   { id: 'm11', sender: CONTACTS[0], text: 'Also, I shared a new case study template in #marketing. Check it out!', time: generateTimestamp(5), reactions: [], thread: null },
@@ -116,7 +116,7 @@ const VOICEMAILS = [
 ];
 
 const PINNED_MESSAGES = [
-  { id: 'pin-1', sender: CONTACTS[8], text: 'Q1 target: $2.4M ARR. Current progress: $1.8M (75%). Let\'s push!', time: generateTimestamp(2880) },
+  { id: 'pin-1', sender: CONTACTS[8], text: 'Pre-revenue phase. Focus on product, onboarding, and first 100 users. LFG!', time: generateTimestamp(2880) },
   { id: 'pin-2', sender: CONTACTS[1], text: 'New feature release: AI Call Transcription is live. Enable in Settings > Integrations.', time: generateTimestamp(4320) },
 ];
 
@@ -812,8 +812,8 @@ function ChatArea({ selectedConversation, activeChannel, onChannelChange, messag
         <Bot size={12} style={{ color: '#00ff88' }} />
         <span style={{ color: 'rgba(0,255,136,0.7)' }}>
           <strong className="font-semibold" style={{ color: '#00ff88' }}>AI Summary:</strong>
-          {' '}12 messages today. Key topics: deal closings, AI feature adoption, Q1 targets at 75%.
-          Sarah closed TechVault ($185K), Rachel renewed Velocity ($520K).
+          {' '}12 messages today. Key topics: onboarding, AI feature adoption, beta program updates.
+          Sarah onboarded TechVault, Rachel confirmed Velocity Partners for beta.
         </span>
         <button className="ml-auto flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-medium transition-colors hover:bg-white/[0.02]"
           style={{ color: '#00ff88', border: '1px solid rgba(0,255,136,0.2)' }}>
