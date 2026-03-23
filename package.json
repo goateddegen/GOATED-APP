@@ -24,6 +24,9 @@
     "world-atlas": "^2.0.2",
     "zustand": "^4.5.0"
   },
+  "engines": {
+    "node": "20.x"
+  },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
