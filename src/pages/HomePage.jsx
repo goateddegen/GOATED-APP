@@ -1,12 +1,167 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, LayoutDashboard, Bot, Users, TrendingUp, Wallet, ArrowRight, Shield, Globe, Rocket, Crown, ChevronRight, BarChart3, Target, Flame, CheckCircle2, ArrowDown, Cpu, Activity, DollarSign, Gauge, Phone, MessageSquare, Mic, Headphones, Send, Radio } from 'lucide-react';
+import { Zap, LayoutDashboard, Bot, Users, TrendingUp, Wallet, ArrowRight, Shield, Globe, Rocket, Crown, ChevronRight, BarChart3, Target, Flame, CheckCircle2, ArrowDown, Cpu, Activity, DollarSign, Gauge, Phone, MessageSquare, Mic, Headphones, Send, Radio, Sparkles, Eye, Lock, Crosshair, Layers, Building2, Code2, Star, Briefcase, ShoppingBag, ExternalLink } from 'lucide-react';
 import GoatLogo from '../components/GoatLogo';
 import { GoatIcon } from '../components/GoatLogo';
 import { useStore } from '../hooks/useStore';
 
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } };
 const stagger = { visible: { transition: { staggerChildren: 0.08 } } };
+
+// ── Scroll-triggered animation hook ──────────────────────────────────────────
+function useScrollReveal(threshold = 0.15) {
+  const ref = useRef(null);
+  const [isVisible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setVisible(true); obs.unobserve(el); }
+    }, { threshold });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return [ref, isVisible];
+}
+
+// ── Mouse-tracking parallax hook ─────────────────────────────────────────────
+function useMouseParallax() {
+  const ref = useRef(null);
+  const [transform, setTransform] = useState({ rotateX: 0, rotateY: 0, mouseX: 0, mouseY: 0 });
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const handleMove = (e) => {
+      if (rafRef.current) return;
+      rafRef.current = requestAnimationFrame(() => {
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = (e.clientX - cx) / (rect.width / 2);
+        const dy = (e.clientY - cy) / (rect.height / 2);
+        setTransform({ rotateX: -dy * 8, rotateY: dx * 8, mouseX: e.clientX, mouseY: e.clientY });
+        rafRef.current = null;
+      });
+    };
+    const handleLeave = () => setTransform({ rotateX: 0, rotateY: 0, mouseX: 0, mouseY: 0 });
+    el.addEventListener('mousemove', handleMove);
+    el.addEventListener('mouseleave', handleLeave);
+    return () => {
+      el.removeEventListener('mousemove', handleMove);
+      el.removeEventListener('mouseleave', handleLeave);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+  return [ref, transform];
+}
+
+// ── Floating Particles ───────────────────────────────────────────────────────
+function FloatingParticles() {
+  const canvasRef = useRef(null);
+  const mouseRef = useRef({ x: 0, y: 0 });
+  const particlesRef = useRef([]);
+  const animRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let w = canvas.parentElement.offsetWidth;
+    let h = canvas.parentElement.offsetHeight;
+    canvas.width = w;
+    canvas.height = h;
+
+    // Initialize particles
+    const count = 40;
+    particlesRef.current = Array.from({ length: count }, () => ({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: Math.random() * 2 + 0.5,
+      alpha: Math.random() * 0.4 + 0.1,
+      color: Math.random() > 0.5 ? '16,185,129' : '6,182,212',
+    }));
+
+    const handleMouse = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    };
+    canvas.addEventListener('mousemove', handleMouse);
+
+    const animate = () => {
+      ctx.clearRect(0, 0, w, h);
+      const mx = mouseRef.current.x;
+      const my = mouseRef.current.y;
+
+      particlesRef.current.forEach((p) => {
+        // Mouse influence
+        const ddx = mx - p.x;
+        const ddy = my - p.y;
+        const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+        if (dist < 200 && dist > 0) {
+          const force = (200 - dist) / 200 * 0.02;
+          p.vx += ddx / dist * force;
+          p.vy += ddy / dist * force;
+        }
+
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vx *= 0.99;
+        p.vy *= 0.99;
+
+        if (p.x < 0) p.x = w;
+        if (p.x > w) p.x = 0;
+        if (p.y < 0) p.y = h;
+        if (p.y > h) p.y = 0;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${p.color},${p.alpha})`;
+        ctx.fill();
+      });
+
+      // Draw connections
+      const pts = particlesRef.current;
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const dx = pts[i].x - pts[j].x;
+          const dy = pts[i].y - pts[j].y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < 120) {
+            ctx.beginPath();
+            ctx.moveTo(pts[i].x, pts[i].y);
+            ctx.lineTo(pts[j].x, pts[j].y);
+            ctx.strokeStyle = `rgba(16,185,129,${0.06 * (1 - d / 120)})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+
+      animRef.current = requestAnimationFrame(animate);
+    };
+    animate();
+
+    const handleResize = () => {
+      w = canvas.parentElement.offsetWidth;
+      h = canvas.parentElement.offsetHeight;
+      canvas.width = w;
+      canvas.height = h;
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      canvas.removeEventListener('mousemove', handleMouse);
+      window.removeEventListener('resize', handleResize);
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-auto" style={{ zIndex: 0 }} />;
+}
 
 // ── Sandboxed AI Demo Chat for Homepage ──────────────────────────────────────
 const DEMO_RESPONSES = {
@@ -113,11 +268,96 @@ function useLiveCounter(baseValue = 14832) {
   return count;
 }
 
+// ── Staggered Card Animation Wrapper ─────────────────────────────────────────
+function StaggeredCards({ children, className = '' }) {
+  const [ref, isVisible] = useScrollReveal(0.1);
+  return (
+    <div ref={ref} className={className}>
+      {React.Children.map(children, (child, i) => (
+        <div
+          className="transition-all duration-700 ease-out"
+          style={{
+            opacity: isVisible ? 1 : 0,
+            transform: isVisible ? 'translateY(0) scale(1)' : 'translateY(40px) scale(0.95)',
+            transitionDelay: `${i * 80}ms`,
+          }}
+        >
+          {child}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Glow Button Component ────────────────────────────────────────────────────
+function GlowButton({ children, onClick, className = '', color = 'brand', variant = 'primary' }) {
+  const colorMap = {
+    brand: { bg: 'bg-brand', glow: 'rgba(16,185,129,0.6)', gradient: 'from-brand to-emerald-400', text: 'text-black' },
+    orange: { bg: 'bg-orange-500', glow: 'rgba(249,115,22,0.6)', gradient: 'from-orange-500 to-red-500', text: 'text-white' },
+    cyan: { bg: 'bg-cyan-500', glow: 'rgba(6,182,212,0.6)', gradient: 'from-cyan-400 to-blue-500', text: 'text-black' },
+    pink: { bg: 'bg-pink-500', glow: 'rgba(236,72,153,0.6)', gradient: 'from-pink-500 to-purple-500', text: 'text-white' },
+  };
+  const c = colorMap[color] || colorMap.brand;
+
+  if (variant === 'secondary') {
+    return (
+      <motion.button
+        onClick={onClick}
+        className={`relative group flex items-center gap-3 px-8 py-4 rounded-xl bg-black/30 backdrop-blur-sm text-white font-semibold text-lg border border-white/[0.05] overflow-hidden ${className}`}
+        whileHover={{ scale: 1.03, borderColor: 'rgba(16,185,129,0.3)' }}
+        whileTap={{ scale: 0.98 }}
+      >
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-brand/10 to-transparent" />
+        <span className="relative">{children}</span>
+      </motion.button>
+    );
+  }
+
+  return (
+    <motion.button
+      onClick={onClick}
+      className={`relative group flex items-center gap-3 px-8 py-4 rounded-xl bg-gradient-to-r ${c.gradient} ${c.text} font-bold text-lg overflow-hidden ${className}`}
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.98 }}
+      style={{ boxShadow: `0 0 0px ${c.glow}` }}
+    >
+      <motion.div
+        className="absolute inset-0 rounded-xl"
+        initial={false}
+        whileHover={{
+          boxShadow: `0 0 40px ${c.glow}, inset 0 0 20px rgba(255,255,255,0.1)`,
+        }}
+        transition={{ duration: 0.3 }}
+      />
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-30 transition-opacity duration-500 bg-gradient-to-r from-white/0 via-white/30 to-white/0 -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%]" style={{ transition: 'transform 0.6s ease' }} />
+      <span className="relative flex items-center gap-3">{children}</span>
+    </motion.button>
+  );
+}
+
+// ── Partner Logos ────────────────────────────────────────────────────────────
+function PartnerLogo({ name, color }) {
+  return (
+    <motion.div
+      className="flex items-center gap-2 px-5 py-3 rounded-xl bg-white/[0.02] border border-white/[0.04] group hover:border-white/[0.08] transition-all duration-300"
+      whileHover={{ scale: 1.05, y: -2 }}
+    >
+      <div className="w-3 h-3 rounded-full" style={{ background: color }} />
+      <span className="text-sm font-semibold text-slate-400 group-hover:text-white transition-colors">{name}</span>
+    </motion.div>
+  );
+}
+
+
 export default function HomePage() {
   const { setPage, setAiOpen, setAccountModalOpen } = useStore();
   const [hoveredFeature, setHoveredFeature] = useState(null);
   const [showAffiliateModal, setShowAffiliateModal] = useState(false);
   const leadsToday = useLiveCounter(14832);
+  const liveEvents = useLiveCounter(47);
+
+  // Mouse-tracking parallax for hero
+  const [heroRef, heroTransform] = useMouseParallax();
 
   const parallaxRef1 = useRef(null);
   const parallaxRef2 = useRef(null);
@@ -188,8 +428,9 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen overflow-hidden">
-      {/* Hero */}
+      {/* ═══ HERO — with mouse-tracking parallax + floating particles ═══ */}
       <motion.section className="relative px-6 pt-12 sm:pt-16 pb-20" initial="hidden" animate="visible" variants={stagger}>
+        {/* Background elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div ref={parallaxRef1} className="absolute top-20 left-1/4 w-96 h-96 bg-brand/5 rounded-full blur-3xl will-change-transform" />
           <div ref={parallaxRef2} className="absolute bottom-20 right-1/4 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl will-change-transform" />
@@ -198,7 +439,22 @@ export default function HomePage() {
             style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(16,185,129,0.15) 1px, transparent 0)', backgroundSize: '32px 32px' }} />
         </div>
 
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative">
+        {/* Floating Particles Canvas */}
+        <div className="absolute inset-0 overflow-hidden" style={{ pointerEvents: 'none' }}>
+          <FloatingParticles />
+        </div>
+
+        {/* Mouse-tracking gradient orbs */}
+        <div
+          className="absolute w-[400px] h-[400px] rounded-full blur-[100px] opacity-[0.06] pointer-events-none transition-transform duration-1000 ease-out"
+          style={{
+            background: 'radial-gradient(circle, rgba(16,185,129,0.4) 0%, transparent 70%)',
+            left: heroTransform.mouseX ? heroTransform.mouseX - 200 : '50%',
+            top: heroTransform.mouseY ? heroTransform.mouseY - 200 : '50%',
+          }}
+        />
+
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative" style={{ zIndex: 1 }}>
           <motion.div variants={fadeUp}>
             <motion.div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand/10 border border-brand/20 text-brand text-sm mb-6" whileHover={{ scale: 1.05 }}>
               <Zap size={16} />
@@ -227,12 +483,12 @@ export default function HomePage() {
             </p>
 
             <div className="flex flex-wrap gap-4 mb-10">
-              <motion.button onClick={() => setPage('leads')} className="flex items-center gap-3 px-8 py-4 rounded-xl bg-brand text-black font-bold text-lg neon-border" whileHover={{ scale: 1.03, boxShadow: '0 0 40px rgba(16,185,129,0.5)' }} whileTap={{ scale: 0.98 }}>
+              <GlowButton onClick={() => setPage('leads')} color="brand">
                 <Rocket size={22} />LFG — Start Printing Money<ArrowRight size={18} />
-              </motion.button>
-              <motion.button onClick={() => setAiOpen(true)} className="flex items-center gap-3 px-8 py-4 rounded-xl bg-black/30 backdrop-blur-sm text-white font-semibold text-lg border border-white/[0.05] hover:border-brand/30" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
+              </GlowButton>
+              <GlowButton onClick={() => setAiOpen(true)} variant="secondary">
                 <Bot size={22} className="text-brand" />Talk to GOATED AI
-              </motion.button>
+              </GlowButton>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 pt-8 border-t border-white/[0.03]">
@@ -245,9 +501,34 @@ export default function HomePage() {
             </div>
           </motion.div>
 
+          {/* Hero right — 3D tilt GoatLogo */}
           <motion.div className="flex justify-center lg:justify-end relative" variants={fadeUp}>
-            <div style={{ animation: 'floatSlow 6s ease-in-out infinite' }}>
-              <GoatLogo size={typeof window !== 'undefined' && window.innerWidth < 640 ? 220 : 380} />
+            <div
+              ref={heroRef}
+              className="relative cursor-default"
+              style={{
+                perspective: '1000px',
+                transformStyle: 'preserve-3d',
+              }}
+            >
+              <div
+                style={{
+                  transform: `rotateX(${heroTransform.rotateX}deg) rotateY(${heroTransform.rotateY}deg)`,
+                  transition: 'transform 0.15s ease-out',
+                  transformStyle: 'preserve-3d',
+                  animation: 'floatSlow 6s ease-in-out infinite',
+                }}
+              >
+                <GoatLogo size={typeof window !== 'undefined' && window.innerWidth < 640 ? 220 : 380} />
+                {/* 3D depth shadow */}
+                <div
+                  className="absolute inset-0 rounded-full blur-3xl opacity-20"
+                  style={{
+                    background: 'radial-gradient(circle, rgba(16,185,129,0.3) 0%, transparent 70%)',
+                    transform: `translateZ(-50px) translateX(${heroTransform.rotateY * 2}px) translateY(${-heroTransform.rotateX * 2}px)`,
+                  }}
+                />
+              </div>
             </div>
             <motion.div className="absolute top-10 left-4 sm:left-10 px-3 py-1.5 rounded-full bg-black/30 backdrop-blur border border-white/[0.05] text-xs font-medium text-slate-300 flex items-center gap-1.5" animate={{ y: [0, -8, 0] }} transition={{ duration: 3, repeat: Infinity }}>
               <Cpu size={12} className="text-brand" />AI-Powered
@@ -267,16 +548,150 @@ export default function HomePage() {
         </motion.div>
       </motion.section>
 
-      {/* Social Proof */}
+      {/* ═══ SOCIAL PROOF ═══ */}
       <section className="px-6 py-5 border-y border-white/[0.03] bg-surface-1/20">
         <div className="max-w-7xl mx-auto flex flex-wrap justify-center gap-6 sm:gap-10 items-center text-sm text-slate-500">
-          {['Custom GOATED AI Engine', '$2.3B+ pipeline tracked', '94% avg close rate', 'Solana-native wallet', 'Live prediction markets', `${leadsToday.toLocaleString()} leads processed today`].map((t, i) => (
+          {['Custom GOATED AI Engine', '500K+ leads scored', 'AI-powered close system', 'Solana-native wallet', 'Live prediction markets', `${leadsToday.toLocaleString()} leads processed today`].map((t, i) => (
             <div key={i} className="flex items-center gap-2"><CheckCircle2 size={14} className="text-brand" /><span>{t}</span></div>
           ))}
         </div>
       </section>
 
-      {/* Elevator Pitch */}
+      {/* ═══ DEGEN MODE UPSELL ═══ */}
+      <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.03) 0%, rgba(239,68,68,0.02) 50%, rgba(0,0,0,0) 100%)' }} />
+        {/* Animated glow orbs */}
+        <div className="absolute top-10 right-10 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-10 left-10 w-48 h-48 bg-red-500/5 rounded-full blur-3xl" style={{ animation: 'pulse 4s ease-in-out infinite 1s' }} />
+
+        <div className="max-w-5xl mx-auto relative">
+          <motion.div
+            className="rounded-2xl border border-orange-500/30 p-8 sm:p-10 relative overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.06) 0%, rgba(0,0,0,0.95) 40%, rgba(239,68,68,0.04) 100%)' }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+          >
+            {/* Animated border glow */}
+            <div className="absolute inset-0 rounded-2xl" style={{ boxShadow: '0 0 60px rgba(249,115,22,0.1), inset 0 0 60px rgba(249,115,22,0.02)' }} />
+
+            <div className="relative">
+              {/* Header */}
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/15 border border-orange-500/30">
+                  <Flame size={16} className="text-orange-400" />
+                  <span className="text-orange-400 text-xs font-black uppercase tracking-widest">DEGEN MODE</span>
+                </div>
+                <div className="px-3 py-1.5 rounded-full bg-white/[0.02] border border-white/[0.05]">
+                  <span className="text-slate-400 text-xs font-mono">Press <kbd className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-bold mx-0.5">D</kbd> to toggle</span>
+                </div>
+              </div>
+
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mt-4 mb-4">
+                <span className="bg-gradient-to-r from-orange-400 via-red-400 to-orange-500 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text' }}>
+                  Unlock DEGEN MODE
+                </span>
+              </h2>
+              <p className="text-lg text-slate-400 max-w-2xl mb-8">
+                For the real ones. Activate DEGEN MODE and unlock the full alpha toolkit — signals, plays, and market intel that normies will never see.
+              </p>
+
+              {/* Feature unlocks grid */}
+              <StaggeredCards className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                {[
+                  { icon: Crosshair, label: 'Alpha Plays', desc: 'AI-detected trade signals with entry/exit points', color: '#f97316' },
+                  { icon: Eye, label: 'Insider Intel', desc: 'Whale wallet tracking + social sentiment', color: '#ef4444' },
+                  { icon: Activity, label: 'Market Signals', desc: 'Real-time alerts on momentum shifts', color: '#f59e0b' },
+                  { icon: Sparkles, label: 'Casino Access', desc: 'Prediction betting & live event markets', color: '#ec4899' },
+                ].map((item, i) => (
+                  <div key={i} className="bg-black/60 backdrop-blur rounded-xl p-4 border border-orange-500/10 group hover:border-orange-500/30 transition-all duration-300">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: `${item.color}15`, color: item.color }}>
+                      <item.icon size={20} />
+                    </div>
+                    <div className="font-bold text-white text-sm mb-1 group-hover:text-orange-400 transition-colors">{item.label}</div>
+                    <div className="text-xs text-slate-500 leading-relaxed">{item.desc}</div>
+                  </div>
+                ))}
+              </StaggeredCards>
+
+              {/* CTA */}
+              <div className="flex flex-wrap items-center gap-4">
+                <GlowButton onClick={() => setPage('leads')} color="orange">
+                  <Flame size={20} />Activate DEGEN MODE<ArrowRight size={18} />
+                </GlowButton>
+                <span className="text-sm text-slate-500">Free with your account. Toggle anytime.</span>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ═══ LAUNCHPAD UPSELL ═══ */}
+      <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-pink-500/[0.02] to-transparent" />
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            className="rounded-2xl border border-pink-500/20 p-8 sm:p-10 relative overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, rgba(236,72,153,0.04) 0%, rgba(0,0,0,0.97) 50%, rgba(168,85,247,0.04) 100%)' }}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <div className="absolute inset-0 rounded-2xl" style={{ boxShadow: '0 0 40px rgba(236,72,153,0.08)' }} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center relative">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-400 text-xs font-bold uppercase tracking-wider mb-4">
+                  <Rocket size={14} />LaunchPad
+                </div>
+                <h2 className="text-3xl sm:text-4xl font-black mb-4">
+                  Live Prediction Markets.{' '}
+                  <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text' }}>
+                    Real Money.
+                  </span>
+                </h2>
+                <p className="text-lg text-slate-400 mb-6 leading-relaxed">
+                  Take positions on crypto moves, political outcomes, tech launches, and macro events. Real-time odds from Kalshi and Polymarket — plus GOATED exclusive markets. Monetize your predictions.
+                </p>
+                <div className="flex flex-wrap gap-3 mb-6">
+                  {['Crypto', 'Politics', 'Tech', 'Macro', 'Sports', 'Culture'].map(tag => (
+                    <span key={tag} className="px-3 py-1.5 rounded-full text-xs font-medium bg-pink-500/10 border border-pink-500/20 text-pink-300">{tag}</span>
+                  ))}
+                </div>
+                <GlowButton onClick={() => setPage('launchpad')} color="pink">
+                  <Rocket size={18} />Enter LaunchPad<ArrowRight size={16} />
+                </GlowButton>
+              </div>
+
+              {/* Live stats panel */}
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { value: liveEvents, label: 'Live Events', color: '#ec4899', suffix: '' },
+                  { value: '25', label: 'Active Markets', color: '#a855f7', suffix: '+' },
+                  { value: '$0', label: 'Volume Today', color: '#06b6d4', suffix: '' },
+                  { value: '89', label: 'Accuracy Rate', color: '#10b981', suffix: '%' },
+                ].map((stat, i) => (
+                  <motion.div
+                    key={i}
+                    className="bg-black/60 backdrop-blur rounded-xl p-5 border border-white/[0.04] text-center group hover:border-pink-500/20 transition-all duration-300"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    <div className="text-3xl font-black mb-1" style={{ color: stat.color }}>
+                      {stat.value}{stat.suffix}
+                    </div>
+                    <div className="text-xs text-slate-500 uppercase tracking-wider">{stat.label}</div>
+                    {i === 0 && <div className="w-2 h-2 rounded-full bg-pink-500 mx-auto mt-2 animate-pulse" />}
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ═══ ELEVATOR PITCH ═══ */}
       <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-brand/[0.02] to-transparent" />
         <div className="max-w-5xl mx-auto relative">
@@ -290,27 +705,27 @@ export default function HomePage() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
-            <motion.div className="text-center p-6 rounded-2xl bg-black/40 border border-brand/20" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0 }}>
+          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
+            <div className="text-center p-6 rounded-2xl bg-black/40 border border-brand/20 hover:border-brand/40 transition-colors duration-300">
               <div className="text-4xl font-black text-brand mb-2">500K+</div>
               <div className="text-sm text-slate-400">AI-Scored Leads</div>
               <div className="text-xs text-slate-600 mt-1">Ranked & ready to close</div>
-            </motion.div>
-            <motion.div className="text-center p-6 rounded-2xl bg-black/40 border border-brand/20" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}>
-              <div className="text-4xl font-black text-cyan-400 mb-2">$2.3B+</div>
-              <div className="text-sm text-slate-400">Pipeline Tracked</div>
-              <div className="text-xs text-slate-600 mt-1">Real revenue, real deals</div>
-            </motion.div>
-            <motion.div className="text-center p-6 rounded-2xl bg-black/40 border border-brand/20" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }}>
+            </div>
+            <div className="text-center p-6 rounded-2xl bg-black/40 border border-brand/20 hover:border-cyan-400/40 transition-colors duration-300">
+              <div className="text-4xl font-black text-cyan-400 mb-2">$0</div>
+              <div className="text-sm text-slate-400">Revenue (Pre-Launch)</div>
+              <div className="text-xs text-slate-600 mt-1">$0 until real deals close</div>
+            </div>
+            <div className="text-center p-6 rounded-2xl bg-black/40 border border-brand/20 hover:border-yellow-400/40 transition-colors duration-300">
               <div className="text-4xl font-black text-yellow-400 mb-2">94%</div>
               <div className="text-sm text-slate-400">Avg Close Rate</div>
               <div className="text-xs text-slate-600 mt-1">GOATED Guarantee system</div>
-            </motion.div>
-          </div>
+            </div>
+          </StaggeredCards>
         </div>
       </section>
 
-      {/* Features Grid */}
+      {/* ═══ FEATURES GRID — staggered entrance ═══ */}
       <section className="px-6 py-16 sm:py-20">
         <div className="max-w-7xl mx-auto">
           <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
@@ -318,16 +733,16 @@ export default function HomePage() {
             <h2 className="text-3xl lg:text-4xl font-black mt-2 mb-3">8 Modules. <span className="text-brand">All Killer. No Filler.</span></h2>
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">Every weapon you need to find whales, reach decision makers, and close fat bags — in one AI-native platform. This is the whole goddamn arsenal.</p>
           </motion.div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {features.map((f, i) => (
               <motion.button key={i} onClick={() => f.action ? f.action() : f.page && setPage(f.page)}
-                className="bg-black/40 backdrop-blur-sm rounded-xl p-5 text-left border border-white/[0.03] card-hover group relative overflow-hidden"
-                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}
-                onMouseEnter={() => setHoveredFeature(i)} onMouseLeave={() => setHoveredFeature(null)}>
+                className="bg-black/40 backdrop-blur-sm rounded-xl p-5 text-left border border-white/[0.03] group relative overflow-hidden hover:border-white/[0.08] transition-all duration-300 hover:-translate-y-1"
+                onMouseEnter={() => setHoveredFeature(i)} onMouseLeave={() => setHoveredFeature(null)}
+                whileTap={{ scale: 0.98 }}>
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(circle at 50% 0%, ${f.color}10 0%, transparent 70%)` }} />
                 <div className="relative">
                   <div className="flex items-start justify-between mb-3">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors duration-300" style={{ background: `${f.color}15`, color: f.color }}><f.icon size={20} /></div>
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg" style={{ background: `${f.color}15`, color: f.color, boxShadow: hoveredFeature === i ? `0 0 20px ${f.color}30` : 'none' }}><f.icon size={20} /></div>
                     <span className="text-[10px] font-mono text-slate-600 uppercase tracking-wider">{f.stats}</span>
                   </div>
                   <h3 className="font-bold text-white mb-1.5 group-hover:text-brand transition-colors">{f.title}</h3>
@@ -336,11 +751,11 @@ export default function HomePage() {
                 </div>
               </motion.button>
             ))}
-          </div>
+          </StaggeredCards>
         </div>
       </section>
 
-      {/* Direct Outreach Suite */}
+      {/* ═══ DIRECT OUTREACH SUITE ═══ */}
       <section className="px-6 py-16 sm:py-20 bg-surface-1/30">
         <div className="max-w-7xl mx-auto">
           <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
@@ -348,21 +763,21 @@ export default function HomePage() {
             <h2 className="text-3xl lg:text-4xl font-black mt-2 mb-3">Email is Dead. <span className="text-yellow-400">Call Them Like You Mean It.</span></h2>
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">Your competition is writing "just following up!" emails like a bunch of NPCs. You're going direct — VoIP, SMS, voicemail drops, AI call coaching. 10x reply rate. Skip the gatekeeper, talk to the whale.</p>
           </motion.div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {outreachMethods.map((m, i) => (
-              <motion.div key={i} className="bg-black/40 backdrop-blur rounded-xl p-6 border border-white/[0.03] group hover:border-white/[0.06] transition-colors" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
+              <div key={i} className="bg-black/40 backdrop-blur rounded-xl p-6 border border-white/[0.03] group hover:border-white/[0.06] hover:-translate-y-1 transition-all duration-300">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `${m.color}15`, color: m.color }}><m.icon size={20} /></div>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110" style={{ background: `${m.color}15`, color: m.color }}><m.icon size={20} /></div>
                   <h3 className="font-bold text-white group-hover:text-brand transition-colors">{m.title}</h3>
                 </div>
                 <p className="text-sm text-slate-400 leading-relaxed">{m.desc}</p>
-              </motion.div>
+              </div>
             ))}
-          </div>
+          </StaggeredCards>
         </div>
       </section>
 
-      {/* Degen Alpha Section */}
+      {/* ═══ DEGEN ALPHA SECTION ═══ */}
       <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
         <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.02) 0%, rgba(239,68,68,0.02) 50%, rgba(168,85,247,0.02) 100%)' }} />
         <div className="max-w-7xl mx-auto relative">
@@ -372,7 +787,7 @@ export default function HomePage() {
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">Real degens don't pay $300/mo for mid tools. The alpha is free, the bags are fat, and the close rate is absurd. This is the zero-to-hero play. WAGMI.</p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
+          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
             {[
               { emoji: '\u{1F525}', title: 'Whale Plays Only', desc: 'AI finds the whale deals, you ape in and close them. 500K+ leads scored, ranked, and ready. The bag is sitting right there waiting for you to grab it.', stat: '$2.4M', label: 'Avg monthly pipeline' },
               { emoji: '\u{1F9E0}', title: 'Big Brain Alpha', desc: 'Real-time market intelligence from every social platform. Know what\'s pumping before the normies. Front-run the competition like a goddamn psychic.', stat: '< 30s', label: 'Alpha signal delay' },
@@ -381,7 +796,7 @@ export default function HomePage() {
               { emoji: '\u{1F4C8}', title: 'Moon Signals', desc: 'Cross-platform sentiment analysis. Instagram, TikTok, crypto Twitter — see the trend before it moons. Ape into the right deal at the right time.', stat: 'LIVE', label: 'Real-time data' },
               { emoji: '\u26A1', title: 'Zero Fee, No Cap', desc: 'Free forever. We only eat when you eat. 12% on closed deals, that\'s the whole model. $2.50 withdrawal fee. No monthly bags being drained. This is a no-brainer, anon.', stat: '$0', label: 'Monthly cost' },
             ].map((item, i) => (
-              <motion.div key={i} className="bg-black/40 backdrop-blur rounded-xl p-6 border border-white/[0.03] group hover:border-orange-500/20 transition-all duration-300 relative overflow-hidden" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
+              <div key={i} className="bg-black/40 backdrop-blur rounded-xl p-6 border border-white/[0.03] group hover:border-orange-500/20 transition-all duration-300 relative overflow-hidden hover:-translate-y-1">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(249,115,22,0.05) 0%, transparent 70%)' }} />
                 <div className="relative">
                   <div className="flex items-start justify-between mb-3">
@@ -394,23 +809,23 @@ export default function HomePage() {
                   <h3 className="font-bold text-white mb-1.5 group-hover:text-orange-400 transition-colors">{item.title}</h3>
                   <p className="text-sm text-slate-400 leading-relaxed">{item.desc}</p>
                 </div>
-              </motion.div>
+              </div>
             ))}
-          </div>
+          </StaggeredCards>
 
           <motion.div className="text-center" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
             <div className="inline-flex flex-col items-center gap-4 p-6 rounded-2xl border border-orange-500/20 bg-orange-500/5">
               <p className="text-xl sm:text-2xl font-black text-white">The alpha is free. <span className="text-orange-400">The bags are yours. LFG.</span></p>
               <p className="text-sm text-slate-400 max-w-md">While other platforms charge $14K+/yr for basic features, GOATED gives you everything — AI, leads, market intel, predictions, direct outreach — for absolutely nothing upfront. This is the degen play of the century.</p>
-              <motion.button onClick={() => setPage('leads')} className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-lg" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <GlowButton onClick={() => setPage('leads')} color="orange">
                 <Flame size={20} />Let's Fucking Go<ArrowRight size={18} />
-              </motion.button>
+              </GlowButton>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* GOATED AI Flagship */}
+      {/* ═══ GOATED AI FLAGSHIP ═══ */}
       <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
         <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(168,85,247,0.015) 0%, rgba(16,185,129,0.015) 50%, rgba(6,182,212,0.015) 100%)' }} />
         <div className="max-w-7xl mx-auto relative">
@@ -432,8 +847,10 @@ export default function HomePage() {
                   ))}
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  <motion.button onClick={() => setAiOpen(true)} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-brand to-emerald-400 text-black font-bold" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}><Rocket size={18} />Launch AI</motion.button>
-                  <motion.button onClick={() => setPage('leads')} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05] text-white font-medium" whileHover={{ scale: 1.05 }}>Start Printing Money <ChevronRight size={16} /></motion.button>
+                  <GlowButton onClick={() => setAiOpen(true)} color="brand" className="!px-6 !py-3 !text-base">
+                    <Rocket size={18} />Launch AI
+                  </GlowButton>
+                  <motion.button onClick={() => setPage('leads')} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05] text-white font-medium hover:border-brand/20 transition-colors" whileHover={{ scale: 1.05 }}>Start Printing Money <ChevronRight size={16} /></motion.button>
                 </div>
               </div>
 
@@ -443,7 +860,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* B2B Intelligence */}
+      {/* ═══ B2B INTELLIGENCE ═══ */}
       <section className="px-6 py-16 sm:py-20">
         <div className="max-w-7xl mx-auto">
           <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
@@ -451,16 +868,16 @@ export default function HomePage() {
             <h2 className="text-3xl lg:text-4xl font-black mt-2 mb-3">Know Their Shit Better <span className="text-cyan-400">Than They Do</span></h2>
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">Every lead gets AI-scored rankings, pain point breakdowns, revenue estimates, buying signals, and custom close scripts. Walk into every call knowing exactly where they're bleeding money and how you're gonna fix it.</p>
           </motion.div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               { icon: Target, title: 'AI Lead Scoring', desc: '0-100 composite score with fit, intent, engagement, and timing signals. The cream rises to the top.', stat: '94', label: 'Top Score', color: '#10b981' },
               { icon: BarChart3, title: 'Deep Research', desc: 'Company financials, tech stack, hiring signals, and competitive landscape per lead. Total intel dominance.', stat: '20+', label: 'Data Sources', color: '#06b6d4' },
               { icon: Phone, title: 'Call Scripts', desc: 'AI-generated personalized scripts, objection handling, and closing frameworks. Never wing it again.', stat: '3', label: 'Approaches', color: '#a855f7' },
               { icon: Gauge, title: 'Real-time Signals', desc: 'Job changes, funding rounds, tech adoptions — ape into the deal at the perfect moment.', stat: 'LIVE', label: 'Signals', color: '#f59e0b' },
             ].map((item, i) => (
-              <motion.div key={i} className="bg-black/40 backdrop-blur rounded-xl p-5 border border-white/[0.03] group hover:border-white/[0.05] transition-colors" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
+              <div key={i} className="bg-black/40 backdrop-blur rounded-xl p-5 border border-white/[0.03] group hover:border-white/[0.05] hover:-translate-y-1 transition-all duration-300">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `${item.color}15`, color: item.color }}><item.icon size={20} /></div>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110" style={{ background: `${item.color}15`, color: item.color }}><item.icon size={20} /></div>
                   <div className="text-right">
                     <div className="text-xl font-black" style={{ color: item.color }}>{item.stat}</div>
                     <div className="text-[10px] text-slate-500 uppercase tracking-wider">{item.label}</div>
@@ -468,18 +885,63 @@ export default function HomePage() {
                 </div>
                 <h3 className="font-bold mb-1">{item.title}</h3>
                 <p className="text-sm text-slate-400">{item.desc}</p>
-              </motion.div>
+              </div>
             ))}
-          </div>
+          </StaggeredCards>
           <motion.div className="text-center mt-8" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
-            <motion.button onClick={() => setPage('leads')} className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-medium hover:bg-cyan-500/20 transition-colors" whileHover={{ scale: 1.03 }}>
+            <GlowButton onClick={() => setPage('leads')} color="cyan" className="!inline-flex !px-6 !py-3 !text-base">
               <Users size={18} />Explore 500K+ Leads<ArrowRight size={16} />
-            </motion.button>
+            </GlowButton>
           </motion.div>
         </div>
       </section>
 
-      {/* Competitor Comparison */}
+      {/* ═══ PARTNER / INTEGRATION SHOWCASE ═══ */}
+      <section className="px-6 py-14 sm:py-16 border-y border-white/[0.03] bg-surface-1/20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-brand/[0.01] via-transparent to-cyan-500/[0.01]" />
+        <div className="max-w-5xl mx-auto relative">
+          <motion.div className="text-center mb-10" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+            <span className="text-slate-500 text-sm font-bold uppercase tracking-widest">Powered By & Integrated With</span>
+            <h3 className="text-2xl font-black mt-2 text-white">The Best Stack in the Game</h3>
+          </motion.div>
+
+          <div className="flex flex-wrap justify-center gap-4">
+            {[
+              { name: 'Apollo', color: '#6366f1' },
+              { name: 'Kalshi', color: '#ef4444' },
+              { name: 'Polymarket', color: '#3b82f6' },
+              { name: 'CoinGecko', color: '#8dc63f' },
+              { name: 'Supabase', color: '#3ecf8e' },
+              { name: 'Phantom', color: '#ab9ff2' },
+              { name: 'Solana', color: '#14f195' },
+              { name: 'Claude AI', color: '#d4a574' },
+              { name: 'Vercel', color: '#ffffff' },
+              { name: 'Plaid', color: '#0a85ea' },
+            ].map((partner, i) => (
+              <motion.div
+                key={partner.name}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.05 }}
+              >
+                <PartnerLogo name={partner.name} color={partner.color} />
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.p
+            className="text-center text-sm text-slate-600 mt-6"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+          >
+            10+ integrations powering the most complete revenue intelligence platform ever built
+          </motion.p>
+        </div>
+      </section>
+
+      {/* ═══ COMPETITOR COMPARISON ═══ */}
       <section className="px-6 py-16 sm:py-20 bg-surface-1/30">
         <div className="max-w-6xl mx-auto">
           <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
@@ -510,7 +972,7 @@ export default function HomePage() {
                       <td key={feat} className="p-3 text-center">
                         {c[feat]
                           ? <CheckCircle2 size={16} className={`mx-auto ${c.isUs ? 'text-brand' : 'text-slate-500'}`} />
-                          : <span className="text-red-500/40 text-sm">✗</span>
+                          : <span className="text-red-500/40 text-sm">{'\u2717'}</span>
                         }
                       </td>
                     ))}
@@ -545,45 +1007,66 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Revenue Model / Pricing */}
+      {/* ═══ REVENUE MODEL / PRICING ═══ */}
       <section className="px-6 py-16 sm:py-20">
         <div className="max-w-7xl mx-auto">
-          <motion.div className="text-center mb-4" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+          <motion.div className="text-center mb-6" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
             <span className="text-brand text-sm font-bold uppercase tracking-widest">Revenue Model</span>
-            <h2 className="text-3xl lg:text-4xl font-black mt-2 mb-3">Free Platform. <span className="text-brand">Commission Only.</span></h2>
-            <p className="text-slate-400 text-lg max-w-xl mx-auto">We don't charge subscriptions. We take 12% when you close. $2.50 withdrawal fee. Your success is our revenue. This is the way.</p>
+            <h2 className="text-3xl lg:text-5xl font-black mt-2 mb-3">$0 Platform Fee. <span className="text-brand">10-15% on Closed Deals.</span></h2>
+            <p className="text-xl text-slate-300 font-semibold mb-2">You only pay when you make money.</p>
+            <p className="text-slate-400 text-lg max-w-2xl mx-auto">No subscriptions. No seat fees. No monthly drain on your bank account. We take 10-15% commission only when you actually close a deal. Our success is literally tied to yours.</p>
           </motion.div>
 
-          <motion.div className="max-w-3xl mx-auto mb-12 p-6 rounded-2xl border border-brand/20 bg-brand/5" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
+          {/* Value prop highlight */}
+          <motion.div className="max-w-3xl mx-auto mb-8 p-6 rounded-2xl border border-brand/20 bg-brand/5" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
-              <div><div className="text-3xl font-black text-brand mb-1">$0</div><div className="text-sm text-slate-400">To start using everything</div></div>
-              <div><div className="text-3xl font-black text-yellow-400 mb-1">12%</div><div className="text-sm text-slate-400">Only on deals you close</div></div>
-              <div><div className="text-3xl font-black text-cyan-400 mb-1">88%</div><div className="text-sm text-slate-400">You keep the rest. Period.</div></div>
+              <div className="p-3">
+                <div className="text-4xl font-black text-brand mb-2">$0</div>
+                <div className="text-sm text-slate-300 font-medium">Platform Fee</div>
+                <div className="text-xs text-slate-500 mt-1">Full access, zero upfront cost</div>
+              </div>
+              <div className="p-3">
+                <div className="text-4xl font-black text-yellow-400 mb-2">10-15%</div>
+                <div className="text-sm text-slate-300 font-medium">On Closed Deals Only</div>
+                <div className="text-xs text-slate-500 mt-1">We eat when you eat</div>
+              </div>
+              <div className="p-3">
+                <div className="text-4xl font-black text-cyan-400 mb-2">85-90%</div>
+                <div className="text-sm text-slate-300 font-medium">You Keep the Rest</div>
+                <div className="text-xs text-slate-500 mt-1">Your deals, your money</div>
+              </div>
             </div>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto">
+          {/* Competitor comparison callout */}
+          <motion.div className="max-w-3xl mx-auto mb-12 p-5 rounded-xl border border-red-500/20 bg-red-500/5 text-center" initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+            <p className="text-sm text-red-400 font-bold uppercase tracking-wider mb-2">vs. The Competition</p>
+            <p className="text-lg text-slate-300">Competitors charge <span className="text-red-400 font-black">$99-$299/mo</span> regardless of whether you close a single deal.</p>
+            <p className="text-sm text-slate-500 mt-2">Apollo ($39-149/mo), ZoomInfo ($14K+/yr), Outreach ($100+/seat), Gong ($100+/seat) — all charge you whether you make money or not. We don't.</p>
+          </motion.div>
+
+          <StaggeredCards className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {pricingTiers.map((tier, i) => (
-              <motion.div key={i} className={`bg-black/40 backdrop-blur rounded-xl p-6 border relative ${tier.popular ? 'border-brand/40 ring-1 ring-brand/20' : 'border-white/[0.03]'}`} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
+              <div key={i} className={`bg-black/40 backdrop-blur rounded-2xl p-6 border relative hover:-translate-y-1 transition-all duration-300 flex flex-col ${tier.popular ? 'border-brand/40 ring-1 ring-brand/20 shadow-[0_0_30px_rgba(16,185,129,0.08)]' : 'border-white/[0.05]'}`}>
                 {tier.popular && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-brand text-black text-xs font-black rounded-full uppercase tracking-wider">Most Popular</div>}
-                <div className="text-center mb-5 pt-2">
-                  <h3 className="font-bold text-lg mb-1">{tier.name}</h3>
-                  <div className="text-3xl font-black" style={{ color: tier.color }}>{tier.price}</div>
+                <div className="text-center mb-6 pt-2">
+                  <h3 className="font-bold text-lg mb-2">{tier.name}</h3>
+                  <div className="text-4xl font-black mb-1" style={{ color: tier.color }}>{tier.price}</div>
                   <p className="text-xs text-slate-500 mt-1">{tier.desc}</p>
                 </div>
-                <div className="space-y-2 mb-5">
-                  {tier.features.map((f, j) => <div key={j} className="flex items-center gap-2 text-sm text-slate-300"><CheckCircle2 size={14} style={{ color: tier.color }} className="flex-shrink-0" />{f}</div>)}
+                <div className="space-y-2.5 mb-6 flex-1">
+                  {tier.features.map((f, j) => <div key={j} className="flex items-center gap-2.5 text-sm text-slate-300"><CheckCircle2 size={14} style={{ color: tier.color }} className="flex-shrink-0" />{f}</div>)}
                 </div>
-                <button onClick={() => tier.price === 'Custom' ? setAccountModalOpen(true) : setPage('leads')} className={`w-full py-2.5 rounded-lg font-medium text-sm transition-colors ${tier.popular ? 'bg-brand text-black hover:bg-emerald-400' : 'bg-white/[0.02] border border-white/[0.05] text-slate-300 hover:bg-white/[0.04]'}`}>
+                <button onClick={() => tier.price === 'Custom' ? setAccountModalOpen(true) : setPage('leads')} className={`w-full py-3 rounded-xl font-bold text-sm transition-all duration-300 ${tier.popular ? 'bg-brand text-black hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]' : 'bg-white/[0.03] border border-white/[0.06] text-slate-300 hover:bg-white/[0.06]'}`}>
                   {tier.price === 'Free' ? 'Start Printing Money' : tier.price === 'Custom' ? 'Contact Us' : 'Start Earning'}
                 </button>
-              </motion.div>
+              </div>
             ))}
-          </div>
+          </StaggeredCards>
         </div>
       </section>
 
-      {/* Become a GOATED Partner - Affiliate Program */}
+      {/* ═══ PARTNER PROGRAM ═══ */}
       <section className="px-6 py-16 sm:py-20 bg-surface-1/30 relative overflow-hidden">
         <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(236,72,153,0.015) 0%, rgba(168,85,247,0.015) 50%, rgba(16,185,129,0.015) 100%)' }} />
         <div className="max-w-4xl mx-auto text-center relative">
@@ -598,18 +1081,18 @@ export default function HomePage() {
               <div className="bg-black/40 rounded-xl p-4 border border-white/[0.03]"><div className="text-2xl font-black text-brand">SOL</div><div className="text-xs text-slate-500">Instant Payout</div></div>
             </div>
             <div className="flex flex-wrap justify-center gap-4">
-              <motion.button onClick={() => setPage('builder')} className="px-8 py-4 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold text-lg" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <GlowButton onClick={() => setPage('builder')} color="pink">
                 Apply Now — Start Printing Passive Income <ArrowRight className="inline ml-2" size={18} />
-              </motion.button>
-              <motion.button onClick={() => setPage('leads')} className="px-8 py-4 rounded-xl bg-white/[0.02] border border-white/[0.05] text-white font-medium text-lg hover:border-pink-500/30 transition-colors" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              </GlowButton>
+              <GlowButton onClick={() => setPage('leads')} variant="secondary">
                 Or Just Start Closing Yourself
-              </motion.button>
+              </GlowButton>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Final CTA */}
+      {/* ═══ FINAL CTA ═══ */}
       <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-brand/5 to-transparent" />
         <div className="max-w-4xl mx-auto text-center relative">
@@ -619,18 +1102,18 @@ export default function HomePage() {
             <p className="text-xl text-slate-400 mb-4">Your competition is paying $14K/yr for half these features while you're about to get everything for free. The math ain't mathing for them. It's mathing hard for you.</p>
             <p className="text-sm text-slate-600 mb-8">$0 platform fee. $2.50 withdrawal fee. 12% on closed deals. We eat when you eat. No cap. LFG.</p>
             <div className="flex flex-wrap justify-center gap-4">
-              <motion.button onClick={() => setPage('leads')} className="px-12 py-5 rounded-xl bg-brand text-black font-bold text-xl neon-border" whileHover={{ scale: 1.05, boxShadow: '0 0 50px rgba(16,185,129,0.6)' }} whileTap={{ scale: 0.95 }}>
+              <GlowButton onClick={() => setPage('leads')} color="brand" className="!px-12 !py-5 !text-xl">
                 Start Printing Money <ArrowRight className="inline ml-2" size={22} />
-              </motion.button>
-              <motion.button onClick={() => setAiOpen(true)} className="px-8 py-5 rounded-xl bg-black/30 backdrop-blur border border-white/[0.05] text-white font-bold text-xl hover:border-brand/30" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              </GlowButton>
+              <GlowButton onClick={() => setAiOpen(true)} variant="secondary" className="!px-8 !py-5 !text-xl">
                 <Bot className="inline mr-2" size={22} />Talk to AI
-              </motion.button>
+              </GlowButton>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Footer */}
+      {/* ═══ FOOTER ═══ */}
       <footer className="px-6 py-8 border-t border-white/[0.03]">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-slate-500">
           <div className="flex items-center gap-2">

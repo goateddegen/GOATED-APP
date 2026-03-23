@@ -6,13 +6,14 @@ import {
   ArrowDown, ChevronRight, ExternalLink, Shield, Star, Radio, Timer,
   Layers, Crown, Lightbulb, Building2, CheckCircle2, XCircle, RefreshCw,
   Plus, Briefcase, Milestone, ArrowRight, Eye, Hash, X, Share2, MessageCircle,
-  Medal, Award
+  Medal, Award, ThumbsUp, Filter, ChevronDown, Send, GitBranch, Cpu,
+  Code2, Coins, Wifi, Database
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { useGoatedAI } from '../hooks/useGoatedAI';
 
 // ============================================================================
-// LAUNCHPAD - Live Events, Prediction Betting, Leaderboard & Incubator
+// LAUNCHPAD - Prediction Tracker, Accuracy Leaderboard & Startup Incubator
 // ============================================================================
 
 // Seeded RNG for deterministic mock data
@@ -25,7 +26,7 @@ function seedRng(s) {
 }
 
 const TABS = [
-  { id: 'events', label: 'Live Events', icon: Zap },
+  { id: 'events', label: 'Predictions', icon: Zap },
   { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
   { id: 'incubator', label: 'Incubator', icon: Rocket },
 ];
@@ -36,6 +37,17 @@ const CATEGORY_COLORS = {
   Crypto: '#f59e0b', Politics: '#3b82f6', Tech: '#a855f7',
   Business: '#10b981', Sports: '#ef4444', Culture: '#ec4899',
 };
+
+const PROJECT_CATEGORIES = ['All', 'DeFi', 'AI', 'SaaS', 'Web3', 'FinTech', 'Infrastructure', 'Social'];
+
+const PROJECT_STAGES = {
+  idea: { label: 'Idea', color: '#94a3b8', step: 0 },
+  prototype: { label: 'Prototype', color: '#a855f7', step: 1 },
+  launch: { label: 'Launch', color: '#3b82f6', step: 2 },
+  scale: { label: 'Scale', color: '#10b981', step: 3 },
+};
+
+const STAGE_ORDER = ['idea', 'prototype', 'launch', 'scale'];
 
 const SIM_USERS = [
   '@closerking', '@degenmaster', '@alphawhale', '@diamondhands', '@moonboy99',
@@ -51,14 +63,14 @@ const AVATAR_COLORS = [
 
 function generateComments(rng) {
   const texts = [
-    'This is a lock, easy money',
-    'No way this happens before deadline',
-    'Just aped in with max size',
-    'Hedging my position here',
-    'The smart money is on YES',
-    'Probability is mispriced imo',
-    'Diamond handing this one',
-    'Market is sleeping on this',
+    'Strong signal from on-chain data',
+    'Historical patterns suggest otherwise',
+    'The macro environment supports this',
+    'Tracking this closely, probability seems right',
+    'Interesting divergence from consensus here',
+    'My model gives this higher odds',
+    'Following the institutional flow on this one',
+    'Market is underpricing this outcome',
   ];
   const count = Math.floor(rng() * 4) + 2;
   const comments = [];
@@ -71,22 +83,6 @@ function generateComments(rng) {
     });
   }
   return comments;
-}
-
-function generateOrderBook(rng, currentProb) {
-  const yesLevels = [];
-  const noLevels = [];
-  for (let i = 0; i < 5; i++) {
-    yesLevels.push({
-      price: Math.max(1, currentProb - (i + 1) * 2),
-      qty: Math.floor(rng() * 5000) + 500,
-    });
-    noLevels.push({
-      price: Math.max(1, (100 - currentProb) - (i + 1) * 2),
-      qty: Math.floor(rng() * 5000) + 500,
-    });
-  }
-  return { yes: yesLevels, no: noLevels };
 }
 
 function generateEvents() {
@@ -132,15 +128,13 @@ function generateEvents() {
       hot: t.hot,
       yesProb: history[history.length - 1],
       priceHistory: history,
-      volume: randInt(50, 5000) * 1000,
-      participants: randInt(200, 25000),
+      followers: randInt(200, 25000),
       endsIn: pick(['2h', '6h', '1d', '3d', '1w', '2w', '30d', '90d']),
       trending: rng() > 0.6 ? (rng() > 0.5 ? 'up' : 'down') : null,
       change24h: +(rng() * 20 - 10).toFixed(1),
-      userPosition: null,
-      bettingNow: randInt(3, 48),
+      userPrediction: null,
+      trackingNow: randInt(3, 48),
       comments: generateComments(rng),
-      orderBook: generateOrderBook(rng, history[history.length - 1]),
     };
   });
 }
@@ -154,35 +148,125 @@ function generateLeaderboard() {
     '@dripgod', '@apemaxi', '@wagmi_wes', '@nocaptrader', '@flipsidejay',
   ];
   return names.map((name, i) => {
-    const wins = Math.floor(rng() * 150) + 20;
-    const losses = Math.floor(rng() * 80) + 5;
-    const pnl = (rng() * 60000) - 8000;
+    const correct = Math.floor(rng() * 150) + 20;
+    const incorrect = Math.floor(rng() * 80) + 5;
+    const total = correct + incorrect;
+    const accuracy = ((correct / total) * 100).toFixed(1);
     const streak = Math.floor(rng() * 12);
-    const wagered = Math.floor(rng() * 200000) + 5000;
+    const predictions = Math.floor(rng() * 300) + 30;
     return {
       rank: i + 1,
       name,
       avatar: AVATAR_COLORS[i % AVATAR_COLORS.length],
-      pnl: +pnl.toFixed(2),
-      wins,
-      losses,
+      accuracy: +accuracy,
+      correct,
+      incorrect,
       streak,
-      wagered,
+      predictions,
       isCurrentUser: name === '@closerking',
     };
-  }).sort((a, b) => b.pnl - a.pnl).map((u, i) => ({ ...u, rank: i + 1 }));
+  }).sort((a, b) => b.accuracy - a.accuracy).map((u, i) => ({ ...u, rank: i + 1 }));
 }
 
-const fmtVol = (n) => {
+function generateIncubatorProjects() {
+  const rng = seedRng(99999);
+  const randInt = (min, max) => Math.floor(rng() * (max - min + 1)) + min;
+
+  const projects = [
+    {
+      id: 'proj-1', name: 'YieldVault', tagline: 'Automated DeFi yield optimization',
+      category: 'DeFi', stage: 'scale', teamSize: 8, fundingRaised: 2400000,
+      communityMembers: 12400, upvotes: 842, monthlyGrowth: 34,
+      founder: '@alphawhale', founderAvatar: '#3b82f6',
+      description: 'AI-powered yield farming aggregator that automatically rebalances across 15+ DeFi protocols for optimal returns.',
+      tags: ['Solana', 'DeFi', 'Yield'],
+    },
+    {
+      id: 'proj-2', name: 'NeuralPitch', tagline: 'AI pitch deck generator for founders',
+      category: 'AI', stage: 'launch', teamSize: 4, fundingRaised: 500000,
+      communityMembers: 3200, upvotes: 567, monthlyGrowth: 62,
+      founder: '@tradequeen', founderAvatar: '#a855f7',
+      description: 'Generate investor-ready pitch decks in minutes. Trained on 10,000+ successful fundraising decks.',
+      tags: ['AI', 'SaaS', 'Fundraising'],
+    },
+    {
+      id: 'proj-3', name: 'ChainGuard', tagline: 'Real-time smart contract security',
+      category: 'Web3', stage: 'prototype', teamSize: 3, fundingRaised: 150000,
+      communityMembers: 890, upvotes: 312, monthlyGrowth: 28,
+      founder: '@diamondhands', founderAvatar: '#10b981',
+      description: 'Automated smart contract auditing and real-time vulnerability monitoring for DeFi protocols.',
+      tags: ['Security', 'Web3', 'Auditing'],
+    },
+    {
+      id: 'proj-4', name: 'MetricFlow', tagline: 'Revenue analytics for SaaS founders',
+      category: 'SaaS', stage: 'launch', teamSize: 5, fundingRaised: 800000,
+      communityMembers: 5600, upvotes: 445, monthlyGrowth: 41,
+      founder: '@profitpete', founderAvatar: '#f59e0b',
+      description: 'One dashboard for MRR, churn, LTV, CAC, and 50+ SaaS metrics. Integrates with Stripe, Paddle, and more.',
+      tags: ['Analytics', 'SaaS', 'Revenue'],
+    },
+    {
+      id: 'proj-5', name: 'SolPay', tagline: 'Instant crypto payments for merchants',
+      category: 'FinTech', stage: 'scale', teamSize: 12, fundingRaised: 5200000,
+      communityMembers: 28000, upvotes: 1203, monthlyGrowth: 22,
+      founder: '@stacksats', founderAvatar: '#ec4899',
+      description: 'Accept SOL, USDC, and 20+ tokens at checkout. Instant settlement, 0.1% fees, no chargebacks.',
+      tags: ['Payments', 'Crypto', 'Merchants'],
+    },
+    {
+      id: 'proj-6', name: 'DataForge', tagline: 'No-code data pipeline builder',
+      category: 'Infrastructure', stage: 'prototype', teamSize: 2, fundingRaised: 75000,
+      communityMembers: 450, upvotes: 189, monthlyGrowth: 55,
+      founder: '@moonboy99', founderAvatar: '#06b6d4',
+      description: 'Visual data pipeline builder with 100+ connectors. ETL without writing code.',
+      tags: ['Data', 'No-Code', 'ETL'],
+    },
+    {
+      id: 'proj-7', name: 'CloserNet', tagline: 'AI-powered sales outreach platform',
+      category: 'SaaS', stage: 'idea', teamSize: 1, fundingRaised: 0,
+      communityMembers: 120, upvotes: 87, monthlyGrowth: 0,
+      founder: '@closerking', founderAvatar: '#00ff88',
+      description: 'Hyper-personalized cold outreach using AI that reads prospect signals from LinkedIn, Twitter, and on-chain activity.',
+      tags: ['Sales', 'AI', 'Outreach'],
+    },
+    {
+      id: 'proj-8', name: 'TrustGraph', tagline: 'On-chain reputation scoring',
+      category: 'Web3', stage: 'idea', teamSize: 2, fundingRaised: 25000,
+      communityMembers: 340, upvotes: 156, monthlyGrowth: 0,
+      founder: '@vibecheck', founderAvatar: '#8b5cf6',
+      description: 'Build verifiable reputation from on-chain history. Credit scores for the decentralized world.',
+      tags: ['Identity', 'Web3', 'Reputation'],
+    },
+    {
+      id: 'proj-9', name: 'FeedAI', tagline: 'Personalized content curation engine',
+      category: 'AI', stage: 'launch', teamSize: 6, fundingRaised: 1100000,
+      communityMembers: 7800, upvotes: 634, monthlyGrowth: 48,
+      founder: '@wagmi_wes', founderAvatar: '#84cc16',
+      description: 'AI that learns your interests and curates a feed from 500+ sources. Zero algorithmic manipulation.',
+      tags: ['AI', 'Content', 'Curation'],
+    },
+    {
+      id: 'proj-10', name: 'LiquidLayer', tagline: 'Cross-chain liquidity aggregation',
+      category: 'DeFi', stage: 'prototype', teamSize: 4, fundingRaised: 300000,
+      communityMembers: 1600, upvotes: 278, monthlyGrowth: 37,
+      founder: '@apemaxi', founderAvatar: '#f97316',
+      description: 'Aggregate liquidity across 8 chains for the best swap rates. One click, best execution.',
+      tags: ['DeFi', 'Cross-chain', 'Liquidity'],
+    },
+  ];
+  return projects;
+}
+
+const fmtNum = (n) => {
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
+  return '' + n;
+};
+
+const fmtMoney = (n) => {
   if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
   if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
   return '$' + n;
-};
-
-const fmtPnl = (n) => {
-  const prefix = n >= 0 ? '+' : '';
-  if (Math.abs(n) >= 1e3) return prefix + '$' + (n / 1e3).toFixed(1) + 'K';
-  return prefix + '$' + n.toFixed(0);
 };
 
 // Sparkline SVG chart
@@ -225,249 +309,47 @@ function LiveIndicator({ count, degenMode }) {
         </div>
         <span className={'text-[10px] font-black tracking-widest ' + (degenMode ? 'text-orange-400' : 'text-red-400')}>LIVE</span>
       </div>
-      <span className="text-[10px] text-slate-500">{count} people betting now</span>
+      <span className="text-[10px] text-slate-500">{count} tracking now</span>
     </div>
   );
 }
 
-// Full-screen betting overlay for degen mode
-function BettingOverlay({ event, position, degenMode, onClose, onConfirm }) {
-  const [amount, setAmount] = useState(50);
-  const [multiplier, setMultiplier] = useState(1.0);
-  const [recentBets, setRecentBets] = useState([]);
-  const [confirmed, setConfirmed] = useState(false);
-
-  const price = position === 'yes' ? event.yesProb / 100 : (100 - event.yesProb) / 100;
-  const payout = (amount / price).toFixed(2);
-  const mockBalance = 1000;
-  const accentColor = degenMode ? '#f97316' : '#00ff88';
-
-  useEffect(() => {
-    const iv = setInterval(() => {
-      setMultiplier(prev => {
-        const delta = (Math.random() - 0.48) * 0.08;
-        return Math.max(1.01, +(prev + delta).toFixed(2));
-      });
-    }, 800);
-    return () => clearInterval(iv);
-  }, []);
-
-  useEffect(() => {
-    const initial = [];
-    for (let i = 0; i < 5; i++) {
-      initial.push({
-        id: i,
-        user: SIM_USERS[Math.floor(Math.random() * SIM_USERS.length)],
-        side: Math.random() > 0.4 ? 'YES' : 'NO',
-        amount: Math.floor(Math.random() * 500) + 10,
-        time: Math.floor(Math.random() * 30) + 1 + 's ago',
-      });
-    }
-    setRecentBets(initial);
-    const iv = setInterval(() => {
-      setRecentBets(prev => {
-        const newBet = {
-          id: Date.now(),
-          user: SIM_USERS[Math.floor(Math.random() * SIM_USERS.length)],
-          side: Math.random() > 0.4 ? 'YES' : 'NO',
-          amount: Math.floor(Math.random() * 500) + 10,
-          time: 'just now',
-        };
-        return [newBet, ...prev.slice(0, 6)];
-      });
-    }, 3000);
-    return () => clearInterval(iv);
-  }, []);
-
-  const handleConfirm = () => {
-    setConfirmed(true);
-    setTimeout(() => onConfirm(amount), 1200);
-  };
-
-  const presets = [25, 50, 100, 250, 500];
+// Progress stage indicator for incubator projects
+function StageProgress({ stage }) {
+  const stageInfo = PROJECT_STAGES[stage];
+  const currentStep = stageInfo.step;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.9, y: 30 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 30 }}
-        className="w-full max-w-lg rounded-2xl border p-6 relative"
-        style={{
-          background: 'rgba(10,10,10,0.98)',
-          borderColor: accentColor + '30',
-          boxShadow: '0 0 60px ' + accentColor + '15',
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        <button onClick={onClose} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors">
-          <X size={20} />
-        </button>
-
-        {confirmed ? (
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="text-center py-12"
-          >
-            <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-              style={{ background: accentColor + '20' }}>
-              <CheckCircle2 size={32} style={{ color: accentColor }} />
-            </div>
-            <h3 className="text-xl font-black text-white mb-1">Bet Placed!</h3>
-            <p className="text-sm text-slate-400">${amount} on {position.toUpperCase()} @ ${price.toFixed(2)}</p>
-            <p className="text-xs mt-2" style={{ color: accentColor }}>Potential payout: ${payout}</p>
-          </motion.div>
-        ) : (
-          <>
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase"
-                  style={{
-                    background: position === 'yes' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-                    color: position === 'yes' ? '#10b981' : '#ef4444',
-                    border: '1px solid ' + (position === 'yes' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'),
-                  }}>
-                  {position.toUpperCase()} Position
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] text-slate-400 border border-white/[0.06]">
-                  {event.category}
-                </span>
-              </div>
-              <h2 className="text-lg font-black text-white leading-snug">{event.title}</h2>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                <div className="text-[10px] text-slate-500 mb-1">Current Price</div>
-                <div className="text-2xl font-black" style={{ color: position === 'yes' ? '#10b981' : '#ef4444' }}>
-                  ${price.toFixed(2)}
-                </div>
-              </div>
-              <div className="p-3 rounded-xl border"
-                style={{ background: accentColor + '05', borderColor: accentColor + '20' }}>
-                <div className="text-[10px] text-slate-500 mb-1">Live Multiplier</div>
-                <motion.div
-                  key={multiplier}
-                  initial={{ scale: 1.1 }}
-                  animate={{ scale: 1 }}
-                  className="text-2xl font-black"
-                  style={{ color: accentColor }}
-                >
-                  {multiplier.toFixed(2)}x
-                </motion.div>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-400 font-bold">Bet Amount (USDC)</span>
-                <span className="text-[10px] text-slate-500">Balance: ${mockBalance.toLocaleString()}</span>
-              </div>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-bold">$</span>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={e => setAmount(Math.max(1, Math.min(mockBalance, Number(e.target.value) || 0)))}
-                  className="w-full pl-7 pr-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white text-lg font-bold focus:outline-none focus:border-brand/40 transition-colors"
-                  style={{ caretColor: accentColor }}
-                />
-              </div>
-              <div className="flex gap-2 mt-2">
-                {presets.map(p => (
-                  <button
-                    key={p}
-                    onClick={() => setAmount(p)}
-                    className={'flex-1 py-1.5 rounded-lg text-[11px] font-bold transition-all ' +
-                      (amount === p
-                        ? 'text-black'
-                        : 'bg-white/[0.04] text-slate-400 border border-white/[0.06] hover:bg-white/[0.06]')
-                    }
-                    style={amount === p ? { background: accentColor } : {}}
-                  >
-                    ${p}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] mb-6">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400">Potential Payout</span>
-                <span className="text-lg font-black" style={{ color: accentColor }}>${payout}</span>
-              </div>
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-[10px] text-slate-500">Return on investment</span>
-                <span className="text-xs font-bold" style={{ color: accentColor }}>
-                  {((Number(payout) / amount - 1) * 100).toFixed(0)}%
-                </span>
-              </div>
-            </div>
-
-            <button
-              onClick={handleConfirm}
-              className="w-full py-3.5 rounded-xl text-sm font-black transition-all hover:brightness-110 active:scale-[0.98]"
+    <div className="flex items-center gap-1">
+      {STAGE_ORDER.map((s, i) => {
+        const info = PROJECT_STAGES[s];
+        const isActive = i <= currentStep;
+        const isCurrent = i === currentStep;
+        return (
+          <React.Fragment key={s}>
+            <div
+              className={'w-2 h-2 rounded-full transition-all ' + (isCurrent ? 'ring-2 ring-offset-1 ring-offset-black' : '')}
               style={{
-                background: position === 'yes'
-                  ? 'linear-gradient(135deg, #10b981, #059669)'
-                  : 'linear-gradient(135deg, #ef4444, #dc2626)',
-                color: position === 'yes' ? '#000' : '#fff',
+                background: isActive ? info.color : 'rgba(255,255,255,0.06)',
+                ringColor: isCurrent ? info.color : 'transparent',
               }}
-            >
-              Place {position.toUpperCase()} Bet - ${amount}
-            </button>
-
-            <div className="mt-5 pt-4 border-t border-white/[0.05]">
-              <div className="flex items-center gap-2 mb-3">
-                <Activity size={12} className="text-slate-500" />
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Recent bets</span>
-              </div>
-              <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                <AnimatePresence>
-                  {recentBets.map(bet => (
-                    <motion.div
-                      key={bet.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0 }}
-                      className="flex items-center justify-between text-[11px]"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-400">{bet.user}</span>
-                        <span className={'font-bold ' + (bet.side === 'YES' ? 'text-emerald-400' : 'text-red-400')}>
-                          {bet.side}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-bold">${bet.amount}</span>
-                        <span className="text-slate-600">{bet.time}</span>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-            </div>
-          </>
-        )}
-      </motion.div>
-    </motion.div>
+              title={info.label}
+            />
+            {i < STAGE_ORDER.length - 1 && (
+              <div className="w-3 h-px" style={{ background: isActive && i < currentStep ? info.color : 'rgba(255,255,255,0.06)' }} />
+            )}
+          </React.Fragment>
+        );
+      })}
+      <span className="text-[9px] font-bold ml-1.5" style={{ color: stageInfo.color }}>
+        {stageInfo.label}
+      </span>
+    </div>
   );
 }
 
 // Event detail expansion panel
 function EventDetailExpansion({ event, degenMode }) {
-  const maxQty = Math.max(
-    ...event.orderBook.yes.map(l => l.qty),
-    ...event.orderBook.no.map(l => l.qty),
-  );
-
   return (
     <motion.div
       initial={{ height: 0, opacity: 0 }}
@@ -477,7 +359,7 @@ function EventDetailExpansion({ event, degenMode }) {
     >
       <div className="pt-3 mt-3 border-t border-white/[0.05] space-y-4">
         <div>
-          <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2">Price History</div>
+          <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2">Probability History</div>
           <div className="p-3 rounded-lg bg-black/30 border border-white/[0.04]">
             <Sparkline
               data={event.priceHistory}
@@ -493,36 +375,8 @@ function EventDetailExpansion({ event, degenMode }) {
         </div>
 
         <div>
-          <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2">Order Book</div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <div className="text-[9px] text-emerald-400 font-bold mb-1 uppercase">YES Bids</div>
-              {event.orderBook.yes.map((level, i) => (
-                <div key={i} className="flex items-center gap-1 mb-0.5 relative">
-                  <div className="absolute inset-0 rounded bg-emerald-500/[0.06]"
-                    style={{ width: (level.qty / maxQty) * 100 + '%' }} />
-                  <span className="text-[10px] text-emerald-400 font-mono w-8 relative z-10">${(level.price / 100).toFixed(2)}</span>
-                  <span className="text-[10px] text-slate-500 relative z-10">{level.qty.toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
-            <div>
-              <div className="text-[9px] text-red-400 font-bold mb-1 uppercase">NO Bids</div>
-              {event.orderBook.no.map((level, i) => (
-                <div key={i} className="flex items-center gap-1 mb-0.5 relative">
-                  <div className="absolute inset-0 rounded bg-red-500/[0.06]"
-                    style={{ width: (level.qty / maxQty) * 100 + '%' }} />
-                  <span className="text-[10px] text-red-400 font-mono w-8 relative z-10">${(level.price / 100).toFixed(2)}</span>
-                  <span className="text-[10px] text-slate-500 relative z-10">{level.qty.toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div>
           <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2">
-            Comments ({event.comments.length})
+            Discussion ({event.comments.length})
           </div>
           <div className="space-y-1.5">
             {event.comments.map((c, i) => (
@@ -543,15 +397,15 @@ function EventDetailExpansion({ event, degenMode }) {
 
         <button className="flex items-center gap-1.5 text-[10px] text-slate-500 hover:text-brand transition-colors font-bold">
           <Share2 size={10} />
-          Share Event
+          Share Prediction
         </button>
       </div>
     </motion.div>
   );
 }
 
-// Event card with inline expansion
-function EventCard({ event, degenMode, onBet, expanded, onToggleExpand }) {
+// Prediction event card (no betting/wagering)
+function EventCard({ event, degenMode, onPredict, expanded, onToggleExpand }) {
   const catColor = CATEGORY_COLORS[event.category] || '#64748b';
   return (
     <motion.div
@@ -580,7 +434,7 @@ function EventCard({ event, degenMode, onBet, expanded, onToggleExpand }) {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-slate-600 flex items-center gap-1">
-            <Users size={9} />{event.bettingNow} live
+            <Eye size={9} />{event.trackingNow} watching
           </span>
           <div className="flex items-center gap-1 text-[10px] text-slate-500">
             <Clock size={10} />
@@ -606,38 +460,37 @@ function EventCard({ event, degenMode, onBet, expanded, onToggleExpand }) {
       </div>
 
       <div className="flex items-center justify-between text-[10px] text-slate-500 mb-3">
-        <span className="flex items-center gap-1"><DollarSign size={10} />{fmtVol(event.volume)}</span>
-        <span className="flex items-center gap-1"><Users size={10} />{event.participants.toLocaleString()}</span>
+        <span className="flex items-center gap-1"><Users size={10} />{event.followers.toLocaleString()} followers</span>
         {event.change24h !== 0 && (
           <span className={'flex items-center gap-0.5 font-bold ' + (event.change24h > 0 ? 'text-emerald-400' : 'text-red-400')}>
             {event.change24h > 0 ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
-            {Math.abs(event.change24h)}%
+            {Math.abs(event.change24h)}% 24h
           </span>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         <button
-          onClick={() => onBet(event, 'yes')}
+          onClick={() => onPredict(event, 'yes')}
           className={'py-2 rounded-lg text-xs font-bold transition-all ' +
-            (event.userPosition === 'yes'
+            (event.userPrediction === 'yes'
               ? 'bg-emerald-500 text-black'
               : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20')
           }
         >
-          {event.userPosition === 'yes' ? <CheckCircle2 size={12} className="inline mr-1" /> : null}
-          YES ${(event.yesProb / 100).toFixed(2)}
+          {event.userPrediction === 'yes' ? <CheckCircle2 size={12} className="inline mr-1" /> : null}
+          Predict YES
         </button>
         <button
-          onClick={() => onBet(event, 'no')}
+          onClick={() => onPredict(event, 'no')}
           className={'py-2 rounded-lg text-xs font-bold transition-all ' +
-            (event.userPosition === 'no'
+            (event.userPrediction === 'no'
               ? 'bg-red-500 text-white'
               : 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20')
           }
         >
-          {event.userPosition === 'no' ? <XCircle size={12} className="inline mr-1" /> : null}
-          NO ${((100 - event.yesProb) / 100).toFixed(2)}
+          {event.userPrediction === 'no' ? <XCircle size={12} className="inline mr-1" /> : null}
+          Predict NO
         </button>
       </div>
 
@@ -648,7 +501,7 @@ function EventCard({ event, degenMode, onBet, expanded, onToggleExpand }) {
   );
 }
 
-// Leaderboard row
+// Leaderboard row - prediction accuracy focused
 function LeaderboardRow({ user, degenMode }) {
   const accentColor = degenMode ? '#f97316' : '#00ff88';
   const rankBadge = user.rank === 1 ? { icon: Crown, color: '#f59e0b' }
@@ -689,10 +542,10 @@ function LeaderboardRow({ user, degenMode }) {
             {user.isCurrentUser && <span className="text-[9px] text-brand/60 ml-1">(you)</span>}
           </span>
           <div className="flex items-center gap-2 text-[10px] text-slate-500">
-            <span>{user.wins}W / {user.losses}L</span>
+            <span>{user.correct} correct / {user.incorrect} wrong</span>
             {user.streak > 0 && (
               <span className="flex items-center gap-0.5 text-orange-400">
-                <Flame size={9} />{user.streak}
+                <Flame size={9} />{user.streak} streak
               </span>
             )}
           </div>
@@ -700,12 +553,327 @@ function LeaderboardRow({ user, degenMode }) {
       </div>
 
       <div className="text-right flex-shrink-0">
-        <div className={'text-sm font-black ' + (user.pnl >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-          {fmtPnl(user.pnl)}
+        <div className={'text-sm font-black ' + (user.accuracy >= 60 ? 'text-emerald-400' : user.accuracy >= 45 ? 'text-yellow-400' : 'text-red-400')}>
+          {user.accuracy}%
         </div>
-        <div className="text-[10px] text-slate-500">{fmtVol(user.wagered)} wagered</div>
+        <div className="text-[10px] text-slate-500">{user.predictions} predictions</div>
       </div>
     </motion.div>
+  );
+}
+
+// Incubator project card
+function ProjectCard({ project, degenMode, onUpvote, onView }) {
+  const stageInfo = PROJECT_STAGES[project.stage];
+  const accentColor = degenMode ? '#f97316' : '#00ff88';
+  const categoryIcon = {
+    DeFi: Coins,
+    AI: Cpu,
+    SaaS: Code2,
+    Web3: Database,
+    FinTech: DollarSign,
+    Infrastructure: Layers,
+    Social: Users,
+  }[project.category] || Rocket;
+  const CatIcon = categoryIcon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={'rounded-xl border p-4 transition-all duration-200 hover:border-white/[0.08] group ' +
+        (degenMode ? 'alpha-panel degen-fire-border' : '')
+      }
+      style={{
+        background: 'rgba(255,255,255,0.015)',
+        borderColor: 'rgba(255,255,255,0.04)',
+      }}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+            style={{ background: stageInfo.color + '15', border: '1px solid ' + stageInfo.color + '25' }}>
+            <CatIcon size={16} style={{ color: stageInfo.color }} />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white group-hover:text-brand transition-colors">{project.name}</h3>
+            <p className="text-[10px] text-slate-500">{project.tagline}</p>
+          </div>
+        </div>
+        <StageProgress stage={project.stage} />
+      </div>
+
+      <p className="text-[11px] text-slate-400 mb-3 leading-relaxed line-clamp-2">{project.description}</p>
+
+      <div className="flex flex-wrap gap-1 mb-3">
+        {project.tags.map(tag => (
+          <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-slate-500 border border-white/[0.05]">
+            {tag}
+          </span>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mb-3 p-2 rounded-lg bg-white/[0.02] border border-white/[0.03]">
+        <div className="text-center">
+          <div className="text-[9px] text-slate-500 mb-0.5">Team</div>
+          <div className="text-xs font-bold text-white flex items-center justify-center gap-1">
+            <Users size={10} className="text-slate-400" />
+            {project.teamSize}
+          </div>
+        </div>
+        <div className="text-center border-x border-white/[0.04]">
+          <div className="text-[9px] text-slate-500 mb-0.5">Raised</div>
+          <div className="text-xs font-bold text-white">
+            {project.fundingRaised > 0 ? fmtMoney(project.fundingRaised) : '--'}
+          </div>
+        </div>
+        <div className="text-center">
+          <div className="text-[9px] text-slate-500 mb-0.5">Community</div>
+          <div className="text-xs font-bold text-white">{fmtNum(project.communityMembers)}</div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2 text-[10px] text-slate-500">
+          <div className="flex items-center gap-1">
+            <div className="w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-black text-black"
+              style={{ background: project.founderAvatar }}>
+              {project.founder.slice(1, 3).toUpperCase()}
+            </div>
+            <span>{project.founder}</span>
+          </div>
+        </div>
+        {project.monthlyGrowth > 0 && (
+          <span className="flex items-center gap-0.5 text-[10px] text-emerald-400 font-bold">
+            <TrendingUp size={10} />
+            +{project.monthlyGrowth}% /mo
+          </span>
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          onClick={() => onUpvote(project.id)}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all bg-white/[0.04] text-slate-400 border border-white/[0.06] hover:bg-white/[0.06] hover:text-white"
+        >
+          <ThumbsUp size={12} />
+          {project.upvotes}
+        </button>
+        <button
+          onClick={() => onView(project.id)}
+          className="flex-1 py-2 rounded-lg text-xs font-bold transition-all text-black hover:brightness-110"
+          style={{ background: accentColor }}
+        >
+          View Project
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+// Project submission modal
+function SubmitProjectModal({ onClose, degenMode }) {
+  const accentColor = degenMode ? '#f97316' : '#00ff88';
+  const [formData, setFormData] = useState({
+    name: '', tagline: '', description: '', category: 'DeFi', stage: 'idea',
+    website: '', teamSize: '1',
+  });
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setSubmitted(true);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, y: 30 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 30 }}
+        className="w-full max-w-lg rounded-2xl border p-6 relative max-h-[90vh] overflow-y-auto"
+        style={{
+          background: 'rgba(10,10,10,0.98)',
+          borderColor: accentColor + '30',
+          boxShadow: '0 0 60px ' + accentColor + '15',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <button onClick={onClose} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors">
+          <X size={20} />
+        </button>
+
+        {submitted ? (
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-center py-12"
+          >
+            <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
+              style={{ background: accentColor + '20' }}>
+              <CheckCircle2 size={32} style={{ color: accentColor }} />
+            </div>
+            <h3 className="text-xl font-black text-white mb-1">Project Submitted!</h3>
+            <p className="text-sm text-slate-400">Your project is under review. You will be notified when it goes live.</p>
+            <button
+              onClick={onClose}
+              className="mt-6 px-6 py-2.5 rounded-xl text-sm font-bold text-black"
+              style={{ background: accentColor }}
+            >
+              Done
+            </button>
+          </motion.div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <h2 className="text-lg font-black text-white mb-1 flex items-center gap-2">
+              <Rocket size={20} style={{ color: accentColor }} />
+              Submit Your Project
+            </h2>
+            <p className="text-xs text-slate-400 mb-6">Get your startup in front of the GOATED community</p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Project Name *</label>
+                <input
+                  required
+                  value={formData.name}
+                  onChange={e => setFormData(f => ({ ...f, name: e.target.value }))}
+                  placeholder="e.g., YieldVault"
+                  className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white text-sm focus:outline-none focus:border-brand/40 transition-colors placeholder:text-slate-600"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Tagline *</label>
+                <input
+                  required
+                  value={formData.tagline}
+                  onChange={e => setFormData(f => ({ ...f, tagline: e.target.value }))}
+                  placeholder="One-line description"
+                  className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white text-sm focus:outline-none focus:border-brand/40 transition-colors placeholder:text-slate-600"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Description *</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={formData.description}
+                  onChange={e => setFormData(f => ({ ...f, description: e.target.value }))}
+                  placeholder="What does your project do and what problem does it solve?"
+                  className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white text-sm focus:outline-none focus:border-brand/40 transition-colors placeholder:text-slate-600 resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Category</label>
+                  <select
+                    value={formData.category}
+                    onChange={e => setFormData(f => ({ ...f, category: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white text-sm focus:outline-none focus:border-brand/40 transition-colors"
+                  >
+                    {PROJECT_CATEGORIES.filter(c => c !== 'All').map(c => (
+                      <option key={c} value={c} className="bg-black">{c}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Stage</label>
+                  <select
+                    value={formData.stage}
+                    onChange={e => setFormData(f => ({ ...f, stage: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white text-sm focus:outline-none focus:border-brand/40 transition-colors"
+                  >
+                    {STAGE_ORDER.map(s => (
+                      <option key={s} value={s} className="bg-black">{PROJECT_STAGES[s].label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Website</label>
+                  <input
+                    value={formData.website}
+                    onChange={e => setFormData(f => ({ ...f, website: e.target.value }))}
+                    placeholder="https://..."
+                    className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white text-sm focus:outline-none focus:border-brand/40 transition-colors placeholder:text-slate-600"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Team Size</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.teamSize}
+                    onChange={e => setFormData(f => ({ ...f, teamSize: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white text-sm focus:outline-none focus:border-brand/40 transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="mt-6 w-full py-3 rounded-xl text-sm font-black text-black transition-all hover:brightness-110 active:scale-[0.98]"
+              style={{ background: accentColor }}
+            >
+              Submit Project for Review
+            </button>
+          </form>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// Announcement banner for homepage upsell
+export function LaunchPadBanner({ degenMode }) {
+  const accentColor = degenMode ? '#f97316' : '#00ff88';
+  return (
+    <div
+      className="p-4 rounded-xl border relative overflow-hidden group cursor-pointer hover:border-brand/20 transition-all"
+      style={{
+        background: 'linear-gradient(135deg, rgba(0,255,136,0.03), rgba(168,85,247,0.03))',
+        borderColor: 'rgba(255,255,255,0.06)',
+      }}
+    >
+      <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10"
+        style={{ background: 'radial-gradient(circle, ' + accentColor + ', transparent)' }} />
+      <div className="flex items-center justify-between flex-wrap gap-3 relative z-10">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: accentColor + '15' }}>
+            <Rocket size={20} style={{ color: accentColor }} />
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-white flex items-center gap-2">
+              LaunchPad is Live
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-brand/15 text-brand font-bold tracking-wider">NEW</span>
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Track real-time predictions, submit your startup to the Incubator, and climb the accuracy leaderboard.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-slate-500">20 live predictions</span>
+          <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold"
+            style={{ background: accentColor + '15', color: accentColor }}>
+            Explore <ArrowRight size={12} />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -714,19 +882,23 @@ function LeaderboardRow({ user, degenMode }) {
 // ============================================================================
 export default function LaunchPadPage() {
   const degenMode = useStore(s => s.degenMode);
-  const { regime, sentiment, predictions } = useGoatedAI();
+  const { regime } = useGoatedAI();
   const [tab, setTab] = useState('events');
   const [catFilter, setCatFilter] = useState('All');
+  const [projCatFilter, setProjCatFilter] = useState('All');
+  const [projStageFilter, setProjStageFilter] = useState('All');
   const [events, setEvents] = useState(generateEvents);
   const leaderboard = useMemo(generateLeaderboard, []);
+  const [projects, setProjects] = useState(generateIncubatorProjects);
   const [expandedEvent, setExpandedEvent] = useState(null);
-  const [bettingOverlay, setBettingOverlay] = useState(null);
-  const [totalBettingNow, setTotalBettingNow] = useState(0);
+  const [totalTrackingNow, setTotalTrackingNow] = useState(0);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   useEffect(() => {
-    setTotalBettingNow(events.reduce((s, e) => s + e.bettingNow, 0));
+    setTotalTrackingNow(events.reduce((s, e) => s + e.trackingNow, 0));
   }, [events]);
 
+  // Real-time probability updates
   useEffect(() => {
     const iv = setInterval(() => {
       setEvents(prev => prev.map(e => {
@@ -737,41 +909,39 @@ export default function LaunchPadPage() {
           ...e,
           yesProb: Math.round(newProb),
           priceHistory: newHistory,
-          participants: e.participants + Math.floor(Math.random() * 20),
-          volume: e.volume + Math.floor(Math.random() * 10000),
-          bettingNow: Math.max(1, e.bettingNow + Math.floor(Math.random() * 5) - 2),
+          followers: e.followers + Math.floor(Math.random() * 20),
+          trackingNow: Math.max(1, e.trackingNow + Math.floor(Math.random() * 5) - 2),
         };
       }));
     }, 5000);
     return () => clearInterval(iv);
   }, []);
 
-  const handleBet = useCallback((event, position) => {
-    if (degenMode) {
-      setBettingOverlay({ event, position });
-    } else {
-      setEvents(prev => prev.map(e =>
-        e.id === event.id
-          ? { ...e, userPosition: e.userPosition === position ? null : position }
-          : e
-      ));
-    }
-  }, [degenMode]);
-
-  const handleBetConfirm = useCallback((amount) => {
-    if (!bettingOverlay) return;
+  const handlePredict = useCallback((event, position) => {
     setEvents(prev => prev.map(e =>
-      e.id === bettingOverlay.event.id
-        ? { ...e, userPosition: bettingOverlay.position }
+      e.id === event.id
+        ? { ...e, userPrediction: e.userPrediction === position ? null : position }
         : e
     ));
-    setTimeout(() => setBettingOverlay(null), 1500);
-  }, [bettingOverlay]);
+  }, []);
+
+  const handleUpvote = useCallback((projectId) => {
+    setProjects(prev => prev.map(p =>
+      p.id === projectId ? { ...p, upvotes: p.upvotes + 1 } : p
+    ));
+  }, []);
 
   const filteredEvents = useMemo(() =>
     catFilter === 'All' ? events : events.filter(e => e.category === catFilter),
     [events, catFilter]
   );
+
+  const filteredProjects = useMemo(() => {
+    let result = projects;
+    if (projCatFilter !== 'All') result = result.filter(p => p.category === projCatFilter);
+    if (projStageFilter !== 'All') result = result.filter(p => p.stage === projStageFilter);
+    return result;
+  }, [projects, projCatFilter, projStageFilter]);
 
   const accentColor = degenMode ? '#f97316' : '#00ff88';
 
@@ -791,10 +961,10 @@ export default function LaunchPadPage() {
                 LaunchPad
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/15 text-brand font-bold tracking-wider">BETA</span>
               </h1>
-              <p className="text-xs text-slate-500">Live events, predictions & leaderboard</p>
+              <p className="text-xs text-slate-500">Predictions, accuracy leaderboard & startup incubator</p>
             </div>
           </div>
-          <LiveIndicator count={totalBettingNow} degenMode={degenMode} />
+          <LiveIndicator count={totalTrackingNow} degenMode={degenMode} />
         </div>
       </div>
 
@@ -830,7 +1000,7 @@ export default function LaunchPadPage() {
         ))}
       </div>
 
-      {/* LIVE EVENTS TAB */}
+      {/* PREDICTIONS TAB */}
       {tab === 'events' && (
         <div>
           <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
@@ -853,9 +1023,9 @@ export default function LaunchPadPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             {[
-              { label: 'Live Events', value: events.length, icon: Zap, color: '#a855f7' },
-              { label: 'Total Volume', value: fmtVol(events.reduce((s, e) => s + e.volume, 0)), icon: DollarSign, color: '#10b981' },
-              { label: 'Participants', value: events.reduce((s, e) => s + e.participants, 0).toLocaleString(), icon: Users, color: '#06b6d4' },
+              { label: 'Active Predictions', value: events.length, icon: Zap, color: '#a855f7' },
+              { label: 'Total Followers', value: fmtNum(events.reduce((s, e) => s + e.followers, 0)), icon: Users, color: '#06b6d4' },
+              { label: 'Your Predictions', value: events.filter(e => e.userPrediction).length, icon: Target, color: '#10b981' },
               { label: 'Hot Events', value: events.filter(e => e.hot).length, icon: Flame, color: '#f59e0b' },
             ].map((s, i) => (
               <div key={i} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
@@ -874,7 +1044,7 @@ export default function LaunchPadPage() {
                 key={event.id}
                 event={event}
                 degenMode={degenMode}
-                onBet={handleBet}
+                onPredict={handlePredict}
                 expanded={expandedEvent === event.id}
                 onToggleExpand={() => setExpandedEvent(expandedEvent === event.id ? null : event.id)}
               />
@@ -884,7 +1054,7 @@ export default function LaunchPadPage() {
           {filteredEvents.length === 0 && (
             <div className="text-center py-16 text-slate-500">
               <Zap size={32} className="mx-auto mb-3 opacity-30" />
-              <p className="text-sm">No events in this category yet</p>
+              <p className="text-sm">No predictions in this category yet</p>
             </div>
           )}
         </div>
@@ -899,9 +1069,9 @@ export default function LaunchPadPage() {
               <div>
                 <h2 className="text-lg font-black flex items-center gap-2">
                   <Trophy size={20} style={{ color: accentColor }} />
-                  GOATED Leaderboard
+                  Prediction Leaderboard
                 </h2>
-                <p className="text-xs text-slate-400 mt-1">Top performers ranked by profit & loss</p>
+                <p className="text-xs text-slate-400 mt-1">Top predictors ranked by accuracy</p>
               </div>
               <div className="flex items-center gap-3 text-[10px] text-slate-500">
                 <span className="flex items-center gap-1"><Crown size={10} className="text-yellow-500" /> Gold</span>
@@ -913,10 +1083,10 @@ export default function LaunchPadPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             {[
-              { label: 'Total Players', value: leaderboard.length, icon: Users, color: '#06b6d4' },
-              { label: 'Top P&L', value: fmtPnl(leaderboard[0]?.pnl || 0), icon: TrendingUp, color: '#10b981' },
-              { label: 'Total Wagered', value: fmtVol(leaderboard.reduce((s, u) => s + u.wagered, 0)), icon: DollarSign, color: '#a855f7' },
-              { label: 'Your Rank', value: '#' + (leaderboard.find(u => u.isCurrentUser)?.rank || '-'), icon: Target, color: '#f59e0b' },
+              { label: 'Total Predictors', value: leaderboard.length, icon: Users, color: '#06b6d4' },
+              { label: 'Top Accuracy', value: leaderboard[0]?.accuracy + '%' || '--', icon: Target, color: '#10b981' },
+              { label: 'Total Predictions', value: fmtNum(leaderboard.reduce((s, u) => s + u.predictions, 0)), icon: BarChart3, color: '#a855f7' },
+              { label: 'Your Rank', value: '#' + (leaderboard.find(u => u.isCurrentUser)?.rank || '-'), icon: Trophy, color: '#f59e0b' },
             ].map((s, i) => (
               <div key={i} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                 <div className="flex items-center gap-2 mb-1">
@@ -936,9 +1106,10 @@ export default function LaunchPadPage() {
         </div>
       )}
 
-      {/* INCUBATOR TAB (Coming Soon) */}
+      {/* INCUBATOR TAB */}
       {tab === 'incubator' && (
         <div>
+          {/* Incubator header */}
           <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-brand/[0.05] to-purple-500/[0.03] border border-brand/10">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
@@ -946,20 +1117,26 @@ export default function LaunchPadPage() {
                   <Building2 size={20} className="text-brand" />
                   GOATED Incubator
                 </h2>
-                <p className="text-xs text-slate-400 mt-1">Build, launch, and scale your startup with AI-powered tools and a network of closers</p>
+                <p className="text-xs text-slate-400 mt-1">Build, launch, and scale your startup with AI-powered tools and the GOATED network</p>
               </div>
-              <span className="text-[10px] px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-bold tracking-wider">
-                COMING SOON
-              </span>
+              <button
+                onClick={() => setShowSubmitModal(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-black hover:brightness-110 transition-all"
+                style={{ background: accentColor }}
+              >
+                <Plus size={14} />
+                Submit Project
+              </button>
             </div>
           </div>
 
+          {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             {[
-              { label: 'Active Projects', value: '0', icon: Rocket, color: '#a855f7' },
-              { label: 'Combined MRR', value: '$0', icon: DollarSign, color: '#10b981' },
-              { label: 'Total Users', value: '0', icon: Users, color: '#06b6d4' },
-              { label: 'Avg Progress', value: '\u2014', icon: Target, color: '#f59e0b' },
+              { label: 'Active Projects', value: projects.length, icon: Rocket, color: '#a855f7' },
+              { label: 'Total Raised', value: fmtMoney(projects.reduce((s, p) => s + p.fundingRaised, 0)), icon: DollarSign, color: '#10b981' },
+              { label: 'Community', value: fmtNum(projects.reduce((s, p) => s + p.communityMembers, 0)), icon: Users, color: '#06b6d4' },
+              { label: 'Scaling', value: projects.filter(p => p.stage === 'scale').length, icon: TrendingUp, color: '#f59e0b' },
             ].map((s, i) => (
               <div key={i} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                 <div className="flex items-center gap-2 mb-1">
@@ -971,30 +1148,111 @@ export default function LaunchPadPage() {
             ))}
           </div>
 
-          <div className="text-center py-16 px-6 rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.01] mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-brand/10 flex items-center justify-center mx-auto mb-4">
-              <Rocket size={28} className="text-brand opacity-50" />
+          {/* Stage pipeline overview */}
+          <div className="mb-6 p-4 rounded-xl bg-white/[0.015] border border-white/[0.04]">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <GitBranch size={12} />
+              Pipeline Overview
+            </h3>
+            <div className="grid grid-cols-4 gap-3">
+              {STAGE_ORDER.map(s => {
+                const info = PROJECT_STAGES[s];
+                const count = projects.filter(p => p.stage === s).length;
+                return (
+                  <div key={s} className="text-center p-3 rounded-lg border"
+                    style={{
+                      background: info.color + '08',
+                      borderColor: info.color + '20',
+                    }}>
+                    <div className="text-2xl font-black" style={{ color: info.color }}>{count}</div>
+                    <div className="text-[10px] font-bold mt-0.5" style={{ color: info.color }}>{info.label}</div>
+                  </div>
+                );
+              })}
             </div>
-            <h3 className="text-lg font-black text-white mb-2">No Projects Yet</h3>
-            <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">
-              The GOATED Incubator is launching soon. Be the first to submit your startup and get access to AI-powered tools, a network of closers, and 500K+ leads.
-            </p>
-            <button className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand text-black text-sm font-bold hover:bg-emerald-400 transition-colors">
-              <Plus size={16} />
-              Submit the First Project
-            </button>
           </div>
 
-          <div className="mb-6 p-5 rounded-xl border border-brand/15 bg-black/30 relative overflow-hidden">
-            <div className="absolute top-3 right-3 text-[9px] px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-bold tracking-wider z-10">
-              LAUNCHING SOON
+          {/* Filters */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
+              {PROJECT_CATEGORIES.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setProjCatFilter(cat)}
+                  className={'px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ' +
+                    (projCatFilter === cat
+                      ? degenMode
+                        ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20'
+                        : 'bg-brand/15 text-brand border border-brand/20'
+                      : 'text-slate-500 hover:text-slate-300 bg-white/[0.02] border border-white/[0.04]')
+                  }
+                >
+                  {cat}
+                </button>
+              ))}
             </div>
+            <div className="flex gap-1.5 overflow-x-auto pb-1 ml-auto">
+              <button
+                onClick={() => setProjStageFilter('All')}
+                className={'px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ' +
+                  (projStageFilter === 'All'
+                    ? 'bg-white/[0.08] text-white border border-white/[0.12]'
+                    : 'text-slate-500 hover:text-slate-300 bg-white/[0.02] border border-white/[0.04]')
+                }
+              >
+                All Stages
+              </button>
+              {STAGE_ORDER.map(s => {
+                const info = PROJECT_STAGES[s];
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setProjStageFilter(s === projStageFilter ? 'All' : s)}
+                    className={'px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ' +
+                      (projStageFilter === s
+                        ? 'border'
+                        : 'text-slate-500 hover:text-slate-300 bg-white/[0.02] border border-white/[0.04]')
+                    }
+                    style={projStageFilter === s ? {
+                      background: info.color + '15',
+                      color: info.color,
+                      borderColor: info.color + '30',
+                    } : {}}
+                  >
+                    {info.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
+          {/* Project grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            {filteredProjects.map(project => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                degenMode={degenMode}
+                onUpvote={handleUpvote}
+                onView={() => {}}
+              />
+            ))}
+          </div>
+
+          {filteredProjects.length === 0 && (
+            <div className="text-center py-16 text-slate-500 mb-8">
+              <Rocket size={32} className="mx-auto mb-3 opacity-30" />
+              <p className="text-sm">No projects match these filters</p>
+            </div>
+          )}
+
+          {/* Quick Launch section */}
+          <div className="mb-6 p-5 rounded-xl border border-brand/15 bg-black/30 relative overflow-hidden">
             <h3 className="text-sm font-bold text-brand mb-3 flex items-center gap-2">
               <Lightbulb size={16} />
               Quick Launch &mdash; Start a Business in 60 Seconds
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 opacity-60">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
                 { step: '1', title: 'Pick Your Niche', desc: 'AI selects the highest-opportunity niche based on market data', icon: Target },
                 { step: '2', title: 'Generate MVP', desc: 'GOATED AI builds your landing page, pitch deck, and outreach', icon: Brain },
@@ -1011,25 +1269,23 @@ export default function LaunchPadPage() {
               ))}
             </div>
             <button
-              disabled
-              className="mt-3 w-full py-2.5 rounded-lg bg-white/[0.05] text-slate-500 text-xs font-bold cursor-not-allowed flex items-center justify-center gap-2 border border-white/[0.06]"
+              onClick={() => setShowSubmitModal(true)}
+              className="mt-3 w-full py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 border transition-all hover:brightness-110"
+              style={{ background: accentColor + '15', color: accentColor, borderColor: accentColor + '25' }}
             >
               <Rocket size={14} />
-              Coming Soon
+              Get Started
             </button>
           </div>
         </div>
       )}
 
-      {/* BETTING OVERLAY (Degen Mode) */}
+      {/* Submit Project Modal */}
       <AnimatePresence>
-        {bettingOverlay && (
-          <BettingOverlay
-            event={bettingOverlay.event}
-            position={bettingOverlay.position}
+        {showSubmitModal && (
+          <SubmitProjectModal
+            onClose={() => setShowSubmitModal(false)}
             degenMode={degenMode}
-            onClose={() => setBettingOverlay(null)}
-            onConfirm={handleBetConfirm}
           />
         )}
       </AnimatePresence>

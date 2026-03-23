@@ -17,15 +17,15 @@ const HomePage = lazy(() => import('./pages/HomePage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const LeadsPage = lazy(() => import('./pages/LeadsPage'));
 const TrendsPage = lazy(() => import('./pages/TrendsPage'));
-const MarketPage = lazy(() => import('./pages/MarketPage'));
+// MarketPage merged into TrendsPage — kept for reference
+// const MarketPage = lazy(() => import('./pages/MarketPage'));
 const WalletPage = lazy(() => import('./pages/WalletPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const BuilderPage = lazy(() => import('./pages/BuilderPage'));
 const WhopPage = lazy(() => import('./pages/WhopPage'));
 const LaunchPadPage = lazy(() => import('./pages/LaunchPadPage'));
 const CasinoPage = lazy(() => import('./pages/CasinoPage'));
-const CommsPage = lazy(() => import('./pages/CommsPage'));
-const FinderPage = lazy(() => import('./pages/FinderPage'));
+// CommsPage and FinderPage removed — outreach built into leads side
 
 // Loading fallback — NO black background, NO framer-motion delays
 // Renders instantly visible to prevent any dark flash during lazy loading
@@ -44,6 +44,10 @@ function LoadingFallback() {
 }
 
 // Custom cursor — high-perf dot + ring, throttled hover detection
+// On low-perf devices (<=4 logical cores or deviceMemory<=4), skip the ring entirely
+const isLowPerf = (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) ||
+  (navigator.deviceMemory && navigator.deviceMemory <= 4);
+
 function CustomCursor() {
   const dotRef = useRef(null);
   const ringRef = useRef(null);
@@ -52,21 +56,41 @@ function CustomCursor() {
   const ringPos = useRef({ x: -100, y: -100 });
   const rafRef = useRef(null);
   const visibleRef = useRef(true);
+  const showRing = !isLowPerf;
 
   useEffect(() => {
     let lastHoverCheck = 0;
+    // Track the current page to skip elementFromPoint during transitions
+    let lastPage = useStore.getState().page;
+    let transitioning = false;
+    let transitionTimer = null;
+    const unsub = useStore.subscribe((state) => {
+      if (state.page !== lastPage) {
+        lastPage = state.page;
+        transitioning = true;
+        clearTimeout(transitionTimer);
+        transitionTimer = setTimeout(() => { transitioning = false; }, 600);
+      }
+    });
+
     const tick = (now) => {
+      // Pause entirely when tab is hidden
+      if (document.hidden) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
       const { x, y } = mouseRef.current;
       // Ring follows with smooth lerp
-      ringPos.current.x += (x - 14 - ringPos.current.x) * 0.2;
-      ringPos.current.y += (y - 14 - ringPos.current.y) * 0.2;
-      if (ringRef.current) {
-        ringRef.current.style.transform = `translate3d(${ringPos.current.x}px, ${ringPos.current.y}px, 0)`;
+      if (showRing) {
+        ringPos.current.x += (x - 14 - ringPos.current.x) * 0.2;
+        ringPos.current.y += (y - 14 - ringPos.current.y) * 0.2;
+        if (ringRef.current) {
+          ringRef.current.style.transform = `translate3d(${ringPos.current.x}px, ${ringPos.current.y}px, 0)`;
+        }
       }
-      // Throttled hover detection — check every 200ms, skip during transitions
-      if (now - lastHoverCheck > 200) {
+      // Throttled hover detection — check every 500ms, skip during page transitions
+      if (now - lastHoverCheck > 500 && !transitioning) {
         lastHoverCheck = now;
-        // Skip expensive elementFromPoint if mouse hasn't moved (avoids layout thrash during transitions)
         if (x > 0 && y > 0) {
           try {
             const el = document.elementFromPoint(x, y);
@@ -98,7 +122,7 @@ function CustomCursor() {
       if (!visibleRef.current) {
         visibleRef.current = true;
         if (dotRef.current) dotRef.current.style.opacity = '1';
-        if (ringRef.current) ringRef.current.style.opacity = '1';
+        if (showRing && ringRef.current) ringRef.current.style.opacity = '1';
       }
     };
 
@@ -106,7 +130,7 @@ function CustomCursor() {
     const onLeave = () => {
       visibleRef.current = false;
       if (dotRef.current) dotRef.current.style.opacity = '0';
-      if (ringRef.current) ringRef.current.style.opacity = '0';
+      if (showRing && ringRef.current) ringRef.current.style.opacity = '0';
     };
 
     window.addEventListener('mousemove', onMove, { passive: true });
@@ -115,13 +139,15 @@ function CustomCursor() {
       window.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseleave', onLeave);
       cancelAnimationFrame(rafRef.current);
+      clearTimeout(transitionTimer);
+      unsub();
     };
   }, []);
 
   return (
     <>
-      <div ref={dotRef} className="cursor-dot" aria-hidden="true" />
-      <div ref={ringRef} className="cursor-ring" aria-hidden="true" />
+      <div ref={dotRef} className="cursor-dot" style={{ willChange: 'transform' }} aria-hidden="true" />
+      {showRing && <div ref={ringRef} className="cursor-ring" style={{ willChange: 'transform' }} aria-hidden="true" />}
     </>
   );
 }
@@ -141,7 +167,25 @@ function PageFadeIn({ children, pageKey }) {
 class PageErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
   static getDerivedStateFromError(error) { return { hasError: true, error }; }
-  componentDidCatch(error, info) { console.error('[GOATED] Page crash caught by error boundary:', error, info?.componentStack); }
+  componentDidCatch(error, info) {
+    // Structured error reporting for observability
+    const errorReport = {
+      type: 'component_error',
+      component: this.props.pageKey || 'unknown',
+      error: {
+        name: error?.name,
+        message: error?.message,
+        stack: error?.stack?.split('\n').slice(0, 5).join('\n'),
+      },
+      componentStack: info?.componentStack?.split('\n').slice(0, 5).join('\n'),
+      timestamp: new Date().toISOString(),
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+    };
+    console.error('[GOATED] Error Boundary Report:', JSON.stringify(errorReport, null, 2));
+    // Also fire as a trackEvent if available
+    try { trackPageView && trackPageView('error_boundary_' + (this.props.pageKey || 'unknown')); } catch {}
+  }
   componentDidUpdate(prevProps) {
     // Auto-recover when user navigates to a different page
     if (prevProps.pageKey !== this.props.pageKey && this.state.hasError) {
@@ -216,6 +260,8 @@ export default function App() {
   const setIsLoggedIn = useStore(s => s.setIsLoggedIn);
   const setUserPlan = useStore(s => s.setUserPlan);
   const degenMode = useStore(s => s.degenMode);
+  const [degenToast, setDegenToast] = useState(null);
+  const degenToastTimer = useRef(null);
   const isMobile = useIsMobile();
 
   // Restore persisted user session on mount + Supabase auth listener
@@ -308,7 +354,7 @@ export default function App() {
       // If keybinds modal is open, handle navigation keys then close
       if (state.keybindsOpen) {
         e.preventDefault();
-        const keybindNav = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'market', w: 'wallet', x: 'admin', u: 'whop', p: 'casino', m: 'market', r: 'launchpad', v: 'comms', f: 'finder' };
+        const keybindNav = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'market', w: 'wallet', x: 'admin', u: 'whop', p: 'casino', m: 'market', r: 'launchpad' };
         const target = keybindNav[key];
         setKeybindsOpen(false);
         if (target) { navTo(target); }
@@ -318,11 +364,25 @@ export default function App() {
         return;
       }
 
+      // Shift+D — toggle DEGEN mode
+      if (e.shiftKey && key === 'd') {
+        e.preventDefault();
+        const store = useStore.getState();
+        store.toggleDegenMode();
+        const nowDegen = !store.degenMode;
+        clearTimeout(degenToastTimer.current);
+        setDegenToast(nowDegen
+          ? '\u{1F525} DEGEN MODE ACTIVE \u2014 Casino, Alpha Plays, Insider Intel, Market Signals unlocked'
+          : 'DEGEN MODE OFF \u2014 Standard mode');
+        degenToastTimer.current = setTimeout(() => setDegenToast(null), 3000);
+        return;
+      }
+
       // Skip if modifier keys are held (except Escape/Cmd+K handled above)
       if (hasModifier) return;
 
       // Navigation map — single lookup
-      const navMap = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'market', w: 'wallet', x: 'admin', u: 'whop', r: 'launchpad', p: 'casino', v: 'comms', f: 'finder' };
+      const navMap = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'market', w: 'wallet', x: 'admin', u: 'whop', r: 'launchpad', p: 'casino' };
       const navTarget = navMap[key];
       if (navTarget) {
         e.preventDefault();
@@ -338,7 +398,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [navTo]);
+  }, [navTo, degenToast]);
 
   const selectLead = useCallback((l) => { setPreviousPage(page); setSelectedLead(l); setDetailOpen(true); }, [page, setPreviousPage, setSelectedLead, setDetailOpen]);
   const mainML = isMobile ? 0 : (sidebar ? 240 : 72);
@@ -350,15 +410,14 @@ export default function App() {
       case 'dashboard': return <DashboardPage onSelect={selectLead} />;
       case 'leads': return <LeadsPage onSelect={selectLead} />;
       case 'trends': return <TrendsPage />;
-      case 'market': return <MarketPage />;
+      case 'market': return <TrendsPage />;
       case 'wallet': return <WalletPage />;
       case 'admin': return <AdminPage />;
       case 'builder': return <BuilderPage />;
       case 'whop': return <WhopPage />;
       case 'launchpad': return <LaunchPadPage />;
       case 'casino': return <CasinoPage />;
-      case 'comms': return <CommsPage />;
-      case 'finder': return <FinderPage />;
+      // comms and finder removed
       default: return <HomePage />;
     }
   };
@@ -399,6 +458,16 @@ export default function App() {
         {accountModalOpen && <AccountModal key="account" />}
       </AnimatePresence>
       {!onboardingComplete && <Onboarding />}
+      {degenToast && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[999] px-5 py-3 rounded-xl text-sm font-semibold shadow-2xl border border-white/10 backdrop-blur-md"
+          style={{
+            background: degenToast.includes('ACTIVE') ? 'rgba(249,115,22,0.15)' : 'rgba(0,0,0,0.8)',
+            color: degenToast.includes('ACTIVE') ? '#f97316' : '#94a3b8',
+            animation: 'scaleIn 0.2s ease-out',
+          }}>
+          {degenToast}
+        </div>
+      )}
       <Analytics />
       <SpeedInsights />
     </div>

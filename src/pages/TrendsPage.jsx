@@ -6,6 +6,10 @@ import {
   DollarSign, Globe, Brain, Search, ExternalLink, Newspaper, Sparkles,
   ChevronDown, X, Crosshair, Shield, TrendingDown, Radar, Rocket, MapPin,
   Filter, SlidersHorizontal, Trophy,
+  ArrowUpRight, ArrowDownRight, Minus, Signal, LayoutGrid, List,
+  PieChart, LineChart, Hash, ShieldCheck, Percent, Coins, Building2,
+  Landmark, Fuel, Gem, Scale, Vote, Cpu, Banknote, CircleDollarSign,
+  ChevronUp, Star, Eye, Wifi, Layers,
 } from 'lucide-react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
@@ -25,9 +29,9 @@ const TABS = [
   { id: 'overview', label: 'Intelligence Hub', icon: Brain },
   { id: 'globe', label: 'Global Heatmap', icon: Globe },
   { id: 'alpha', label: 'Alpha Plays', icon: Zap },
-  { id: 'news', label: 'News Feed', icon: Newspaper },
+  { id: 'news', label: 'Live News', icon: Newspaper },
   { id: 'prices', label: 'Live Prices', icon: DollarSign },
-  { id: 'predictions', label: 'Predictions', icon: Target },
+  { id: 'research', label: 'Deep Research', icon: Search },
 ];
 
 // ─── Formatters ─────────────────────────────────────────────────────────────
@@ -527,16 +531,24 @@ function AlphaCard({ play }) {
           )}
         </div>
       )}
-      {/* Trade setup hint */}
-      <div className="flex items-center gap-3 p-2 rounded-lg bg-brand/5 border border-brand/10 text-[10px]">
-        <Zap size={10} className="text-brand shrink-0" />
-        <span className="text-slate-400">
-          <span className={`font-bold ${play.direction === 'long' ? 'text-emerald-400' : 'text-red-400'}`}>
-            {play.direction === 'long' ? 'LONG' : 'SHORT'}
+      {/* Actionable Play */}
+      <div className="p-2.5 rounded-lg bg-brand/5 border border-brand/10 text-[11px] space-y-1">
+        <div className="flex items-center gap-1.5">
+          <Target size={11} className="text-brand shrink-0" />
+          <span className="text-brand font-black uppercase tracking-wider text-[10px]">PLAY:</span>
+          <span className="text-slate-200 font-medium">
+            {play.direction === 'long' ? 'Long' : 'Short'} {play.asset}
+            {play.entry ? ` above ${play.entry}` : ''}
+            {play.stopLoss ? ` with stop at ${play.stopLoss}` : ''}
+            {play.exit ? ` — target ${play.exit}` : ''}
+            {!play.entry && !play.exit ? ` · ${play.timeframe} horizon · Watch for confirmation before entering` : ''}
           </span>
-          {' '}{play.asset} · {goatedScore}/100 GOATED Score · {play.timeframe}
-        </span>
-        <span className="ml-auto text-brand font-bold">Trade Setup</span>
+        </div>
+        <div className="flex items-center gap-3 text-[10px] text-slate-500">
+          <span>{goatedScore}/100 GOATED Score</span>
+          <span>{play.timeframe}</span>
+          <span className="ml-auto text-brand font-bold">Actionable Setup</span>
+        </div>
       </div>
     </motion.div>
   );
@@ -688,14 +700,10 @@ const CATEGORY_COLORS = {
 // ─── Prediction Card with Betting UI ────────────────────────────────────────
 
 function TrendsPredictionCard({ m }) {
-  const [betSide, setBetSide] = useState(null);
-  const [betAmount, setBetAmount] = useState('');
   const y = m.yesPrice ?? parseFloat(m.outcomePrices?.[0] || '0.5');
   const n = 1 - y;
   const yesPct = Math.round(y * 100);
   const noPct = 100 - yesPct;
-  const yesReturn = betAmount ? (parseFloat(betAmount) / y).toFixed(2) : '0';
-  const noReturn = betAmount ? (parseFloat(betAmount) / n).toFixed(2) : '0';
   const trendColor = m.trend === 'up' ? 'text-emerald-400' : m.trend === 'down' ? 'text-red-400' : 'text-slate-500';
   const platformStyle = PLATFORM_COLORS[m.platform] || PLATFORM_COLORS.GOATED;
   const catStyle = CATEGORY_COLORS[m.category] || CATEGORY_COLORS.Other;
@@ -763,52 +771,448 @@ function TrendsPredictionCard({ m }) {
           </span>
         )}
       </div>
-      {/* Bet buttons */}
+      {/* Odds badges */}
       <div className="flex gap-2">
-        <button
-          onClick={() => setBetSide(betSide === 'yes' ? null : 'yes')}
-          className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-            betSide === 'yes' ? 'bg-emerald-500 text-black' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
-          }`}
-        >
-          Buy YES ${y.toFixed(2)}
-        </button>
-        <button
-          onClick={() => setBetSide(betSide === 'no' ? null : 'no')}
-          className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-            betSide === 'no' ? 'bg-red-500 text-white' : 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'
-          }`}
-        >
-          Buy NO ${n.toFixed(2)}
-        </button>
+        <span className="flex-1 py-2 rounded-lg text-xs font-bold text-center bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          YES ${y.toFixed(2)}
+        </span>
+        <span className="flex-1 py-2 rounded-lg text-xs font-bold text-center bg-red-500/10 text-red-400 border border-red-500/20">
+          NO ${n.toFixed(2)}
+        </span>
       </div>
-      {betSide && (
-        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="overflow-hidden">
-          <div className={`mt-2 p-3 rounded-lg border ${betSide === 'yes' ? 'bg-emerald-500/5 border-emerald-500/15' : 'bg-red-500/5 border-red-500/15'}`}>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[10px] text-slate-400">Amount (USDC)</span>
-              <div className="flex gap-1 ml-auto">
-                {['10', '25', '100'].map(v => (
-                  <button key={v} onClick={() => setBetAmount(v)} className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 hover:text-white transition-colors">${v}</button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="number" placeholder="0.00" value={betAmount} onChange={e => setBetAmount(e.target.value)}
-                className="flex-1 pl-3 pr-3 py-2 rounded-lg bg-black/30 border border-white/10 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand/30" />
-              <button className={`px-4 py-2 rounded-lg text-xs font-bold ${betSide === 'yes' ? 'bg-emerald-500 text-black' : 'bg-red-500 text-white'} ${!betAmount ? 'opacity-40 cursor-not-allowed' : ''}`} disabled={!betAmount}>
-                {betSide === 'yes' ? 'Buy YES' : 'Buy NO'}
-              </button>
-            </div>
-            {betAmount && (
-              <div className="flex items-center justify-between mt-2 text-[10px]">
-                <span className="text-slate-500">If {betSide.toUpperCase()} wins:</span>
-                <span className="text-brand font-bold">${betSide === 'yes' ? yesReturn : noReturn} (+{betSide === 'yes' ? ((1/y - 1) * 100).toFixed(0) : ((1/n - 1) * 100).toFixed(0)}%)</span>
-              </div>
-            )}
-          </div>
-        </motion.div>
+    </motion.div>
+  );
+}
+
+// ============================================================================
+// MARKETS TAB — DATA & COMPONENTS (from MarketPage)
+// ============================================================================
+
+// ---------------------------------------------------------------------------
+// Helpers (Markets)
+// ---------------------------------------------------------------------------
+function formatPrice(n, decimals) {
+  if (n == null || isNaN(n)) return '$0.00';
+  if (decimals != null) return `$${n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+  if (n >= 1000) return `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  if (n >= 1) return `$${n.toFixed(2)}`;
+  return `$${n.toFixed(6)}`;
+}
+function formatLargeNumber(n) {
+  if (n == null || isNaN(n)) return '$0';
+  if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
+  return `$${n.toFixed(0)}`;
+}
+function formatCompactNumber(n) {
+  if (n == null || isNaN(n)) return '0';
+  if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(0)}K`;
+  return `${n}`;
+}
+function timeAgo(isoString) {
+  if (!isoString) return '';
+  const diff = Date.now() - new Date(isoString).getTime();
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return 'just now';
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
+  return `${Math.floor(sec / 86400)}d ago`;
+}
+
+// ---------------------------------------------------------------------------
+// ASSET CLASS COLORS / ICONS
+// ---------------------------------------------------------------------------
+const ASSET_COLORS = {
+  BTC: '#f7931a', ETH: '#627eea', SOL: '#00ffa3', BNB: '#f3ba2f',
+  ADA: '#0033ad', DOT: '#e6007a', AVAX: '#e84142', MATIC: '#8247e5',
+  LINK: '#2a5ada', UNI: '#ff007a', XRP: '#00aae4', DOGE: '#c2a633',
+  ATOM: '#2e3148', NEAR: '#00ec97', ARB: '#28a0f0', OP: '#ff0420',
+  APT: '#00bcd4', SUI: '#4da2ff', FIL: '#0090ff', INJ: '#00f2fe',
+  AAPL: '#a2aaad', NVDA: '#76b900', TSLA: '#cc0000', MSFT: '#00a4ef',
+  GOOGL: '#4285f4', AMZN: '#ff9900', META: '#0668e1', JPM: '#003087',
+  'SPY': '#1a73e8', 'QQQ': '#7b1fa2', 'DIA': '#0d47a1', 'IWM': '#2e7d32',
+  'EUR/USD': '#003399', 'GBP/USD': '#cf142b', 'USD/JPY': '#bc002d',
+  'AUD/USD': '#00843d', 'USD/CAD': '#ff0000', 'USD/CHF': '#d52b1e',
+  GOLD: '#ffd700', SILVER: '#c0c0c0', OIL: '#4a4a4a', 'NAT GAS': '#00bcd4',
+  COPPER: '#b87333', PLATINUM: '#e5e4e2',
+};
+const CLASS_COLORS = {
+  crypto: '#00ff88', stocks: '#00a4ef', predictions: '#a855f7',
+  forex: '#f59e0b', commodities: '#ffd700',
+};
+
+// ---------------------------------------------------------------------------
+// MOCK DATA: Stocks / Forex / Commodities
+// ---------------------------------------------------------------------------
+const STOCKS_DATA = [
+  { id: 'spy', symbol: 'SPY', name: 'S&P 500 ETF', price: 5842.50, change24h: 0.73, marketCap: 5.2e12, volume24h: 82e9, assetClass: 'stocks' },
+  { id: 'qqq', symbol: 'QQQ', name: 'Nasdaq 100 ETF', price: 20465.20, change24h: 1.12, marketCap: 3.8e12, volume24h: 64e9, assetClass: 'stocks' },
+  { id: 'dia', symbol: 'DIA', name: 'Dow Jones ETF', price: 43210.80, change24h: -0.18, marketCap: 4.1e12, volume24h: 38e9, assetClass: 'stocks' },
+  { id: 'iwm', symbol: 'IWM', name: 'Russell 2000 ETF', price: 2284.30, change24h: -0.92, marketCap: 1.8e12, volume24h: 22e9, assetClass: 'stocks' },
+  { id: 'aapl', symbol: 'AAPL', name: 'Apple Inc.', price: 234.82, change24h: 1.42, marketCap: 3.62e12, volume24h: 58e9, assetClass: 'stocks' },
+  { id: 'nvda', symbol: 'NVDA', name: 'NVIDIA Corp.', price: 142.56, change24h: 3.87, marketCap: 3.49e12, volume24h: 48e9, assetClass: 'stocks' },
+  { id: 'tsla', symbol: 'TSLA', name: 'Tesla Inc.', price: 248.92, change24h: -2.34, marketCap: 793e9, volume24h: 32e9, assetClass: 'stocks' },
+  { id: 'msft', symbol: 'MSFT', name: 'Microsoft Corp.', price: 442.18, change24h: 0.56, marketCap: 3.29e12, volume24h: 28e9, assetClass: 'stocks' },
+  { id: 'googl', symbol: 'GOOGL', name: 'Alphabet Inc.', price: 178.94, change24h: 0.89, marketCap: 2.21e12, volume24h: 24e9, assetClass: 'stocks' },
+  { id: 'amzn', symbol: 'AMZN', name: 'Amazon.com Inc.', price: 218.64, change24h: 1.67, marketCap: 2.28e12, volume24h: 31e9, assetClass: 'stocks' },
+  { id: 'meta', symbol: 'META', name: 'Meta Platforms', price: 612.40, change24h: 2.15, marketCap: 1.56e12, volume24h: 22e9, assetClass: 'stocks' },
+  { id: 'jpm', symbol: 'JPM', name: 'JPMorgan Chase', price: 242.68, change24h: -0.45, marketCap: 698e9, volume24h: 12e9, assetClass: 'stocks' },
+];
+const FOREX_DATA = [
+  { id: 'eurusd', symbol: 'EUR/USD', name: 'Euro / US Dollar', price: 1.0892, change24h: 0.14, volume24h: 2.1e12, assetClass: 'forex' },
+  { id: 'gbpusd', symbol: 'GBP/USD', name: 'British Pound / USD', price: 1.2734, change24h: -0.22, volume24h: 1.1e12, assetClass: 'forex' },
+  { id: 'usdjpy', symbol: 'USD/JPY', name: 'US Dollar / Yen', price: 149.82, change24h: 0.31, volume24h: 1.5e12, assetClass: 'forex' },
+  { id: 'audusd', symbol: 'AUD/USD', name: 'Australian Dollar / USD', price: 0.6648, change24h: -0.47, volume24h: 450e9, assetClass: 'forex' },
+  { id: 'usdcad', symbol: 'USD/CAD', name: 'US Dollar / Canadian', price: 1.3542, change24h: 0.08, volume24h: 380e9, assetClass: 'forex' },
+  { id: 'usdchf', symbol: 'USD/CHF', name: 'US Dollar / Swiss Franc', price: 0.8834, change24h: -0.15, volume24h: 320e9, assetClass: 'forex' },
+  { id: 'nzdusd', symbol: 'NZD/USD', name: 'New Zealand Dollar / USD', price: 0.6124, change24h: -0.62, volume24h: 120e9, assetClass: 'forex' },
+  { id: 'eurgbp', symbol: 'EUR/GBP', name: 'Euro / British Pound', price: 0.8554, change24h: 0.36, volume24h: 280e9, assetClass: 'forex' },
+];
+const COMMODITIES_DATA = [
+  { id: 'gold', symbol: 'GOLD', name: 'Gold (XAU/USD)', price: 2648.30, change24h: 0.82, volume24h: 180e9, marketCap: null, assetClass: 'commodities' },
+  { id: 'silver', symbol: 'SILVER', name: 'Silver (XAG/USD)', price: 31.24, change24h: 1.34, volume24h: 28e9, marketCap: null, assetClass: 'commodities' },
+  { id: 'oil', symbol: 'OIL', name: 'Crude Oil (WTI)', price: 71.82, change24h: -1.87, volume24h: 95e9, marketCap: null, assetClass: 'commodities' },
+  { id: 'natgas', symbol: 'NAT GAS', name: 'Natural Gas', price: 3.42, change24h: 2.64, volume24h: 18e9, marketCap: null, assetClass: 'commodities' },
+  { id: 'copper', symbol: 'COPPER', name: 'Copper (HG)', price: 4.18, change24h: -0.72, volume24h: 22e9, marketCap: null, assetClass: 'commodities' },
+  { id: 'platinum', symbol: 'PLATINUM', name: 'Platinum (XPT/USD)', price: 982.40, change24h: 0.44, volume24h: 6e9, marketCap: null, assetClass: 'commodities' },
+];
+
+// ---------------------------------------------------------------------------
+// MOCK DATA: Prediction Markets (expanded)
+// ---------------------------------------------------------------------------
+const PREDICTION_MARKETS = [
+  { id: 'pm1', question: 'Will the Republican candidate win the 2028 Presidential Election?', yesPrice: 0.48, volume: 142000000, category: 'Political', platform: 'Polymarket', trend: 'up', change: +1.8, alpha: '+108%', resolution: 'Nov 2028' },
+  { id: 'pm2', question: 'Will Trump run for President in 2028?', yesPrice: 0.12, volume: 68000000, category: 'Political', platform: 'Polymarket', trend: 'down', change: -2.4, alpha: '+733%', resolution: 'Jun 2028' },
+  { id: 'pm3', question: 'Will there be a US government shutdown in 2026?', yesPrice: 0.38, volume: 24000000, category: 'Political', platform: 'Kalshi', trend: 'up', change: +4.1, alpha: '+163%', resolution: 'Dec 2026' },
+  { id: 'pm4', question: 'Will US impose new tariffs on China in Q2 2026?', yesPrice: 0.67, volume: 31000000, category: 'Political', platform: 'Kalshi', trend: 'up', change: +2.9, alpha: '+49%', resolution: 'Jun 2026' },
+  { id: 'pm5', question: 'Will the Fed cut rates before June 2026?', yesPrice: 0.61, volume: 89000000, category: 'Economic', platform: 'Kalshi', trend: 'down', change: -1.8, alpha: '+64%', resolution: 'Jun 2026' },
+  { id: 'pm6', question: 'Will US GDP growth exceed 3% in 2026?', yesPrice: 0.29, volume: 18000000, category: 'Economic', platform: 'Kalshi', trend: 'down', change: -0.7, alpha: '+245%', resolution: 'Jan 2027' },
+  { id: 'pm7', question: 'Will S&P 500 hit 6500 in 2026?', yesPrice: 0.42, volume: 54000000, category: 'Economic', platform: 'Kalshi', trend: 'up', change: +3.2, alpha: '+138%', resolution: 'Dec 2026' },
+  { id: 'pm8', question: 'Will US inflation drop below 2% by end of 2026?', yesPrice: 0.34, volume: 22000000, category: 'Economic', platform: 'Kalshi', trend: 'up', change: +1.1, alpha: '+194%', resolution: 'Dec 2026' },
+  { id: 'pm9', question: 'Will US unemployment exceed 5% in 2026?', yesPrice: 0.18, volume: 15000000, category: 'Economic', platform: 'Kalshi', trend: 'flat', change: +0.2, alpha: '+456%', resolution: 'Dec 2026' },
+  { id: 'pm10', question: 'Will BTC reach $150K before July 2026?', yesPrice: 0.31, volume: 76000000, category: 'Crypto', platform: 'Polymarket', trend: 'up', change: +5.4, alpha: '+223%', resolution: 'Jul 2026' },
+  { id: 'pm11', question: 'Will Ethereum flip BTC market cap in 2026?', yesPrice: 0.06, volume: 12000000, category: 'Crypto', platform: 'Polymarket', trend: 'flat', change: +0.2, alpha: '+1567%', resolution: 'Dec 2026' },
+  { id: 'pm12', question: 'Will Solana reach $500 in 2026?', yesPrice: 0.22, volume: 28000000, category: 'Crypto', platform: 'Polymarket', trend: 'up', change: +3.1, alpha: '+355%', resolution: 'Dec 2026' },
+  { id: 'pm13', question: 'US spot Solana ETF approved in 2026?', yesPrice: 0.41, volume: 45000000, category: 'Crypto', platform: 'Polymarket', trend: 'up', change: +8.7, alpha: '+144%', resolution: 'Dec 2026' },
+  { id: 'pm14', question: 'Will DOGE reach $1 in 2026?', yesPrice: 0.09, volume: 34000000, category: 'Crypto', platform: 'Polymarket', trend: 'up', change: +1.9, alpha: '+1011%', resolution: 'Dec 2026' },
+  { id: 'pm15', question: 'Will AI tokens outperform BTC in Q2 2026?', yesPrice: 0.44, volume: 16000000, category: 'Crypto', platform: 'Kalshi', trend: 'up', change: +2.4, alpha: '+127%', resolution: 'Jun 2026' },
+  { id: 'pm16', question: 'Will total crypto market cap exceed $5T in 2026?', yesPrice: 0.52, volume: 38000000, category: 'Crypto', platform: 'Polymarket', trend: 'up', change: +1.6, alpha: '+92%', resolution: 'Dec 2026' },
+  { id: 'pm17', question: 'Will Apple release an AI-first iPhone in 2026?', yesPrice: 0.73, volume: 21000000, category: 'Tech', platform: 'Kalshi', trend: 'up', change: +1.2, alpha: '+37%', resolution: 'Dec 2026' },
+  { id: 'pm18', question: 'Will OpenAI IPO in 2026?', yesPrice: 0.35, volume: 42000000, category: 'Tech', platform: 'Polymarket', trend: 'down', change: -3.4, alpha: '+186%', resolution: 'Dec 2026' },
+  { id: 'pm19', question: 'Will AGI be declared achieved by a major lab in 2026?', yesPrice: 0.14, volume: 56000000, category: 'Tech', platform: 'Polymarket', trend: 'up', change: +2.8, alpha: '+614%', resolution: 'Dec 2026' },
+  { id: 'pm20', question: 'Will NVIDIA market cap exceed $5T in 2026?', yesPrice: 0.38, volume: 29000000, category: 'Tech', platform: 'Kalshi', trend: 'up', change: +4.2, alpha: '+163%', resolution: 'Dec 2026' },
+  { id: 'pm21', question: 'Will Tesla release a fully autonomous robotaxi in 2026?', yesPrice: 0.19, volume: 33000000, category: 'Tech', platform: 'Polymarket', trend: 'down', change: -1.6, alpha: '+426%', resolution: 'Dec 2026' },
+  { id: 'pm22', question: 'Will Russia-Ukraine ceasefire happen in 2026?', yesPrice: 0.32, volume: 48000000, category: 'Geopolitical', platform: 'Polymarket', trend: 'up', change: +2.1, alpha: '+213%', resolution: 'Dec 2026' },
+  { id: 'pm23', question: 'Will China invade Taiwan in 2026?', yesPrice: 0.04, volume: 62000000, category: 'Geopolitical', platform: 'Polymarket', trend: 'flat', change: -0.1, alpha: '+2400%', resolution: 'Dec 2026' },
+  { id: 'pm24', question: 'Will Iran develop a nuclear weapon in 2026?', yesPrice: 0.08, volume: 19000000, category: 'Geopolitical', platform: 'Kalshi', trend: 'down', change: -0.5, alpha: '+1150%', resolution: 'Dec 2026' },
+  { id: 'pm25', question: 'Will viewership for 2026 World Cup final exceed 2B?', yesPrice: 0.62, volume: 14000000, category: 'Sports', platform: 'Polymarket', trend: 'up', change: +0.8, alpha: '+61%', resolution: 'Jul 2026' },
+  { id: 'pm26', question: 'Will a streaming service surpass Netflix subscribers in 2026?', yesPrice: 0.21, volume: 8000000, category: 'Tech', platform: 'Kalshi', trend: 'down', change: -1.2, alpha: '+376%', resolution: 'Dec 2026' },
+];
+
+// ---------------------------------------------------------------------------
+// Alpha Signals (Markets)
+// ---------------------------------------------------------------------------
+const ALPHA_SIGNALS = [
+  { id: 'a1', title: 'Whale Alert: 12,400 BTC moved from exchange to cold wallet', type: 'whale', severity: 'high', coin: 'BTC', time: Date.now() - 900_000, impact: 'Bullish -- supply squeeze signal',
+    trade: { direction: 'LONG', asset: 'BTC', entry: '$97,200', target: '$102,000', stop: '$95,500', leverage: '3x', timeframe: '2-7 days', expectedReturn: '+4.9%', predictionLink: 'BTC above $100K by April 2026?', predictionOdds: '72% YES' } },
+  { id: 'a2', title: 'NVDA after-hours: beat earnings by 18%, guidance raised', type: 'flow', severity: 'high', coin: 'NVDA', time: Date.now() - 1_200_000, impact: 'Bullish -- AI capex cycle intact',
+    trade: { direction: 'LONG', asset: 'NVDA', entry: '$142.50', target: '$165.00', stop: '$135.00', leverage: '1x (shares)', timeframe: '1-4 weeks', expectedReturn: '+15.8%', predictionLink: 'Will NVIDIA market cap exceed $5T in 2026?', predictionOdds: '38% YES (+163% alpha)' } },
+  { id: 'a3', title: 'Ethereum ETF inflows hit $340M today -- 3rd consecutive record', type: 'flow', severity: 'high', coin: 'ETH', time: Date.now() - 1_800_000, impact: 'Bullish -- institutional demand accelerating',
+    trade: { direction: 'LONG', asset: 'ETH', entry: '$3,840', target: '$4,200', stop: '$3,650', leverage: '5x', timeframe: '1-2 weeks', expectedReturn: '+9.4%', predictionLink: 'Will Ethereum flip BTC market cap in 2026?', predictionOdds: '6% YES (+1567% alpha)' } },
+  { id: 'a4', title: 'Gold breaks $2,650 as Middle East tensions escalate', type: 'volume', severity: 'high', coin: 'GOLD', time: Date.now() - 2_400_000, impact: 'Bullish -- safe haven bid intensifying',
+    trade: { direction: 'LONG', asset: 'GOLD (XAU/USD)', entry: '$2,648', target: '$2,720', stop: '$2,610', leverage: '10x', timeframe: '3-10 days', expectedReturn: '+2.7%', predictionLink: null, predictionOdds: null } },
+  { id: 'a5', title: 'SOL open interest surged 28% in 4 hours on Binance', type: 'derivatives', severity: 'high', coin: 'SOL', time: Date.now() - 3_600_000, impact: 'Volatile -- leveraged long buildup',
+    trade: { direction: 'LONG', asset: 'SOL', entry: '$198', target: '$225', stop: '$185', leverage: '5x', timeframe: '1-3 days', expectedReturn: '+13.6%', predictionLink: 'Will Solana reach $500 in 2026?', predictionOdds: '22% YES (+355% alpha)' } },
+  { id: 'a6', title: 'EUR/USD breaks above 1.09 -- ECB rate decision tomorrow', type: 'flow', severity: 'medium', coin: 'EUR/USD', time: Date.now() - 4_200_000, impact: 'Volatile -- forex markets pricing in divergence',
+    trade: { direction: 'LONG', asset: 'EUR/USD', entry: '1.0892', target: '1.0960', stop: '1.0840', leverage: '20x', timeframe: '1-3 days', expectedReturn: '+0.6% (12% w/ leverage)', predictionLink: null, predictionOdds: null } },
+  { id: 'a7', title: 'BTC funding rate turning negative across major exchanges', type: 'derivatives', severity: 'medium', coin: 'BTC', time: Date.now() - 5_400_000, impact: 'Contrarian bullish -- shorts may get squeezed',
+    trade: { direction: 'LONG', asset: 'BTC Perp', entry: '$97,400', target: '$101,000', stop: '$95,800', leverage: '5x', timeframe: '12-48h', expectedReturn: '+3.7%', predictionLink: 'BTC above $100K by April 2026?', predictionOdds: '72% YES' } },
+  { id: 'a8', title: 'TSLA put/call ratio spikes to 1.8 -- unusual options activity', type: 'derivatives', severity: 'medium', coin: 'TSLA', time: Date.now() - 6_000_000, impact: 'Bearish -- hedging activity elevated',
+    trade: { direction: 'SHORT', asset: 'TSLA', entry: '$248.90', target: '$230.00', stop: '$258.00', leverage: '2x', timeframe: '1-2 weeks', expectedReturn: '+7.6%', predictionLink: 'Will Tesla release a fully autonomous robotaxi in 2026?', predictionOdds: '19% YES' } },
+  { id: 'a9', title: 'AVAX sees 140% spike in DEX volume -- new protocol launch', type: 'volume', severity: 'medium', coin: 'AVAX', time: Date.now() - 7_200_000, impact: 'Bullish -- ecosystem growth catalyst',
+    trade: { direction: 'LONG', asset: 'AVAX', entry: '$38.50', target: '$45.00', stop: '$35.50', leverage: '3x', timeframe: '3-7 days', expectedReturn: '+16.9%', predictionLink: null, predictionOdds: null } },
+  { id: 'a10', title: 'Crude oil inventories draw larger than expected (-8.2M bbl)', type: 'volume', severity: 'medium', coin: 'OIL', time: Date.now() - 8_400_000, impact: 'Bullish -- tighter supply outlook',
+    trade: { direction: 'LONG', asset: 'WTI Crude', entry: '$71.82', target: '$75.50', stop: '$69.80', leverage: '5x', timeframe: '1-2 weeks', expectedReturn: '+5.1%', predictionLink: null, predictionOdds: null } },
+];
+
+// ---------------------------------------------------------------------------
+// Spread Comparisons / Degen Picks / Cross-Correlations / Fear & Greed
+// ---------------------------------------------------------------------------
+const SPREAD_COMPARISONS = [
+  { event: 'Republican wins 2028 Election', goated: 0.46, kalshi: 0.52, polymarket: 0.50, volume: '142M', category: 'Political' },
+  { event: 'Fed cuts rates before June 2026', goated: 0.59, kalshi: 0.65, polymarket: 0.63, volume: '89M', category: 'Economic' },
+  { event: 'BTC reaches $150K by Jul 2026', goated: 0.29, kalshi: 0.35, polymarket: 0.33, volume: '76M', category: 'Crypto' },
+  { event: 'S&P 500 hits 6500 in 2026', goated: 0.40, kalshi: 0.46, polymarket: 0.44, volume: '54M', category: 'Economic' },
+  { event: 'OpenAI IPO in 2026', goated: 0.33, kalshi: 0.39, polymarket: 0.37, volume: '42M', category: 'Tech' },
+  { event: 'Solana ETF approved in 2026', goated: 0.39, kalshi: 0.45, polymarket: 0.43, volume: '45M', category: 'Crypto' },
+];
+const DEGEN_PICKS = [
+  { asset: 'SOL', direction: 'LONG', leverage: '10x', entry: '$198', target: '$250', confidence: 94, expectedReturn: '+26.3%', reason: 'ETF approval catalyst + OI surge' },
+  { asset: 'BTC', direction: 'LONG', leverage: '5x', entry: '$97,200', target: '$115,000', confidence: 91, expectedReturn: '+18.3%', reason: 'Whale accumulation + negative funding' },
+  { asset: 'DOGE', direction: 'LONG', leverage: '20x', entry: '$0.18', target: '$0.35', confidence: 78, expectedReturn: '+94.4%', reason: 'Meme supercycle + retail FOMO incoming' },
+  { asset: 'TSLA', direction: 'SHORT', leverage: '3x', entry: '$248.90', target: '$210', confidence: 82, expectedReturn: '+15.6%', reason: 'Put/call ratio 1.8x + robotaxi delay' },
+  { asset: 'AVAX', direction: 'LONG', leverage: '8x', entry: '$38.50', target: '$55', confidence: 85, expectedReturn: '+42.9%', reason: 'DEX volume +140% + new protocol launch' },
+];
+const CROSS_CORRELATIONS = [
+  { pair: 'BTC-Gold', correlation: 0.31, direction: 'rising', change: '+0.08', insight: 'Safe-haven narrative strengthening as macro uncertainty grows', colorA: '#f7931a', colorB: '#ffd700' },
+  { pair: 'BTC-SPY', correlation: -0.12, direction: 'diverging', change: '-0.19', insight: 'Decoupling from equities -- crypto becoming uncorrelated alpha', colorA: '#f7931a', colorB: '#1a73e8' },
+  { pair: 'ETH-SOL', correlation: 0.87, direction: 'stable', change: '+0.02', insight: 'Alt-L1s moving in lockstep. Rotation risk low', colorA: '#627eea', colorB: '#00ffa3' },
+  { pair: 'NVDA-BTC', correlation: 0.44, direction: 'rising', change: '+0.11', insight: 'AI/crypto convergence trade gaining institutional traction', colorA: '#76b900', colorB: '#f7931a' },
+  { pair: 'Oil-USD/JPY', correlation: 0.38, direction: 'stable', change: '-0.03', insight: 'Energy-yen carry trade correlation holding steady', colorA: '#4a4a4a', colorB: '#bc002d' },
+  { pair: 'Gold-EUR/USD', correlation: 0.52, direction: 'rising', change: '+0.06', insight: 'Dollar weakness benefiting both gold and euro', colorA: '#ffd700', colorB: '#003399' },
+];
+const FEAR_GREED_INDEX = { value: 72, label: 'Greed', previousClose: 68, weekAgo: 61, monthAgo: 45 };
+const BTC_DOMINANCE = 52.4;
+const ETH_DOMINANCE = 17.8;
+
+const mktSignalTypeIcons = { whale: Zap, flow: TrendingUp, derivatives: Activity, volume: BarChart3, adoption: Globe };
+const mktSignalSeverityColors = {
+  high: 'bg-red-500/15 text-red-400 border-red-500/30',
+  medium: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
+  low: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+};
+const MARKET_SUB_TABS = [
+  { key: 'all', label: 'All Markets', icon: Globe },
+  { key: 'crypto', label: 'Crypto', icon: Coins },
+  { key: 'stocks', label: 'Stocks', icon: Building2 },
+  { key: 'predictions', label: 'Predictions', icon: Brain },
+  { key: 'forex', label: 'Forex', icon: CircleDollarSign },
+  { key: 'commodities', label: 'Commodities', icon: Gem },
+];
+
+// ---------------------------------------------------------------------------
+// HeatmapCell (multi-asset)
+// ---------------------------------------------------------------------------
+function HeatmapCell({ asset, onClick, flash }) {
+  const change = asset.change24h ?? 0;
+  let bgClass = 'bg-white/[0.02]';
+  if (change > 5) bgClass = 'bg-emerald-500/30';
+  else if (change > 2) bgClass = 'bg-emerald-500/20';
+  else if (change > 0) bgClass = 'bg-emerald-500/10';
+  else if (change < -5) bgClass = 'bg-red-500/30';
+  else if (change < -2) bgClass = 'bg-red-500/20';
+  else if (change < 0) bgClass = 'bg-red-500/10';
+  const textColor = change > 0 ? 'text-emerald-400' : change < 0 ? 'text-red-400' : 'text-slate-400';
+  const accentColor = ASSET_COLORS[asset.symbol] || CLASS_COLORS[asset.assetClass] || '#888';
+  const flashBorder = flash === 'green' ? 'border-emerald-400/60 shadow-emerald-500/20 shadow-lg' : flash === 'red' ? 'border-red-400/60 shadow-red-500/20 shadow-lg' : 'border-white/5';
+  return (
+    <motion.button onClick={onClick}
+      className={`${bgClass} rounded-xl p-3 border ${flashBorder} text-left transition-all hover:border-white/10 hover:scale-[1.02] active:scale-[0.98] w-full`}
+      initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
+          style={{ backgroundColor: `${accentColor}20`, color: accentColor }}>{asset.symbol?.slice(0, 2)}</div>
+        <div className="min-w-0">
+          <span className="text-xs font-bold text-white truncate block">{asset.symbol}</span>
+          <p className="text-[9px] text-slate-500 leading-none truncate">{asset.name}</p>
+        </div>
+      </div>
+      <div className={`text-sm font-bold mb-0.5 transition-colors duration-300 ${flash === 'green' ? 'text-emerald-300' : flash === 'red' ? 'text-red-300' : 'text-white'}`}>
+        {asset.assetClass === 'forex' ? `$${asset.price.toFixed(4)}` : formatPrice(asset.price)}
+      </div>
+      <div className={`flex items-center gap-1 text-xs font-medium ${textColor}`}>
+        {change > 0 ? <ArrowUpRight size={12} /> : change < 0 ? <ArrowDownRight size={12} /> : <Minus size={12} />}
+        {change > 0 ? '+' : ''}{change.toFixed(2)}%
+      </div>
+      {asset.assetClass && (
+        <div className="mt-1.5">
+          <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wider"
+            style={{ backgroundColor: `${CLASS_COLORS[asset.assetClass] || '#888'}15`, color: CLASS_COLORS[asset.assetClass] || '#888' }}>{asset.assetClass}</span>
+        </div>
       )}
+    </motion.button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MarketPredictionCard
+// ---------------------------------------------------------------------------
+function MarketPredictionCard({ market }) {
+  const pct = Math.round(market.yesPrice * 100);
+  const trendColor = market.trend === 'up' ? 'text-emerald-400' : market.trend === 'down' ? 'text-red-400' : 'text-slate-400';
+  const TrendIcon = market.trend === 'up' ? ArrowUpRight : market.trend === 'down' ? ArrowDownRight : Minus;
+  return (
+    <div className="rounded-lg bg-surface-2/40 border border-white/5 p-3 hover:border-white/10 transition-all">
+      <p className="text-xs font-medium text-white leading-snug mb-2">{market.question}</p>
+      <div className="flex items-center gap-2 mb-1.5">
+        <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct >= 60 ? '#10b981' : pct <= 30 ? '#ef4444' : '#f59e0b' }} />
+        </div>
+        <span className="text-xs font-bold text-white">{pct}%</span>
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400">{market.category}</span>
+          <span className="text-[9px] text-slate-600">{market.platform}</span>
+        </div>
+        {market.alpha && <span className="text-[9px] font-bold text-emerald-400">{market.alpha}</span>}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MiniSparkline & MoverCard
+// ---------------------------------------------------------------------------
+function MktMiniSparkline({ positive, color }) {
+  const points = useMemo(() => {
+    const pts = [];
+    let y = 20;
+    for (let i = 0; i < 12; i++) {
+      const delta = (Math.random() - (positive ? 0.35 : 0.65)) * 6;
+      y = Math.max(4, Math.min(36, y + delta));
+      pts.push({ x: i * 7, y });
+    }
+    return pts;
+  }, [positive]);
+  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+  return (
+    <svg width="77" height="40" viewBox="0 0 77 40" fill="none" className="opacity-60">
+      <path d={pathD} stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  );
+}
+
+function MktMoverCard({ asset, rank, type }) {
+  const change = asset.change24h ?? 0;
+  const isGain = type === 'gainer';
+  const accentColor = ASSET_COLORS[asset.symbol] || CLASS_COLORS[asset.assetClass] || '#888';
+  const changeColor = isGain ? '#10b981' : '#ef4444';
+  return (
+    <motion.div
+      className={`rounded-xl p-3 border transition-all hover:scale-[1.02] ${isGain ? 'bg-emerald-500/[0.06] border-emerald-500/15 hover:border-emerald-500/30' : 'bg-red-500/[0.06] border-red-500/15 hover:border-red-500/30'}`}
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: rank * 0.06 }}>
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center ${isGain ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>{rank}</span>
+          <div className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
+            style={{ backgroundColor: `${accentColor}20`, color: accentColor }}>{asset.symbol?.slice(0, 2)}</div>
+          <div>
+            <span className="text-sm font-bold text-white">{asset.symbol}</span>
+            <span className="ml-1.5 text-[8px] font-semibold px-1 py-0.5 rounded uppercase"
+              style={{ backgroundColor: `${CLASS_COLORS[asset.assetClass] || '#888'}15`, color: CLASS_COLORS[asset.assetClass] || '#888' }}>{asset.assetClass}</span>
+          </div>
+        </div>
+        <MktMiniSparkline positive={isGain} color={changeColor} />
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-slate-400 font-medium">{asset.assetClass === 'forex' ? `$${asset.price.toFixed(4)}` : formatPrice(asset.price)}</span>
+        <span className={`text-lg font-black ${isGain ? 'text-emerald-400' : 'text-red-400'}`}>{change > 0 ? '+' : ''}{change.toFixed(2)}%</span>
+      </div>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CorrelationBadge
+// ---------------------------------------------------------------------------
+function CorrelationBadge({ data }) {
+  const dirColor = data.direction === 'rising' ? 'text-emerald-400' : data.direction === 'diverging' ? 'text-red-400' : 'text-slate-400';
+  const DirIcon = data.direction === 'rising' ? ArrowUpRight : data.direction === 'diverging' ? ArrowDownRight : Minus;
+  const barWidth = Math.abs(data.correlation) * 100;
+  const barColor = data.correlation > 0.5 ? '#10b981' : data.correlation > 0 ? '#f59e0b' : '#ef4444';
+  return (
+    <motion.div className="rounded-xl border border-white/5 bg-surface-2/40 p-3 hover:border-white/10 transition-all"
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5">
+            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: `${data.colorA}30`, boxShadow: `0 0 6px ${data.colorA}30` }} />
+            <span className="text-[10px] text-slate-600 mx-0.5">/</span>
+            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: `${data.colorB}30`, boxShadow: `0 0 6px ${data.colorB}30` }} />
+          </div>
+          <span className="text-xs font-bold text-white">{data.pair}</span>
+        </div>
+        <div className={`flex items-center gap-1 text-[10px] font-bold ${dirColor}`}>
+          <DirIcon size={10} />{data.direction}<span className="text-slate-500 ml-0.5">({data.change})</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 mb-1.5">
+        <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+          <div className="h-full rounded-full transition-all" style={{ width: `${barWidth}%`, backgroundColor: barColor }} />
+        </div>
+        <span className="text-sm font-black text-white">{data.correlation.toFixed(2)}</span>
+      </div>
+      <p className="text-[10px] text-slate-500 leading-snug">{data.insight}</p>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AlphaSignalRow (Markets)
+// ---------------------------------------------------------------------------
+function MktAlphaSignalRow({ signal, index, expanded, onToggle, degenMode }) {
+  const Icon = mktSignalTypeIcons[signal.type] || Zap;
+  const severityClass = mktSignalSeverityColors[signal.severity] || mktSignalSeverityColors.low;
+  const coinColor = ASSET_COLORS[signal.coin] || '#888';
+  const t = signal.trade;
+  const isLong = t?.direction === 'LONG';
+  const glowBorder = signal.severity === 'high' ? 'border-red-500/40 shadow-[0_0_15px_rgba(239,68,68,0.15)]' : signal.severity === 'medium' ? 'border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.1)]' : 'border-blue-500/30';
+  return (
+    <motion.div className={`rounded-xl bg-surface-2/50 border ${glowBorder} hover:border-white/20 transition-all overflow-hidden`}
+      initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }}>
+      <button onClick={onToggle} className="flex items-start gap-3 p-4 w-full text-left">
+        <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${severityClass} border`}><Icon size={16} /></div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            {t && <span className={`px-2 py-0.5 rounded text-[10px] font-black tracking-wide ${isLong ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>{t.direction}</span>}
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ backgroundColor: `${coinColor}20`, color: coinColor }}>{signal.coin}</span>
+            {t && <span className="text-xs font-bold text-brand">{t.expectedReturn}</span>}
+          </div>
+          <p className="text-sm text-white leading-snug font-medium">{signal.title}</p>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap"><span className="text-[10px] text-slate-500">{signal.impact}</span></div>
+          {t && (
+            <div className="flex items-center gap-3 mt-2 text-[10px]">
+              <span className="text-slate-500">Entry <span className="text-white font-mono font-bold">{t.entry}</span></span>
+              <span className="text-slate-500">Target <span className="text-emerald-400 font-mono font-bold">{t.target}</span></span>
+              <span className="text-slate-500">Stop <span className="text-red-400 font-mono font-bold">{t.stop}</span></span>
+              <span className="text-slate-500">Lev <span className="text-yellow-400 font-mono font-bold">{t.leverage}</span></span>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <span className="text-[10px] text-slate-500 whitespace-nowrap">{timeAgo(new Date(signal.time).toISOString())}</span>
+          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${signal.severity === 'high' ? 'bg-red-500/15 text-red-400' : signal.severity === 'medium' ? 'bg-amber-500/15 text-amber-400' : 'bg-blue-500/15 text-blue-400'}`}>{signal.severity.toUpperCase()}</span>
+          {t && <ChevronDown size={12} className={`text-slate-600 transition-transform ${expanded ? 'rotate-180' : ''}`} />}
+        </div>
+      </button>
+      <AnimatePresence>
+        {expanded && t && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <div className={`mx-3 mb-3 p-4 rounded-lg border ${isLong ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <Target size={14} className={isLong ? 'text-emerald-400' : 'text-red-400'} />
+                <span className="text-sm font-bold text-white">Trade Setup</span>
+                <span className={`text-[11px] px-2 py-0.5 rounded font-black ${isLong ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>{t.direction} {t.asset}</span>
+                <span className="ml-auto text-xs text-slate-400">{t.timeframe}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3 mb-3">
+                <div className="bg-black/20 rounded-lg p-2.5 text-center"><span className="text-[9px] text-slate-500 uppercase tracking-wider block mb-1">Entry</span><span className="text-sm text-white font-mono font-bold">{t.entry}</span></div>
+                <div className="bg-black/20 rounded-lg p-2.5 text-center"><span className="text-[9px] text-emerald-500 uppercase tracking-wider block mb-1">Target</span><span className="text-sm text-emerald-400 font-mono font-bold">{t.target}</span></div>
+                <div className="bg-black/20 rounded-lg p-2.5 text-center"><span className="text-[9px] text-red-500 uppercase tracking-wider block mb-1">Stop Loss</span><span className="text-sm text-red-400 font-mono font-bold">{t.stop}</span></div>
+              </div>
+              <div className="flex items-center justify-between text-[11px] bg-black/20 rounded-lg p-2.5">
+                <div className="flex items-center gap-4">
+                  <span className="text-slate-500">Leverage: <span className="text-yellow-400 font-bold">{t.leverage}</span></span>
+                  <span className="text-slate-500">Expected: <span className="text-brand font-bold text-sm">{t.expectedReturn}</span></span>
+                </div>
+                {degenMode && <button className="px-3 py-1 rounded-lg bg-orange-500/20 text-orange-400 text-[10px] font-bold border border-orange-500/30 hover:bg-orange-500/30 transition-colors">COPY TRADE</button>}
+              </div>
+              {t.predictionLink && (
+                <div className="mt-3 p-2.5 rounded-lg bg-purple-500/5 border border-purple-500/15 flex items-center gap-2">
+                  <Brain size={12} className="text-purple-400 shrink-0" />
+                  <div className="text-[11px] text-slate-400 flex-1"><span className="text-purple-400 font-medium">Prediction Market:</span> {t.predictionLink}</div>
+                  <span className="text-[11px] font-bold text-purple-400 whitespace-nowrap bg-purple-500/10 px-2 py-0.5 rounded">{t.predictionOdds}</span>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -832,7 +1236,25 @@ export default function TrendsPage() {
   const [scanLineActive, setScanLineActive] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
+  // Deep Research tab state
+  const [researchQuery, setResearchQuery] = useState('');
+  const [researchLoading, setResearchLoading] = useState(false);
+  const [researchReport, setResearchReport] = useState(null);
+  // Markets tab state
+  const [marketData, setMarketData] = useState(null);
+  const [marketLoading, setMarketLoading] = useState(false);
+  const [marketSubTab, setMarketSubTab] = useState('all');
+  const [marketView, setMarketView] = useState('heatmap');
+  const [marketSearchQuery, setMarketSearchQuery] = useState('');
+  const [showMarketSearch, setShowMarketSearch] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState(null);
+  const [mktPredFilter, setMktPredFilter] = useState('All');
+  const [expandedSignal, setExpandedSignal] = useState(null);
+  const [priceFlashes, setPriceFlashes] = useState({});
+  const [tickTimestamp, setTickTimestamp] = useState(Date.now());
   const ivRef = useRef(null);
+  const mktTickRef = useRef(null);
+  const mktIntervalRef = useRef(null);
   const { degenMode, setPage, getLeads } = useStore();
   const { aiData, regime: rawRegime, sentiment: rawAiSentiment, predictions: rawAiPredictions, correlations: rawCorrelations, portfolioHeat: rawPortfolioHeat, loading: aiLoading } = useGoatedAI();
 
@@ -1106,6 +1528,105 @@ export default function TrendsPage() {
     return () => clearInterval(ivRef.current);
   }, [autoRefresh]);
 
+  // ─── Markets tab: fetch crypto data ───
+  const fetchMarketData = useCallback(async () => {
+    try {
+      const res = await fetch('/api/market-data');
+      const ct = res.headers.get('content-type') || '';
+      if (!res.ok || !ct.includes('json')) throw new Error('Not available');
+      const d = await res.json();
+      setMarketData(d);
+    } catch {
+      try {
+        const [coinsRes, globalRes] = await Promise.allSettled([
+          fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=false&price_change_percentage=1h%2C24h%2C7d'),
+          fetch('https://api.coingecko.com/api/v3/global'),
+        ]);
+        const coins = coinsRes.status === 'fulfilled' && coinsRes.value.ok ? await coinsRes.value.json() : [];
+        const globalData = globalRes.status === 'fulfilled' && globalRes.value.ok ? await globalRes.value.json() : null;
+        if (Array.isArray(coins) && coins.length > 0) {
+          const prices = coins.map(c => ({
+            id: c.id, name: c.name, symbol: c.symbol?.toUpperCase(), image: c.image,
+            price: c.current_price, change1h: c.price_change_percentage_1h_in_currency || 0,
+            change24h: c.price_change_percentage_24h || 0, change7d: c.price_change_percentage_7d_in_currency || 0,
+            volume24h: c.total_volume, marketCap: c.market_cap, rank: c.market_cap_rank, assetClass: 'crypto',
+          }));
+          const gd = globalData?.data || {};
+          const totalMC = gd.total_market_cap?.usd || prices.reduce((s, c) => s + (c.marketCap || 0), 0);
+          const totalVol = gd.total_volume?.usd || prices.reduce((s, c) => s + (c.volume24h || 0), 0);
+          const gainCount = prices.filter(c => c.change24h > 0).length;
+          const loseCount = prices.filter(c => c.change24h < 0).length;
+          const avgChange = prices.reduce((s, c) => s + c.change24h, 0) / prices.length;
+          const sentimentLabel = avgChange > 2 ? 'Strongly Bullish' : avgChange > 0 ? 'Mildly Bullish' : avgChange > -2 ? 'Mildly Bearish' : 'Strongly Bearish';
+          setMarketData({
+            prices, marketOverview: { totalMarketCap: totalMC, total24hVolume: totalVol, totalCoinsTracked: prices.length, gainers: gainCount, losers: loseCount, marketSentiment: sentimentLabel },
+            timestamp: new Date().toISOString(),
+          });
+        }
+      } catch { /* silent */ }
+    } finally {
+      setMarketLoading(false);
+    }
+  }, []);
+
+  // Fetch market data when Markets tab is active
+  useEffect(() => {
+    if (activeTab === 'markets' && !marketData) {
+      setMarketLoading(true);
+      fetchMarketData();
+    }
+    if (activeTab === 'markets') {
+      mktIntervalRef.current = setInterval(fetchMarketData, 15_000);
+      return () => clearInterval(mktIntervalRef.current);
+    }
+    return () => { if (mktIntervalRef.current) clearInterval(mktIntervalRef.current); };
+  }, [activeTab, fetchMarketData, marketData]);
+
+  // Price tick simulation for markets tab
+  useEffect(() => {
+    if (activeTab !== 'markets') { if (mktTickRef.current) clearInterval(mktTickRef.current); return; }
+    mktTickRef.current = setInterval(() => {
+      const flashMap = {};
+      setMarketData(prev => {
+        if (!prev?.prices) return prev;
+        const prices = (Array.isArray(prev.prices) ? prev.prices : Object.values(prev.prices)).map(c => {
+          const isCrypto = (c.assetClass || 'crypto') === 'crypto';
+          const range = isCrypto ? 0.005 : 0.001;
+          const jitter = ((Math.random() - 0.5) * 2 * range);
+          const absJitter = Math.abs(jitter) < 0.001 ? (jitter >= 0 ? 0.001 : -0.001) : jitter;
+          flashMap[c.symbol] = absJitter > 0 ? 'green' : 'red';
+          return { ...c, price: c.price * (1 + absJitter), change24h: (c.change24h || 0) + absJitter * 100 };
+        });
+        return { ...prev, prices };
+      });
+      setPriceFlashes(flashMap);
+      setTickTimestamp(Date.now());
+      setTimeout(() => setPriceFlashes({}), 600);
+    }, 2000);
+    return () => clearInterval(mktTickRef.current);
+  }, [activeTab]);
+
+  // Markets computed data
+  const mktCryptoAssets = useMemo(() => {
+    if (!marketData?.prices) return [];
+    const arr = Array.isArray(marketData.prices) ? marketData.prices : Object.values(marketData.prices);
+    return arr.map(c => ({ ...c, assetClass: c.assetClass || 'crypto' })).sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0));
+  }, [marketData]);
+  const mktAllAssets = useMemo(() => [...mktCryptoAssets, ...STOCKS_DATA, ...FOREX_DATA, ...COMMODITIES_DATA], [mktCryptoAssets]);
+  const mktFilteredAssets = useMemo(() => {
+    let list = mktAllAssets;
+    if (marketSubTab !== 'all' && marketSubTab !== 'predictions') list = list.filter(a => a.assetClass === marketSubTab);
+    if (marketSearchQuery.trim()) { const q = marketSearchQuery.toLowerCase(); list = list.filter(a => a.symbol?.toLowerCase().includes(q) || a.name?.toLowerCase().includes(q)); }
+    return list;
+  }, [mktAllAssets, marketSubTab, marketSearchQuery]);
+  const mktAllGainers = useMemo(() => [...mktAllAssets].filter(a => a.change24h > 0).sort((a, b) => b.change24h - a.change24h), [mktAllAssets]);
+  const mktAllLosers = useMemo(() => [...mktAllAssets].filter(a => a.change24h < 0).sort((a, b) => a.change24h - b.change24h), [mktAllAssets]);
+  const mktOverview = marketData?.marketOverview || {};
+  const mktSentimentLabel = mktOverview.marketSentiment || 'Loading...';
+  const mktSentimentColor = mktSentimentLabel.includes('Bullish') ? 'text-emerald-400' : mktSentimentLabel.includes('Bearish') ? 'text-red-400' : 'text-yellow-400';
+  const mktPredCategories = ['All', ...new Set(PREDICTION_MARKETS.map(p => p.category))];
+  const mktFilteredPredictions = mktPredFilter === 'All' ? PREDICTION_MARKETS : PREDICTION_MARKETS.filter(p => p.category === mktPredFilter);
+
   const filteredNews = useMemo(() => {
     let n = data?.news || [];
     if (newsFilter !== 'all') n = n.filter(a => a.sentiment === newsFilter);
@@ -1197,10 +1718,10 @@ export default function TrendsPage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-black tracking-tight flex items-center gap-3">
             <Brain className="text-brand" size={28} />
-            Trend Pulse
+            GOATED Intelligence
             <span className="text-[10px] bg-brand/10 text-brand px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />LIVE</span>
           </h1>
-          <p className="text-slate-500 text-sm mt-1">Multi-source sentiment aggregation &amp; predictive alpha{data?.sources && <span className="text-slate-600 ml-1">— {data.sources.join(' · ')}</span>}</p>
+          <p className="text-slate-500 text-sm mt-1">Real-time market research &amp; alpha signals{data?.sources && <span className="text-slate-600 ml-1">— {data.sources.join(' · ')}</span>}</p>
         </div>
         <div className="flex items-center gap-2">
           {lastRefresh && <span className="text-[11px] text-slate-600 flex items-center gap-1"><Clock size={11} />Updated {ago(lastRefresh.toISOString())}</span>}
@@ -1697,7 +2218,7 @@ export default function TrendsPage() {
           {/* News preview */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2"><Newspaper size={16} className="text-cyan-400" />Latest Intelligence</h3>
+              <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2"><Newspaper size={16} className="text-cyan-400" />Latest Intelligence <span className="text-[9px] bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />LIVE</span></h3>
               <button onClick={() => setActiveTab('news')} className="text-xs text-brand hover:underline flex items-center gap-1">View all<ChevronRight size={12} /></button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1705,13 +2226,17 @@ export default function TrendsPage() {
                 <a key={a.id} href={a.url} target="_blank" rel="noopener noreferrer"
                   className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 hover:bg-white/[0.04] hover:border-brand/20 transition-all group block">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                      a.sentiment === 'bullish' ? 'bg-emerald-500/10 text-emerald-400' : a.sentiment === 'bearish' ? 'bg-red-500/10 text-red-400' : 'bg-slate-500/10 text-slate-400'
-                    }`}>{a.sentiment === 'bullish' ? '↑ Bull' : a.sentiment === 'bearish' ? '↓ Bear' : '— Neutral'}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${
+                      a.sentiment === 'bullish' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' : a.sentiment === 'bearish' ? 'bg-red-500/15 text-red-400 border-red-500/20' : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                    }`}>{a.sentiment === 'bullish' ? 'BULLISH' : a.sentiment === 'bearish' ? 'BEARISH' : 'NEUTRAL'}</span>
                     <span className="text-[10px] text-slate-600">{a.source}</span>
                     <span className="text-[10px] text-slate-700 ml-auto">{ago(a.publishedAt)}</span>
                   </div>
                   <p className="text-sm text-slate-300 leading-snug group-hover:text-white line-clamp-2">{a.title}</p>
+                  <div className="mt-1.5 text-[10px] flex items-center gap-1">
+                    <span className="text-brand font-black">PLAY:</span>
+                    <span className="text-slate-500">{a.sentiment === 'bullish' ? 'Watch for momentum continuation — potential long setup' : a.sentiment === 'bearish' ? 'Monitor for short-term risk — consider reducing exposure' : 'Wait for directional confirmation before acting'}</span>
+                  </div>
                 </a>
               ))}
             </div>
@@ -1899,7 +2424,7 @@ export default function TrendsPage() {
             <div className="flex items-center gap-6">
               <SentimentDonut bullish={bullCount} bearish={bearCount} neutral={neutCount} size={72} />
               <div className="flex-1 space-y-2">
-                <div className="text-xs text-slate-500 uppercase tracking-wider font-medium">Sentiment Analysis Summary</div>
+                <div className="text-xs text-slate-500 uppercase tracking-wider font-medium flex items-center gap-2">News Sentiment Analysis <span className="text-[9px] bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 normal-case"><span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />LIVE FEED</span></div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1.5">
                     <ArrowUp size={14} className="text-emerald-400" />
@@ -2024,120 +2549,498 @@ export default function TrendsPage() {
         </div>
       )}
 
-      {/* ════════════ PREDICTIONS ════════════ */}
-      {activeTab === 'predictions' && (
-        <div className="space-y-4">
-          {/* Spread Comparison Banner */}
-          {spreadStats && (
-            <div className="bg-gradient-to-r from-brand/10 via-blue-500/5 to-purple-500/10 border border-brand/20 rounded-xl p-5 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
-              <div className="relative">
-                <div className="flex items-center gap-2 mb-3">
-                  <Trophy size={18} className="text-brand" />
-                  <h3 className="text-sm font-bold text-white">GOATED vs Kalshi vs Polymarket — Better Spreads, Better Alpha</h3>
-                  <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-brand/15 text-brand font-bold">{spreadStats.avgSavings}% AVG SAVINGS</span>
+      {/* ════════════ MARKETS ════════════ */}
+      {activeTab === 'markets' && (
+        <div className="space-y-5">
+          {/* Market Overview Dashboard */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+            <motion.div className="rounded-xl border border-white/5 bg-surface-1/80 p-3" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <div className="flex items-center gap-1.5 mb-1"><PieChart size={11} className="text-brand" /><span className="text-[9px] text-slate-500 uppercase tracking-wider">Total Market Cap</span></div>
+              <div className="text-lg font-black text-white">{mktOverview.totalMarketCap ? formatLargeNumber(mktOverview.totalMarketCap) : '--'}</div>
+              <div className="text-[10px] text-slate-500">Crypto only</div>
+            </motion.div>
+            <motion.div className="rounded-xl border border-white/5 bg-surface-1/80 p-3" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.03 }}>
+              <div className="flex items-center gap-1.5 mb-1"><BarChart3 size={11} className="text-blue-400" /><span className="text-[9px] text-slate-500 uppercase tracking-wider">24h Volume</span></div>
+              <div className="text-lg font-black text-white">{mktOverview.total24hVolume ? formatLargeNumber(mktOverview.total24hVolume) : '--'}</div>
+              <div className="text-[10px] text-slate-500">All exchanges</div>
+            </motion.div>
+            <motion.div className="rounded-xl border border-white/5 bg-surface-1/80 p-3" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
+              <div className="flex items-center gap-1.5 mb-1"><Coins size={11} className="text-orange-400" /><span className="text-[9px] text-slate-500 uppercase tracking-wider">BTC Dominance</span></div>
+              <div className="text-lg font-black text-white">{BTC_DOMINANCE}%</div>
+              <div className="h-1 rounded-full bg-white/5 mt-1 overflow-hidden"><div className="h-full rounded-full bg-orange-400/60" style={{ width: `${BTC_DOMINANCE}%` }} /></div>
+            </motion.div>
+            <motion.div className="rounded-xl border border-white/5 bg-surface-1/80 p-3" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.09 }}>
+              <div className="flex items-center gap-1.5 mb-1"><Activity size={11} className={FEAR_GREED_INDEX.value > 60 ? 'text-emerald-400' : 'text-yellow-400'} /><span className="text-[9px] text-slate-500 uppercase tracking-wider">Fear & Greed</span></div>
+              <div className="flex items-center gap-2">
+                <span className={`text-lg font-black ${FEAR_GREED_INDEX.value > 60 ? 'text-emerald-400' : 'text-yellow-400'}`}>{FEAR_GREED_INDEX.value}</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${FEAR_GREED_INDEX.value > 60 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-yellow-500/10 text-yellow-400'}`}>{FEAR_GREED_INDEX.label}</span>
+              </div>
+            </motion.div>
+            <motion.div className="rounded-xl border border-white/5 bg-surface-1/80 p-3" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
+              <div className="flex items-center gap-1.5 mb-1"><Signal size={11} className={mktSentimentColor} /><span className="text-[9px] text-slate-500 uppercase tracking-wider">Market Status</span></div>
+              <div className={`text-lg font-black ${mktSentimentColor}`}>{mktSentimentLabel.includes('Bullish') ? 'BULL' : mktSentimentLabel.includes('Bearish') ? 'BEAR' : 'NEUTRAL'}</div>
+              <div className={`text-[10px] ${mktSentimentColor}`}>{mktSentimentLabel}</div>
+            </motion.div>
+            <motion.div className="rounded-xl border border-white/5 bg-surface-1/80 p-3" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+              <div className="flex items-center gap-1.5 mb-1"><Layers size={11} className="text-brand" /><span className="text-[9px] text-slate-500 uppercase tracking-wider">Assets Tracked</span></div>
+              <div className="text-lg font-black text-white">{mktAllAssets.length + PREDICTION_MARKETS.length}</div>
+              <div className="text-[10px] text-slate-500">5 asset classes</div>
+            </motion.div>
+            <motion.div className="rounded-xl border border-white/5 bg-surface-1/80 p-3" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
+              <div className="flex items-center gap-1.5 mb-1"><TrendingUp size={11} className="text-emerald-400" /><span className="text-[9px] text-slate-500 uppercase tracking-wider">Gainers / Losers</span></div>
+              <div className="flex items-center gap-1">
+                <span className="text-lg font-black text-emerald-400">{mktAllGainers.length}</span>
+                <span className="text-sm text-slate-600">/</span>
+                <span className="text-lg font-black text-red-400">{mktAllLosers.length}</span>
+              </div>
+              <div className="h-1 rounded-full bg-white/5 mt-1 overflow-hidden flex">
+                <div className="h-full bg-emerald-400/60" style={{ width: `${mktAllAssets.length > 0 ? (mktAllGainers.length / mktAllAssets.length) * 100 : 50}%` }} />
+                <div className="h-full bg-red-400/60 flex-1" />
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Spread Comparison: GOATED vs Competitors */}
+          {(() => {
+            const avgKalshiEdge = (SPREAD_COMPARISONS.reduce((s, c) => s + ((1 - c.goated / c.kalshi) * 100), 0) / SPREAD_COMPARISONS.length).toFixed(1);
+            const avgPolyEdge = (SPREAD_COMPARISONS.reduce((s, c) => s + ((1 - c.goated / c.polymarket) * 100), 0) / SPREAD_COMPARISONS.length).toFixed(1);
+            const avgEdge = ((parseFloat(avgKalshiEdge) + parseFloat(avgPolyEdge)) / 2).toFixed(1);
+            return (
+              <motion.div className="rounded-xl border border-brand/20 bg-gradient-to-r from-brand/5 via-surface-1/80 to-purple-500/5 overflow-hidden" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+                <div className="px-4 py-2.5 bg-brand/10 border-b border-brand/20 flex items-center justify-center gap-3">
+                  <Zap size={14} className="text-brand" />
+                  <span className="text-sm font-black text-brand">GOATED spreads avg {avgEdge}% tighter than competitors</span>
+                  <span className="text-[10px] text-brand/70 hidden sm:inline">| Save {avgKalshiEdge}% vs Kalshi | Save {avgPolyEdge}% vs Polymarket</span>
                 </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                  {spreadStats.examples.map((ex, i) => (
-                    <div key={i} className="bg-black/30 rounded-lg p-3 border border-white/5">
-                      <p className="text-[10px] text-slate-400 mb-2 leading-tight truncate">{ex.question}</p>
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-[10px]">
-                          <span className="text-emerald-400 font-semibold">GOATED</span>
-                          <span className="text-emerald-400 font-bold">${ex.goated?.toFixed(3)}</span>
+                <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {SPREAD_COMPARISONS.map((s, i) => {
+                    const kalshiEdge = ((1 - s.goated / s.kalshi) * 100).toFixed(0);
+                    const polyEdge = ((1 - s.goated / s.polymarket) * 100).toFixed(0);
+                    const bestEdge = Math.max(parseFloat(kalshiEdge), parseFloat(polyEdge));
+                    return (
+                      <motion.div key={i} className="bg-black/20 rounded-lg p-3 border border-white/5 hover:border-brand/20 transition-all" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-white leading-snug flex-1 mr-2">{s.event}</span>
+                          <span className="text-[10px] font-black text-brand bg-brand/15 px-2 py-0.5 rounded-full">{bestEdge}% EDGE</span>
                         </div>
-                        {ex.kalshi != null && (
-                          <div className="flex items-center justify-between text-[10px]">
-                            <span className="text-blue-400">Kalshi</span>
-                            <span className="text-slate-400">${ex.kalshi?.toFixed(3)}</span>
-                          </div>
-                        )}
-                        {ex.polymarket != null && (
-                          <div className="flex items-center justify-between text-[10px]">
-                            <span className="text-purple-400">Polymarket</span>
-                            <span className="text-slate-400">${ex.polymarket?.toFixed(3)}</span>
-                          </div>
-                        )}
-                      </div>
+                        <div className="space-y-1.5 mb-2">
+                          <div className="flex items-center gap-2"><span className="text-[9px] text-brand font-bold w-14">GOATED</span><div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden"><div className="h-full rounded-full bg-brand" style={{ width: `${s.goated * 100}%` }} /></div><span className="text-[11px] text-brand font-black w-10 text-right">${s.goated.toFixed(2)}</span></div>
+                          <div className="flex items-center gap-2"><span className="text-[9px] text-slate-500 w-14">Kalshi</span><div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden"><div className="h-full rounded-full bg-slate-600" style={{ width: `${s.kalshi * 100}%` }} /></div><span className="text-[11px] text-slate-400 font-bold w-10 text-right">${s.kalshi.toFixed(2)}</span></div>
+                          <div className="flex items-center gap-2"><span className="text-[9px] text-slate-500 w-14">Poly</span><div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden"><div className="h-full rounded-full bg-slate-600" style={{ width: `${s.polymarket * 100}%` }} /></div><span className="text-[11px] text-slate-400 font-bold w-10 text-right">${s.polymarket.toFixed(2)}</span></div>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-slate-600">Vol ${s.volume}</span>
+                          <span className="text-emerald-400 font-bold">You save ${(s.kalshi - s.goated).toFixed(2)}-${(s.polymarket - s.goated).toFixed(2)}/share</span>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            );
+          })()}
+
+          {/* Market Sub-Tabs */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+            {MARKET_SUB_TABS.map(tab => {
+              const Icon = tab.icon;
+              const isActive = marketSubTab === tab.key;
+              return (
+                <button key={tab.key} onClick={() => setMarketSubTab(tab.key)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${isActive ? 'bg-brand/15 text-brand border border-brand/30 shadow-lg shadow-brand/5' : 'bg-surface-3 text-slate-500 border border-white/[0.03] hover:text-white hover:bg-surface-2'}`}>
+                  <Icon size={14} />{tab.label}
+                  {tab.key !== 'all' && tab.key !== 'predictions' && (
+                    <span className={`text-[10px] px-1.5 rounded-full ${isActive ? 'bg-brand/20' : 'bg-white/5'}`}>
+                      {tab.key === 'crypto' ? mktCryptoAssets.length : tab.key === 'stocks' ? STOCKS_DATA.length : tab.key === 'forex' ? FOREX_DATA.length : COMMODITIES_DATA.length}
+                    </span>
+                  )}
+                  {tab.key === 'predictions' && <span className={`text-[10px] px-1.5 rounded-full ${isActive ? 'bg-brand/20' : 'bg-white/5'}`}>{PREDICTION_MARKETS.length}</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Live Price Ticker */}
+          <div className="flex items-center gap-2 text-[10px] text-slate-500">
+            <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /><span className="font-medium text-emerald-400">LIVE</span></div>
+            <span>Prices tick every 2s</span><span className="text-slate-600">|</span>
+            <span>Last tick: {new Date(tickTimestamp).toLocaleTimeString()}</span><span className="text-slate-600">|</span>
+            <span>{mktFilteredAssets.length} assets tracked</span>
+          </div>
+
+          {/* Market Movers — Top Gainers & Losers */}
+          <div className="rounded-xl border border-white/5 bg-surface-1/80 overflow-hidden">
+            <div className="p-4 border-b border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-2"><Flame size={16} className="text-brand" /><h2 className="font-bold text-white text-sm">Market Movers</h2><span className="text-[10px] text-slate-500">Top gainers & losers across all asset classes</span></div>
+            </div>
+            <div className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2.5"><TrendingUp size={14} className="text-emerald-400" /><span className="text-xs font-bold text-emerald-400">Top Gainers</span></div>
+                  <div className="space-y-2">{mktAllGainers.slice(0, 3).map((a, i) => <MktMoverCard key={`mg-${a.assetClass}-${a.symbol}`} asset={a} rank={i + 1} type="gainer" />)}</div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2.5"><TrendingDown size={14} className="text-red-400" /><span className="text-xs font-bold text-red-400">Top Losers</span></div>
+                  <div className="space-y-2">{mktAllLosers.slice(0, 3).map((a, i) => <MktMoverCard key={`ml-${a.assetClass}-${a.symbol}`} asset={a} rank={i + 1} type="loser" />)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Heatmap / List or Predictions */}
+          {marketSubTab !== 'predictions' ? (
+            <>
+              {/* Heatmap View */}
+              <div className="rounded-xl border border-white/5 bg-surface-1/80 overflow-hidden">
+                <div className="flex items-center justify-between p-4 border-b border-white/5">
+                  <div className="flex items-center gap-2"><Flame size={16} className="text-brand" /><h2 className="font-bold text-white">{marketSubTab === 'all' ? 'All Markets' : marketSubTab.charAt(0).toUpperCase() + marketSubTab.slice(1)} Heatmap</h2><span className="text-xs text-slate-500">{mktFilteredAssets.length} assets</span></div>
+                  <div className="flex items-center gap-1 bg-surface-3 rounded-lg p-0.5">
+                    <button onClick={() => setMarketView('heatmap')} className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${marketView === 'heatmap' ? 'bg-brand/15 text-brand' : 'text-slate-500 hover:text-white'}`}><LayoutGrid size={12} />Grid</button>
+                    <button onClick={() => setMarketView('list')} className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${marketView === 'list' ? 'bg-brand/15 text-brand' : 'text-slate-500 hover:text-white'}`}><List size={12} />List</button>
+                  </div>
+                </div>
+                {marketView === 'heatmap' ? (
+                  <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    {mktFilteredAssets.map(asset => (
+                      <HeatmapCell key={`${asset.assetClass}-${asset.symbol}`} asset={asset} flash={priceFlashes[asset.symbol]}
+                        onClick={() => setSelectedAsset(selectedAsset?.symbol === asset.symbol && selectedAsset?.assetClass === asset.assetClass ? null : asset)} />
+                    ))}
+                    {mktFilteredAssets.length === 0 && <div className="col-span-full text-center py-12 text-slate-500 text-sm">No assets match your search</div>}
+                  </div>
+                ) : (
+                  <div className="divide-y divide-white/5">
+                    <div className="grid grid-cols-12 gap-2 px-4 py-2 text-xs text-slate-500 font-medium">
+                      <div className="col-span-3">Asset</div><div className="col-span-1 text-center">Class</div><div className="col-span-2 text-right">Price</div>
+                      <div className="col-span-2 text-right">24h Change</div><div className="col-span-2 text-right">Market Cap</div><div className="col-span-2 text-right">Volume</div>
                     </div>
+                    {mktFilteredAssets.map((asset, i) => {
+                      const change = asset.change24h ?? 0;
+                      const changeColor = change > 0 ? 'text-emerald-400' : change < 0 ? 'text-red-400' : 'text-slate-400';
+                      const ChangeIcon = change > 0 ? ArrowUpRight : change < 0 ? ArrowDownRight : Minus;
+                      const accentColor = ASSET_COLORS[asset.symbol] || '#888';
+                      return (
+                        <motion.div key={`${asset.assetClass}-${asset.symbol}`}
+                          className="grid grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-white/[0.02] transition-colors cursor-pointer"
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
+                          onClick={() => setSelectedAsset(selectedAsset?.symbol === asset.symbol ? null : asset)}>
+                          <div className="col-span-3 flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0" style={{ backgroundColor: `${accentColor}20`, color: accentColor }}>{asset.symbol?.slice(0, 2)}</div>
+                            <div><span className="text-sm font-bold text-white">{asset.symbol}</span><p className="text-[10px] text-slate-500 leading-none truncate max-w-[120px]">{asset.name}</p></div>
+                          </div>
+                          <div className="col-span-1 flex justify-center"><span className="text-[8px] font-semibold px-1.5 py-0.5 rounded-full uppercase" style={{ backgroundColor: `${CLASS_COLORS[asset.assetClass] || '#888'}15`, color: CLASS_COLORS[asset.assetClass] || '#888' }}>{asset.assetClass}</span></div>
+                          <div className="col-span-2 text-right text-sm font-medium text-white">{asset.assetClass === 'forex' ? `$${asset.price.toFixed(4)}` : formatPrice(asset.price)}</div>
+                          <div className={`col-span-2 text-right text-sm font-medium flex items-center justify-end gap-1 ${changeColor}`}><ChangeIcon size={14} />{change > 0 ? '+' : ''}{change.toFixed(2)}%</div>
+                          <div className="col-span-2 text-right text-sm text-slate-400">{asset.marketCap ? formatLargeNumber(asset.marketCap) : '--'}</div>
+                          <div className="col-span-2 text-right text-sm text-slate-400">{asset.volume24h ? formatLargeNumber(asset.volume24h) : '--'}</div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Selected Asset Detail */}
+              <AnimatePresence>
+                {selectedAsset && (
+                  <motion.div className="rounded-xl border border-white/5 bg-surface-1/80 p-5" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style={{ backgroundColor: `${ASSET_COLORS[selectedAsset.symbol] || '#888'}20`, color: ASSET_COLORS[selectedAsset.symbol] || '#888' }}>{selectedAsset.symbol?.slice(0, 3)}</div>
+                        <div><h3 className="text-lg font-bold text-white">{selectedAsset.name}</h3><p className="text-sm text-slate-500">{selectedAsset.symbol}</p></div>
+                      </div>
+                      <button onClick={() => setSelectedAsset(null)} className="p-1.5 rounded-lg hover:bg-white/5 text-slate-500 hover:text-white transition-colors"><X size={16} /></button>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="bg-surface-2/50 rounded-lg p-3"><span className="text-xs text-slate-500">Price</span><p className="text-lg font-bold text-white">{selectedAsset.assetClass === 'forex' ? `$${selectedAsset.price.toFixed(4)}` : formatPrice(selectedAsset.price)}</p></div>
+                      <div className="bg-surface-2/50 rounded-lg p-3"><span className="text-xs text-slate-500">24h Change</span><p className={`text-lg font-bold ${(selectedAsset.change24h ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{(selectedAsset.change24h ?? 0) >= 0 ? '+' : ''}{(selectedAsset.change24h ?? 0).toFixed(2)}%</p></div>
+                      <div className="bg-surface-2/50 rounded-lg p-3"><span className="text-xs text-slate-500">Market Cap</span><p className="text-lg font-bold text-white">{selectedAsset.marketCap ? formatLargeNumber(selectedAsset.marketCap) : 'N/A'}</p></div>
+                      <div className="bg-surface-2/50 rounded-lg p-3"><span className="text-xs text-slate-500">24h Volume</span><p className="text-lg font-bold text-white">{selectedAsset.volume24h ? formatLargeNumber(selectedAsset.volume24h) : 'N/A'}</p></div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          ) : (
+            /* Predictions Sub-Tab */
+            <div className="rounded-xl border border-white/5 bg-surface-1/80 overflow-hidden">
+              <div className="p-4 border-b border-white/5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2"><Brain size={16} className="text-purple-400" /><h2 className="font-bold text-white">Prediction Markets</h2><span className="text-xs text-slate-500">{PREDICTION_MARKETS.length} events</span></div>
+                </div>
+                <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+                  {mktPredCategories.map(cat => (
+                    <button key={cat} onClick={() => setMktPredFilter(cat)}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${mktPredFilter === cat ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30' : 'bg-surface-3 text-slate-500 border border-white/[0.03] hover:text-white'}`}>
+                      {cat} <span className="ml-1 text-[10px] opacity-60">({cat === 'All' ? PREDICTION_MARKETS.length : PREDICTION_MARKETS.filter(p => p.category === cat).length})</span>
+                    </button>
                   ))}
                 </div>
+              </div>
+              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[700px] overflow-y-auto scrollbar-hide">
+                {mktFilteredPredictions.map(market => <MarketPredictionCard key={market.id} market={market} />)}
               </div>
             </div>
           )}
 
-          {/* Info bar */}
-          <div className="bg-gradient-to-r from-purple-500/5 via-transparent to-brand/5 border border-purple-500/10 rounded-xl p-4">
-            <p className="text-xs text-slate-400"><Target size={12} className="inline mr-1 text-purple-400" />Live prediction markets aggregated from Kalshi, Polymarket &amp; GOATED. Buy YES or NO shares — if you're right, each share pays $1. <span className="text-brand font-medium">Powered by GOATED intelligence.</span></p>
-          </div>
+          {/* Cross-Asset Correlations */}
+          <motion.div className="rounded-xl border border-white/5 bg-surface-1/80 overflow-hidden" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="p-4 border-b border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-2"><Radio size={16} className="text-blue-400" /><h2 className="font-bold text-white text-sm">Cross-Asset Correlations</h2><span className="text-[10px] text-slate-500">Real-time correlation matrix insights</span></div>
+              <span className="text-[9px] text-slate-600 bg-white/5 px-2 py-0.5 rounded-full">30-day rolling</span>
+            </div>
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {CROSS_CORRELATIONS.map((corr) => <CorrelationBadge key={corr.pair} data={corr} />)}
+            </div>
+          </motion.div>
 
-          {/* Filters row */}
-          <div className="space-y-3">
-            {/* Category filter */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] text-slate-600 uppercase tracking-wider font-medium flex items-center gap-1"><Filter size={10} />Category</span>
-              {['All', 'Crypto', 'Politics', 'Economics', 'Tech', 'AI', 'Sports'].map(cat => (
-                <button key={cat} onClick={() => setPredCategory(cat)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
-                    predCategory === cat
-                      ? 'bg-brand/10 text-brand border border-brand/20'
-                      : 'text-slate-500 hover:text-slate-300 bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04]'
-                  }`}>
-                  {cat}
-                </button>
+          {/* Alpha Signals */}
+          <div className={`rounded-xl border bg-surface-1/80 overflow-hidden ${degenMode ? 'border-orange-500/30' : 'border-white/5'}`}>
+            <div className={`flex items-center gap-2 p-4 border-b ${degenMode ? 'border-orange-500/20 bg-orange-500/5' : 'border-white/5'}`}>
+              <Zap size={16} className={degenMode ? 'text-orange-400' : 'text-yellow-400'} />
+              <h2 className="font-bold text-white text-sm">Alpha Signals</h2>
+              <span className="text-[10px] text-slate-500 px-2 py-0.5 rounded-full bg-white/5">Real-time</span>
+              <span className="ml-auto text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">{ALPHA_SIGNALS.length} active</span>
+            </div>
+            <div className="p-3 space-y-2 max-h-[480px] overflow-y-auto scrollbar-hide">
+              {ALPHA_SIGNALS.map((signal, i) => (
+                <MktAlphaSignalRow key={signal.id} signal={signal} index={i} expanded={expandedSignal === signal.id}
+                  onToggle={() => setExpandedSignal(expandedSignal === signal.id ? null : signal.id)} degenMode={degenMode} />
               ))}
             </div>
-            {/* Platform filter + Sort */}
-            <div className="flex items-center gap-2 flex-wrap justify-between">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] text-slate-600 uppercase tracking-wider font-medium">Platform</span>
-                {['All', 'GOATED', 'Kalshi', 'Polymarket'].map(plat => {
-                  const style = plat !== 'All' ? PLATFORM_COLORS[plat] : null;
-                  return (
-                    <button key={plat} onClick={() => setPredPlatform(plat)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
-                        predPlatform === plat
-                          ? style ? `${style.bg} ${style.text} border ${style.border}` : 'bg-brand/10 text-brand border border-brand/20'
-                          : 'text-slate-500 hover:text-slate-300 bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04]'
-                      }`}>
-                      {plat}
-                    </button>
-                  );
-                })}
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <ShieldCheck size={12} className="text-slate-600" />
+            <p className="text-[10px] text-slate-600">Crypto via CoinGecko. Stocks, forex, commodities are indicative. Prediction data from Polymarket & Kalshi. Not financial advice.</p>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════ DEEP RESEARCH ════════════ */}
+      {activeTab === 'research' && (
+        <div className="space-y-5">
+          {/* Search input */}
+          <div className="relative">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              value={researchQuery}
+              onChange={e => setResearchQuery(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && researchQuery.trim()) {
+                  setResearchLoading(true);
+                  setResearchReport(null);
+                  setTimeout(() => {
+                    const q = researchQuery.toLowerCase();
+                    const reports = {
+                      btc: {
+                        title: `BTC Deep Analysis: ${researchQuery}`,
+                        summary: 'Bitcoin is showing strong institutional accumulation patterns with on-chain metrics signaling a potential breakout above key resistance levels. The current market structure resembles pre-rally conditions seen in previous cycles, with decreasing exchange reserves and rising long-term holder supply.',
+                        findings: [
+                          'Exchange reserves at 2-year lows — accumulation phase confirmed by on-chain data',
+                          'RSI divergence on weekly timeframe suggests momentum building for upside move',
+                          'Institutional inflows via ETFs averaging $340M/week, highest since Q1 2024',
+                          'Hash rate at all-time highs indicating miner confidence in future price appreciation',
+                          'Options market skew favoring calls at 1.3x ratio — smart money positioning bullish',
+                        ],
+                        sentiment: 78,
+                        sentimentLabel: 'Bullish',
+                        risk: 'Moderate. Key downside risk is macro liquidity tightening if Fed reverses rate cut trajectory. Support at $58K must hold for bullish thesis.',
+                        plays: ['Long BTC spot with stop at $58K support', 'BTC call spreads targeting $85K-$95K range (60-90 DTE)', 'Accumulate on dips below $62K with DCA strategy'],
+                      },
+                      ai: {
+                        title: `AI Sector Deep Analysis: ${researchQuery}`,
+                        summary: 'The AI sector continues to show explosive growth with compute demand outpacing supply. Key players are seeing revenue acceleration while new entrants are disrupting traditional software verticals. The sector is transitioning from hype to fundamental value creation.',
+                        findings: [
+                          'NVIDIA data center revenue up 154% YoY — GPU demand still outstripping supply',
+                          'AI infrastructure spending by hyperscalers expected to reach $200B+ in 2026',
+                          'Open-source models closing the gap with proprietary solutions — commoditization risk emerging',
+                          'Enterprise AI adoption rate jumped from 35% to 67% in 12 months',
+                          'AI agent frameworks gaining traction — next wave of value creation in autonomous systems',
+                        ],
+                        sentiment: 82,
+                        sentimentLabel: 'Very Bullish',
+                        risk: 'Elevated valuations create vulnerability to earnings misses. Regulatory headwinds in EU and potential compute export restrictions add uncertainty.',
+                        plays: ['Overweight AI infrastructure plays (NVDA, AVGO, MRVL)', 'AI software picks-and-shovels approach (PLTR, SNOW, MDB)', 'Short overvalued AI wrappers with no moat'],
+                      },
+                      election: {
+                        title: `Election Impact Analysis: ${researchQuery}`,
+                        summary: 'Political markets are showing increased volatility as election dynamics shift. Prediction markets are pricing in significant policy divergence between candidates, with crypto and tech sectors most exposed to regulatory outcomes.',
+                        findings: [
+                          'Prediction market volumes surging 300%+ compared to previous election cycles',
+                          'Crypto-friendly policy stance creating 15-20% premium in digital asset markets',
+                          'Defense and energy sectors showing strong correlation with polling data shifts',
+                          'Tax policy uncertainty creating hedging demand in equity options markets',
+                          'Immigration policy odds moving markets in agriculture and construction sectors',
+                        ],
+                        sentiment: 52,
+                        sentimentLabel: 'Neutral',
+                        risk: 'High uncertainty period. Policy whiplash risk is elevated. Markets historically see 10-15% volatility expansion in election months.',
+                        plays: ['Straddle strategies on SPY for election week volatility', 'Long crypto as hedge against regulatory clarity trade', 'Rotate into defensive sectors if polling volatility increases'],
+                      },
+                    };
+                    let report = null;
+                    if (q.includes('btc') || q.includes('bitcoin')) report = reports.btc;
+                    else if (q.includes('ai') || q.includes('artificial intelligence') || q.includes('nvidia') || q.includes('tech')) report = reports.ai;
+                    else if (q.includes('election') || q.includes('trump') || q.includes('politics') || q.includes('vote')) report = reports.election;
+                    else {
+                      report = {
+                        title: `Deep Analysis: ${researchQuery}`,
+                        summary: `GOATED AI has analyzed "${researchQuery}" across multiple data sources including on-chain metrics, social sentiment, technical indicators, and macro conditions. The current environment shows mixed signals with selective opportunities emerging for informed participants.`,
+                        findings: [
+                          `Market sentiment around "${researchQuery}" is trending moderately positive across social channels`,
+                          'Technical indicators show consolidation pattern — breakout direction pending catalyst',
+                          'Volume profile suggests accumulation by sophisticated participants at current levels',
+                          'Correlation with broader market risk appetite remains elevated at 0.72',
+                          'Smart money flow indicators are neutral-to-positive on 7-day timeframe',
+                        ],
+                        sentiment: 58,
+                        sentimentLabel: 'Slightly Bullish',
+                        risk: 'Moderate. Position sizing should reflect uncertainty. Key risk factors include macro headwinds and sector-specific regulatory developments.',
+                        plays: ['Scale into positions with 3-5 entry tranches over 2 weeks', 'Set tight risk management with 5-8% stop losses', 'Monitor for catalyst events before increasing exposure'],
+                      };
+                    }
+                    setResearchReport(report);
+                    setResearchLoading(false);
+                  }, 2000);
+                }
+              }}
+              placeholder="Enter topic for deep analysis... (e.g., 'BTC breakout potential', 'AI sector momentum')"
+              className="w-full pl-11 pr-4 py-4 rounded-xl bg-white/[0.03] border border-white/[0.08] text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand/30 focus:bg-white/[0.05] transition-all"
+            />
+            {researchQuery && (
+              <button onClick={() => { setResearchQuery(''); setResearchReport(null); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-600 hover:text-white transition-colors">
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Loading state */}
+          {researchLoading && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-20 gap-4">
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full border-2 border-brand/20 border-t-brand animate-spin" />
+                <Brain size={24} className="text-brand absolute inset-0 m-auto" />
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-slate-600 uppercase tracking-wider font-medium flex items-center gap-1"><SlidersHorizontal size={10} />Sort</span>
-                {[
-                  { id: 'volume', label: 'Volume' },
-                  { id: 'alpha', label: 'Alpha %' },
-                  { id: 'trending', label: 'Trending' },
-                  { id: 'newest', label: 'Newest' },
-                ].map(s => (
-                  <button key={s.id} onClick={() => setPredSort(s.id)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
-                      predSort === s.id
-                        ? 'bg-white/10 text-white border border-white/15'
-                        : 'text-slate-500 hover:text-slate-300 bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04]'
-                    }`}>
-                    {s.label}
+              <div className="text-center">
+                <p className="text-sm font-bold text-white mb-1">GOATED AI analyzing...</p>
+                <p className="text-xs text-slate-500">Scanning on-chain data, sentiment feeds, technical indicators & macro signals</p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Research report */}
+          {researchReport && !researchLoading && (
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+              {/* Report header */}
+              <div className="bg-gradient-to-r from-brand/10 via-purple-500/5 to-blue-500/10 border border-brand/20 rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <Brain size={18} className="text-brand" />
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/15 text-brand font-bold uppercase tracking-wider">Deep Research Report</span>
+                  <span className="ml-auto text-[10px] text-slate-500">{new Date().toLocaleDateString()}</span>
+                </div>
+                <h2 className="text-lg font-black text-white">{researchReport.title}</h2>
+              </div>
+
+              {/* Executive Summary */}
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles size={14} className="text-purple-400" />
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Executive Summary</h3>
+                </div>
+                <p className="text-sm text-slate-300 leading-relaxed">{researchReport.summary}</p>
+              </div>
+
+              {/* Key Findings */}
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Target size={14} className="text-emerald-400" />
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Key Findings</h3>
+                </div>
+                <div className="space-y-2.5">
+                  {researchReport.findings.map((f, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-brand/10 text-brand text-[10px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
+                      <p className="text-sm text-slate-300 leading-relaxed">{f}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sentiment Analysis */}
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <Activity size={14} className="text-blue-400" />
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Sentiment Analysis</h3>
+                </div>
+                <div className="flex items-center gap-6">
+                  <Ring score={researchReport.sentiment} label={researchReport.sentimentLabel} sz="lg" />
+                  <div className="flex-1">
+                    <div className="h-3 bg-white/5 rounded-full overflow-hidden flex">
+                      <div className="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-emerald-500 rounded-full transition-all" style={{ width: `${researchReport.sentiment}%` }} />
+                    </div>
+                    <div className="flex justify-between mt-1.5 text-[10px] text-slate-600">
+                      <span>Bearish</span>
+                      <span>Neutral</span>
+                      <span>Bullish</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Risk Assessment */}
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle size={14} className="text-amber-400" />
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Risk Assessment</h3>
+                </div>
+                <p className="text-sm text-slate-300 leading-relaxed">{researchReport.risk}</p>
+              </div>
+
+              {/* Recommended Plays */}
+              <div className="bg-white/[0.02] border border-brand/20 rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Zap size={14} className="text-brand" />
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Recommended Plays</h3>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand/10 text-brand font-bold">ALPHA</span>
+                </div>
+                <div className="space-y-2">
+                  {researchReport.plays.map((p, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-brand/5 border border-brand/10">
+                      <Crosshair size={12} className="text-brand flex-shrink-0" />
+                      <p className="text-sm text-slate-200">{p}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Disclaimer */}
+              <div className="flex items-center gap-2 pt-1">
+                <Shield size={10} className="text-slate-600" />
+                <p className="text-[10px] text-slate-600">AI-generated analysis. Not financial advice. Always do your own research before making investment decisions.</p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Empty state */}
+          {!researchLoading && !researchReport && (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-4">
+                <Brain size={28} className="text-slate-600" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-400 mb-1">Enter a topic to research</h3>
+              <p className="text-xs text-slate-600 max-w-sm">GOATED AI will analyze sentiment, technicals, on-chain data, and macro conditions to generate a comprehensive research report.</p>
+              <div className="flex flex-wrap gap-2 mt-4 justify-center">
+                {['BTC breakout potential', 'AI sector momentum', 'Election market impact', 'SOL ecosystem growth'].map(suggestion => (
+                  <button key={suggestion} onClick={() => setResearchQuery(suggestion)}
+                    className="px-3 py-1.5 rounded-lg text-xs text-slate-500 bg-white/[0.03] border border-white/[0.06] hover:text-white hover:border-brand/20 transition-all">
+                    {suggestion}
                   </button>
                 ))}
               </div>
             </div>
-          </div>
-
-          {/* Results count */}
-          <div className="text-[11px] text-slate-600 flex items-center gap-2">
-            <span>{filteredPredictions.length} market{filteredPredictions.length !== 1 ? 's' : ''}</span>
-            {predCategory !== 'All' && <span className="text-brand">in {predCategory}</span>}
-            {predPlatform !== 'All' && <span className={PLATFORM_COLORS[predPlatform]?.text || 'text-brand'}>on {predPlatform}</span>}
-          </div>
-
-          {/* Prediction cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {filteredPredictions.map(m => <TrendsPredictionCard key={m.id} m={m} />)}
-          </div>
-          {filteredPredictions.length === 0 && <div className="text-center py-16 text-slate-600"><Target size={32} className="mx-auto mb-2 opacity-30" /><p>No prediction markets match your filters</p></div>}
+          )}
         </div>
       )}
 

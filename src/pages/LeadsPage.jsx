@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import {
   Users, Search, Download, Plus, Phone, Mail, ArrowUp, ArrowDown, Minus,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
@@ -16,7 +16,7 @@ import {
   Calculator,
 } from 'lucide-react';
 import { useStore, fmt, priorities, statuses, industries } from '../hooks/useStore';
-import WorldMap from '../components/WorldMap';
+const WorldMap = lazy(() => import('../components/WorldMap'));
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -61,7 +61,326 @@ const sourceIcons = {
   'Directory Listing': Search, 'Apollo': Crosshair,
 };
 
-const perPageOptions = [50, 100, 250, 500];
+const perPageOptions = [25, 50, 100, 250];
+
+// ---------------------------------------------------------------------------
+// Region mapping for geographic grouping
+// ---------------------------------------------------------------------------
+const REGION_MAP = {
+  'North America - West': ['San Francisco', 'LA', 'Seattle', 'Portland', 'Denver', 'Phoenix', 'Las Vegas', 'San Diego', 'Salt Lake City', 'Vancouver'],
+  'North America - East': ['New York', 'Boston', 'Miami', 'Atlanta', 'Philadelphia', 'Charlotte', 'Raleigh', 'Tampa', 'Orlando', 'Pittsburgh', 'Montreal'],
+  'North America - Central': ['Austin', 'Chicago', 'Dallas', 'Nashville', 'Minneapolis', 'Detroit', 'Columbus', 'Indianapolis', 'Kansas City', 'St Louis', 'Toronto'],
+  'Europe - West': ['London', 'Paris', 'Amsterdam', 'Dublin', 'Lisbon', 'Barcelona', 'Milan', 'Rome'],
+  'Europe - North': ['Stockholm', 'Copenhagen', 'Oslo', 'Helsinki'],
+  'Europe - Central': ['Berlin', 'Munich', 'Zurich', 'Vienna', 'Prague', 'Warsaw'],
+  'Asia Pacific': ['Singapore', 'Sydney', 'Tokyo', 'Hong Kong', 'Seoul', 'Taipei', 'Bangkok', 'Melbourne', 'Auckland', 'Jakarta', 'Mumbai', 'Bangalore', 'Delhi'],
+  'Middle East & Africa': ['Dubai', 'Riyadh', 'Tel Aviv', 'Cape Town', 'Lagos', 'Nairobi', 'Cairo'],
+};
+
+function getRegion(location) {
+  if (!location) return 'Unknown';
+  for (const [region, cities] of Object.entries(REGION_MAP)) {
+    if (cities.includes(location)) return region;
+  }
+  return 'Other';
+}
+
+// ---------------------------------------------------------------------------
+// Close probability calculator
+// ---------------------------------------------------------------------------
+function getCloseProbability(lead, index) {
+  const seed = (index + 1) * 5021;
+  const base = 20;
+  let prob = base;
+  // Score factor
+  if (lead.score >= 90) prob += 35;
+  else if (lead.score >= 80) prob += 25;
+  else if (lead.score >= 60) prob += 15;
+  else prob += 5;
+  // Status factor
+  if (lead.status === 'negotiation') prob += 25;
+  else if (lead.status === 'proposal') prob += 18;
+  else if (lead.status === 'qualified') prob += 12;
+  else if (lead.status === 'contacted') prob += 6;
+  else if (lead.status === 'won') prob = 100;
+  else if (lead.status === 'lost') prob = 0;
+  // Priority factor
+  if (lead.priority === 'critical') prob += 10;
+  else if (lead.priority === 'high') prob += 5;
+  // Momentum factor
+  if (lead.momentum === 'surging') prob += 8;
+  else if (lead.momentum === 'rising') prob += 4;
+  else if (lead.momentum === 'declining') prob -= 8;
+  // Random variance
+  prob += Math.round((simpleHash(seed) - 0.5) * 10);
+  return Math.max(0, Math.min(100, prob));
+}
+
+function closeProbColor(prob) {
+  if (prob >= 75) return 'text-emerald-400';
+  if (prob >= 50) return 'text-amber-400';
+  if (prob >= 25) return 'text-orange-400';
+  return 'text-red-400';
+}
+
+function closeProbBg(prob) {
+  if (prob >= 75) return 'bg-emerald-500/15 border-emerald-500/30';
+  if (prob >= 50) return 'bg-amber-500/15 border-amber-500/30';
+  if (prob >= 25) return 'bg-orange-500/15 border-orange-500/30';
+  return 'bg-red-500/15 border-red-500/30';
+}
+
+// ---------------------------------------------------------------------------
+// Pain points per industry
+// ---------------------------------------------------------------------------
+const INDUSTRY_PAIN_POINTS = {
+  'SaaS': ['High churn rate bleeding MRR', 'Customer acquisition cost too high', 'No product-led growth engine', 'Manual onboarding killing expansion'],
+  'Fintech': ['Compliance bottlenecks slowing launches', 'Customer trust deficit', 'Legacy system migration pain', 'Fraud detection gaps'],
+  'E-commerce': ['Cart abandonment over 70%', 'No retention/loyalty program', 'Rising ad costs crushing margins', 'Poor mobile conversion rate'],
+  'Healthcare': ['Patient acquisition cost rising', 'No online booking system', 'HIPAA-compliant marketing gaps', 'Low review/reputation scores'],
+  'EdTech': ['Low course completion rates', 'Student acquisition cost too high', 'No community engagement strategy', 'Content production bottleneck'],
+  'Cybersecurity': ['Long enterprise sales cycles', 'Difficulty proving ROI to prospects', 'Crowded market positioning', 'Technical buyer vs budget holder gap'],
+  'AI/ML': ['Difficulty monetizing research', 'Enterprise trust and explainability concerns', 'Data pipeline reliability issues', 'Talent retention challenges'],
+  'default': ['No clear digital presence', 'Inefficient lead generation process', 'Poor conversion rates on website', 'No systematic follow-up process'],
+};
+
+function getLeadPainPoints(lead) {
+  return INDUSTRY_PAIN_POINTS[lead.industry] || INDUSTRY_PAIN_POINTS['default'];
+}
+
+function getCloseStrategy(lead, closeProbability) {
+  if (closeProbability >= 75) return {
+    label: 'High Confidence Close', color: 'emerald',
+    steps: ['Send final proposal with limited-time incentive', 'Schedule decision call within 48 hours', 'Prepare ROI summary with their specific metrics', 'Have contract ready for e-signature'],
+  };
+  if (closeProbability >= 50) return {
+    label: 'Nurture to Close', color: 'amber',
+    steps: ['Address remaining objections directly', 'Share relevant case study from their industry', 'Offer pilot/trial period to reduce risk', 'Connect them with existing customer reference'],
+  };
+  if (closeProbability >= 25) return {
+    label: 'Build Trust First', color: 'orange',
+    steps: ['Send personalized value analysis', 'Schedule discovery call to understand pain points', 'Share free resource demonstrating expertise', 'Follow up with industry-specific insights'],
+  };
+  return {
+    label: 'Long-term Nurture', color: 'red',
+    steps: ['Add to drip email campaign', 'Engage on social media / LinkedIn', 'Share thought leadership content monthly', 'Check back in 30-60 days with new value prop'],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Outreach templates
+// ---------------------------------------------------------------------------
+function getOutreachTemplates(lead) {
+  const firstName = lead.name.split(' ')[0];
+  const companyName = lead.company;
+  return {
+    email: {
+      subject: `Quick question about ${companyName}'s growth`,
+      body: `Hi ${firstName},\n\nI noticed ${companyName} is doing great things in ${lead.industry}. I work with similar companies to help them increase revenue by 20-40% through optimized digital presence.\n\nWould you be open to a quick 15-min call this week to see if there's a fit?\n\nBest,\n[Your Name]`,
+    },
+    linkedin: `Hi ${firstName}, I came across ${companyName} and was impressed by your work in ${lead.industry}. I help companies like yours unlock hidden revenue through digital optimization. Would love to connect and share some insights that might be valuable.`,
+    sms: `Hi ${firstName}, this is [Your Name] from GOATED. I have some insights on how ${companyName} could be capturing more revenue in ${lead.industry}. Worth a quick chat? Reply YES and I'll send details.`,
+    call: `Hi ${firstName}, this is [Your Name]. I'm reaching out because I work with companies in ${lead.industry} and noticed some opportunities for ${companyName} to capture additional revenue. Do you have a few minutes to discuss?`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// OutreachDropdown Component
+// ---------------------------------------------------------------------------
+function OutreachDropdown({ lead, onClose, showToast }) {
+  const [activeTab, setActiveTab] = useState(null);
+  const templates = useMemo(() => getOutreachTemplates(lead), [lead]);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) onClose();
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard'));
+  };
+
+  const tabs = [
+    { key: 'email', label: 'Send Email', icon: Mail, color: 'purple' },
+    { key: 'linkedin', label: 'LinkedIn Connect', icon: Linkedin, color: 'blue' },
+    { key: 'sms', label: 'SMS', icon: MessageSquare, color: 'emerald' },
+    { key: 'call', label: 'Call Script', icon: Phone, color: 'amber' },
+  ];
+
+  return (
+    <div ref={dropdownRef} className="absolute right-0 top-full mt-1 z-30 w-80 bg-[#0a0a0a] rounded-xl border border-white/[0.08] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="px-3 py-2 border-b border-white/[0.04] flex items-center justify-between">
+        <span className="text-xs font-bold text-white">Outreach - {lead.name}</span>
+        <button onClick={onClose} className="p-1 rounded text-slate-500 hover:text-white"><X size={12} /></button>
+      </div>
+      {!activeTab ? (
+        <div className="p-2 space-y-1">
+          {tabs.map(t => (
+            <button key={t.key} onClick={() => setActiveTab(t.key)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-${t.color}-500/10 hover:text-${t.color}-400 transition-colors text-left`}>
+              <t.icon size={14} className={`text-${t.color}-400`} /> {t.label}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="p-3">
+          <button onClick={() => setActiveTab(null)} className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-white mb-2">
+            <ChevronLeft size={10} /> Back
+          </button>
+          {activeTab === 'email' && (
+            <div className="space-y-2">
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Subject</div>
+              <div className="bg-surface-2 rounded-lg p-2 text-xs text-white border border-white/[0.04]">{templates.email.subject}</div>
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Body</div>
+              <div className="bg-surface-2 rounded-lg p-2 text-xs text-slate-300 border border-white/[0.04] whitespace-pre-wrap max-h-32 overflow-y-auto">{templates.email.body}</div>
+              <div className="flex gap-2">
+                <button onClick={() => copyToClipboard(templates.email.body)} className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-purple-500/15 border border-purple-500/25 text-xs font-bold text-purple-400 hover:bg-purple-500/25 transition-colors">
+                  <Copy size={10} /> Copy
+                </button>
+                <a href={`mailto:${lead.email}?subject=${encodeURIComponent(templates.email.subject)}&body=${encodeURIComponent(templates.email.body)}`}
+                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-purple-500 text-white text-xs font-bold hover:bg-purple-600 transition-colors">
+                  <Mail size={10} /> Open Email
+                </a>
+              </div>
+            </div>
+          )}
+          {activeTab === 'linkedin' && (
+            <div className="space-y-2">
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Connection Message</div>
+              <div className="bg-surface-2 rounded-lg p-2 text-xs text-slate-300 border border-white/[0.04] whitespace-pre-wrap">{templates.linkedin}</div>
+              <div className="flex gap-2">
+                <button onClick={() => copyToClipboard(templates.linkedin)} className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-500/15 border border-blue-500/25 text-xs font-bold text-blue-400 hover:bg-blue-500/25 transition-colors">
+                  <Copy size={10} /> Copy
+                </button>
+                <a href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(lead.name + ' ' + lead.company)}`} target="_blank" rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-500 text-white text-xs font-bold hover:bg-blue-600 transition-colors">
+                  <Linkedin size={10} /> Open LinkedIn
+                </a>
+              </div>
+            </div>
+          )}
+          {activeTab === 'sms' && (
+            <div className="space-y-2">
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">SMS Template</div>
+              <div className="bg-surface-2 rounded-lg p-2 text-xs text-slate-300 border border-white/[0.04] whitespace-pre-wrap">{templates.sms}</div>
+              <button onClick={() => copyToClipboard(templates.sms)} className="w-full flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-xs font-bold text-emerald-400 hover:bg-emerald-500/25 transition-colors">
+                <Copy size={10} /> Copy SMS
+              </button>
+            </div>
+          )}
+          {activeTab === 'call' && (
+            <div className="space-y-2">
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Call Script</div>
+              <div className="bg-surface-2 rounded-lg p-2 text-xs text-slate-300 border border-white/[0.04] whitespace-pre-wrap">{templates.call}</div>
+              <button onClick={() => copyToClipboard(templates.call)} className="w-full flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-amber-500/15 border border-amber-500/25 text-xs font-bold text-amber-400 hover:bg-amber-500/25 transition-colors">
+                <Copy size={10} /> Copy Script
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// PainPointsModal Component
+// ---------------------------------------------------------------------------
+function PainPointsModal({ lead, index, onClose }) {
+  const painPoints = getLeadPainPoints(lead);
+  const deficits = getLeadDeficits(lead, index);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-lg mx-4 bg-[#0a0a0a] rounded-2xl border border-white/[0.06] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-white/[0.04] flex items-center justify-between">
+          <div>
+            <div className="text-sm font-bold text-white flex items-center gap-2">
+              <AlertTriangle size={16} className="text-orange-400" /> Pain Points - {lead.company}
+            </div>
+            <div className="text-[10px] text-slate-500">{lead.name} &middot; {lead.industry}</div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:text-white transition-colors"><X size={16} /></button>
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          <div className="text-xs font-bold text-red-400 uppercase tracking-wider">Key Pain Points</div>
+          {painPoints.map((point, i) => (
+            <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-red-500/5 border border-red-500/10">
+              <div className="w-6 h-6 rounded-full bg-red-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-xs font-bold text-red-400">{i + 1}</span>
+              </div>
+              <div>
+                <div className="text-sm text-white font-medium">{point}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">Impact: ~{fmt(Math.round(deficits.totalMonthlyLoss / painPoints.length * (1 + simpleHash((index + 1) * 100 + i) * 0.5)))}/mo lost revenue</div>
+              </div>
+            </div>
+          ))}
+          <div className="mt-4 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+            <div className="text-xs font-bold text-emerald-400 mb-1">Total Estimated Impact</div>
+            <div className="text-lg font-black text-red-400">-{fmt(deficits.totalMonthlyLoss)}<span className="text-sm text-red-400/60">/month</span></div>
+            <div className="text-xs text-slate-500 mt-1">Fixing these could recover <span className="text-emerald-400 font-bold">{fmt(deficits.opportunityValue)}</span> annually</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CloseStrategyModal Component
+// ---------------------------------------------------------------------------
+function CloseStrategyModal({ lead, index, onClose }) {
+  const prob = getCloseProbability(lead, index);
+  const strategy = getCloseStrategy(lead, prob);
+  const painPoints = getLeadPainPoints(lead);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-lg mx-4 bg-[#0a0a0a] rounded-2xl border border-white/[0.06] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-white/[0.04] flex items-center justify-between">
+          <div>
+            <div className="text-sm font-bold text-white flex items-center gap-2">
+              <Target size={16} className={`text-${strategy.color}-400`} /> Close Strategy - {lead.company}
+            </div>
+            <div className="text-[10px] text-slate-500">{lead.name} &middot; Close Probability: <span className={`font-bold ${closeProbColor(prob)}`}>{prob}%</span></div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:text-white transition-colors"><X size={16} /></button>
+        </div>
+        <div className="px-5 py-4 space-y-4">
+          {/* Strategy label */}
+          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-${strategy.color}-500/10 border border-${strategy.color}-500/20`}>
+            <span className={`text-sm font-bold text-${strategy.color}-400`}>{strategy.label}</span>
+          </div>
+
+          {/* Steps */}
+          <div className="space-y-2">
+            <div className="text-xs font-bold text-white uppercase tracking-wider">Recommended Steps</div>
+            {strategy.steps.map((step, i) => (
+              <div key={i} className="flex items-start gap-3 p-2.5 rounded-lg bg-surface-2 border border-white/[0.04]">
+                <div className={`w-5 h-5 rounded-full bg-${strategy.color}-500/15 flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                  <span className={`text-[10px] font-bold text-${strategy.color}-400`}>{i + 1}</span>
+                </div>
+                <span className="text-sm text-slate-300">{step}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Lead-specific approach */}
+          <div className="p-3 rounded-lg bg-brand/5 border border-brand/15">
+            <div className="text-xs font-bold text-brand mb-2">Lead-Specific Approach</div>
+            <div className="text-xs text-slate-400 space-y-1">
+              <p>Primary pain point: <span className="text-white font-medium">{painPoints[0]}</span></p>
+              <p>Deal value: <span className="text-brand font-bold">{fmt(lead.dealValue || 0)}</span> &middot; Commission: <span className="text-emerald-400 font-bold">{fmt(Math.round((lead.dealValue || 0) * 0.12))}</span></p>
+              <p>Industry: <span className="text-white">{lead.industry}</span> &middot; Location: <span className="text-white">{lead.location || 'Unknown'}</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Deterministic hash for deficit/revenue data generation
@@ -169,7 +488,7 @@ function deficitStatusColor(status) {
 // Revenue Intelligence Panel Component
 // ---------------------------------------------------------------------------
 function RevenueIntelligencePanel({ leads, allLeads }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportLeadIdx, setReportLeadIdx] = useState(null);
 
@@ -406,7 +725,7 @@ function RevenueIntelligencePanel({ leads, allLeads }) {
 // GOATED Money Machine Panel
 // ---------------------------------------------------------------------------
 function MoneyMachinePanel({ allLeads, onSelect }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [checkedSteps, setCheckedSteps] = useState({});
   const [outreachSent, setOutreachSent] = useState(0);
   const [dealsPerWeek, setDealsPerWeek] = useState(3);
@@ -1073,12 +1392,14 @@ function LeadMapView({ leads, allLeads, onSelect, showToast }) {
 
       {/* Map */}
       <div className="relative h-[400px]">
-        <WorldMap hotspots={hotspots} className="h-full"
-          onCenterClick={(center) => {
-            const loc = locationData.find(d => d.location === center.name);
-            if (loc) setSelectedMapLead(loc);
-          }}
-        />
+        <Suspense fallback={<div className="h-full flex items-center justify-center text-slate-500 text-sm">Loading map...</div>}>
+          <WorldMap hotspots={hotspots} className="h-full"
+            onCenterClick={(center) => {
+              const loc = locationData.find(d => d.location === center.name);
+              if (loc) setSelectedMapLead(loc);
+            }}
+          />
+        </Suspense>
         {/* Selected location overlay */}
         {selectedMapLead && (
           <div className="absolute top-4 right-4 w-72 bg-black/90 backdrop-blur-md rounded-xl border border-white/[0.08] shadow-xl overflow-hidden z-10">
@@ -1636,6 +1957,371 @@ function DataSourceBadge({ source }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Multiplayer Closing Ecosystem — Mock Data
+// ---------------------------------------------------------------------------
+const CLOSER_LEADERBOARD = [
+  { id: 1, username: '@closerking', avatar: 'CK', deals: 47, revenue: 823500, closeRate: 94, streak: 12, isCurrentUser: false },
+  { id: 2, username: '@degenalpha', avatar: 'DA', deals: 41, revenue: 712000, closeRate: 91, streak: 8, isCurrentUser: false },
+  { id: 3, username: '@wolfofdeals', avatar: 'WD', deals: 38, revenue: 695000, closeRate: 89, streak: 15, isCurrentUser: false },
+  { id: 4, username: '@salesgoat', avatar: 'SG', deals: 35, revenue: 580000, closeRate: 87, streak: 6, isCurrentUser: true },
+  { id: 5, username: '@pipeline_god', avatar: 'PG', deals: 33, revenue: 545000, closeRate: 85, streak: 10, isCurrentUser: false },
+  { id: 6, username: '@commission_queen', avatar: 'CQ', deals: 31, revenue: 498000, closeRate: 83, streak: 4, isCurrentUser: false },
+  { id: 7, username: '@deal_surgeon', avatar: 'DS', deals: 28, revenue: 462000, closeRate: 81, streak: 7, isCurrentUser: false },
+  { id: 8, username: '@rev_hunter', avatar: 'RH', deals: 26, revenue: 415000, closeRate: 79, streak: 3, isCurrentUser: false },
+  { id: 9, username: '@cold_call_king', avatar: 'CC', deals: 24, revenue: 388000, closeRate: 77, streak: 5, isCurrentUser: false },
+  { id: 10, username: '@quota_crusher', avatar: 'QC', deals: 22, revenue: 351000, closeRate: 75, streak: 2, isCurrentUser: false },
+];
+
+const CLOSING_FEED_TEMPLATES = [
+  { username: '@closerking', amount: 15000, company: 'Flowstate.io' },
+  { username: '@degenalpha', amount: 22000, company: 'NimbusOps' },
+  { username: '@wolfofdeals', amount: 8500, company: 'BrightPath Labs' },
+  { username: '@pipeline_god', amount: 31000, company: 'QuantumLeap' },
+  { username: '@commission_queen', amount: 12000, company: 'SyncWave' },
+  { username: '@salesgoat', amount: 45000, company: 'MetricFlow' },
+  { username: '@deal_surgeon', amount: 19500, company: 'EdgeSync' },
+  { username: '@rev_hunter', amount: 7800, company: 'GridPoint' },
+  { username: '@cold_call_king', amount: 28000, company: 'VelocityAI' },
+  { username: '@quota_crusher', amount: 11200, company: 'PrismLogic' },
+  { username: '@closerking', amount: 52000, company: 'Apex Plumbing' },
+  { username: '@degenalpha', amount: 16500, company: 'Summit Marketing' },
+  { username: '@wolfofdeals', amount: 38000, company: 'TerraNode' },
+  { username: '@pipeline_god', amount: 9200, company: 'Ironclad Creative' },
+  { username: '@commission_queen', amount: 27000, company: 'HyperLoop Labs' },
+];
+
+const BET_ODDS = [
+  { target: 50000, yesOdds: '+120', noOdds: '-150' },
+  { target: 50000, yesOdds: '+180', noOdds: '-110' },
+  { target: 50000, yesOdds: '+250', noOdds: '-180' },
+  { target: 50000, yesOdds: '-110', noOdds: '+140' },
+  { target: 50000, yesOdds: '+150', noOdds: '-130' },
+  { target: 50000, yesOdds: '+300', noOdds: '-200' },
+  { target: 50000, yesOdds: '+200', noOdds: '-160' },
+  { target: 50000, yesOdds: '+140', noOdds: '-120' },
+  { target: 50000, yesOdds: '+220', noOdds: '-170' },
+  { target: 50000, yesOdds: '+350', noOdds: '-250' },
+];
+
+function rankBadge(rank) {
+  if (rank === 1) return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40';
+  if (rank === 2) return 'bg-slate-300/15 text-slate-300 border-slate-300/30';
+  if (rank === 3) return 'bg-amber-700/20 text-amber-600 border-amber-700/30';
+  return 'bg-white/5 text-slate-500 border-white/10';
+}
+
+function rankIcon(rank) {
+  if (rank <= 3) return Crown;
+  return Hash;
+}
+
+// ---------------------------------------------------------------------------
+// CloserLeaderboard Component
+// ---------------------------------------------------------------------------
+function CloserLeaderboard({ degenMode, showToast }) {
+  const [expanded, setExpanded] = useState(true);
+  const [bets, setBets] = useState({}); // { closerId: 'yes' | 'no' }
+  const [goatBalance] = useState(24750); // Simulated GOAT token balance
+
+  const handleBet = (closerId, side) => {
+    setBets(prev => ({ ...prev, [closerId]: prev[closerId] === side ? null : side }));
+    showToast(`Bet placed: ${side === 'yes' ? 'YES' : 'NO'} on closer #${closerId}`);
+  };
+
+  return (
+    <div className="mb-4 rounded-xl border border-cyan-500/20 bg-gradient-to-r from-cyan-500/[0.04] via-black to-cyan-500/[0.02] overflow-hidden">
+      <button onClick={() => setExpanded(!expanded)} className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/[0.01] transition-colors">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-cyan-500/15 flex items-center justify-center relative">
+            <Crown size={20} className="text-cyan-400" />
+            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+            </span>
+          </div>
+          <div className="text-left">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-white">LIVE Closer Leaderboard</span>
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/25 font-bold animate-pulse">LIVE</span>
+            </div>
+            <span className="text-xs text-slate-500">Top 10 closers ranked by weekly performance</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {degenMode && (
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-500/10 border border-orange-500/20">
+              <Wallet size={12} className="text-orange-400" />
+              <span className="text-xs font-bold text-orange-400">{goatBalance.toLocaleString()} GOAT</span>
+            </div>
+          )}
+          {expanded ? <ChevronUp size={18} className="text-slate-500" /> : <ChevronDown size={18} className="text-slate-500" />}
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="px-4 pb-4">
+          <div className="overflow-x-auto">
+            <div className="space-y-1.5 min-w-[600px]">
+              {/* Header */}
+              <div className="flex items-center gap-3 px-3 py-1.5 text-[10px] text-slate-500 uppercase tracking-wider font-bold">
+                <div className="w-8 text-center">Rank</div>
+                <div className="flex-1">Closer</div>
+                <div className="w-16 text-center">Deals</div>
+                <div className="w-20 text-right">Revenue</div>
+                <div className="w-16 text-center">Close %</div>
+                <div className="w-16 text-center">Streak</div>
+                {degenMode && <div className="w-24 text-center">Bet</div>}
+              </div>
+
+              {CLOSER_LEADERBOARD.map((closer, idx) => {
+                const rank = idx + 1;
+                const RankIcon = rankIcon(rank);
+                return (
+                  <div key={closer.id}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                      closer.isCurrentUser
+                        ? 'bg-brand/[0.06] border border-brand/25'
+                        : 'bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04]'
+                    }`}>
+                    {/* Rank */}
+                    <div className="w-8 flex justify-center">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center border text-xs font-black ${rankBadge(rank)}`}>
+                        {rank <= 3 ? <RankIcon size={14} /> : rank}
+                      </div>
+                    </div>
+
+                    {/* User */}
+                    <div className="flex-1 flex items-center gap-2.5">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                        closer.isCurrentUser ? 'bg-brand/20 text-brand border border-brand/30' : 'bg-white/[0.06] text-slate-400 border border-white/[0.06]'
+                      }`}>
+                        {closer.avatar}
+                      </div>
+                      <div>
+                        <span className={`text-xs font-bold ${closer.isCurrentUser ? 'text-brand' : 'text-white'}`}>{closer.username}</span>
+                        {closer.isCurrentUser && (
+                          <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full bg-brand/15 text-brand border border-brand/25 font-bold">YOU</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Deals */}
+                    <div className="w-16 text-center">
+                      <span className="text-sm font-bold text-white">{closer.deals}</span>
+                    </div>
+
+                    {/* Revenue */}
+                    <div className="w-20 text-right">
+                      <span className="text-xs font-bold text-emerald-400">{fmt(closer.revenue)}</span>
+                    </div>
+
+                    {/* Close Rate */}
+                    <div className="w-16 text-center">
+                      <span className={`text-xs font-bold ${closer.closeRate >= 90 ? 'text-emerald-400' : closer.closeRate >= 80 ? 'text-cyan-400' : 'text-amber-400'}`}>
+                        {closer.closeRate}%
+                      </span>
+                    </div>
+
+                    {/* Streak */}
+                    <div className="w-16 flex items-center justify-center gap-1">
+                      <Flame size={12} className="text-orange-400" />
+                      <span className="text-xs font-bold text-orange-400">{closer.streak}</span>
+                    </div>
+
+                    {/* Bet (DEGEN only) */}
+                    {degenMode && (
+                      <div className="w-24 flex items-center gap-1">
+                        <button
+                          onClick={() => handleBet(closer.id, 'yes')}
+                          className={`flex-1 px-1.5 py-1 rounded text-[9px] font-bold transition-colors ${
+                            bets[closer.id] === 'yes'
+                              ? 'bg-emerald-500/25 text-emerald-400 border border-emerald-500/40'
+                              : 'bg-white/[0.04] text-slate-500 border border-white/[0.06] hover:bg-emerald-500/10 hover:text-emerald-400'
+                          }`}>
+                          YES <span className="text-[8px] opacity-70">{BET_ODDS[idx]?.yesOdds}</span>
+                        </button>
+                        <button
+                          onClick={() => handleBet(closer.id, 'no')}
+                          className={`flex-1 px-1.5 py-1 rounded text-[9px] font-bold transition-colors ${
+                            bets[closer.id] === 'no'
+                              ? 'bg-red-500/25 text-red-400 border border-red-500/40'
+                              : 'bg-white/[0.04] text-slate-500 border border-white/[0.06] hover:bg-red-500/10 hover:text-red-400'
+                          }`}>
+                          NO <span className="text-[8px] opacity-70">{BET_ODDS[idx]?.noOdds}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {degenMode && (
+            <div className="mt-3 p-2.5 rounded-lg bg-orange-500/[0.05] border border-orange-500/15 text-center">
+              <span className="text-[10px] text-orange-400/70">Bet if a closer hits <span className="font-bold text-orange-400">$50K this week</span> using GOAT tokens. Odds update live.</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// SocialClosingFeed Component
+// ---------------------------------------------------------------------------
+function SocialClosingFeed({ showToast }) {
+  const [feedItems, setFeedItems] = useState(() => {
+    const initial = [];
+    for (let i = 0; i < 5; i++) {
+      const tmpl = CLOSING_FEED_TEMPLATES[i % CLOSING_FEED_TEMPLATES.length];
+      initial.push({
+        id: i,
+        username: tmpl.username,
+        amount: tmpl.amount,
+        company: tmpl.company,
+        timeAgo: `${(5 - i) * 2 + 1}m ago`,
+        reactions: { fire: Math.floor(Math.random() * 20) + 3, eyes: Math.floor(Math.random() * 10) + 1, money: Math.floor(Math.random() * 15) + 2 },
+      });
+    }
+    return initial;
+  });
+  const [expanded, setExpanded] = useState(true);
+  const nextIdRef = useRef(100);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const tmpl = CLOSING_FEED_TEMPLATES[Math.floor(Math.random() * CLOSING_FEED_TEMPLATES.length)];
+      const newItem = {
+        id: nextIdRef.current++,
+        username: tmpl.username,
+        amount: Math.round(tmpl.amount * (0.7 + Math.random() * 0.8)),
+        company: tmpl.company,
+        timeAgo: 'just now',
+        reactions: { fire: 0, eyes: 0, money: 0 },
+      };
+      setFeedItems(prev => [newItem, ...prev].slice(0, 10));
+    }, 8000 + Math.random() * 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleReaction = (itemId, type) => {
+    setFeedItems(prev => prev.map(item =>
+      item.id === itemId ? { ...item, reactions: { ...item.reactions, [type]: item.reactions[type] + 1 } } : item
+    ));
+  };
+
+  return (
+    <div className="mb-4 rounded-xl border border-purple-500/20 bg-gradient-to-r from-purple-500/[0.04] via-black to-purple-500/[0.02] overflow-hidden">
+      <button onClick={() => setExpanded(!expanded)} className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/[0.01] transition-colors">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center">
+            <Activity size={20} className="text-purple-400" />
+          </div>
+          <div className="text-left">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-white">Live Closing Feed</span>
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/25 font-bold">REAL-TIME</span>
+            </div>
+            <span className="text-xs text-slate-500">Watch closers land deals in real time</span>
+          </div>
+        </div>
+        {expanded ? <ChevronUp size={18} className="text-slate-500" /> : <ChevronDown size={18} className="text-slate-500" />}
+      </button>
+
+      {expanded && (
+        <div className="px-4 pb-4 space-y-2">
+          {feedItems.map((item, idx) => (
+            <div key={item.id}
+              className={`flex items-center justify-between px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] transition-all ${
+                idx === 0 ? 'animate-pulse-once border-purple-500/20 bg-purple-500/[0.03]' : ''
+              }`}>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="w-7 h-7 rounded-full bg-purple-500/15 flex items-center justify-center text-[9px] font-bold text-purple-400 shrink-0">
+                  {item.username.slice(1, 3).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs">
+                    <span className="font-bold text-purple-400">{item.username}</span>
+                    <span className="text-slate-400"> just closed a </span>
+                    <span className="font-bold text-emerald-400">{fmt(item.amount)}</span>
+                    <span className="text-slate-400"> deal with </span>
+                    <span className="font-medium text-white">{item.company}</span>
+                  </span>
+                  <div className="text-[10px] text-slate-600 mt-0.5">{item.timeAgo}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                <button onClick={() => handleReaction(item.id, 'fire')}
+                  className="flex items-center gap-0.5 px-1.5 py-1 rounded-md bg-white/[0.03] hover:bg-orange-500/10 transition-colors text-[10px]">
+                  <Flame size={10} className="text-orange-400" /><span className="text-slate-400">{item.reactions.fire}</span>
+                </button>
+                <button onClick={() => handleReaction(item.id, 'eyes')}
+                  className="flex items-center gap-0.5 px-1.5 py-1 rounded-md bg-white/[0.03] hover:bg-cyan-500/10 transition-colors text-[10px]">
+                  <Eye size={10} className="text-cyan-400" /><span className="text-slate-400">{item.reactions.eyes}</span>
+                </button>
+                <button onClick={() => handleReaction(item.id, 'money')}
+                  className="flex items-center gap-0.5 px-1.5 py-1 rounded-md bg-white/[0.03] hover:bg-emerald-500/10 transition-colors text-[10px]">
+                  <DollarSign size={10} className="text-emerald-400" /><span className="text-slate-400">{item.reactions.money}</span>
+                </button>
+              </div>
+            </div>
+          ))}
+
+          <div className="flex items-center justify-center pt-1">
+            <button
+              onClick={() => showToast('Watch Live coming soon — connect your TikTok')}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs font-bold text-purple-400 hover:bg-purple-500/20 transition-colors">
+              <Video size={14} /> Watch Live
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CreatorProgramBanner Component
+// ---------------------------------------------------------------------------
+function CreatorProgramBanner({ showToast }) {
+  return (
+    <div className="mb-4 rounded-xl border border-amber-500/20 bg-gradient-to-r from-amber-500/[0.05] via-black to-amber-500/[0.03] overflow-hidden">
+      <div className="px-4 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center shrink-0">
+          <Star size={24} className="text-amber-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-sm font-black text-white uppercase tracking-wider">GOATED Creator Program</span>
+            <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25 font-bold">EARN</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            Screen record your degen closing sessions on TikTok &amp; earn. <span className="text-amber-400 font-bold">15% revenue share</span> on all referred user revenue.
+          </p>
+          <div className="flex items-center gap-4 mt-2">
+            <div className="flex items-center gap-1.5">
+              <Users size={12} className="text-amber-400/70" />
+              <span className="text-[10px] text-slate-500"><span className="text-amber-400 font-bold">247</span> creators earning</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <DollarSign size={12} className="text-emerald-400/70" />
+              <span className="text-[10px] text-slate-500"><span className="text-emerald-400 font-bold">$45K</span> paid out this month</span>
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={() => showToast('Creator application submitted! We\'ll be in touch.')}
+          className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-black text-xs font-black uppercase tracking-wider hover:from-amber-400 hover:to-orange-400 transition-all shrink-0 shadow-lg shadow-amber-500/20">
+          Apply for Creator Access
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ===========================================================================================
 // MAIN COMPONENT
 // ===========================================================================================
@@ -1649,6 +2335,11 @@ export default function LeadsPage({ onSelect }) {
     degenMode, degenData, generateDegenData,
   } = useStore();
 
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
+
   // Lazily initialize leads outside render to avoid setState-during-render
   useEffect(() => {
     if (!allLeads) getLeads();
@@ -1661,6 +2352,49 @@ export default function LeadsPage({ onSelect }) {
   const [toastMsg, setToastMsg] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const showToast = useCallback((msg) => { setToastMsg(msg); setToastVisible(true); }, []);
+
+  // Load More pattern - start with 35 leads, load more on demand
+  const [visibleCount, setVisibleCount] = useState(35);
+
+  // Outreach dropdown state
+  const [outreachLeadId, setOutreachLeadId] = useState(null);
+
+  // Pain points / close strategy modals
+  const [painPointLead, setPainPointLead] = useState(null);
+  const [painPointIndex, setPainPointIndex] = useState(0);
+  const [strategyLead, setStrategyLead] = useState(null);
+  const [strategyIndex, setStrategyIndex] = useState(0);
+
+  // User profiling: track clicked lead preferences
+  const [userProfile, setUserProfile] = useState({ industries: {}, regions: {}, dealSizes: [] });
+  const trackLeadClick = useCallback((lead) => {
+    setUserProfile(prev => {
+      const next = { ...prev };
+      next.industries = { ...prev.industries };
+      next.regions = { ...prev.regions };
+      next.dealSizes = [...prev.dealSizes];
+      // Track industry
+      if (lead.industry) next.industries[lead.industry] = (next.industries[lead.industry] || 0) + 1;
+      // Track region
+      const region = getRegion(lead.location);
+      next.regions[region] = (next.regions[region] || 0) + 1;
+      // Track deal size
+      if (lead.dealValue) next.dealSizes.push(lead.dealValue);
+      // Keep only last 50 deal sizes
+      if (next.dealSizes.length > 50) next.dealSizes = next.dealSizes.slice(-50);
+      return next;
+    });
+  }, []);
+
+  // Compute preferred industry/region for lead boosting
+  const userPreferences = useMemo(() => {
+    const topIndustry = Object.entries(userProfile.industries).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+    const topRegion = Object.entries(userProfile.regions).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+    const avgDealSize = userProfile.dealSizes.length > 0
+      ? userProfile.dealSizes.reduce((s, v) => s + v, 0) / userProfile.dealSizes.length
+      : 0;
+    return { topIndustry, topRegion, avgDealSize, hasData: userProfile.dealSizes.length >= 3 };
+  }, [userProfile]);
 
   // View mode: table or map
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'map'
@@ -1702,7 +2436,7 @@ export default function LeadsPage({ onSelect }) {
   // ---------------------------------------------------------------------------
   // AI Chat State
   // ---------------------------------------------------------------------------
-  const [aiChatOpen, setAiChatOpen] = useState(true);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiMessages, setAiMessages] = useState([{
     role: 'assistant',
@@ -1899,9 +2633,9 @@ export default function LeadsPage({ onSelect }) {
   }, [liveMode, fetchLiveLeads]);
 
   // ---------------------------------------------------------------------------
-  // Apply AI Filters to local data
+  // Apply AI Filters to local data + geographic grouping + deal prioritization + user profiling
   // ---------------------------------------------------------------------------
-  const filteredLeads = useMemo(() => {
+  const allFilteredLeads = useMemo(() => {
     if (liveMode) return liveLeads;
 
     const searchLower = search.toLowerCase();
@@ -1930,46 +2664,54 @@ export default function LeadsPage({ onSelect }) {
       });
     }
 
-    // Sort
-    const sf = aiFilters?.sort || sortField;
-    const dir = (aiFilters?.order || sortDirection) === 'asc' ? 1 : -1;
+    // Multi-factor sort: user profile boost -> $20K+ deals first -> geographic grouping -> score
     filtered.sort((a, b) => {
+      // User profiling boost: if user has clicked 3+ leads, boost matching leads
+      if (userPreferences.hasData) {
+        const aBoost = (a.industry === userPreferences.topIndustry ? 2 : 0) + (getRegion(a.location) === userPreferences.topRegion ? 1 : 0);
+        const bBoost = (b.industry === userPreferences.topIndustry ? 2 : 0) + (getRegion(b.location) === userPreferences.topRegion ? 1 : 0);
+        if (aBoost !== bBoost) return bBoost - aBoost;
+      }
+
+      // Prioritize $20K+ deals
+      const aHighValue = (a.dealValue || 0) >= 20000 ? 1 : 0;
+      const bHighValue = (b.dealValue || 0) >= 20000 ? 1 : 0;
+      if (aHighValue !== bHighValue) return bHighValue - aHighValue;
+
+      // Then apply user-selected sort
+      const sf = aiFilters?.sort || sortField;
+      const dir = (aiFilters?.order || sortDirection) === 'asc' ? 1 : -1;
       const aVal = a[sf]; const bVal = b[sf];
       if (typeof aVal === 'number' && typeof bVal === 'number') return (aVal - bVal) * dir;
       return String(aVal || '').localeCompare(String(bVal || '')) * dir;
     });
 
-    // Paginate
-    const start = leadsPage * leadsPerPage;
-    return filtered.slice(start, start + leadsPerPage);
-  }, [activeLeads, search, filterPriority, filterStatus, aiFilters, sortField, sortDirection, leadsPage, leadsPerPage, liveMode, liveLeads]);
+    return filtered;
+  }, [activeLeads, search, filterPriority, filterStatus, aiFilters, sortField, sortDirection, liveMode, liveLeads, userPreferences]);
+
+  // Apply "Load More" pattern: show visibleCount leads
+  const filteredLeads = useMemo(() => {
+    return allFilteredLeads.slice(0, visibleCount);
+  }, [allFilteredLeads, visibleCount]);
 
   const totalFiltered = useMemo(() => {
     if (liveMode) return liveTotal;
-    const searchLower = search.toLowerCase();
-    let count = 0;
-    for (const l of activeLeads) {
-      const matchSearch = !search || l.name.toLowerCase().includes(searchLower) || l.company.toLowerCase().includes(searchLower) || l.industry.toLowerCase().includes(searchLower);
-      const matchPriority = filterPriority === 'all' || l.priority === filterPriority;
-      const matchStatus = filterStatus === 'all' || l.status === filterStatus;
-      if (!matchSearch || !matchPriority || !matchStatus) continue;
-      if (aiFilters) {
-        if (aiFilters.industry && l.industry !== aiFilters.industry) continue;
-        if (aiFilters.minScore && l.score < aiFilters.minScore) continue;
-        if (aiFilters.minDeal && l.dealValue < aiFilters.minDeal) continue;
-        if (aiFilters.maxDeal < Infinity && l.dealValue > aiFilters.maxDeal) continue;
-        if (aiFilters.location && !l.location?.toLowerCase().includes(aiFilters.location.toLowerCase())) continue;
-        if (aiFilters.title && !l.title?.toLowerCase().includes(aiFilters.title.toLowerCase())) continue;
-        if (aiFilters.momentum && l.momentum !== aiFilters.momentum) continue;
-      }
-      count++;
-    }
-    return count;
-  }, [activeLeads, search, filterPriority, filterStatus, aiFilters, liveMode, liveTotal]);
+    return allFilteredLeads.length;
+  }, [allFilteredLeads, liveMode, liveTotal]);
 
   const leads = filteredLeads;
-  const currentPage = liveMode ? livePage - 1 : leadsPage;
-  const totalPages = liveMode ? liveTotalPages : Math.max(1, Math.ceil(totalFiltered / leadsPerPage));
+  const hasMore = visibleCount < totalFiltered;
+
+  // Geographic region breakdown for display
+  const regionBreakdown = useMemo(() => {
+    const regions = {};
+    for (const l of leads) {
+      const region = getRegion(l.location);
+      if (!regions[region]) regions[region] = 0;
+      regions[region]++;
+    }
+    return Object.entries(regions).sort((a, b) => b[1] - a[1]);
+  }, [leads]);
 
   // Summary stats
   const summaryStats = useMemo(() => {
@@ -1989,13 +2731,13 @@ export default function LeadsPage({ onSelect }) {
   const handleSort = useCallback((field) => {
     if (sortField === field) setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     else { setSortField(field); setSortDirection(field === 'name' || field === 'company' ? 'asc' : 'desc'); }
+    setVisibleCount(35);
     if (liveMode) setLivePage(1); else setLeadsPage(0);
   }, [sortField, sortDirection, setSortField, setSortDirection, setLeadsPage, liveMode]);
 
-  const handlePageChange = useCallback((p) => {
-    if (liveMode) setLivePage(p + 1);
-    else setLeadsPage(p);
-  }, [liveMode, setLeadsPage]);
+  const handleLoadMore = useCallback(() => {
+    setVisibleCount(prev => Math.min(prev + 50, totalFiltered));
+  }, [totalFiltered]);
 
   const toggleSelect = useCallback((id, e) => {
     e.stopPropagation();
@@ -2031,10 +2773,11 @@ export default function LeadsPage({ onSelect }) {
     setFilterPriority('all');
     setFilterStatus('all');
     setLeadsPage(0);
+    setVisibleCount(35);
     showToast('AI filters cleared');
   }, [setSearch, setFilterPriority, setFilterStatus, setLeadsPage, showToast]);
 
-  const startIndex = liveMode ? (livePage - 1) * leadsPerPage : leadsPage * leadsPerPage;
+  const startIndex = 0;
   const allOnPageSelected = leads.length > 0 && leads.every(l => selectedIds.has(l.id));
 
   const sortableColumns = [
@@ -2043,30 +2786,29 @@ export default function LeadsPage({ onSelect }) {
     { key: 'last_activity', label: 'Activity' }, { key: 'momentum', label: 'Momentum' },
   ];
 
-  const getPageNumbers = () => {
-    const pages = [];
-    if (totalPages <= 7) { for (let i = 0; i < totalPages; i++) pages.push(i); }
-    else {
-      pages.push(0);
-      if (currentPage > 3) pages.push('...');
-      const start = Math.max(1, currentPage - 1);
-      const end = Math.min(totalPages - 2, currentPage + 1);
-      for (let i = start; i <= end; i++) pages.push(i);
-      if (currentPage < totalPages - 4) pages.push('...');
-      pages.push(totalPages - 1);
-    }
-    return pages;
-  };
+  // Wrapped onSelect to also track profiling
+  const handleSelectLead = useCallback((lead) => {
+    trackLeadClick(lead);
+    if (onSelect) onSelect(lead);
+  }, [onSelect, trackLeadClick]);
+
+  // DEGEN intel panel state - closed by default
+  const [degenIntelOpen, setDegenIntelOpen] = useState(false);
 
   return (
     <div className="p-4 sm:p-6">
       <Toast message={toastMsg} visible={toastVisible} onDone={() => setToastVisible(false)} />
 
-      {/* DEGEN INTEL Banner */}
+      {/* Pain Points Modal */}
+      {painPointLead && <PainPointsModal lead={painPointLead} index={painPointIndex} onClose={() => setPainPointLead(null)} />}
+      {/* Close Strategy Modal */}
+      {strategyLead && <CloseStrategyModal lead={strategyLead} index={strategyIndex} onClose={() => setStrategyLead(null)} />}
+
+      {/* DEGEN INTEL Banner — CLOSED by default, user opts in */}
       {degenMode && degenData && (
         <div className="mb-4 rounded-xl border border-orange-500/30 bg-gradient-to-r from-orange-500/10 via-red-500/5 to-yellow-500/10 overflow-hidden">
-          {/* Banner Header */}
-          <div className="px-4 py-2.5 flex items-center justify-between border-b border-orange-500/20">
+          {/* Banner Header - always visible, clickable to expand */}
+          <button onClick={() => setDegenIntelOpen(!degenIntelOpen)} className="w-full px-4 py-2.5 flex items-center justify-between border-b border-orange-500/20 hover:bg-orange-500/[0.03] transition-colors">
             <div className="flex items-center gap-2">
               <Flame size={18} className="text-orange-400 animate-pulse" />
               <span className="text-sm font-black tracking-wider text-orange-400 uppercase">DEGEN INTEL</span>
@@ -2076,43 +2818,48 @@ export default function LeadsPage({ onSelect }) {
               <div className="flex items-center gap-1.5">
                 <Skull size={14} className="text-orange-400" />
                 <span className="text-xs font-bold text-orange-300">DEGEN SCORE: {degenData.degenScore}</span>
-                <div className="w-16 h-1.5 bg-black/30 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-red-500" style={{ width: degenData.degenScore + '%' }} />
+              </div>
+              {degenIntelOpen ? <ChevronUp size={16} className="text-orange-400" /> : <ChevronDown size={16} className="text-orange-400" />}
+            </div>
+          </button>
+          {degenIntelOpen && (
+            <>
+              {/* Refresh button */}
+              <div className="px-4 py-1.5 flex justify-end">
+                <button onClick={() => generateDegenData()} className="text-[10px] px-2 py-1 rounded-lg bg-orange-500/15 text-orange-400 hover:bg-orange-500/25 transition-colors border border-orange-500/20">
+                  <RefreshCw size={10} className="inline mr-1" />REFRESH
+                </button>
+              </div>
+              {/* Whale Alerts Ticker */}
+              <div className="px-4 py-2 overflow-hidden relative">
+                <div className="flex gap-6 animate-marquee whitespace-nowrap">
+                  {[...degenData.whaleAlerts, ...degenData.whaleAlerts].map((alert, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1.5 text-xs">
+                      <span className={`font-bold ${alert.direction === 'BUY' || alert.direction === 'STAKE' ? 'text-emerald-400' : alert.direction === 'SELL' || alert.direction === 'UNSTAKE' ? 'text-red-400' : 'text-yellow-400'}`}>
+                        {alert.direction}
+                      </span>
+                      <span className="text-white font-mono font-medium">{fmt(alert.amount)}</span>
+                      <span className="text-orange-300 font-bold">{alert.asset}</span>
+                      <span className="text-slate-500">{alert.wallet}</span>
+                      <span className="text-slate-600">{alert.timestamp}</span>
+                      {alert.impact === 'HIGH' && <span className="text-[9px] px-1 py-0 rounded bg-red-500/20 text-red-400 font-bold">HIGH IMPACT</span>}
+                      <span className="text-slate-700 mx-1">|</span>
+                    </span>
+                  ))}
                 </div>
               </div>
-              <button onClick={() => generateDegenData()} className="text-[10px] px-2 py-1 rounded-lg bg-orange-500/15 text-orange-400 hover:bg-orange-500/25 transition-colors border border-orange-500/20">
-                <RefreshCw size={10} className="inline mr-1" />REFRESH
-              </button>
-            </div>
-          </div>
-          {/* Whale Alerts Ticker */}
-          <div className="px-4 py-2 overflow-hidden relative">
-            <div className="flex gap-6 animate-marquee whitespace-nowrap">
-              {[...degenData.whaleAlerts, ...degenData.whaleAlerts].map((alert, idx) => (
-                <span key={idx} className="inline-flex items-center gap-1.5 text-xs">
-                  <span className={`font-bold ${alert.direction === 'BUY' || alert.direction === 'STAKE' ? 'text-emerald-400' : alert.direction === 'SELL' || alert.direction === 'UNSTAKE' ? 'text-red-400' : 'text-yellow-400'}`}>
-                    {alert.direction}
-                  </span>
-                  <span className="text-white font-mono font-medium">{fmt(alert.amount)}</span>
-                  <span className="text-orange-300 font-bold">{alert.asset}</span>
-                  <span className="text-slate-500">{alert.wallet}</span>
-                  <span className="text-slate-600">{alert.timestamp}</span>
-                  {alert.impact === 'HIGH' && <span className="text-[9px] px-1 py-0 rounded bg-red-500/20 text-red-400 font-bold">HIGH IMPACT</span>}
-                  <span className="text-slate-700 mx-1">|</span>
-                </span>
-              ))}
-            </div>
-          </div>
-          {/* Hot Signals Summary */}
-          <div className="px-4 py-2 border-t border-orange-500/15 flex items-center gap-4 overflow-x-auto scrollbar-hide">
-            {degenData.hotSignals.filter(s => s.actionable).slice(0, 5).map((sig, i) => (
-              <div key={sig.id} className="flex-shrink-0 flex items-center gap-1.5 text-[11px]">
-                <span className={`w-1.5 h-1.5 rounded-full ${sig.strength >= 90 ? 'bg-red-400 animate-pulse' : 'bg-orange-400'}`} />
-                <span className="text-orange-300 font-bold">{sig.asset}</span>
-                <span className="text-slate-400">{sig.description}</span>
+              {/* Hot Signals Summary */}
+              <div className="px-4 py-2 border-t border-orange-500/15 flex items-center gap-4 overflow-x-auto scrollbar-hide">
+                {degenData.hotSignals.filter(s => s.actionable).slice(0, 5).map((sig, i) => (
+                  <div key={sig.id} className="flex-shrink-0 flex items-center gap-1.5 text-[11px]">
+                    <span className={`w-1.5 h-1.5 rounded-full ${sig.strength >= 90 ? 'bg-red-400 animate-pulse' : 'bg-orange-400'}`} />
+                    <span className="text-orange-300 font-bold">{sig.asset}</span>
+                    <span className="text-slate-400">{sig.description}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
         </div>
       )}
 
@@ -2120,7 +2867,12 @@ export default function LeadsPage({ onSelect }) {
       <RevenueIntelligencePanel leads={leads} allLeads={activeLeads} />
 
       {/* GOATED Money Machine */}
-      <MoneyMachinePanel allLeads={activeLeads} onSelect={onSelect} />
+      <MoneyMachinePanel allLeads={activeLeads} onSelect={handleSelectLead} />
+
+      {/* ── Multiplayer Closing Ecosystem ── */}
+      <CloserLeaderboard degenMode={degenMode} showToast={showToast} />
+      <SocialClosingFeed showToast={showToast} />
+      <CreatorProgramBanner showToast={showToast} />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
@@ -2141,7 +2893,10 @@ export default function LeadsPage({ onSelect }) {
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20">AI-Powered</span>
               )}
             </h1>
-            <p className="text-slate-500 text-sm">{totalFiltered.toLocaleString()} leads {aiFilters ? '(AI filtered)' : ''} of {summaryStats.total.toLocaleString()} total</p>
+            <p className="text-slate-500 text-sm">
+              {leads.length.toLocaleString()} shown of {totalFiltered.toLocaleString()} {aiFilters ? 'filtered' : 'total'}
+              {userPreferences.hasData && <span className="ml-1 text-brand"> &middot; Personalized for you</span>}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -2348,7 +3103,7 @@ export default function LeadsPage({ onSelect }) {
       {/* Map View */}
       {viewMode === 'map' && (
         <div className="mb-4">
-          <LeadMapView leads={leads} allLeads={activeLeads} onSelect={onSelect} showToast={showToast} />
+          <LeadMapView leads={leads} allLeads={activeLeads} onSelect={handleSelectLead} showToast={showToast} />
         </div>
       )}
 
@@ -2366,15 +3121,13 @@ export default function LeadsPage({ onSelect }) {
                 </th>
                 <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider w-10">#</th>
                 {sortableColumns.map(col => <SortHeader key={col.key} field={col.key} label={col.label} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />)}
+                <th className="px-3 py-3 text-left text-xs text-cyan-400 font-medium uppercase tracking-wider">Close %</th>
                 <th className="px-3 py-3 text-left text-xs text-red-400 font-medium uppercase tracking-wider">Deficit</th>
-                <th className="px-3 py-3 text-left text-xs text-orange-400 font-medium uppercase tracking-wider">Lost Rev</th>
                 <th className="px-3 py-3 text-left text-xs text-emerald-400 font-medium uppercase tracking-wider">Opportunity</th>
                 {degenMode && <th className="px-3 py-3 text-left text-xs text-orange-400 font-bold uppercase tracking-wider">Whale Score</th>}
                 {degenMode && <th className="px-3 py-3 text-left text-xs text-orange-400 font-bold uppercase tracking-wider">Bag Size</th>}
                 <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider">Source</th>
-                <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider">Location</th>
-                <th className="px-3 py-3 text-left text-xs text-blue-400 font-medium uppercase tracking-wider">Last Called</th>
-                <th className="px-3 py-3 text-left text-xs text-blue-400 font-medium uppercase tracking-wider">Follow-up</th>
+                <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider">Region</th>
                 <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -2390,7 +3143,7 @@ export default function LeadsPage({ onSelect }) {
                 const tableCols = degenMode ? 20 : 18;
                 return (
                   <React.Fragment key={l.id}>
-                  <tr onClick={() => onSelect(l)}
+                  <tr onClick={() => handleSelectLead(l)}
                     className={`border-b border-white/[0.03] cursor-pointer hover:bg-white/[0.02] transition-colors ${isSelected ? 'bg-brand/5' : ''} ${isAlphaPriority ? 'bg-orange-500/[0.03]' : ''}`}>
                     <td className="px-3 py-2.5" onClick={e => toggleSelect(l.id, e)}>
                       {isSelected ? <CheckSquare size={16} className={degenMode ? 'text-orange-400' : 'text-brand'} /> : <Square size={16} className="text-slate-600" />}

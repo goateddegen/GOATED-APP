@@ -7,7 +7,8 @@ import {
   Rocket, Terminal, GitBranch, Clock, Radio, Flame, Target, PieChart,
   ArrowUpRight, ArrowDownRight, Layers, ChevronDown, ChevronUp, ExternalLink,
   Phone, Mail, Briefcase, Crown, Percent, CreditCard, ToggleLeft, ToggleRight,
-  Key, Hash, Map, Monitor, AlertCircle, Gauge
+  Key, Hash, Map, Monitor, AlertCircle, Gauge, Wallet, FileText, Download,
+  Filter, Search, Receipt, ArrowDown, ArrowUp, Bitcoin, Banknote
 } from 'lucide-react';
 import { useStore, fmt } from '../hooks/useStore';
 import WorldMap from '../components/WorldMap';
@@ -161,6 +162,8 @@ const OBS_SERVICES = [
 ];
 
 // ─── Revenue Stats from Leads ────────────────────────────────────────────────
+// PRE-REVENUE: All revenue/pipeline figures are $0 until real transactions flow.
+// Lead counts and status breakdowns are real; dollar amounts are zeroed out.
 function useLeadStats() {
   const leads = useStore(s => s.leads) || [];
   return useMemo(() => {
@@ -168,35 +171,28 @@ function useLeadStats() {
     const won = leads.filter(l => l.status === 'won');
     const lost = leads.filter(l => l.status === 'lost' || l.status === 'unresponsive');
     const active = leads.filter(l => !['won', 'lost', 'unresponsive'].includes(l.status));
-    const totalPipeline = leads.reduce((s, l) => s + (l.dealValue || 0), 0);
-    const wonRevenue = won.reduce((s, l) => s + (l.dealValue || 0), 0);
-    const lostRevenue = lost.reduce((s, l) => s + (l.dealValue || 0), 0);
-    const activePipeline = active.reduce((s, l) => s + (l.dealValue || 0), 0);
-    const closeRate = total > 0 ? ((won.length / Math.max(1, won.length + lost.length)) * 100) : 0;
-    const avgDeal = won.length > 0 ? wonRevenue / won.length : 0;
+    // PRE-REVENUE: all dollar values are $0
+    const totalPipeline = 0;
+    const wonRevenue = 0;
+    const lostRevenue = 0;
+    const activePipeline = 0;
+    const closeRate = 0;
+    const avgDeal = 0;
     const byStatus = {};
     leads.forEach(l => { byStatus[l.status] = (byStatus[l.status] || 0) + 1; });
     const byIndustry = {};
     leads.forEach(l => { if (l.industry) byIndustry[l.industry] = (byIndustry[l.industry] || 0) + 1; });
     const topIndustries = Object.entries(byIndustry).sort((a, b) => b[1] - a[1]).slice(0, 8);
 
-    // Revenue by region
-    const byRegion = {};
-    leads.forEach(l => {
-      const region = l.region || l.location || l.country || 'Unknown';
-      if (!byRegion[region]) byRegion[region] = { total: 0, won: 0, count: 0 };
-      byRegion[region].total += (l.dealValue || 0);
-      if (l.status === 'won') byRegion[region].won += (l.dealValue || 0);
-      byRegion[region].count += 1;
-    });
-    const topRegions = Object.entries(byRegion).sort((a, b) => b[1].total - a[1].total).slice(0, 8);
+    // Revenue by region — zeroed, will populate with real transactions
+    const topRegions = [];
 
-    // Commission calculations (12% model)
+    // Commission calculations — $0 pre-revenue
     const commissionRate = 0.12;
-    const totalCommission = wonRevenue * commissionRate;
-    const avgCommission = won.length > 0 ? totalCommission / won.length : 0;
-    const pendingCommission = activePipeline * commissionRate * (closeRate / 100);
-    const monthlyProjection = (totalCommission / 12) * 1.15; // +15% growth factor
+    const totalCommission = 0;
+    const avgCommission = 0;
+    const pendingCommission = 0;
+    const monthlyProjection = 0;
 
     return {
       total, won: won.length, lost: lost.length, active: active.length,
@@ -256,18 +252,18 @@ function LatencyGauge({ value, max = 300, label }) {
 function generateActivities(count = 12) {
   const seed = Math.floor(Date.now() / 60000);
   const actions = [
-    { tmpl: (n, c, v) => `${n} moved to Negotiation — ${v} deal`, icon: ArrowUpRight, color: 'text-yellow-400' },
+    { tmpl: (n, c, v) => `${n} moved to Qualified — ${c}`, icon: ArrowUpRight, color: 'text-yellow-400' },
     { tmpl: (n, c, v) => `New lead from LinkedIn — ${c}`, icon: Users, color: 'text-blue-400' },
-    { tmpl: (n, c, v) => `Deal closed! ${v} — ${c}`, icon: CheckCircle2, color: 'text-emerald-400' },
+    { tmpl: (n, c, v) => `Lead scored — ${c}`, icon: CheckCircle2, color: 'text-emerald-400' },
     { tmpl: (n, c, v) => `${n} sent proposal — ${c}`, icon: Mail, color: 'text-purple-400' },
     { tmpl: (n, c, v) => `VoIP call completed — ${n} at ${c}`, icon: Phone, color: 'text-cyan-400' },
     { tmpl: (n, c, v) => `AI generated close strategy for ${c}`, icon: Bot, color: 'text-orange-400' },
     { tmpl: (n, c, v) => `${c} re-engaged after 30 days`, icon: RefreshCw, color: 'text-indigo-400' },
-    { tmpl: (n, c, v) => `Revenue report generated — ${c}`, icon: BarChart3, color: 'text-pink-400' },
+    { tmpl: (n, c, v) => `Lead report generated — ${c}`, icon: BarChart3, color: 'text-pink-400' },
   ];
   const names = ['Sarah J.', 'Mike C.', 'Alex W.', 'Jordan T.', 'Chris M.', 'Emily R.', 'David K.', 'Rachel L.', 'Matt B.', 'Nicole P.'];
   const cos = ['Acme Corp', 'Pipeline HQ', 'FlowState', 'NimbusOps', 'DealForge', 'BrightPath', 'SyncWave', 'MetricFlow', 'StackedCRM', 'LaunchGrid'];
-  const vals = ['$45K', '$120K', '$28K', '$89K', '$156K', '$34K', '$72K', '$210K', '$63K', '$97K'];
+  const vals = ['$0', '$0', '$0', '$0', '$0', '$0', '$0', '$0', '$0', '$0'];
   const result = [];
   let s = seed;
   for (let i = 0; i < count; i++) {
@@ -401,6 +397,428 @@ function FeatureFlag({ label, description, enabled, onToggle }) {
   );
 }
 
+// ─── Admin Email Gate ─────────────────────────────────────────────────────
+const ADMIN_EMAIL = 'secrdev@gmail.com';
+
+function AdminAccessDenied() {
+  return (
+    <div className="flex-1 flex items-center justify-center p-8">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md w-full text-center">
+        <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-5">
+          <Shield size={28} className="text-red-400" />
+        </div>
+        <h2 className="text-xl font-bold mb-2">Admin Access Only</h2>
+        <p className="text-slate-400 text-sm mb-6">
+          This page is restricted to platform administrators. Your account does not have admin privileges.
+        </p>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Seeded PRNG for deterministic transaction data ──────────────────────
+function seededRandom(seed) {
+  let s = seed | 0;
+  if (!s) s = 1;
+  return function () {
+    s = (s * 1664525 + 1013904223) & 0x7fffffff;
+    return s / 0x7fffffff;
+  };
+}
+
+// ─── Generate mock transaction log (deterministic, will be replaced by real data) ─
+function generateTransactionLog() {
+  // Returns empty array — these will be populated by real transactions
+  // For now, show the structure with $0 totals
+  return [];
+}
+
+// ─── Master Wallet Section ───────────────────────────────────────────────
+function MasterWalletSection() {
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawAddress, setWithdrawAddress] = useState('');
+
+  return (
+    <div className="space-y-4">
+      {/* Wallet Balance Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="px-4 py-4 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/20">
+          <div className="flex items-center gap-2 mb-2">
+            <Wallet size={16} className="text-emerald-400" />
+            <span className="text-[10px] text-emerald-400/70 uppercase tracking-wider">Total Balance</span>
+          </div>
+          <div className="text-2xl font-bold text-emerald-400">$0.00</div>
+          <div className="text-[10px] text-slate-500 mt-1">Platform wallet — grows with transaction fees</div>
+        </div>
+        <div className="px-4 py-4 rounded-xl bg-blue-500/[0.06] border border-blue-500/20">
+          <div className="flex items-center gap-2 mb-2">
+            <DollarSign size={16} className="text-blue-400" />
+            <span className="text-[10px] text-blue-400/70 uppercase tracking-wider">Available to Withdraw</span>
+          </div>
+          <div className="text-2xl font-bold text-blue-400">$0.00</div>
+          <div className="text-[10px] text-slate-500 mt-1">After pending settlements</div>
+        </div>
+        <div className="px-4 py-4 rounded-xl bg-purple-500/[0.06] border border-purple-500/20">
+          <div className="flex items-center gap-2 mb-2">
+            <Clock size={16} className="text-purple-400" />
+            <span className="text-[10px] text-purple-400/70 uppercase tracking-wider">Pending Settlement</span>
+          </div>
+          <div className="text-2xl font-bold text-purple-400">$0.00</div>
+          <div className="text-[10px] text-slate-500 mt-1">Processing within 24-48h</div>
+        </div>
+      </div>
+
+      {/* Recent Wallet Transactions */}
+      <div>
+        <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Recent Wallet Transactions</div>
+        <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 text-center">
+          <Receipt size={24} className="text-slate-600 mx-auto mb-2" />
+          <p className="text-sm text-slate-500">No transactions yet</p>
+          <p className="text-[10px] text-slate-600 mt-1">Transactions will appear here as the platform processes fees</p>
+        </div>
+      </div>
+
+      {/* Withdraw Button */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setShowWithdraw(!showWithdraw)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm font-semibold transition-colors"
+        >
+          <Download size={15} /> Withdraw Funds
+        </button>
+        <span className="text-[10px] text-slate-600">Min withdrawal: $50.00</span>
+      </div>
+
+      {showWithdraw && (
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+          className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 space-y-3">
+          <div className="text-sm font-medium text-white">Withdraw to External Wallet</div>
+          <div>
+            <label className="text-[10px] text-slate-500 uppercase tracking-wider">Amount (USD)</label>
+            <input type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} placeholder="0.00"
+              className="w-full mt-1 px-3 py-2 bg-black/30 border border-white/[0.06] rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40" />
+          </div>
+          <div>
+            <label className="text-[10px] text-slate-500 uppercase tracking-wider">Destination Address</label>
+            <input type="text" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} placeholder="Wallet address or bank account"
+              className="w-full mt-1 px-3 py-2 bg-black/30 border border-white/[0.06] rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40" />
+          </div>
+          <button disabled className="px-4 py-2 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm font-medium opacity-50 cursor-not-allowed">
+            Insufficient balance
+          </button>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+// ─── Invoicing Section ───────────────────────────────────────────────────
+function InvoicingSection() {
+  const [invoiceFilter, setInvoiceFilter] = useState('all');
+
+  // Empty invoices — will populate with real data
+  const invoices = [];
+
+  const filteredInvoices = invoiceFilter === 'all' ? invoices : invoices.filter(i => i.status === invoiceFilter);
+
+  return (
+    <div className="space-y-4">
+      {/* Invoice Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: 'Total Invoiced', value: '$0.00', color: '#10b981' },
+          { label: 'Paid', value: '$0.00', color: '#22c55e' },
+          { label: 'Pending', value: '$0.00', color: '#f59e0b' },
+          { label: 'Overdue', value: '$0.00', color: '#ef4444' },
+        ].map(s => (
+          <div key={s.label} className="px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] text-center">
+            <div className="text-[10px] text-slate-500 uppercase tracking-wider">{s.label}</div>
+            <div className="text-lg font-bold mt-0.5" style={{ color: s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-2">
+        {['all', 'paid', 'pending', 'overdue'].map(f => (
+          <button key={f} onClick={() => setInvoiceFilter(f)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border capitalize ${
+              invoiceFilter === f
+                ? 'bg-orange-500/15 border-orange-500/30 text-orange-400'
+                : 'bg-white/[0.02] border-white/[0.04] text-slate-400 hover:bg-white/[0.05]'
+            }`}>
+            {f}
+          </button>
+        ))}
+      </div>
+
+      {/* Invoice List */}
+      <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 text-center">
+        <FileText size={24} className="text-slate-600 mx-auto mb-2" />
+        <p className="text-sm text-slate-500">No invoices yet</p>
+        <p className="text-[10px] text-slate-600 mt-1">Invoices will be generated automatically as transactions occur</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Transaction Fee Display ─────────────────────────────────────────────
+function TransactionFeeDisplay() {
+  return (
+    <div className="space-y-4">
+      {/* Fee Schedule */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Deal Commission */}
+        <div className="px-4 py-4 rounded-xl bg-emerald-500/[0.04] border border-emerald-500/15">
+          <div className="flex items-center gap-2 mb-3">
+            <Briefcase size={16} className="text-emerald-400" />
+            <span className="text-sm font-semibold text-white">Deal Commission</span>
+          </div>
+          <div className="text-3xl font-bold text-emerald-400 mb-1">10-15%</div>
+          <p className="text-[11px] text-slate-400">Platform takes 10-15% on all closed deals</p>
+          <div className="mt-3 space-y-1.5">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-500">Standard deals</span>
+              <span className="text-emerald-400 font-mono font-medium">10%</span>
+            </div>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-500">Premium / expedited</span>
+              <span className="text-emerald-400 font-mono font-medium">12%</span>
+            </div>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-500">Enterprise deals (&gt;$100K)</span>
+              <span className="text-emerald-400 font-mono font-medium">15%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Betting / Prediction Market Spread */}
+        <div className="px-4 py-4 rounded-xl bg-orange-500/[0.04] border border-orange-500/15">
+          <div className="flex items-center gap-2 mb-3">
+            <Target size={16} className="text-orange-400" />
+            <span className="text-sm font-semibold text-white">Betting Spread Fee</span>
+          </div>
+          <div className="text-3xl font-bold text-orange-400 mb-1">2-5%</div>
+          <p className="text-[11px] text-slate-400">Spread taken on prediction market & casino bets</p>
+          <div className="mt-3 space-y-1.5">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-500">Prediction market bets</span>
+              <span className="text-orange-400 font-mono font-medium">2%</span>
+            </div>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-500">Casino games (house edge)</span>
+              <span className="text-orange-400 font-mono font-medium">3-5%</span>
+            </div>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-500">Live event betting</span>
+              <span className="text-orange-400 font-mono font-medium">4%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Crypto Transaction Fees */}
+        <div className="px-4 py-4 rounded-xl bg-blue-500/[0.04] border border-blue-500/15">
+          <div className="flex items-center gap-2 mb-3">
+            <CreditCard size={16} className="text-blue-400" />
+            <span className="text-sm font-semibold text-white">Crypto Transaction Fee</span>
+          </div>
+          <div className="text-3xl font-bold text-blue-400 mb-1">1-2%</div>
+          <p className="text-[11px] text-slate-400">Fee on crypto deposits, withdrawals, and swaps</p>
+          <div className="mt-3 space-y-1.5">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-500">Deposits (crypto)</span>
+              <span className="text-blue-400 font-mono font-medium">1%</span>
+            </div>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-500">Withdrawals (crypto)</span>
+              <span className="text-blue-400 font-mono font-medium">1.5%</span>
+            </div>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-500">Token swaps</span>
+              <span className="text-blue-400 font-mono font-medium">2%</span>
+            </div>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-500">Fiat on-ramp / off-ramp</span>
+              <span className="text-blue-400 font-mono font-medium">2.5%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Platform Subscription */}
+        <div className="px-4 py-4 rounded-xl bg-purple-500/[0.04] border border-purple-500/15">
+          <div className="flex items-center gap-2 mb-3">
+            <Crown size={16} className="text-purple-400" />
+            <span className="text-sm font-semibold text-white">Platform Model</span>
+          </div>
+          <div className="text-3xl font-bold text-purple-400 mb-1">$0</div>
+          <p className="text-[11px] text-slate-400">No platform subscription fee — revenue from transaction fees only</p>
+          <div className="mt-3 px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
+            <p className="text-[11px] text-purple-300">Users pay $0 to use the platform. Revenue is generated solely from commissions on closed deals and transaction fees.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Revenue Summary */}
+      <div className="px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+        <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Revenue Collected to Date</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: 'From Deal Commissions', value: '$0.00' },
+            { label: 'From Betting Spread', value: '$0.00' },
+            { label: 'From Crypto Fees', value: '$0.00' },
+            { label: 'Total Revenue', value: '$0.00', bold: true },
+          ].map(s => (
+            <div key={s.label} className="text-center">
+              <div className="text-[10px] text-slate-600">{s.label}</div>
+              <div className={`text-sm font-mono mt-0.5 ${s.bold ? 'font-bold text-emerald-400' : 'text-slate-300'}`}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Transaction Activity Log ────────────────────────────────────────────
+function TransactionActivityLog() {
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [dateRange, setDateRange] = useState('all');
+  const [searchUser, setSearchUser] = useState('');
+
+  const ACTION_TYPES = [
+    { key: 'all', label: 'All', color: 'text-slate-400' },
+    { key: 'deal_closed', label: 'Deal Closed', color: 'text-emerald-400' },
+    { key: 'bet_placed', label: 'Bet Placed', color: 'text-orange-400' },
+    { key: 'bet_won', label: 'Bet Won', color: 'text-yellow-400' },
+    { key: 'deposit', label: 'Deposit', color: 'text-blue-400' },
+    { key: 'withdrawal', label: 'Withdrawal', color: 'text-red-400' },
+    { key: 'subscription', label: 'Subscription', color: 'text-purple-400' },
+  ];
+
+  // Empty log — will populate with real-time data
+  const transactions = [];
+
+  return (
+    <div className="space-y-4">
+      {/* Running Totals */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        {[
+          { label: 'Total Transactions', value: '0', color: '#64748b' },
+          { label: 'Total Volume', value: '$0.00', color: '#10b981' },
+          { label: 'Total Fees Collected', value: '$0.00', color: '#22c55e' },
+          { label: 'Deals Closed', value: '0', color: '#3b82f6' },
+          { label: 'Bets Processed', value: '0', color: '#f97316' },
+          { label: 'Withdrawals', value: '0', color: '#ef4444' },
+        ].map(s => (
+          <div key={s.label} className="px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] text-center">
+            <div className="text-[9px] text-slate-500 uppercase tracking-wider">{s.label}</div>
+            <div className="text-base font-bold font-mono mt-0.5" style={{ color: s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Type Filter */}
+        <div className="flex items-center gap-1.5">
+          <Filter size={12} className="text-slate-500" />
+          <span className="text-[10px] text-slate-500">Type:</span>
+          <div className="flex gap-1">
+            {ACTION_TYPES.map(t => (
+              <button key={t.key} onClick={() => setTypeFilter(t.key)}
+                className={`px-2 py-1 rounded text-[10px] font-medium transition-colors border ${
+                  typeFilter === t.key
+                    ? 'bg-orange-500/15 border-orange-500/30 text-orange-400'
+                    : 'bg-white/[0.02] border-white/[0.04] text-slate-500 hover:bg-white/[0.04]'
+                }`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Date Range Filter */}
+        <div className="flex items-center gap-1.5">
+          <Clock size={12} className="text-slate-500" />
+          <span className="text-[10px] text-slate-500">Range:</span>
+          <div className="flex gap-1">
+            {[
+              { key: 'all', label: 'All Time' },
+              { key: 'today', label: 'Today' },
+              { key: 'week', label: '7 Days' },
+              { key: 'month', label: '30 Days' },
+            ].map(d => (
+              <button key={d.key} onClick={() => setDateRange(d.key)}
+                className={`px-2 py-1 rounded text-[10px] font-medium transition-colors border ${
+                  dateRange === d.key
+                    ? 'bg-blue-500/15 border-blue-500/30 text-blue-400'
+                    : 'bg-white/[0.02] border-white/[0.04] text-slate-500 hover:bg-white/[0.04]'
+                }`}>
+                {d.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* User Search */}
+        <div className="flex items-center gap-1.5 ml-auto">
+          <Search size={12} className="text-slate-500" />
+          <input type="text" value={searchUser} onChange={e => setSearchUser(e.target.value)} placeholder="Search user..."
+            className="px-2 py-1 bg-black/30 border border-white/[0.06] rounded text-[11px] text-white placeholder-slate-600 focus:outline-none focus:border-blue-500/40 w-32" />
+        </div>
+      </div>
+
+      {/* Transaction Table */}
+      <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
+        {/* Table Header */}
+        <div className="grid grid-cols-6 gap-2 px-4 py-2.5 border-b border-white/[0.04] text-[10px] text-slate-500 uppercase tracking-wider font-medium">
+          <span>Timestamp</span>
+          <span>User</span>
+          <span>Action</span>
+          <span className="text-right">Amount</span>
+          <span className="text-right">Fee Taken</span>
+          <span className="text-right">Status</span>
+        </div>
+
+        {/* Empty State */}
+        {transactions.length === 0 && (
+          <div className="px-4 py-8 text-center">
+            <Activity size={24} className="text-slate-600 mx-auto mb-2" />
+            <p className="text-sm text-slate-500">No transactions recorded yet</p>
+            <p className="text-[10px] text-slate-600 mt-1">Real-time transaction feed will appear here as users interact with the platform</p>
+            <div className="mt-3 flex items-center justify-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+              </span>
+              <span className="text-[10px] text-emerald-400">Listening for transactions...</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Transaction Types Legend */}
+      <div className="flex flex-wrap gap-3 px-2">
+        {[
+          { type: 'deal_closed', icon: Briefcase, label: 'Deal Closed', desc: '10-15% commission', color: '#10b981' },
+          { type: 'bet_placed', icon: Target, label: 'Bet Placed', desc: '2-5% spread', color: '#f97316' },
+          { type: 'bet_won', icon: Crown, label: 'Bet Won', desc: 'Payout processed', color: '#eab308' },
+          { type: 'deposit', icon: ArrowDown, label: 'Deposit', desc: '1% fee', color: '#3b82f6' },
+          { type: 'withdrawal', icon: ArrowUp, label: 'Withdrawal', desc: '1.5% fee', color: '#ef4444' },
+          { type: 'subscription', icon: CreditCard, label: 'Subscription', desc: 'Recurring', color: '#a855f7' },
+        ].map(t => (
+          <div key={t.type} className="flex items-center gap-1.5 text-[10px]">
+            <t.icon size={11} style={{ color: t.color }} />
+            <span style={{ color: t.color }} className="font-medium">{t.label}</span>
+            <span className="text-slate-600">({t.desc})</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 export default function AdminPage() {
   const { isLoggedIn, user, page, setAccountModalOpen, setPage, setAiOpen } = useStore();
@@ -467,6 +885,9 @@ export default function AdminPage() {
 
   // Auth gate
   if (!isLoggedIn) return <AccessDenied onLogin={() => setAccountModalOpen(true)} />;
+
+  // Admin email gate — only secrdev@gmail.com can access
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   // Health check all endpoints
   const checkAllEndpoints = useCallback(async () => {
@@ -555,18 +976,67 @@ export default function AdminPage() {
       </motion.div>
 
       {/* ══════════════════════════════════════════════════════════════════════ */}
+      {/* PRE-REVENUE BANNER                                                    */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+        className="rounded-xl border border-blue-500/25 bg-blue-500/[0.06] p-4 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-lg bg-blue-500/15 flex items-center justify-center flex-shrink-0">
+          <DollarSign size={18} className="text-blue-400" />
+        </div>
+        <div>
+          <div className="text-sm font-bold text-blue-400">Pre-Revenue Phase</div>
+          <div className="text-[11px] text-slate-500">All revenue, pipeline, and commission figures are $0.00. Values will update automatically as real transactions flow through the platform.</div>
+        </div>
+      </motion.div>
+
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {/* ADMIN-ONLY SECTIONS — Master Wallet, Fees, Invoicing, Transaction Log */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {isAdmin ? (
+        <>
+          {/* Master Wallet */}
+          <Section title="Master Wallet" icon={Wallet} delay={0.01} badge="Admin Only">
+            <MasterWalletSection />
+          </Section>
+
+          {/* Transaction Fee Schedule */}
+          <Section title="Transaction Fee Schedule" icon={Percent} delay={0.02} badge="Revenue Model">
+            <TransactionFeeDisplay />
+          </Section>
+
+          {/* Invoicing */}
+          <Section title="Invoicing" icon={FileText} delay={0.03} badge="Billing">
+            <InvoicingSection />
+          </Section>
+
+          {/* Real-Time Transaction Activity Log */}
+          <Section title="Transaction Activity Log" icon={Activity} delay={0.04} badge="Real-Time">
+            <TransactionActivityLog />
+          </Section>
+        </>
+      ) : (
+        <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/[0.04] p-4 flex items-center gap-3">
+          <Lock size={16} className="text-yellow-400 flex-shrink-0" />
+          <div>
+            <div className="text-sm font-medium text-yellow-400">Limited Access</div>
+            <div className="text-[11px] text-slate-500">Wallet, invoicing, and transaction management are only visible to platform administrators.</div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* 1. REVENUE ANALYTICS DASHBOARD                                       */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
-      <Section title="Revenue Analytics Dashboard" icon={DollarSign} delay={0.02} badge="12% Commission Model">
+      <Section title="Revenue Analytics Dashboard" icon={DollarSign} delay={0.02} badge="10-15% Commission Model">
         <div className="space-y-5">
-          {/* Top Revenue KPIs */}
+          {/* Top Revenue KPIs — $0 baseline, grows with real transactions */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
-              { label: 'Platform Revenue', value: `$${(stats.totalCommission / 1e6).toFixed(2)}M`, sub: '12% commission on closed', color: '#10b981', icon: DollarSign },
-              { label: 'Total Deals Closed', value: fmt(stats.won), sub: `of ${fmt(stats.total)} total leads`, color: '#22c55e', icon: CheckCircle2 },
-              { label: 'MRR Projection', value: `$${(stats.monthlyProjection / 1e3).toFixed(0)}K`, sub: '+15% growth factor', color: '#3b82f6', icon: TrendingUp },
-              { label: 'Avg Commission', value: `$${(stats.avgCommission / 1e3).toFixed(1)}K`, sub: 'per closed deal', color: '#a855f7', icon: Percent },
-              { label: 'Pending Revenue', value: `$${(stats.pendingCommission / 1e6).toFixed(2)}M`, sub: 'based on close rate', color: '#f59e0b', icon: Clock },
+              { label: 'Platform Revenue', value: '$0.00', sub: '10-15% commission on closed deals', color: '#10b981', icon: DollarSign },
+              { label: 'Total Deals Closed', value: '0', sub: 'No deals closed yet', color: '#22c55e', icon: CheckCircle2 },
+              { label: 'MRR', value: '$0.00', sub: 'Will grow with transactions', color: '#3b82f6', icon: TrendingUp },
+              { label: 'Avg Commission', value: '$0.00', sub: 'per closed deal', color: '#a855f7', icon: Percent },
+              { label: 'Pending Revenue', value: '$0.00', sub: 'No pending deals', color: '#f59e0b', icon: Clock },
             ].map((kpi, i) => (
               <motion.div key={kpi.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 + i * 0.04 }}
                 className="px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
@@ -592,18 +1062,18 @@ export default function AdminPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="px-4 py-3 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/20">
               <div className="text-[10px] text-emerald-400/70 uppercase tracking-wider">Total Collected</div>
-              <div className="text-lg font-bold text-emerald-400 mt-1">${(stats.totalCommission / 1e6).toFixed(2)}M</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">From {fmt(stats.won)} closed deals</div>
+              <div className="text-lg font-bold text-emerald-400 mt-1">$0.00</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">No deals closed yet</div>
             </div>
             <div className="px-4 py-3 rounded-xl bg-purple-500/[0.06] border border-purple-500/20">
               <div className="text-[10px] text-purple-400/70 uppercase tracking-wider">Per-Deal Average</div>
-              <div className="text-lg font-bold text-purple-400 mt-1">${(stats.avgCommission / 1e3).toFixed(1)}K</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">Avg deal size: ${(stats.avgDeal / 1e3).toFixed(1)}K</div>
+              <div className="text-lg font-bold text-purple-400 mt-1">$0.00</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">Avg deal size: $0.00</div>
             </div>
             <div className="px-4 py-3 rounded-xl bg-yellow-500/[0.06] border border-yellow-500/20">
               <div className="text-[10px] text-yellow-400/70 uppercase tracking-wider">Pending Commission</div>
-              <div className="text-lg font-bold text-yellow-400 mt-1">${(stats.pendingCommission / 1e6).toFixed(2)}M</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">{fmt(stats.active)} active deals in pipeline</div>
+              <div className="text-lg font-bold text-yellow-400 mt-1">$0.00</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">No active deals in pipeline</div>
             </div>
           </div>
         </div>
@@ -866,9 +1336,9 @@ export default function AdminPage() {
           { label: 'APIs Online', value: `${onlineCount}/${totalEp}`, icon: Wifi, color: onlineCount === totalEp ? '#10b981' : '#f59e0b' },
           { label: 'Avg Latency', value: formatMs(avgLatency), icon: Zap, color: '#3b82f6' },
           { label: 'Total Leads', value: fmt(stats.total), icon: Users, color: '#10b981' },
-          { label: 'Pipeline Value', value: `$${(stats.totalPipeline / 1e6).toFixed(1)}M`, icon: DollarSign, color: '#10b981' },
-          { label: 'Won Revenue', value: `$${(stats.wonRevenue / 1e6).toFixed(1)}M`, icon: TrendingUp, color: '#22c55e' },
-          { label: 'Lost Revenue', value: `$${(stats.lostRevenue / 1e6).toFixed(1)}M`, icon: TrendingDown, color: '#ef4444' },
+          { label: 'Pipeline Value', value: '$0.00', icon: DollarSign, color: '#10b981' },
+          { label: 'Won Revenue', value: '$0.00', icon: TrendingUp, color: '#22c55e' },
+          { label: 'Lost Revenue', value: '$0.00', icon: TrendingDown, color: '#ef4444' },
           { label: 'Close Rate', value: `${stats.closeRate.toFixed(1)}%`, icon: Target, color: stats.closeRate >= 50 ? '#10b981' : '#f59e0b' },
           { label: 'Session Time', value: sessionUptime, icon: Timer, color: '#a855f7' },
         ].map((stat, i) => (

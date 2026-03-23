@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dice5, TrendingUp, Clock, Users, Zap, Trophy, DollarSign, BarChart3, Flame, Target, Radio, ExternalLink, ArrowUp, ArrowDown, ChevronRight, AlertTriangle, Newspaper, Star, Sparkles, Coins, RefreshCw, Wifi, Check, X, Minus, Plus, ChevronDown, Activity, Award, Percent, History, Wallet, CreditCard, ArrowRightLeft, Shield, Lock, Unlock } from 'lucide-react';
+import { Dice5, TrendingUp, Clock, Users, Zap, Trophy, DollarSign, BarChart3, Flame, Target, Radio, ExternalLink, ArrowUp, ArrowDown, ChevronRight, AlertTriangle, Newspaper, Star, Sparkles, Coins, RefreshCw, Wifi, Check, X, Minus, Plus, ChevronDown, Activity, Award, Percent, History, Wallet, CreditCard, ArrowRightLeft, Shield, Lock, Unlock, Volume2, VolumeX, Brain, Eye, Gift } from 'lucide-react';
+import { useGoatedAI } from '../hooks/useGoatedAI';
+import { useStore } from '../hooks/useStore';
 
 // ---------------------------------------------------------------------------
 // GOAT Token helpers — sync with WalletPage localStorage
@@ -10,6 +12,9 @@ const CASINO_BETS_KEY = 'goated_casino_bets';
 const CASINO_RESOLVED_KEY = 'goated_casino_resolved';
 const WALLET_KEY = 'goated_wallet';
 const COMMISSION_RATE = 0.12; // 12% commission on winnings
+const BET_HISTORY_KEY = 'goated_casino_bet_history';
+const DAILY_BONUS_KEY = 'goated_daily_bonus';
+const STREAK_KEY = 'goated_streaks';
 
 function loadGoatBalance() {
   try {
@@ -40,6 +45,36 @@ function saveWallet(w) {
     if (w) localStorage.setItem(WALLET_KEY, JSON.stringify(w));
     else localStorage.removeItem(WALLET_KEY);
   } catch {}
+}
+function loadStreaks() {
+  try {
+    const v = localStorage.getItem(STREAK_KEY);
+    return v ? JSON.parse(v) : { win: 0, loss: 0, best: 0 };
+  } catch { return { win: 0, loss: 0, best: 0 }; }
+}
+function saveStreaks(s) {
+  try { localStorage.setItem(STREAK_KEY, JSON.stringify(s)); } catch {}
+}
+function loadBetHistory() {
+  try {
+    const v = localStorage.getItem(BET_HISTORY_KEY);
+    return v ? JSON.parse(v) : [];
+  } catch { return []; }
+}
+function saveBetHistory(h) {
+  try { localStorage.setItem(BET_HISTORY_KEY, JSON.stringify(h.slice(-50))); } catch {} // keep last 50
+}
+function canClaimDailyBonus() {
+  try {
+    const last = localStorage.getItem(DAILY_BONUS_KEY);
+    if (!last) return true;
+    const lastDate = new Date(parseInt(last));
+    const now = new Date();
+    return lastDate.toDateString() !== now.toDateString();
+  } catch { return true; }
+}
+function claimDailyBonusStorage() {
+  try { localStorage.setItem(DAILY_BONUS_KEY, String(Date.now())); } catch {}
 }
 
 // ---------------------------------------------------------------------------
@@ -117,6 +152,30 @@ const leaderboardUsers = [
   { rank: 24, name: 'BagHolder42', avatar: 'B', trades: 389, pnl: -31000, winRate: 31, streak: '10L' },
 ];
 
+// Trending topics from TrendPulse (simulated sync)
+const trendPulseTopics = ['Bitcoin', 'ETH', 'OpenAI', 'GPT-5', 'Stripe IPO', 'SEC', 'Solana', 'AI', 'Crypto', 'TikTok', 'Regulation', 'DeFi', 'NFT', 'Remote Work'];
+
+// Recent wins ticker data (simulated other players)
+const recentWinNames = ['0xAlpha.eth', 'CryptoWhale', 'DeFi_Dan', 'MarketMaven', 'SolSurfer', 'TechTrader', 'AIBettor', 'VCVibes', 'BlockBet', 'TokenTurtle', 'MoonShot99', 'DiamondHands', 'BullRunner', 'DegenKing'];
+const recentWinGames = ['Price Prediction', 'Market Roulette', 'Portfolio Duel', 'AI Oracle', 'Prediction Market'];
+
+// Daily challenges templates
+const dailyChallengesPool = [
+  { id: 'pp3', title: 'Win 3 Price Predictions', desc: 'Correctly predict price direction 3 times', reward: 150, icon: TrendingUp, target: 3, type: 'prediction_wins' },
+  { id: 'ao8', title: 'Score 8+ on AI Oracle', desc: 'Get at least 8 correct answers in AI Oracle', reward: 200, icon: Sparkles, target: 8, type: 'oracle_score' },
+  { id: 'mr1', title: 'Beat the House in Roulette', desc: 'Win at least 1 Market Roulette spin', reward: 100, icon: Dice5, target: 1, type: 'roulette_wins' },
+  { id: 'pd2', title: 'Win 2 Portfolio Duels', desc: 'Beat the AI in 2 portfolio battles', reward: 250, icon: Users, target: 2, type: 'duel_wins' },
+  { id: 'bet5', title: 'Place 5 Prediction Bets', desc: 'Place bets on 5 different prediction markets', reward: 100, icon: Target, target: 5, type: 'market_bets' },
+  { id: 'streak3', title: 'Get a 3-Win Streak', desc: 'Win 3 games in a row across any game mode', reward: 300, icon: Flame, target: 3, type: 'win_streak' },
+];
+
+// Difficulty levels for AI Oracle
+const AO_DIFFICULTIES = [
+  { id: 'easy', label: 'Easy', color: '#10b981', multiplier: 1, questionCount: 10, baseReward: 15, bonusThreshold: 7, bonus: 50, desc: '10 questions, 15 GOAT each' },
+  { id: 'medium', label: 'Medium', color: '#f59e0b', multiplier: 1.5, questionCount: 10, baseReward: 25, bonusThreshold: 8, bonus: 100, desc: '10 questions, 25 GOAT each' },
+  { id: 'hard', label: 'Hard', color: '#ef4444', multiplier: 2.5, questionCount: 10, baseReward: 50, bonusThreshold: 9, bonus: 250, desc: '10 questions, 50 GOAT each' },
+];
+
 const newsItems = [
   { title: 'Bitcoin breaks $98K as ETF inflows surge', source: 'CoinDesk', time: '2m ago', category: 'Crypto', sentiment: 'bullish' },
   { title: 'OpenAI in talks for $40B funding round at $300B valuation', source: 'Bloomberg', time: '15m ago', category: 'AI', sentiment: 'bullish' },
@@ -126,6 +185,15 @@ const newsItems = [
   { title: 'Remote work adoption declines for third straight quarter', source: 'Gallup', time: '5h ago', category: 'Work', sentiment: 'bearish' },
   { title: 'Solana TVL hits $15B as DeFi activity surges', source: 'DeFi Llama', time: '6h ago', category: 'Crypto', sentiment: 'bullish' },
   { title: 'EU proposes strict AI transparency requirements', source: 'EuroNews', time: '8h ago', category: 'Regulation', sentiment: 'bearish' },
+];
+
+// Token unlocks info
+const tokenUnlocks = [
+  { threshold: 5000, label: 'DEGEN Badge', desc: 'Flex your degen status on leaderboard' },
+  { threshold: 10000, label: 'Priority Markets', desc: 'Early access to new prediction markets' },
+  { threshold: 25000, label: 'VIP Roulette', desc: 'Unlock 10x payout sector on Market Roulette' },
+  { threshold: 50000, label: 'Oracle Master', desc: 'Unlock Legendary difficulty in AI Oracle' },
+  { threshold: 100000, label: 'Whale Status', desc: 'Custom leaderboard flair + early game access' },
 ];
 
 // Mini sparkline component
@@ -138,6 +206,74 @@ function MiniSparkline({ data, color = '#00ff88', width = 50, height = 16 }) {
   return (
     <svg width={width} height={height} className="inline-block ml-1">
       <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Visual flash component for win/loss feedback
+function FlashOverlay({ type }) {
+  if (!type) return null;
+  return (
+    <motion.div
+      className="fixed inset-0 z-[100] pointer-events-none"
+      initial={{ opacity: 0.6 }}
+      animate={{ opacity: 0 }}
+      transition={{ duration: 0.8 }}
+      style={{
+        background: type === 'win'
+          ? 'radial-gradient(circle, rgba(0,255,136,0.3) 0%, transparent 70%)'
+          : 'radial-gradient(circle, rgba(239,68,68,0.3) 0%, transparent 70%)',
+      }}
+    />
+  );
+}
+
+// Animated price chart for Price Prediction
+function PriceChart({ data, color = '#00ff88', height = 120 }) {
+  if (!data || data.length < 2) return null;
+  const min = Math.min(...data) * 0.999;
+  const max = Math.max(...data) * 1.001;
+  const range = max - min || 1;
+  const w = 300;
+  const points = data.map((v, i) => `${(i / (data.length - 1)) * w},${height - ((v - min) / range) * (height - 10) - 5}`).join(' ');
+  const fillPoints = `0,${height} ${points} ${w},${height}`;
+  return (
+    <svg viewBox={`0 0 ${w} ${height}`} className="w-full" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <motion.polygon
+        points={fillPoints}
+        fill="url(#chartGradient)"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      />
+      <motion.polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 1, ease: 'easeOut' }}
+      />
+      {data.length > 0 && (
+        <motion.circle
+          cx={(data.length - 1) / (data.length - 1) * w}
+          cy={height - ((data[data.length - 1] - min) / range) * (height - 10) - 5}
+          r="4"
+          fill={color}
+          initial={{ scale: 0 }}
+          animate={{ scale: [1, 1.5, 1] }}
+          transition={{ duration: 1, repeat: Infinity }}
+        />
+      )}
     </svg>
   );
 }
@@ -166,6 +302,8 @@ function timeLeft(dateStr) {
 // Main Component
 // ---------------------------------------------------------------------------
 export default function CasinoPage() {
+  const { regime, sentiment } = useGoatedAI();
+  const isLoggedIn = useStore(s => s.isLoggedIn);
   const [tab, setTab] = useState('markets');
   const [balance, setBalance] = useState(() => loadGoatBalance());
   const [selectedCat, setSelectedCat] = useState('All');
@@ -192,12 +330,64 @@ export default function CasinoPage() {
   const [activeGame, setActiveGame] = useState(null);
   const [gameBet, setGameBet] = useState(50);
 
+  // Streak tracking
+  const [streaks, setStreaks] = useState(() => loadStreaks());
+  const streakMultiplier = useMemo(() => {
+    if (streaks.win >= 10) return 2.5;
+    if (streaks.win >= 7) return 2.0;
+    if (streaks.win >= 5) return 1.75;
+    if (streaks.win >= 3) return 1.5;
+    if (streaks.win >= 2) return 1.25;
+    return 1.0;
+  }, [streaks.win]);
+
+  // Session bet history
+  const [betHistory, setBetHistory] = useState(() => loadBetHistory());
+  const sessionPnl = useMemo(() => betHistory.reduce((s, b) => s + b.pnl, 0), [betHistory]);
+
+  // Double or nothing state
+  const [doubleOrNothing, setDoubleOrNothing] = useState(null); // { amount, game }
+
+  // Daily bonus
+  const [dailyBonusAvailable, setDailyBonusAvailable] = useState(() => canClaimDailyBonus());
+  const [dailyBonusClaimed, setDailyBonusClaimed] = useState(false);
+
+  // Visual flash for win/loss
+  const [flashType, setFlashType] = useState(null);
+
+  // Sound toggle (UI only)
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // Recent wins ticker
+  const [recentWins, setRecentWins] = useState([]);
+
+  // Daily challenges
+  const [dailyChallenges, setDailyChallenges] = useState(() => {
+    try {
+      const saved = localStorage.getItem('goated_daily_challenges');
+      const parsed = saved ? JSON.parse(saved) : null;
+      if (parsed && parsed.date === new Date().toDateString()) return parsed.challenges;
+    } catch {}
+    const shuffled = [...dailyChallengesPool].sort(() => Math.random() - 0.5).slice(0, 3);
+    const challenges = shuffled.map(c => ({ ...c, progress: 0, completed: false }));
+    try { localStorage.setItem('goated_daily_challenges', JSON.stringify({ date: new Date().toDateString(), challenges })); } catch {}
+    return challenges;
+  });
+
+  // AI Oracle difficulty
+  const [aoDifficulty, setAoDifficulty] = useState(null);
+  const [aoConsecutiveCorrect, setAoConsecutiveCorrect] = useState(0);
+
+  // Price Prediction chart data
+  const [ppChartData, setPpChartData] = useState([]);
+
   // Price Prediction game state
   const [ppCoin, setPpCoin] = useState('BTC');
   const [ppDirection, setPpDirection] = useState(null);
   const [ppCountdown, setPpCountdown] = useState(null);
   const [ppStartPrice, setPpStartPrice] = useState(null);
   const [ppResult, setPpResult] = useState(null);
+  const [ppLivePrice, setPpLivePrice] = useState(null);
   const ppTimerRef = useRef(null);
 
   // Market Roulette game state
@@ -205,6 +395,7 @@ export default function CasinoPage() {
   const [mrSpinning, setMrSpinning] = useState(false);
   const [mrResult, setMrResult] = useState(null);
   const [mrRotation, setMrRotation] = useState(0);
+  const [mrCelebrating, setMrCelebrating] = useState(false);
 
   // Portfolio Duel game state
   const [pdPicks, setPdPicks] = useState([]);
@@ -214,6 +405,7 @@ export default function CasinoPage() {
   const [pdBotValues, setPdBotValues] = useState([]);
   const [pdBotPicks, setPdBotPicks] = useState([]);
   const [pdResult, setPdResult] = useState(null);
+  const [pdRevealing, setPdRevealing] = useState(false);
   const pdTimerRef = useRef(null);
 
   // AI Oracle game state
@@ -229,10 +421,80 @@ export default function CasinoPage() {
   const [pricesLoading, setPricesLoading] = useState(true);
   const [lastPriceUpdate, setLastPriceUpdate] = useState(null);
 
+  // Show login prompt
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
   // Persist balance changes
   useEffect(() => { saveGoatBalance(balance); }, [balance]);
   useEffect(() => { saveBets(CASINO_BETS_KEY, bets); }, [bets]);
   useEffect(() => { saveBets(CASINO_RESOLVED_KEY, resolvedBets); }, [resolvedBets]);
+  useEffect(() => { saveStreaks(streaks); }, [streaks]);
+  useEffect(() => { saveBetHistory(betHistory); }, [betHistory]);
+
+  // Record game result helper
+  const recordGameResult = useCallback((won, amount, payout, game) => {
+    const pnl = won ? payout - amount : -amount;
+    setBetHistory(prev => [...prev, { game, won, amount, payout, pnl, time: Date.now() }]);
+    setStreaks(prev => {
+      const newStreaks = { ...prev };
+      if (won) {
+        newStreaks.win = prev.win + 1;
+        newStreaks.loss = 0;
+        newStreaks.best = Math.max(prev.best, newStreaks.win);
+      } else {
+        newStreaks.loss = prev.loss + 1;
+        newStreaks.win = 0;
+      }
+      return newStreaks;
+    });
+    // Flash
+    setFlashType(won ? 'win' : 'loss');
+    setTimeout(() => setFlashType(null), 800);
+  }, []);
+
+  // Check if logged in before placing a bet
+  const requireLogin = useCallback(() => {
+    if (!isLoggedIn) {
+      setShowLoginPrompt(true);
+      return true; // blocked
+    }
+    return false;
+  }, [isLoggedIn]);
+
+  // Claim daily bonus
+  const claimDailyBonus = useCallback(() => {
+    if (!dailyBonusAvailable) return;
+    const bonusAmount = 250 + Math.floor(Math.random() * 250); // 250-500 random
+    setBalance(prev => prev + bonusAmount);
+    claimDailyBonusStorage();
+    setDailyBonusAvailable(false);
+    setDailyBonusClaimed(true);
+    setFlashType('win');
+    setTimeout(() => { setFlashType(null); setDailyBonusClaimed(false); }, 2000);
+    setBetHistory(prev => [...prev, { game: 'Daily Bonus', won: true, amount: 0, payout: bonusAmount, pnl: bonusAmount, time: Date.now() }]);
+  }, [dailyBonusAvailable]);
+
+  // Double or nothing handler
+  const handleDoubleOrNothing = useCallback((accept) => {
+    if (!doubleOrNothing) return;
+    if (!accept) {
+      setDoubleOrNothing(null);
+      return;
+    }
+    const won = Math.random() > 0.5;
+    const amt = doubleOrNothing.amount;
+    if (won) {
+      setBalance(prev => prev + amt);
+      setFlashType('win');
+      recordGameResult(true, 0, amt, 'Double or Nothing');
+    } else {
+      setBalance(prev => prev - amt);
+      setFlashType('loss');
+      recordGameResult(false, amt, 0, 'Double or Nothing');
+    }
+    setTimeout(() => setFlashType(null), 800);
+    setDoubleOrNothing(null);
+  }, [doubleOrNothing, recordGameResult]);
 
   // ---------------------------------------------------------------------------
   // Wallet connect functions
@@ -280,7 +542,6 @@ export default function CasinoPage() {
   const handleDeposit = () => {
     const amt = parseFloat(depositAmount);
     if (!amt || amt <= 0) return;
-    // Convert to GOAT tokens at 1 GOAT = $0.01 (100 GOAT per $1)
     const goatTokens = Math.floor(amt * 100);
     setBalance(prev => prev + goatTokens);
     setDepositAmount('');
@@ -292,7 +553,6 @@ export default function CasinoPage() {
     if (!amt || amt <= 0) return;
     const goatTokens = Math.floor(amt * 100);
     if (goatTokens > balance) return;
-    // Apply 0.5% withdrawal fee
     const fee = Math.ceil(goatTokens * 0.005);
     setBalance(prev => prev - goatTokens);
     setWithdrawAmount('');
@@ -328,9 +588,9 @@ export default function CasinoPage() {
   // ---------------------------------------------------------------------------
   useEffect(() => {
     if (!cryptoPrices) return;
-    const btcPrice = cryptoPrices.BTC?.price;
-    const ethPrice = cryptoPrices.ETH?.price;
-    const solPrice = cryptoPrices.SOL?.price;
+    const btcP = cryptoPrices.BTC?.price;
+    const ethP = cryptoPrices.ETH?.price;
+    const solP = cryptoPrices.SOL?.price;
 
     setMarkets(prev => prev.map(m => {
       if (m.resolved) return m;
@@ -339,19 +599,19 @@ export default function CasinoPage() {
       if (now < endDate) return m;
 
       let outcome = null;
-      if (m.resolution === 'btc_price' && btcPrice) {
-        outcome = btcPrice >= m.target ? 'yes' : 'no';
-      } else if (m.resolution === 'eth_price' && ethPrice) {
-        outcome = ethPrice >= m.target ? 'yes' : 'no';
-      } else if (m.resolution === 'sol_price' && solPrice) {
-        outcome = solPrice >= m.target ? 'yes' : 'no';
+      if (m.resolution === 'btc_price' && btcP) {
+        outcome = btcP >= m.target ? 'yes' : 'no';
+      } else if (m.resolution === 'eth_price' && ethP) {
+        outcome = ethP >= m.target ? 'yes' : 'no';
+      } else if (m.resolution === 'sol_price' && solP) {
+        outcome = solP >= m.target ? 'yes' : 'no';
       }
       if (outcome) return { ...m, resolved: true, outcome };
       return m;
     }));
   }, [cryptoPrices]);
 
-  // Resolve bets when markets resolve — apply 12% commission on winnings
+  // Resolve bets when markets resolve
   useEffect(() => {
     const resolved = markets.filter(m => m.resolved);
     if (resolved.length === 0) return;
@@ -381,6 +641,17 @@ export default function CasinoPage() {
     });
   }, [markets]);
 
+  // Generate simulated recent wins ticker
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const name = recentWinNames[Math.floor(Math.random() * recentWinNames.length)];
+      const game = recentWinGames[Math.floor(Math.random() * recentWinGames.length)];
+      const amount = [50, 100, 150, 250, 500, 1000][Math.floor(Math.random() * 6)];
+      setRecentWins(prev => [{ name, game, amount, id: Date.now() }, ...prev].slice(0, 5));
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
   const btcPrice = cryptoPrices?.BTC;
   const ethPrice = cryptoPrices?.ETH;
   const solPrice = cryptoPrices?.SOL;
@@ -391,6 +662,7 @@ export default function CasinoPage() {
   // Bet placement functions
   // ---------------------------------------------------------------------------
   const openBetPanel = (marketId, side) => {
+    if (requireLogin()) return;
     setActiveBetMarket(marketId);
     setActiveBetSide(side);
     setBetAmount(50);
@@ -485,39 +757,40 @@ export default function CasinoPage() {
   // AI Oracle trivia questions pool
   // ---------------------------------------------------------------------------
   const triviaPool = useMemo(() => [
-    { q: 'What consensus mechanism does Bitcoin use?', opts: ['Proof of Work', 'Proof of Stake', 'Delegated PoS', 'Proof of Authority'], answer: 0 },
-    { q: 'Which company created the GPT series of models?', opts: ['Google', 'Meta', 'OpenAI', 'Anthropic'], answer: 2 },
-    { q: 'What is the maximum supply of Bitcoin?', opts: ['100 million', '21 million', '18 million', 'Unlimited'], answer: 1 },
-    { q: 'What does "DeFi" stand for?', opts: ['Decentralized Finance', 'Digital Finance', 'Derivative Fintech', 'Distributed Fidelity'], answer: 0 },
-    { q: 'Which blockchain does Solana use for consensus?', opts: ['Proof of Work', 'Proof of History', 'Proof of Authority', 'Proof of Burn'], answer: 1 },
-    { q: 'What is a "transformer" in AI?', opts: ['A robot', 'A neural network architecture', 'A data format', 'A GPU type'], answer: 1 },
-    { q: 'What year was Ethereum launched?', opts: ['2013', '2014', '2015', '2016'], answer: 2 },
-    { q: 'What does NFT stand for?', opts: ['New File Token', 'Non-Fungible Token', 'Network Fee Transaction', 'Node Finality Type'], answer: 1 },
-    { q: 'Which company developed the Claude AI model?', opts: ['OpenAI', 'Google', 'Anthropic', 'Microsoft'], answer: 2 },
-    { q: 'What is "gas" in Ethereum?', opts: ['A token', 'Transaction fee unit', 'A smart contract', 'A wallet type'], answer: 1 },
-    { q: 'What does LLM stand for?', opts: ['Large Learning Model', 'Large Language Model', 'Linear Logic Machine', 'Long-term Language Memory'], answer: 1 },
-    { q: 'What is the name of the Ethereum merge upgrade?', opts: ['The Surge', 'The Merge', 'The Purge', 'The Verge'], answer: 1 },
-    { q: 'What is a "hallucination" in AI?', opts: ['A visual bug', 'Generating false information confidently', 'A training method', 'A type of neural network'], answer: 1 },
-    { q: 'Which crypto uses "Proof of Stake" natively since launch?', opts: ['Bitcoin', 'Litecoin', 'Cardano', 'Dogecoin'], answer: 2 },
-    { q: 'What is "fine-tuning" in machine learning?', opts: ['Adjusting hyperparameters', 'Training a pretrained model on specific data', 'Cleaning data', 'Reducing model size'], answer: 1 },
-    { q: 'What is a DAO?', opts: ['Digital Asset Offering', 'Decentralized Autonomous Organization', 'Distributed Algorithm Operation', 'Data Access Object'], answer: 1 },
-    { q: 'Which GPU maker is most associated with AI training?', opts: ['AMD', 'Intel', 'NVIDIA', 'Qualcomm'], answer: 2 },
-    { q: 'What is "staking" in crypto?', opts: ['Mining coins', 'Locking tokens to earn rewards', 'Selling tokens', 'Creating tokens'], answer: 1 },
-    { q: 'What programming language are most smart contracts on Ethereum written in?', opts: ['Python', 'JavaScript', 'Rust', 'Solidity'], answer: 3 },
-    { q: 'What does RLHF stand for in AI?', opts: ['Reinforcement Learning from Human Feedback', 'Recursive Logic for High Frequency', 'Rapid Learning with Hybrid Functions', 'Real-time Language and Heuristic Framework'], answer: 0 },
+    { q: 'What consensus mechanism does Bitcoin use?', opts: ['Proof of Work', 'Proof of Stake', 'Delegated PoS', 'Proof of Authority'], answer: 0, difficulty: 'easy' },
+    { q: 'Which company created the GPT series of models?', opts: ['Google', 'Meta', 'OpenAI', 'Anthropic'], answer: 2, difficulty: 'easy' },
+    { q: 'What is the maximum supply of Bitcoin?', opts: ['100 million', '21 million', '18 million', 'Unlimited'], answer: 1, difficulty: 'easy' },
+    { q: 'What does "DeFi" stand for?', opts: ['Decentralized Finance', 'Digital Finance', 'Derivative Fintech', 'Distributed Fidelity'], answer: 0, difficulty: 'easy' },
+    { q: 'Which blockchain does Solana use for consensus?', opts: ['Proof of Work', 'Proof of History', 'Proof of Authority', 'Proof of Burn'], answer: 1, difficulty: 'easy' },
+    { q: 'What is a "transformer" in AI?', opts: ['A robot', 'A neural network architecture', 'A data format', 'A GPU type'], answer: 1, difficulty: 'medium' },
+    { q: 'What year was Ethereum launched?', opts: ['2013', '2014', '2015', '2016'], answer: 2, difficulty: 'medium' },
+    { q: 'What does NFT stand for?', opts: ['New File Token', 'Non-Fungible Token', 'Network Fee Transaction', 'Node Finality Type'], answer: 1, difficulty: 'easy' },
+    { q: 'Which company developed the Claude AI model?', opts: ['OpenAI', 'Google', 'Anthropic', 'Microsoft'], answer: 2, difficulty: 'easy' },
+    { q: 'What is "gas" in Ethereum?', opts: ['A token', 'Transaction fee unit', 'A smart contract', 'A wallet type'], answer: 1, difficulty: 'medium' },
+    { q: 'What does LLM stand for?', opts: ['Large Learning Model', 'Large Language Model', 'Linear Logic Machine', 'Long-term Language Memory'], answer: 1, difficulty: 'easy' },
+    { q: 'What is the name of the Ethereum merge upgrade?', opts: ['The Surge', 'The Merge', 'The Purge', 'The Verge'], answer: 1, difficulty: 'medium' },
+    { q: 'What is a "hallucination" in AI?', opts: ['A visual bug', 'Generating false information confidently', 'A training method', 'A type of neural network'], answer: 1, difficulty: 'medium' },
+    { q: 'Which crypto uses "Proof of Stake" natively since launch?', opts: ['Bitcoin', 'Litecoin', 'Cardano', 'Dogecoin'], answer: 2, difficulty: 'medium' },
+    { q: 'What is "fine-tuning" in machine learning?', opts: ['Adjusting hyperparameters', 'Training a pretrained model on specific data', 'Cleaning data', 'Reducing model size'], answer: 1, difficulty: 'hard' },
+    { q: 'What is a DAO?', opts: ['Digital Asset Offering', 'Decentralized Autonomous Organization', 'Distributed Algorithm Operation', 'Data Access Object'], answer: 1, difficulty: 'medium' },
+    { q: 'Which GPU maker is most associated with AI training?', opts: ['AMD', 'Intel', 'NVIDIA', 'Qualcomm'], answer: 2, difficulty: 'easy' },
+    { q: 'What is "staking" in crypto?', opts: ['Mining coins', 'Locking tokens to earn rewards', 'Selling tokens', 'Creating tokens'], answer: 1, difficulty: 'easy' },
+    { q: 'What programming language are most smart contracts on Ethereum written in?', opts: ['Python', 'JavaScript', 'Rust', 'Solidity'], answer: 3, difficulty: 'hard' },
+    { q: 'What does RLHF stand for in AI?', opts: ['Reinforcement Learning from Human Feedback', 'Recursive Logic for High Frequency', 'Rapid Learning with Hybrid Functions', 'Real-time Language and Heuristic Framework'], answer: 0, difficulty: 'hard' },
   ], []);
 
   // ---------------------------------------------------------------------------
   // Game helper: reset all game states
   // ---------------------------------------------------------------------------
   const resetGameStates = useCallback(() => {
-    setPpDirection(null); setPpCountdown(null); setPpStartPrice(null); setPpResult(null);
+    setPpDirection(null); setPpCountdown(null); setPpStartPrice(null); setPpResult(null); setPpLivePrice(null); setPpChartData([]);
     if (ppTimerRef.current) { clearInterval(ppTimerRef.current); ppTimerRef.current = null; }
-    setMrSector(null); setMrSpinning(false); setMrResult(null);
-    setPdPicks([]); setPdRunning(false); setPdRound(0); setPdPlayerValues([]); setPdBotValues([]); setPdBotPicks([]); setPdResult(null);
+    setMrSector(null); setMrSpinning(false); setMrResult(null); setMrCelebrating(false);
+    setPdPicks([]); setPdRunning(false); setPdRound(0); setPdPlayerValues([]); setPdBotValues([]); setPdBotPicks([]); setPdResult(null); setPdRevealing(false);
     if (pdTimerRef.current) { clearInterval(pdTimerRef.current); pdTimerRef.current = null; }
-    setAoQuestion(0); setAoScore(0); setAoSelected(null); setAoFinished(false); setAoQuestions([]);
+    setAoQuestion(0); setAoScore(0); setAoSelected(null); setAoFinished(false); setAoQuestions([]); setAoDifficulty(null); setAoConsecutiveCorrect(0);
     setGameBet(50);
+    setDoubleOrNothing(null);
   }, []);
 
   const exitGame = useCallback(() => {
@@ -534,9 +807,10 @@ export default function CasinoPage() {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Price Prediction game logic
+  // Price Prediction game logic (with animated chart + multiplier)
   // ---------------------------------------------------------------------------
   const startPricePrediction = useCallback((direction) => {
+    if (requireLogin()) return;
     if (gameBet > balance) return;
     setPpDirection(direction);
     const coinData = cryptoPrices?.[ppCoin];
@@ -544,53 +818,76 @@ export default function CasinoPage() {
     setPpStartPrice(startP);
     setPpCountdown(30);
     setPpResult(null);
+    setPpLivePrice(startP);
+    setPpChartData([startP]);
     setBalance(prev => prev - gameBet);
 
-    let timeLeft = 30;
+    let timeRemaining = 30;
+    let currentPrice = startP;
+    const volatility = ppCoin === 'BTC' ? 0.0003 : ppCoin === 'ETH' ? 0.0005 : 0.0008;
+
     ppTimerRef.current = setInterval(() => {
-      timeLeft -= 1;
-      setPpCountdown(timeLeft);
-      if (timeLeft <= 0) {
+      timeRemaining -= 1;
+      // Animate price movement each tick
+      const tick = (Math.random() - 0.48) * volatility;
+      currentPrice = currentPrice * (1 + tick);
+      setPpLivePrice(currentPrice);
+      setPpChartData(prev => [...prev, currentPrice]);
+      setPpCountdown(timeRemaining);
+
+      if (timeRemaining <= 0) {
         clearInterval(ppTimerRef.current);
         ppTimerRef.current = null;
-        // Simulate random walk price movement
-        const volatility = ppCoin === 'BTC' ? 0.008 : ppCoin === 'ETH' ? 0.012 : 0.018;
-        const change = (Math.random() - 0.48) * volatility; // slight upward bias
-        const endPrice = startP * (1 + change);
+        const endPrice = currentPrice;
         const actualDir = endPrice > startP ? 'up' : 'down';
         const won = actualDir === direction;
-        const payout = won ? Math.floor(gameBet * 1.8) : 0;
-        if (won) setBalance(prev => prev + payout);
-        setPpResult({ startPrice: startP, endPrice, direction: actualDir, won, payout, change: ((endPrice - startP) / startP * 100).toFixed(3) });
+        const changePct = Math.abs((endPrice - startP) / startP * 100);
+        // Multiplier based on how far price moved in correct direction
+        const moveMultiplier = won ? Math.max(1.5, 1.5 + changePct * 5) : 0;
+        const streakBonus = won ? streakMultiplier : 1;
+        const basePayout = won ? Math.floor(gameBet * moveMultiplier * streakBonus) : 0;
+        if (won) setBalance(prev => prev + basePayout);
+        const result = { startPrice: startP, endPrice, direction: actualDir, won, payout: basePayout, change: ((endPrice - startP) / startP * 100).toFixed(3), moveMultiplier: moveMultiplier.toFixed(2) };
+        setPpResult(result);
+        recordGameResult(won, gameBet, basePayout, 'Price Prediction');
+        if (won) setDoubleOrNothing({ amount: basePayout, game: 'Price Prediction' });
       }
     }, 1000);
-  }, [gameBet, balance, cryptoPrices, ppCoin]);
+  }, [gameBet, balance, cryptoPrices, ppCoin, requireLogin, streakMultiplier, recordGameResult]);
 
   // ---------------------------------------------------------------------------
-  // Market Roulette game logic
+  // Market Roulette game logic (smoother spin + celebration)
   // ---------------------------------------------------------------------------
   const mrSectors = useMemo(() => ['Tech', 'Finance', 'Healthcare', 'Energy', 'Crypto', 'AI', 'Real Estate', 'Consumer'], []);
   const mrColors = useMemo(() => ['#3b82f6', '#10b981', '#ec4899', '#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444', '#84cc16'], []);
 
   const spinRoulette = useCallback(() => {
+    if (requireLogin()) return;
     if (!mrSector || gameBet > balance || mrSpinning) return;
     setBalance(prev => prev - gameBet);
     setMrSpinning(true);
     setMrResult(null);
+    setMrCelebrating(false);
     const winIndex = Math.floor(Math.random() * 8);
-    const targetAngle = 360 * 5 + (winIndex * 45) + 22.5; // 5 full rotations + land on sector
+    const targetAngle = 360 * 8 + (winIndex * 45) + 22.5; // 8 full rotations for longer spin
     setMrRotation(prev => prev + targetAngle);
     setTimeout(() => {
       setMrSpinning(false);
       const won = mrSectors[winIndex] === mrSector;
-      const payout = won ? Math.floor(gameBet * 6) : 0;
-      if (won) setBalance(prev => prev + payout);
+      const payout = won ? Math.floor(gameBet * 6 * streakMultiplier) : 0;
+      if (won) {
+        setBalance(prev => prev + payout);
+        setMrCelebrating(true);
+        setTimeout(() => setMrCelebrating(false), 3000);
+      }
       setMrResult({ landed: mrSectors[winIndex], won, payout });
-    }, 4000);
-  }, [mrSector, gameBet, balance, mrSpinning, mrSectors]);
+      recordGameResult(won, gameBet, payout, 'Market Roulette');
+      if (won) setDoubleOrNothing({ amount: payout, game: 'Market Roulette' });
+    }, 5000); // 5 seconds for smoother spin
+  }, [mrSector, gameBet, balance, mrSpinning, mrSectors, requireLogin, streakMultiplier, recordGameResult]);
 
   // ---------------------------------------------------------------------------
-  // Portfolio Duel game logic
+  // Portfolio Duel game logic (with dramatic reveal)
   // ---------------------------------------------------------------------------
   const pdAssets = useMemo(() => ['BTC', 'ETH', 'SOL', 'AAPL', 'NVDA', 'TSLA', 'GOLD', 'OIL'], []);
 
@@ -603,12 +900,13 @@ export default function CasinoPage() {
   }, []);
 
   const startPortfolioDuel = useCallback(() => {
+    if (requireLogin()) return;
     if (pdPicks.length !== 3 || gameBet > balance) return;
     setBalance(prev => prev - gameBet);
     setPdRunning(true);
     setPdRound(0);
     setPdResult(null);
-    // Bot picks 3 random assets (can overlap with player)
+    setPdRevealing(false);
     const shuffled = [...pdAssets].sort(() => Math.random() - 0.5);
     const botP = shuffled.slice(0, 3);
     setPdBotPicks(botP);
@@ -634,48 +932,79 @@ export default function CasinoPage() {
         clearInterval(pdTimerRef.current);
         pdTimerRef.current = null;
         setPdRunning(false);
-        const won = newPVal > newBVal;
-        const tie = Math.abs(newPVal - newBVal) < 0.01;
-        const payout = won ? Math.floor(gameBet * 2) : tie ? gameBet : 0;
-        if (payout > 0) setBalance(prev => prev + payout);
-        setPdResult({ won, tie, payout, playerFinal: newPVal.toFixed(2), botFinal: newBVal.toFixed(2) });
+        // Dramatic reveal pause
+        setPdRevealing(true);
+        setTimeout(() => {
+          const won = newPVal > newBVal;
+          const tie = Math.abs(newPVal - newBVal) < 0.01;
+          const payout = won ? Math.floor(gameBet * 2 * streakMultiplier) : tie ? gameBet : 0;
+          if (payout > 0) setBalance(prev => prev + payout);
+          setPdResult({ won, tie, payout, playerFinal: newPVal.toFixed(2), botFinal: newBVal.toFixed(2) });
+          setPdRevealing(false);
+          recordGameResult(won || tie, gameBet, payout, 'Portfolio Duel');
+          if (won) setDoubleOrNothing({ amount: payout, game: 'Portfolio Duel' });
+        }, 2000);
       }
     }, 800);
-  }, [pdPicks, gameBet, balance, pdAssets]);
+  }, [pdPicks, gameBet, balance, pdAssets, requireLogin, streakMultiplier, recordGameResult]);
 
   // ---------------------------------------------------------------------------
-  // AI Oracle game logic
+  // AI Oracle game logic (with difficulty + streak bonus)
   // ---------------------------------------------------------------------------
-  const startAiOracle = useCallback(() => {
-    // Pick 10 random questions from pool
-    const shuffled = [...triviaPool].sort(() => Math.random() - 0.5).slice(0, 10);
+  const startAiOracle = useCallback((diff) => {
+    const difficulty = diff || aoDifficulty || AO_DIFFICULTIES[0];
+    setAoDifficulty(difficulty);
+    // Filter by difficulty if possible, fallback to random
+    let pool = triviaPool.filter(q => q.difficulty === difficulty.id);
+    if (pool.length < 10) pool = [...triviaPool]; // fallback to all
+    const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, difficulty.questionCount);
     setAoQuestions(shuffled);
     setAoQuestion(0);
     setAoScore(0);
     setAoSelected(null);
     setAoFinished(false);
-  }, [triviaPool]);
+    setAoConsecutiveCorrect(0);
+  }, [triviaPool, aoDifficulty]);
 
   const answerAoQuestion = useCallback((idx) => {
     if (aoSelected !== null) return;
     setAoSelected(idx);
     const correct = aoQuestions[aoQuestion]?.answer === idx;
-    if (correct) setAoScore(prev => prev + 1);
+    const diff = aoDifficulty || AO_DIFFICULTIES[0];
+
+    if (correct) {
+      setAoScore(prev => prev + 1);
+      setAoConsecutiveCorrect(prev => prev + 1);
+      setFlashType('win');
+    } else {
+      setAoConsecutiveCorrect(0);
+      setFlashType('loss');
+    }
+    setTimeout(() => setFlashType(null), 400);
+
     setTimeout(() => {
-      if (aoQuestion + 1 >= 10) {
+      if (aoQuestion + 1 >= diff.questionCount) {
         const finalScore = correct ? aoScore + 1 : aoScore;
-        const earned = finalScore * 25 + (finalScore >= 8 ? 100 : 0);
+        const consecutiveBonus = aoConsecutiveCorrect >= 5 ? 75 : aoConsecutiveCorrect >= 3 ? 25 : 0;
+        const earned = finalScore * diff.baseReward + (finalScore >= diff.bonusThreshold ? diff.bonus : 0) + consecutiveBonus;
         setBalance(prev => prev + earned);
         setAoFinished(true);
+        recordGameResult(finalScore >= diff.bonusThreshold, 0, earned, 'AI Oracle');
       } else {
         setAoQuestion(prev => prev + 1);
         setAoSelected(null);
       }
     }, 1200);
-  }, [aoSelected, aoQuestions, aoQuestion, aoScore]);
+  }, [aoSelected, aoQuestions, aoQuestion, aoScore, aoDifficulty, aoConsecutiveCorrect, recordGameResult]);
+
+  // Next unlock for tokens
+  const nextUnlock = useMemo(() => tokenUnlocks.find(u => u.threshold > balance) || tokenUnlocks[tokenUnlocks.length - 1], [balance]);
 
   return (
     <div className="p-4 sm:p-6">
+      {/* Win/Loss Flash Overlay */}
+      <FlashOverlay type={flashType} />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
         <div className="flex items-center gap-3">
@@ -686,6 +1015,51 @@ export default function CasinoPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Daily Bonus */}
+          {dailyBonusAvailable && (
+            <motion.button
+              onClick={claimDailyBonus}
+              className="px-3 py-2 rounded-xl bg-yellow-500/15 border border-yellow-500/40 text-yellow-400 text-sm font-bold flex items-center gap-1.5 hover:bg-yellow-500/25 transition-colors"
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <Gift size={14} />Daily Bonus
+            </motion.button>
+          )}
+          {dailyBonusClaimed && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="px-3 py-2 rounded-xl bg-brand/15 border border-brand/30 text-brand text-sm font-bold"
+            >
+              Bonus Claimed!
+            </motion.div>
+          )}
+
+          {/* Session P&L */}
+          <div className={`px-3 py-2 rounded-xl border text-sm font-bold flex items-center gap-1.5 ${
+            sessionPnl >= 0 ? 'bg-brand/10 border-brand/20 text-brand' : 'bg-red-500/10 border-red-500/20 text-red-400'
+          }`}>
+            <Activity size={14} />
+            {sessionPnl >= 0 ? '+' : ''}{sessionPnl.toLocaleString()} P&L
+          </div>
+
+          {/* Streak */}
+          {streaks.win >= 2 && (
+            <motion.div
+              className="px-3 py-2 rounded-xl bg-orange-500/15 border border-orange-500/30 text-orange-400 text-sm font-bold flex items-center gap-1.5"
+              animate={{ scale: [1, 1.08, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            >
+              <Flame size={14} />{streaks.win}x Win Streak ({streakMultiplier}x)
+            </motion.div>
+          )}
+          {streaks.loss >= 3 && (
+            <div className="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium flex items-center gap-1.5">
+              {streaks.loss}x Loss Streak
+            </div>
+          )}
+
           {/* GOAT Balance */}
           <div className="px-4 py-2 rounded-xl bg-surface-3 border border-white/[0.05] flex items-center gap-2">
             <Coins size={16} className="text-yellow-400" />
@@ -716,13 +1090,49 @@ export default function CasinoPage() {
         </div>
       </div>
 
+      {/* Token Progress & Unlocks */}
+      {nextUnlock && (
+        <div className="bg-surface-3 rounded-xl border border-white/[0.03] p-3 mb-4 flex items-center gap-4">
+          <div className="flex-shrink-0">
+            <Lock size={14} className="text-yellow-400" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="text-slate-400">Next unlock: <span className="text-yellow-400 font-bold">{nextUnlock.label}</span> - {nextUnlock.desc}</span>
+              <span className="text-slate-500">{balance.toLocaleString()} / {nextUnlock.threshold.toLocaleString()} GOAT</span>
+            </div>
+            <div className="h-1.5 bg-surface-1 rounded-full overflow-hidden">
+              <motion.div className="h-full bg-yellow-500 rounded-full" initial={{ width: 0 }} animate={{ width: `${Math.min(100, (balance / nextUnlock.threshold) * 100)}%` }} transition={{ duration: 1 }} />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Commission notice */}
       <div className="bg-yellow-500/5 border border-yellow-500/15 rounded-xl px-4 py-2.5 mb-4 flex items-center gap-3 text-xs">
         <Shield size={14} className="text-yellow-400 flex-shrink-0" />
         <span className="text-slate-400">
           <span className="text-yellow-400 font-bold">12% commission</span> on winnings | <span className="text-yellow-400 font-bold">0% deposit fee</span> | <span className="text-yellow-400 font-bold">$2.50 withdrawal fee</span> | All bets in GOAT tokens (1 GOAT = $0.01)
+          {streaks.best > 0 && <span className="ml-2">| Best streak: <span className="text-orange-400 font-bold">{streaks.best}W</span></span>}
         </span>
       </div>
+
+      {/* Recent Wins Ticker */}
+      {recentWins.length > 0 && (
+        <div className="bg-surface-3 rounded-xl border border-white/[0.03] mb-4 overflow-hidden">
+          <div className="px-4 py-2 flex items-center gap-3 overflow-x-auto">
+            <span className="text-[10px] text-slate-500 uppercase tracking-wider flex-shrink-0">Recent Wins</span>
+            {recentWins.map((w) => (
+              <motion.div key={w.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
+                className="flex items-center gap-1.5 text-xs flex-shrink-0">
+                <span className="text-slate-400">{w.name}</span>
+                <span className="text-brand font-bold">+{w.amount}</span>
+                <span className="text-slate-600">{w.game}</span>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Live Price Ticker */}
       {priceList.length > 0 && (
@@ -822,6 +1232,7 @@ export default function CasinoPage() {
           { id: 'games', label: 'Live Games', icon: Dice5 },
           { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
           { id: 'portfolio', label: `Portfolio (${bets.length})`, icon: Target },
+          { id: 'history', label: 'Bet History', icon: History },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${tab === t.id ? 'bg-brand/15 text-brand border border-brand/30' : 'bg-surface-3 text-slate-400 border border-white/[0.03] hover:text-white'}`}>
@@ -1022,7 +1433,7 @@ export default function CasinoPage() {
                                   ) : (
                                     <motion.div key="confirm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-2">
                                       <div className="text-center text-xs text-yellow-400 flex items-center justify-center gap-1 mb-2">
-                                        <AlertTriangle size={12} />Confirm your bet — this cannot be undone
+                                        <AlertTriangle size={12} />Confirm your bet -- this cannot be undone
                                       </div>
                                       <div className="flex gap-2">
                                         <button onClick={() => setShowConfirm(false)} className="flex-1 py-2.5 rounded-lg bg-surface-2 text-slate-300 text-sm border border-white/[0.05] transition-colors hover:bg-surface-1">Cancel</button>
@@ -1068,65 +1479,101 @@ export default function CasinoPage() {
           <>
             {/* ---- GAME SELECTION GRID ---- */}
             {!activeGame && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {games.map((g, i) => (
-                  <motion.div key={i} className="bg-surface-3 rounded-xl border border-white/[0.03] overflow-hidden card-hover relative"
-                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                    {g.status === 'coming_soon' && (
-                      <div className="absolute inset-0 bg-surface-0/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
-                        <span className="px-4 py-2 rounded-full bg-surface-2 border border-white/[0.05] text-slate-400 text-sm font-bold uppercase tracking-wider">Coming Soon</span>
-                      </div>
-                    )}
-                    <div className="p-5">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: `${g.color}15`, color: g.color }}>
-                          <g.icon size={24} />
+              <>
+                {/* Daily Challenges */}
+                <div className="bg-surface-3 rounded-xl border border-white/[0.03] p-4 mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Target size={16} className="text-yellow-400" />
+                    <span className="font-bold text-sm">Daily Challenges</span>
+                    <span className="text-xs text-slate-500 ml-auto">Resets daily</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {dailyChallenges.map((c) => (
+                      <div key={c.id} className={`bg-surface-2 rounded-lg p-3 border ${c.completed ? 'border-brand/30' : 'border-white/[0.03]'}`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <c.icon size={14} className={c.completed ? 'text-brand' : 'text-slate-400'} />
+                          <span className="text-xs font-bold">{c.title}</span>
                         </div>
-                        <div>
-                          <h3 className="font-bold text-lg">{g.name}</h3>
-                          <p className="text-sm text-slate-500">{g.desc}</p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div className="bg-surface-2 rounded-lg p-3">
-                          <div className="text-xs text-slate-500">Players</div>
-                          <div className="font-bold">{g.players.toLocaleString()}</div>
-                        </div>
-                        <div className="bg-surface-2 rounded-lg p-3">
-                          <div className="text-xs text-slate-500">Prize Pool</div>
-                          <div className="font-bold" style={{ color: g.color }}>{g.reward}</div>
-                        </div>
-                      </div>
-
-                      {g.type === 'prediction' && btcPrice && (
-                        <div className="bg-surface-1 rounded-lg p-2.5 mb-3 flex items-center justify-between">
-                          <span className="text-xs text-slate-500">Live Market Data</span>
-                          <div className="flex items-center gap-3 text-xs">
-                            <span className="font-mono">BTC {btcPrice.priceFormatted}</span>
-                            <span className="font-mono">ETH {ethPrice?.priceFormatted}</span>
+                        <div className="text-[10px] text-slate-500 mb-2">{c.desc}</div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 bg-surface-1 rounded-full h-1.5 mr-2 overflow-hidden">
+                            <div className={`h-full rounded-full ${c.completed ? 'bg-brand' : 'bg-yellow-500'}`}
+                              style={{ width: `${Math.min(100, (c.progress / c.target) * 100)}%` }} />
                           </div>
+                          <span className="text-[10px] text-yellow-400 font-bold">{c.reward} GOAT</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {games.map((g, i) => (
+                    <motion.div key={i} className="bg-surface-3 rounded-xl border border-white/[0.03] overflow-hidden card-hover relative"
+                      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                      {g.status === 'coming_soon' && (
+                        <div className="absolute inset-0 bg-surface-0/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
+                          <span className="px-4 py-2 rounded-full bg-surface-2 border border-white/[0.05] text-slate-400 text-sm font-bold uppercase tracking-wider">Coming Soon</span>
                         </div>
                       )}
-                      {g.type === 'spin' && solPrice && (
-                        <div className="bg-surface-1 rounded-lg p-2.5 mb-3 flex items-center justify-between">
-                          <span className="text-xs text-slate-500">SOL Price Feed</span>
-                          <div className={`flex items-center gap-1 text-xs font-medium ${solPrice.direction === 'up' ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {solPrice.direction === 'up' ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
-                            {solPrice.priceFormatted} ({solPrice.change24hFormatted})
+                      <div className="p-5">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: `${g.color}15`, color: g.color }}>
+                            <g.icon size={24} />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-lg">{g.name}</h3>
+                            <p className="text-sm text-slate-500">{g.desc}</p>
                           </div>
                         </div>
-                      )}
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          <div className="bg-surface-2 rounded-lg p-3">
+                            <div className="text-xs text-slate-500">Players</div>
+                            <div className="font-bold">{g.players.toLocaleString()}</div>
+                          </div>
+                          <div className="bg-surface-2 rounded-lg p-3">
+                            <div className="text-xs text-slate-500">Prize Pool</div>
+                            <div className="font-bold" style={{ color: g.color }}>{g.reward}</div>
+                          </div>
+                        </div>
 
-                      <button className="w-full py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 hover:brightness-125"
-                        style={{ background: `${g.color}15`, color: g.color }}
-                        disabled={g.status === 'coming_soon'}
-                        onClick={() => { if (g.status === 'live') { resetGameStates(); setActiveGame(g.type); if (g.type === 'trivia') startAiOracle(); } }}>
-                        {g.status === 'live' ? <><Zap size={14} />Play Now</> : 'Coming Soon'}
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+                        {g.type === 'prediction' && btcPrice && (
+                          <div className="bg-surface-1 rounded-lg p-2.5 mb-3 flex items-center justify-between">
+                            <span className="text-xs text-slate-500">Live Market Data</span>
+                            <div className="flex items-center gap-3 text-xs">
+                              <span className="font-mono">BTC {btcPrice.priceFormatted}</span>
+                              <span className="font-mono">ETH {ethPrice?.priceFormatted}</span>
+                            </div>
+                          </div>
+                        )}
+                        {g.type === 'spin' && solPrice && (
+                          <div className="bg-surface-1 rounded-lg p-2.5 mb-3 flex items-center justify-between">
+                            <span className="text-xs text-slate-500">SOL Price Feed</span>
+                            <div className={`flex items-center gap-1 text-xs font-medium ${solPrice.direction === 'up' ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {solPrice.direction === 'up' ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+                              {solPrice.priceFormatted} ({solPrice.change24hFormatted})
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Streak multiplier badge */}
+                        {streakMultiplier > 1 && g.status === 'live' && (
+                          <div className="bg-orange-500/10 rounded-lg p-2 mb-3 text-center">
+                            <span className="text-xs text-orange-400 font-bold"><Flame size={10} className="inline mr-1" />{streakMultiplier}x Streak Multiplier Active</span>
+                          </div>
+                        )}
+
+                        <button className="w-full py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 hover:brightness-125"
+                          style={{ background: `${g.color}15`, color: g.color }}
+                          disabled={g.status === 'coming_soon'}
+                          onClick={() => { if (g.status === 'live') { resetGameStates(); setActiveGame(g.type); } }}>
+                          {g.status === 'live' ? <><Zap size={14} />Play Now</> : 'Coming Soon'}
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </>
             )}
 
             {/* ======================================================================= */}
@@ -1145,6 +1592,11 @@ export default function CasinoPage() {
                       <h2 className="text-xl font-bold">Price Prediction</h2>
                       <p className="text-sm text-slate-500">Predict if the price goes UP or DOWN in 30 seconds</p>
                     </div>
+                    {streakMultiplier > 1 && (
+                      <div className="ml-auto px-2 py-1 rounded bg-orange-500/15 text-orange-400 text-xs font-bold">
+                        <Flame size={10} className="inline mr-1" />{streakMultiplier}x
+                      </div>
+                    )}
                   </div>
 
                   {/* Coin selector */}
@@ -1177,33 +1629,71 @@ export default function CasinoPage() {
                           className="w-full bg-surface-1 border border-white/[0.05] rounded-lg px-3 py-2 text-sm font-mono" />
                       </div>
 
+                      <div className="bg-surface-1 rounded-lg p-3 mb-4 text-xs text-slate-400">
+                        <p>Payout scales with price movement. The further it moves in your direction, the bigger the multiplier (1.5x - 5x+).</p>
+                        {streakMultiplier > 1 && <p className="text-orange-400 mt-1">Win streak bonus: {streakMultiplier}x applied to payout!</p>}
+                      </div>
+
                       {/* Direction buttons */}
                       <div className="grid grid-cols-2 gap-3">
                         <button onClick={() => startPricePrediction('up')} disabled={gameBet > balance}
-                          className="py-3 rounded-lg font-bold text-sm bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 transition-colors flex items-center justify-center gap-2 disabled:opacity-40">
-                          <ArrowUp size={18} /> UP
+                          className="py-4 rounded-lg font-bold text-sm bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 transition-colors flex items-center justify-center gap-2 disabled:opacity-40">
+                          <ArrowUp size={20} /> PRICE UP
                         </button>
                         <button onClick={() => startPricePrediction('down')} disabled={gameBet > balance}
-                          className="py-3 rounded-lg font-bold text-sm bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25 transition-colors flex items-center justify-center gap-2 disabled:opacity-40">
-                          <ArrowDown size={18} /> DOWN
+                          className="py-4 rounded-lg font-bold text-sm bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25 transition-colors flex items-center justify-center gap-2 disabled:opacity-40">
+                          <ArrowDown size={20} /> PRICE DOWN
                         </button>
                       </div>
                       {gameBet > balance && <p className="text-red-400 text-xs mt-2 text-center">Insufficient GOAT balance</p>}
                     </>
                   )}
 
-                  {/* Countdown */}
+                  {/* Live countdown with chart */}
                   {ppDirection && ppCountdown !== null && !ppResult && (
-                    <div className="text-center py-8">
-                      <div className="text-6xl font-black text-brand mb-3 font-mono">
-                        <motion.span key={ppCountdown} initial={{ scale: 1.3, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-                          {ppCountdown}
-                        </motion.span>
+                    <div className="text-center py-4">
+                      {/* Prominent countdown */}
+                      <div className="flex items-center justify-center gap-4 mb-4">
+                        <div className={`text-7xl font-black font-mono ${ppCountdown <= 5 ? 'text-red-400' : ppCountdown <= 10 ? 'text-yellow-400' : 'text-brand'}`}>
+                          <motion.span key={ppCountdown} initial={{ scale: 1.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.3 }}>
+                            {ppCountdown}
+                          </motion.span>
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm text-slate-400">Your bet: <span className={ppDirection === 'up' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>{ppDirection.toUpperCase()}</span></p>
+                          <p className="text-xs text-slate-500">{ppCoin} | {gameBet} GOAT</p>
+                          {ppLivePrice && (
+                            <p className={`text-sm font-mono font-bold ${ppLivePrice > ppStartPrice ? 'text-emerald-400' : ppLivePrice < ppStartPrice ? 'text-red-400' : 'text-slate-300'}`}>
+                              ${ppLivePrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-slate-400 text-sm mb-1">Predicted: <span className={ppDirection === 'up' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>{ppDirection.toUpperCase()}</span> on {ppCoin}</p>
-                      <p className="text-slate-500 text-xs">Start: ${ppStartPrice?.toLocaleString()}</p>
-                      <div className="mt-4 w-full bg-surface-1 rounded-full h-2 overflow-hidden">
-                        <motion.div className="h-full bg-brand" initial={{ width: '100%' }} animate={{ width: '0%' }} transition={{ duration: 30, ease: 'linear' }} />
+
+                      {/* Animated chart */}
+                      <div className="bg-surface-1 rounded-lg p-2 mb-3">
+                        <PriceChart
+                          data={ppChartData}
+                          color={ppLivePrice >= ppStartPrice ? '#00ff88' : '#ef4444'}
+                          height={100}
+                        />
+                      </div>
+
+                      {/* Price change indicator */}
+                      {ppLivePrice && ppStartPrice && (
+                        <div className={`text-sm font-bold ${ppLivePrice >= ppStartPrice ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {((ppLivePrice - ppStartPrice) / ppStartPrice * 100).toFixed(4)}% {ppLivePrice >= ppStartPrice ? 'UP' : 'DOWN'}
+                        </div>
+                      )}
+
+                      {/* Progress bar */}
+                      <div className="mt-3 w-full bg-surface-1 rounded-full h-2.5 overflow-hidden">
+                        <motion.div
+                          className={`h-full ${ppCountdown <= 5 ? 'bg-red-500' : ppCountdown <= 10 ? 'bg-yellow-500' : 'bg-brand'}`}
+                          initial={{ width: '100%' }}
+                          animate={{ width: `${(ppCountdown / 30) * 100}%` }}
+                          transition={{ duration: 0.5 }}
+                        />
                       </div>
                     </div>
                   )}
@@ -1211,19 +1701,54 @@ export default function CasinoPage() {
                   {/* Result */}
                   {ppResult && (
                     <motion.div className="text-center py-6" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
-                      <div className={`text-5xl mb-3 ${ppResult.won ? 'text-emerald-400' : 'text-red-400'}`}>
+                      <motion.div
+                        className={`text-5xl mb-3 ${ppResult.won ? 'text-emerald-400' : 'text-red-400'}`}
+                        animate={ppResult.won ? { scale: [1, 1.2, 1], rotate: [0, 5, -5, 0] } : { scale: [1, 0.9, 1] }}
+                        transition={{ duration: 0.5 }}
+                      >
                         {ppResult.won ? <Trophy className="inline" size={48} /> : <X className="inline" size={48} />}
-                      </div>
+                      </motion.div>
                       <h3 className={`text-2xl font-black mb-2 ${ppResult.won ? 'text-emerald-400' : 'text-red-400'}`}>
                         {ppResult.won ? 'YOU WON!' : 'YOU LOST'}
                       </h3>
                       <p className="text-slate-400 text-sm mb-1">{ppCoin} went <span className={ppResult.direction === 'up' ? 'text-emerald-400' : 'text-red-400'}>{ppResult.direction.toUpperCase()} ({ppResult.change}%)</span></p>
-                      <p className="text-slate-500 text-xs">${ppResult.startPrice.toLocaleString()} → ${ppResult.endPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
-                      {ppResult.won && <p className="text-brand font-bold mt-2">+{ppResult.payout} GOAT</p>}
-                      <button onClick={() => { setPpDirection(null); setPpCountdown(null); setPpResult(null); setPpStartPrice(null); }}
-                        className="mt-4 px-6 py-2 rounded-lg bg-brand/15 text-brand font-medium text-sm hover:bg-brand/25 transition-colors">
-                        Play Again
-                      </button>
+                      <p className="text-slate-500 text-xs">${ppResult.startPrice.toLocaleString()} -> ${ppResult.endPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+                      {ppResult.won && (
+                        <>
+                          <p className="text-brand font-bold mt-2 text-lg">+{ppResult.payout} GOAT</p>
+                          <p className="text-xs text-slate-500">Move multiplier: {ppResult.moveMultiplier}x {streakMultiplier > 1 ? `| Streak: ${streakMultiplier}x` : ''}</p>
+                        </>
+                      )}
+
+                      {/* Double or nothing */}
+                      {doubleOrNothing && (
+                        <motion.div
+                          className="mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                        >
+                          <p className="text-yellow-400 font-bold mb-2">Double or Nothing?</p>
+                          <p className="text-sm text-slate-400 mb-3">Risk your {doubleOrNothing.amount} GOAT winnings for a 50/50 chance at {doubleOrNothing.amount * 2} GOAT</p>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleDoubleOrNothing(false)} className="flex-1 py-2 rounded-lg bg-surface-2 text-slate-300 text-sm font-medium border border-white/[0.05]">Keep Winnings</button>
+                            <motion.button
+                              onClick={() => handleDoubleOrNothing(true)}
+                              className="flex-1 py-2 rounded-lg bg-yellow-500/20 text-yellow-400 text-sm font-bold border border-yellow-500/30"
+                              animate={{ scale: [1, 1.03, 1] }}
+                              transition={{ duration: 1, repeat: Infinity }}
+                            >
+                              DOUBLE IT
+                            </motion.button>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {!doubleOrNothing && (
+                        <button onClick={() => { setPpDirection(null); setPpCountdown(null); setPpResult(null); setPpStartPrice(null); setPpLivePrice(null); setPpChartData([]); }}
+                          className="mt-4 px-6 py-2 rounded-lg bg-brand/15 text-brand font-medium text-sm hover:bg-brand/25 transition-colors">
+                          Play Again
+                        </button>
+                      )}
                     </motion.div>
                   )}
                 </div>
@@ -1239,23 +1764,62 @@ export default function CasinoPage() {
                 <button onClick={exitGame} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-4 transition-colors">
                   <ChevronRight size={14} className="rotate-180" /> Back to Games
                 </button>
-                <div className="bg-surface-3 rounded-xl border border-yellow-500/20 p-6">
+                <div className={`bg-surface-3 rounded-xl border p-6 transition-all duration-300 ${mrCelebrating ? 'border-yellow-500/60 shadow-lg shadow-yellow-500/20' : 'border-yellow-500/20'}`}>
                   <div className="flex items-center gap-3 mb-6">
                     <div className="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500"><Dice5 size={24} /></div>
                     <div>
                       <h2 className="text-xl font-bold">Market Roulette</h2>
                       <p className="text-sm text-slate-500">Pick a sector, spin the wheel. Match = 6x payout!</p>
                     </div>
+                    {streakMultiplier > 1 && (
+                      <div className="ml-auto px-2 py-1 rounded bg-orange-500/15 text-orange-400 text-xs font-bold">
+                        <Flame size={10} className="inline mr-1" />{streakMultiplier}x
+                      </div>
+                    )}
                   </div>
+
+                  {/* Celebration overlay */}
+                  {mrCelebrating && (
+                    <motion.div
+                      className="absolute inset-0 pointer-events-none z-20 flex items-center justify-center"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    >
+                      {[...Array(12)].map((_, i) => (
+                        <motion.div
+                          key={i}
+                          className="absolute w-2 h-2 rounded-full"
+                          style={{ background: mrColors[i % 8] }}
+                          initial={{ x: 0, y: 0, opacity: 1 }}
+                          animate={{
+                            x: Math.cos(i * 30 * Math.PI / 180) * 150,
+                            y: Math.sin(i * 30 * Math.PI / 180) * 150,
+                            opacity: 0,
+                            scale: [1, 2, 0],
+                          }}
+                          transition={{ duration: 1.5, ease: 'easeOut' }}
+                        />
+                      ))}
+                    </motion.div>
+                  )}
 
                   {/* Wheel */}
                   <div className="flex justify-center mb-6 relative">
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-0 h-0 border-l-[10px] border-r-[10px] border-t-[16px] border-l-transparent border-r-transparent border-t-white z-10" />
+                    {/* Outer glow ring when spinning */}
+                    {mrSpinning && (
+                      <motion.div
+                        className="absolute inset-0 m-auto w-60 h-60 rounded-full"
+                        style={{ boxShadow: '0 0 40px rgba(245,158,11,0.3), 0 0 80px rgba(245,158,11,0.1)' }}
+                        animate={{ opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: 0.5, repeat: Infinity }}
+                      />
+                    )}
                     <motion.div
                       className="w-56 h-56 rounded-full border-4 border-white/10 relative overflow-hidden"
                       style={{ background: 'conic-gradient(#3b82f6 0deg 45deg, #10b981 45deg 90deg, #ec4899 90deg 135deg, #f59e0b 135deg 180deg, #8b5cf6 180deg 225deg, #06b6d4 225deg 270deg, #ef4444 270deg 315deg, #84cc16 315deg 360deg)' }}
                       animate={{ rotate: mrRotation }}
-                      transition={{ duration: mrSpinning ? 4 : 0, ease: [0.17, 0.67, 0.12, 0.99] }}>
+                      transition={{ duration: mrSpinning ? 5 : 0, ease: [0.17, 0.67, 0.12, 0.99] }}>
                       {mrSectors.map((s, i) => (
                         <div key={s} className="absolute text-[9px] font-bold text-white drop-shadow-lg"
                           style={{
@@ -1278,7 +1842,7 @@ export default function CasinoPage() {
                         <div className="grid grid-cols-4 gap-2">
                           {mrSectors.map((s, i) => (
                             <button key={s} onClick={() => !mrSpinning && setMrSector(s)}
-                              className={`px-2 py-2 rounded-lg text-xs font-medium transition-colors border ${mrSector === s ? 'border-yellow-500/40 text-white' : 'border-white/[0.03] text-slate-400 hover:text-white'}`}
+                              className={`px-2 py-2 rounded-lg text-xs font-medium transition-all border ${mrSector === s ? 'border-yellow-500/40 text-white scale-105' : 'border-white/[0.03] text-slate-400 hover:text-white'}`}
                               style={mrSector === s ? { background: `${mrColors[i]}30`, color: mrColors[i] } : { background: 'rgba(255,255,255,0.03)' }}>
                               {s}
                             </button>
@@ -1312,18 +1876,45 @@ export default function CasinoPage() {
                   {/* Result */}
                   {mrResult && (
                     <motion.div className="text-center py-4" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
-                      <div className={`text-5xl mb-3 ${mrResult.won ? 'text-yellow-400' : 'text-red-400'}`}>
+                      <motion.div
+                        className={`text-5xl mb-3 ${mrResult.won ? 'text-yellow-400' : 'text-red-400'}`}
+                        animate={mrResult.won ? { rotate: [0, 10, -10, 5, -5, 0], scale: [1, 1.3, 1] } : {}}
+                        transition={{ duration: 0.6 }}
+                      >
                         {mrResult.won ? <Trophy className="inline" size={48} /> : <X className="inline" size={48} />}
-                      </div>
+                      </motion.div>
                       <h3 className={`text-2xl font-black mb-2 ${mrResult.won ? 'text-yellow-400' : 'text-red-400'}`}>
                         {mrResult.won ? 'JACKPOT!' : 'NO MATCH'}
                       </h3>
                       <p className="text-slate-400 text-sm">Wheel landed on: <span className="text-white font-bold">{mrResult.landed}</span></p>
-                      {mrResult.won && <p className="text-yellow-400 font-bold mt-2">+{mrResult.payout} GOAT</p>}
-                      <button onClick={() => { setMrResult(null); setMrSector(null); }}
-                        className="mt-4 px-6 py-2 rounded-lg bg-yellow-500/15 text-yellow-500 font-medium text-sm hover:bg-yellow-500/25 transition-colors">
-                        Spin Again
-                      </button>
+                      {mrResult.won && <p className="text-yellow-400 font-bold mt-2 text-lg">+{mrResult.payout} GOAT</p>}
+
+                      {/* Double or nothing */}
+                      {doubleOrNothing && (
+                        <motion.div
+                          className="mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                        >
+                          <p className="text-yellow-400 font-bold mb-2">Double or Nothing?</p>
+                          <p className="text-sm text-slate-400 mb-3">Risk {doubleOrNothing.amount} GOAT for 50/50 at {doubleOrNothing.amount * 2} GOAT</p>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleDoubleOrNothing(false)} className="flex-1 py-2 rounded-lg bg-surface-2 text-slate-300 text-sm font-medium border border-white/[0.05]">Keep</button>
+                            <motion.button onClick={() => handleDoubleOrNothing(true)}
+                              className="flex-1 py-2 rounded-lg bg-yellow-500/20 text-yellow-400 text-sm font-bold border border-yellow-500/30"
+                              animate={{ scale: [1, 1.03, 1] }}
+                              transition={{ duration: 1, repeat: Infinity }}
+                            >DOUBLE IT</motion.button>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {!doubleOrNothing && (
+                        <button onClick={() => { setMrResult(null); setMrSector(null); }}
+                          className="mt-4 px-6 py-2 rounded-lg bg-yellow-500/15 text-yellow-500 font-medium text-sm hover:bg-yellow-500/25 transition-colors">
+                          Spin Again
+                        </button>
+                      )}
                     </motion.div>
                   )}
                 </div>
@@ -1348,7 +1939,7 @@ export default function CasinoPage() {
                     </div>
                   </div>
 
-                  {!pdRunning && !pdResult && (
+                  {!pdRunning && !pdResult && !pdRevealing && (
                     <>
                       {/* Asset selection */}
                       <div className="mb-4">
@@ -1356,7 +1947,7 @@ export default function CasinoPage() {
                         <div className="grid grid-cols-4 gap-2">
                           {pdAssets.map(a => (
                             <button key={a} onClick={() => togglePdPick(a)}
-                              className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors border ${pdPicks.includes(a) ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-surface-2 text-slate-400 border-white/[0.03] hover:text-white'}`}>
+                              className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all border ${pdPicks.includes(a) ? 'bg-purple-500/20 text-purple-400 border-purple-500/30 scale-105' : 'bg-surface-2 text-slate-400 border-white/[0.03] hover:text-white'}`}>
                               {a}
                             </button>
                           ))}
@@ -1386,8 +1977,8 @@ export default function CasinoPage() {
                     </>
                   )}
 
-                  {/* Running simulation */}
-                  {pdRunning && (
+                  {/* Running simulation with live values */}
+                  {(pdRunning || pdRevealing) && !pdResult && (
                     <div>
                       <div className="flex justify-between items-center mb-3">
                         <span className="text-sm text-slate-400">Round <span className="text-white font-bold">{pdRound}</span>/10</span>
@@ -1395,28 +1986,84 @@ export default function CasinoPage() {
                           <motion.div className="h-full bg-purple-500" animate={{ width: `${pdRound * 10}%` }} />
                         </div>
                       </div>
+
+                      {/* Live portfolio values */}
                       <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="bg-surface-2 rounded-lg p-4 border border-purple-500/10">
-                          <div className="text-xs text-slate-500 mb-1">Your Portfolio</div>
-                          <div className="text-xs text-slate-400 mb-2">{pdPicks.join(', ')}</div>
-                          <div className={`text-2xl font-black font-mono ${(pdPlayerValues[pdPlayerValues.length - 1] || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        <motion.div
+                          className="bg-surface-2 rounded-lg p-4 border border-purple-500/20"
+                          animate={pdRunning ? { borderColor: ['rgba(139,92,246,0.2)', 'rgba(139,92,246,0.4)', 'rgba(139,92,246,0.2)'] } : {}}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          <div className="text-xs text-purple-400 mb-1 font-bold">YOUR PORTFOLIO</div>
+                          <div className="text-xs text-slate-400 mb-2">{pdPicks.join(' + ')}</div>
+                          <motion.div
+                            key={pdPlayerValues.length}
+                            initial={{ scale: 1.1 }}
+                            animate={{ scale: 1 }}
+                            className={`text-3xl font-black font-mono ${(pdPlayerValues[pdPlayerValues.length - 1] || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+                          >
                             {(pdPlayerValues[pdPlayerValues.length - 1] || 0) >= 0 ? '+' : ''}{(pdPlayerValues[pdPlayerValues.length - 1] || 0).toFixed(2)}%
+                          </motion.div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            {gameBet} GOAT -> {Math.floor(gameBet * (1 + (pdPlayerValues[pdPlayerValues.length - 1] || 0) / 100))} GOAT
                           </div>
-                        </div>
-                        <div className="bg-surface-2 rounded-lg p-4 border border-white/[0.03]">
-                          <div className="text-xs text-slate-500 mb-1">AI Portfolio</div>
-                          <div className="text-xs text-slate-400 mb-2">{pdBotPicks.join(', ')}</div>
-                          <div className={`text-2xl font-black font-mono ${(pdBotValues[pdBotValues.length - 1] || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        </motion.div>
+                        <motion.div
+                          className="bg-surface-2 rounded-lg p-4 border border-white/[0.03]"
+                          animate={pdRunning ? { borderColor: ['rgba(255,255,255,0.03)', 'rgba(6,182,212,0.3)', 'rgba(255,255,255,0.03)'] } : {}}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          <div className="text-xs text-cyan-400 mb-1 font-bold">AI PORTFOLIO</div>
+                          <div className="text-xs text-slate-400 mb-2">{pdBotPicks.join(' + ')}</div>
+                          <motion.div
+                            key={pdBotValues.length}
+                            initial={{ scale: 1.1 }}
+                            animate={{ scale: 1 }}
+                            className={`text-3xl font-black font-mono ${(pdBotValues[pdBotValues.length - 1] || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+                          >
                             {(pdBotValues[pdBotValues.length - 1] || 0) >= 0 ? '+' : ''}{(pdBotValues[pdBotValues.length - 1] || 0).toFixed(2)}%
+                          </motion.div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            {gameBet} GOAT -> {Math.floor(gameBet * (1 + (pdBotValues[pdBotValues.length - 1] || 0) / 100))} GOAT
                           </div>
-                        </div>
+                        </motion.div>
                       </div>
+
+                      {/* Dramatic reveal */}
+                      {pdRevealing && (
+                        <motion.div
+                          className="text-center py-4"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                        >
+                          <motion.div
+                            className="text-2xl font-black text-yellow-400"
+                            animate={{ opacity: [1, 0.3, 1] }}
+                            transition={{ duration: 0.8, repeat: Infinity }}
+                          >
+                            CALCULATING RESULTS...
+                          </motion.div>
+                        </motion.div>
+                      )}
+
                       {/* Mini chart */}
                       <div className="bg-surface-1 rounded-lg p-3 h-24 flex items-end gap-0.5">
                         {pdPlayerValues.map((v, i) => (
                           <div key={`p-${i}`} className="flex-1 flex flex-col justify-end items-center gap-0.5">
-                            <div className="w-full rounded-t" style={{ height: `${Math.max(2, Math.abs(v) * 3)}px`, background: v >= 0 ? '#8b5cf6' : '#ef4444' }} />
-                            <div className="w-full rounded-t" style={{ height: `${Math.max(2, Math.abs(pdBotValues[i] || 0) * 3)}px`, background: pdBotValues[i] >= 0 ? '#06b6d4' : '#f59e0b', opacity: 0.5 }} />
+                            <motion.div
+                              className="w-full rounded-t"
+                              style={{ background: v >= 0 ? '#8b5cf6' : '#ef4444' }}
+                              initial={{ height: 0 }}
+                              animate={{ height: `${Math.max(2, Math.abs(v) * 3)}px` }}
+                              transition={{ duration: 0.3 }}
+                            />
+                            <motion.div
+                              className="w-full rounded-t"
+                              style={{ background: pdBotValues[i] >= 0 ? '#06b6d4' : '#f59e0b', opacity: 0.5 }}
+                              initial={{ height: 0 }}
+                              animate={{ height: `${Math.max(2, Math.abs(pdBotValues[i] || 0) * 3)}px` }}
+                              transition={{ duration: 0.3 }}
+                            />
                           </div>
                         ))}
                       </div>
@@ -1429,19 +2076,42 @@ export default function CasinoPage() {
 
                   {/* Result */}
                   {pdResult && (
-                    <motion.div className="text-center py-6" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
-                      <div className={`text-5xl mb-3 ${pdResult.won ? 'text-purple-400' : pdResult.tie ? 'text-yellow-400' : 'text-red-400'}`}>
+                    <motion.div className="text-center py-6" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', damping: 15 }}>
+                      <motion.div
+                        className={`text-5xl mb-3 ${pdResult.won ? 'text-purple-400' : pdResult.tie ? 'text-yellow-400' : 'text-red-400'}`}
+                        animate={pdResult.won ? { rotate: [0, 360], scale: [0.5, 1.2, 1] } : {}}
+                        transition={{ duration: 0.8 }}
+                      >
                         {pdResult.won ? <Trophy className="inline" size={48} /> : pdResult.tie ? <Minus className="inline" size={48} /> : <X className="inline" size={48} />}
-                      </div>
+                      </motion.div>
                       <h3 className={`text-2xl font-black mb-2 ${pdResult.won ? 'text-purple-400' : pdResult.tie ? 'text-yellow-400' : 'text-red-400'}`}>
                         {pdResult.won ? 'YOU WON!' : pdResult.tie ? 'TIE GAME' : 'AI WINS'}
                       </h3>
                       <p className="text-slate-400 text-sm">Your portfolio: <span className={`font-bold ${parseFloat(pdResult.playerFinal) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{pdResult.playerFinal}%</span> vs AI: <span className={`font-bold ${parseFloat(pdResult.botFinal) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{pdResult.botFinal}%</span></p>
-                      {pdResult.payout > 0 && <p className="text-purple-400 font-bold mt-2">+{pdResult.payout} GOAT</p>}
-                      <button onClick={() => { setPdPicks([]); setPdRunning(false); setPdRound(0); setPdPlayerValues([]); setPdBotValues([]); setPdBotPicks([]); setPdResult(null); }}
-                        className="mt-4 px-6 py-2 rounded-lg bg-purple-500/15 text-purple-400 font-medium text-sm hover:bg-purple-500/25 transition-colors">
-                        Play Again
-                      </button>
+                      {pdResult.payout > 0 && <p className="text-purple-400 font-bold mt-2 text-lg">+{pdResult.payout} GOAT</p>}
+
+                      {/* Double or nothing */}
+                      {doubleOrNothing && (
+                        <motion.div className="mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                          <p className="text-yellow-400 font-bold mb-2">Double or Nothing?</p>
+                          <p className="text-sm text-slate-400 mb-3">Risk {doubleOrNothing.amount} GOAT for 50/50 at {doubleOrNothing.amount * 2} GOAT</p>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleDoubleOrNothing(false)} className="flex-1 py-2 rounded-lg bg-surface-2 text-slate-300 text-sm font-medium border border-white/[0.05]">Keep</button>
+                            <motion.button onClick={() => handleDoubleOrNothing(true)}
+                              className="flex-1 py-2 rounded-lg bg-yellow-500/20 text-yellow-400 text-sm font-bold border border-yellow-500/30"
+                              animate={{ scale: [1, 1.03, 1] }}
+                              transition={{ duration: 1, repeat: Infinity }}
+                            >DOUBLE IT</motion.button>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {!doubleOrNothing && (
+                        <button onClick={() => { setPdPicks([]); setPdRunning(false); setPdRound(0); setPdPlayerValues([]); setPdBotValues([]); setPdBotPicks([]); setPdResult(null); setPdRevealing(false); }}
+                          className="mt-4 px-6 py-2 rounded-lg bg-purple-500/15 text-purple-400 font-medium text-sm hover:bg-purple-500/25 transition-colors">
+                          Play Again
+                        </button>
+                      )}
                     </motion.div>
                   )}
                 </div>
@@ -1462,23 +2132,77 @@ export default function CasinoPage() {
                     <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400"><Sparkles size={24} /></div>
                     <div>
                       <h2 className="text-xl font-bold">AI Oracle</h2>
-                      <p className="text-sm text-slate-500">10 questions. 25 GOAT each. 8+ correct = 100 GOAT bonus!</p>
+                      <p className="text-sm text-slate-500">Test your knowledge. Streak bonuses for consecutive correct answers!</p>
                     </div>
                   </div>
 
-                  {!aoFinished && aoQuestions.length > 0 && (
-                    <>
-                      {/* Progress */}
-                      <div className="flex justify-between items-center mb-4">
-                        <span className="text-sm text-slate-400">Question <span className="text-white font-bold">{aoQuestion + 1}</span>/10</span>
-                        <span className="text-sm text-cyan-400 font-bold">{aoScore * 25} GOAT earned</span>
+                  {/* Difficulty selection */}
+                  {!aoDifficulty && aoQuestions.length === 0 && (
+                    <div>
+                      <label className="text-xs text-slate-500 mb-3 block">Choose Difficulty</label>
+                      <div className="space-y-3">
+                        {AO_DIFFICULTIES.map(d => (
+                          <motion.button
+                            key={d.id}
+                            onClick={() => startAiOracle(d)}
+                            className="w-full p-4 rounded-xl border text-left transition-colors hover:border-opacity-60"
+                            style={{ background: `${d.color}08`, borderColor: `${d.color}30` }}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-bold text-lg" style={{ color: d.color }}>{d.label}</span>
+                              <span className="text-xs px-2 py-1 rounded-full" style={{ background: `${d.color}15`, color: d.color }}>{d.multiplier}x rewards</span>
+                            </div>
+                            <p className="text-sm text-slate-400">{d.desc}</p>
+                            <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                              <span>Bonus at {d.bonusThreshold}+ correct: {d.bonus} GOAT</span>
+                            </div>
+                          </motion.button>
+                        ))}
                       </div>
-                      <div className="w-full bg-surface-1 rounded-full h-2 overflow-hidden mb-5">
-                        <motion.div className="h-full bg-cyan-500" animate={{ width: `${(aoQuestion + 1) * 10}%` }} />
+                    </div>
+                  )}
+
+                  {!aoFinished && aoQuestions.length > 0 && aoDifficulty && (
+                    <>
+                      {/* Progress bar */}
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-slate-400">Question <span className="text-white font-bold">{aoQuestion + 1}</span>/10</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold" style={{ color: aoDifficulty.color }}>{aoDifficulty.label}</span>
+                          <span className="text-sm text-cyan-400 font-bold">{aoScore * aoDifficulty.baseReward} GOAT</span>
+                        </div>
+                      </div>
+                      {/* Full progress bar */}
+                      <div className="w-full bg-surface-1 rounded-full h-3 overflow-hidden mb-2 relative">
+                        <motion.div className="h-full rounded-full" style={{ background: aoDifficulty.color }} animate={{ width: `${(aoQuestion + 1) * 10}%` }} />
+                        {/* Segments */}
+                        {[...Array(10)].map((_, i) => (
+                          <div key={i} className="absolute top-0 h-full w-px bg-surface-3/50" style={{ left: `${(i + 1) * 10}%` }} />
+                        ))}
                       </div>
 
+                      {/* Streak indicator */}
+                      {aoConsecutiveCorrect >= 2 && (
+                        <motion.div
+                          className="text-center mb-3 py-1 rounded-lg bg-orange-500/10"
+                          animate={{ scale: [1, 1.03, 1] }}
+                          transition={{ duration: 1, repeat: Infinity }}
+                        >
+                          <span className="text-xs text-orange-400 font-bold"><Flame size={10} className="inline mr-1" />{aoConsecutiveCorrect} Correct in a Row! Streak Bonus Active</span>
+                        </motion.div>
+                      )}
+
                       {/* Question */}
-                      <h3 className="text-lg font-bold mb-4">{aoQuestions[aoQuestion]?.q}</h3>
+                      <motion.h3
+                        key={aoQuestion}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="text-lg font-bold mb-4"
+                      >
+                        {aoQuestions[aoQuestion]?.q}
+                      </motion.h3>
                       <div className="space-y-2">
                         {aoQuestions[aoQuestion]?.opts.map((opt, i) => {
                           const isCorrect = aoQuestions[aoQuestion].answer === i;
@@ -1492,10 +2216,15 @@ export default function CasinoPage() {
                           return (
                             <motion.button key={i} onClick={() => answerAoQuestion(i)}
                               className={`w-full text-left px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${btnClass}`}
-                              whileTap={aoSelected === null ? { scale: 0.98 } : {}}>
+                              whileTap={aoSelected === null ? { scale: 0.98 } : {}}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: i * 0.05 }}
+                            >
                               <span className="text-slate-500 mr-2">{String.fromCharCode(65 + i)}.</span> {opt}
                               {aoSelected !== null && isCorrect && <Check size={14} className="inline ml-2 text-emerald-400" />}
                               {aoSelected !== null && isSelected && !isCorrect && <X size={14} className="inline ml-2 text-red-400" />}
+                              {aoSelected !== null && isCorrect && <span className="text-xs text-emerald-400 ml-2">+{aoDifficulty.baseReward} GOAT</span>}
                             </motion.button>
                           );
                         })}
@@ -1504,25 +2233,41 @@ export default function CasinoPage() {
                   )}
 
                   {/* Final score */}
-                  {aoFinished && (
+                  {aoFinished && aoDifficulty && (
                     <motion.div className="text-center py-6" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
-                      <div className={`text-5xl mb-3 ${aoScore >= 8 ? 'text-cyan-400' : aoScore >= 5 ? 'text-yellow-400' : 'text-red-400'}`}>
+                      <motion.div
+                        className={`text-5xl mb-3 ${aoScore >= aoDifficulty.bonusThreshold ? 'text-cyan-400' : aoScore >= 5 ? 'text-yellow-400' : 'text-red-400'}`}
+                        animate={{ rotate: [0, 360] }}
+                        transition={{ duration: 0.8 }}
+                      >
                         <Award className="inline" size={48} />
-                      </div>
+                      </motion.div>
                       <h3 className="text-2xl font-black text-white mb-1">{aoScore}/10 Correct</h3>
-                      <p className="text-slate-400 text-sm mb-2">
-                        {aoScore >= 8 ? 'Outstanding! You know your stuff.' : aoScore >= 5 ? 'Not bad! Keep learning.' : 'Better luck next time!'}
+                      <p className="text-sm font-medium mb-1" style={{ color: aoDifficulty.color }}>{aoDifficulty.label} Mode</p>
+                      <p className="text-slate-400 text-sm mb-3">
+                        {aoScore >= aoDifficulty.bonusThreshold ? 'Outstanding! Bonus unlocked!' : aoScore >= 5 ? 'Not bad! Keep learning.' : 'Better luck next time!'}
                       </p>
                       <div className="bg-surface-2 rounded-lg p-4 inline-block mb-4">
                         <div className="text-xs text-slate-500 mb-1">Total Earned</div>
-                        <div className="text-2xl font-black text-cyan-400">{aoScore * 25 + (aoScore >= 8 ? 100 : 0)} GOAT</div>
-                        {aoScore >= 8 && <div className="text-xs text-yellow-400 mt-1">Includes 100 GOAT bonus!</div>}
+                        <div className="text-2xl font-black text-cyan-400">
+                          {aoScore * aoDifficulty.baseReward + (aoScore >= aoDifficulty.bonusThreshold ? aoDifficulty.bonus : 0)} GOAT
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1 space-y-0.5">
+                          <div>{aoScore} correct x {aoDifficulty.baseReward} = {aoScore * aoDifficulty.baseReward} GOAT</div>
+                          {aoScore >= aoDifficulty.bonusThreshold && <div className="text-yellow-400">Bonus: +{aoDifficulty.bonus} GOAT</div>}
+                        </div>
                       </div>
                       <br />
-                      <button onClick={() => startAiOracle()}
-                        className="mt-2 px-6 py-2 rounded-lg bg-cyan-500/15 text-cyan-400 font-medium text-sm hover:bg-cyan-500/25 transition-colors">
-                        Play Again
-                      </button>
+                      <div className="flex gap-2 justify-center">
+                        <button onClick={() => { setAoDifficulty(null); setAoQuestions([]); setAoFinished(false); }}
+                          className="px-6 py-2 rounded-lg bg-cyan-500/15 text-cyan-400 font-medium text-sm hover:bg-cyan-500/25 transition-colors">
+                          Change Difficulty
+                        </button>
+                        <button onClick={() => startAiOracle(aoDifficulty)}
+                          className="px-6 py-2 rounded-lg bg-surface-2 text-slate-300 font-medium text-sm hover:text-white transition-colors border border-white/[0.05]">
+                          Play Again
+                        </button>
+                      </div>
                     </motion.div>
                   )}
                 </div>
@@ -1544,7 +2289,7 @@ export default function CasinoPage() {
             </div>
             <div className="flex-1">
               <div className="font-bold text-lg">Your Ranking</div>
-              <div className="text-xs text-slate-500">{bets.length + resolvedBets.length} trades | {resolvedBets.filter(b => b.won).length}W-{resolvedBets.filter(b => !b.won).length}L</div>
+              <div className="text-xs text-slate-500">{bets.length + resolvedBets.length} trades | {resolvedBets.filter(b => b.won).length}W-{resolvedBets.filter(b => !b.won).length}L | Best streak: {streaks.best}W</div>
             </div>
             <div className="text-right">
               <div className={`font-bold text-lg ${resolvedPnl >= 0 ? 'text-brand' : 'text-red-400'}`}>
@@ -1594,7 +2339,7 @@ export default function CasinoPage() {
       {/* ================================================================= */}
       {tab === 'portfolio' && (
         <div>
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
             <motion.div className="bg-surface-3 rounded-xl p-4 border border-white/[0.03]" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <div className="text-xs text-slate-500 mb-1">GOAT Balance</div>
               <div className="text-xl font-black text-yellow-400">{balance.toLocaleString()}</div>
@@ -1689,6 +2434,108 @@ export default function CasinoPage() {
           )}
         </div>
       )}
+
+      {/* ================================================================= */}
+      {/* BET HISTORY TAB                                                   */}
+      {/* ================================================================= */}
+      {tab === 'history' && (
+        <div>
+          {/* Session stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div className="bg-surface-3 rounded-xl p-4 border border-white/[0.03]">
+              <div className="text-xs text-slate-500 mb-1">Session P&L</div>
+              <div className={`text-xl font-black ${sessionPnl >= 0 ? 'text-brand' : 'text-red-400'}`}>
+                {sessionPnl >= 0 ? '+' : ''}{sessionPnl.toLocaleString()}
+              </div>
+            </div>
+            <div className="bg-surface-3 rounded-xl p-4 border border-white/[0.03]">
+              <div className="text-xs text-slate-500 mb-1">Total Bets</div>
+              <div className="text-xl font-black">{betHistory.length}</div>
+            </div>
+            <div className="bg-surface-3 rounded-xl p-4 border border-white/[0.03]">
+              <div className="text-xs text-slate-500 mb-1">Win Rate</div>
+              <div className="text-xl font-black text-brand">
+                {betHistory.length > 0 ? Math.round((betHistory.filter(b => b.won).length / betHistory.length) * 100) : 0}%
+              </div>
+            </div>
+            <div className="bg-surface-3 rounded-xl p-4 border border-orange-500/20">
+              <div className="text-xs text-orange-400 mb-1">Current Streak</div>
+              <div className="text-xl font-black">
+                {streaks.win > 0 && <span className="text-brand">{streaks.win}W</span>}
+                {streaks.loss > 0 && <span className="text-red-400">{streaks.loss}L</span>}
+                {streaks.win === 0 && streaks.loss === 0 && <span className="text-slate-500">--</span>}
+              </div>
+            </div>
+          </div>
+
+          {betHistory.length === 0 ? (
+            <div className="bg-surface-3 rounded-xl border border-white/[0.03] p-12 text-center">
+              <History size={48} className="text-slate-600 mx-auto mb-4" />
+              <h3 className="text-lg font-bold mb-2">No Bet History</h3>
+              <p className="text-slate-500">Play some games to see your bet history here</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {[...betHistory].reverse().map((b, i) => (
+                <motion.div key={i}
+                  className={`bg-surface-3 rounded-xl border p-3 flex items-center gap-3 ${b.won ? 'border-brand/15' : 'border-red-500/15'}`}
+                  initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.02 }}>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${b.won ? 'bg-brand/15 text-brand' : 'bg-red-500/15 text-red-400'}`}>
+                    {b.won ? <Check size={14} /> : <X size={14} />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{b.game}</div>
+                    <div className="text-xs text-slate-500">{new Date(b.time).toLocaleTimeString()}</div>
+                  </div>
+                  <div className={`font-bold text-sm ${b.pnl >= 0 ? 'text-brand' : 'text-red-400'}`}>
+                    {b.pnl >= 0 ? '+' : ''}{b.pnl.toLocaleString()} GOAT
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* LOGIN PROMPT MODAL                                                */}
+      {/* ================================================================= */}
+      <AnimatePresence>
+        {showLoginPrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+            onClick={() => setShowLoginPrompt(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-surface-2 rounded-2xl border border-white/[0.05] w-full max-w-sm overflow-hidden p-6 text-center"
+              onClick={e => e.stopPropagation()}
+            >
+              <Lock size={32} className="text-yellow-400 mx-auto mb-3" />
+              <h2 className="text-lg font-bold mb-2">Account Required</h2>
+              <p className="text-sm text-slate-400 mb-4">You need to be logged in to place bets and play games. Sign up to get 1,000 free GOAT tokens!</p>
+              <button
+                onClick={() => {
+                  setShowLoginPrompt(false);
+                  // Open account modal via store
+                  useStore.getState().setAccountModalOpen(true);
+                }}
+                className="w-full py-3 rounded-lg bg-brand text-black font-bold text-sm hover:bg-brand/90 transition-colors mb-2"
+              >
+                Sign In / Sign Up
+              </button>
+              <button onClick={() => setShowLoginPrompt(false)} className="text-sm text-slate-500 hover:text-white transition-colors">
+                Maybe Later
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ================================================================= */}
       {/* WALLET CONNECT MODAL                                              */}
@@ -1806,7 +2653,7 @@ export default function CasinoPage() {
                       </div>
                       {depositAmount && parseFloat(depositAmount) > 0 && (
                         <div className="text-xs text-slate-500 mt-1">
-                          You'll receive: <span className="text-yellow-400 font-bold">{Math.floor(parseFloat(depositAmount) * 100).toLocaleString()} GOAT</span>
+                          You will receive: <span className="text-yellow-400 font-bold">{Math.floor(parseFloat(depositAmount) * 100).toLocaleString()} GOAT</span>
                         </div>
                       )}
                     </div>

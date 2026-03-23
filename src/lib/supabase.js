@@ -194,6 +194,23 @@ export function trackPageView(page) {
   trackEvent('page_view', { page });
 }
 
+// Custom action tracking for key user interactions
+export function trackAIChatUsage(mode, messageCount) {
+  trackEvent('ai_chat_usage', { mode, messageCount, timestamp: Date.now() });
+}
+
+export function trackLeadSearch(query, resultCount, filters) {
+  trackEvent('lead_search', { query, resultCount, filters, timestamp: Date.now() });
+}
+
+export function trackCasinoBet(marketId, amount, direction) {
+  trackEvent('casino_bet', { marketId, amount, direction, timestamp: Date.now() });
+}
+
+export function trackMarketRefresh(source, coinCount) {
+  trackEvent('market_refresh', { source, coinCount, timestamp: Date.now() });
+}
+
 export function trackPerformance() {
   if (typeof window === 'undefined' || !window.performance) return;
 

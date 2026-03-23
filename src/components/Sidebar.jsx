@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, LayoutDashboard, Users, TrendingUp, Zap, BarChart3, Target, Wallet, Bot, Keyboard, Search, ChevronLeft, ChevronRight, Menu, X, Sparkles, User, Shield, Flame, Rocket, Dice5, MessageSquare, Radar } from 'lucide-react';
+import { Home, LayoutDashboard, Users, TrendingUp, Zap, BarChart3, Target, Wallet, Bot, Keyboard, Search, ChevronLeft, ChevronRight, Menu, X, Sparkles, User, Shield, Flame, Rocket, Dice5 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { GoatIcon } from './GoatLogo';
 
@@ -11,8 +11,6 @@ const nav = [
   { id: 'leads', icon: Users, label: 'Leads', key: 'L' },
   { id: 'launchpad', icon: Rocket, label: 'LaunchPad', key: 'R', badge: 'NEW' },
   { id: 'casino', icon: Dice5, label: 'Casino', key: 'P', badge: 'LIVE' },
-  { id: 'comms', icon: MessageSquare, label: 'Comms', key: 'V' },
-  { id: 'finder', icon: Radar, label: 'Finder', key: 'F' },
   { id: 'wallet', icon: Wallet, label: 'Wallet', key: 'W' },
   { id: 'admin', icon: Shield, label: 'Admin', key: 'X', badge: 'PRO' },
 ];

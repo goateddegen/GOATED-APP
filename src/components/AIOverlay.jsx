@@ -5,10 +5,50 @@ import {
   ChevronRight,
   BarChart3, Wallet, Zap, Target, ArrowRight,
   MessageSquare, Sparkles, LayoutDashboard, ExternalLink, Phone, UserSearch,
-  Trophy, Flame, DollarSign, Clock, Activity, Shield
+  Trophy, Flame, DollarSign, Clock, Activity, Shield, ClipboardList, FileText
 } from 'lucide-react';
 import { useStore, fmt } from '../hooks/useStore';
 import { GoatIcon } from './GoatLogo';
+
+// ─── STREAMING TEXT HOOK ──────────────────────────────────────────────
+// Reveals text word-by-word for a streaming feel, even when the response arrives all at once
+function useStreamingText(text, isLatest) {
+  const [displayed, setDisplayed] = useState(text);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const prevTextRef = useRef('');
+
+  useEffect(() => {
+    // Only stream if this is a new message (text changed) and it's the latest assistant message
+    if (text === prevTextRef.current || !isLatest) {
+      setDisplayed(text);
+      return;
+    }
+    prevTextRef.current = text;
+
+    // Split into words, preserving whitespace and markdown
+    const words = text.split(/(\s+)/);
+    let currentIndex = 0;
+    setDisplayed('');
+    setIsStreaming(true);
+
+    // Reveal in chunks of 3-5 words for speed
+    const chunkSize = 4;
+    const interval = setInterval(() => {
+      currentIndex += chunkSize;
+      if (currentIndex >= words.length) {
+        setDisplayed(text);
+        setIsStreaming(false);
+        clearInterval(interval);
+      } else {
+        setDisplayed(words.slice(0, currentIndex).join(''));
+      }
+    }, 25); // 25ms per chunk = fast but visible streaming
+
+    return () => clearInterval(interval);
+  }, [text, isLatest]);
+
+  return { displayed, isStreaming };
+}
 
 // ─── FEATURE LINK MAP ─────────────────────────────────────────────────
 // Maps keywords found in AI responses to navigable pages
@@ -42,10 +82,10 @@ const FEATURE_LINKS = {
 // ─── CONTEXT-AWARE SUGGESTED PROMPTS ───────────────────────────────────
 const PAGE_PROMPTS = {
   home: [
-    { label: 'Summarize my pipeline', icon: BarChart3 },
-    { label: 'Top 5 hottest leads', icon: Users },
+    { label: 'Find leads in Miami', icon: Globe },
+    { label: 'Walk Me Through Leads', icon: ClipboardList },
+    { label: 'Show $50K+ deals', icon: DollarSign },
     { label: 'Market trends today', icon: TrendingUp },
-    { label: 'Generate a business idea', icon: Lightbulb },
   ],
   dashboard: [
     { label: 'Pipeline health check', icon: BarChart3 },
@@ -54,8 +94,8 @@ const PAGE_PROMPTS = {
     { label: 'Show me win/loss trends', icon: Target },
   ],
   leads: [
+    { label: 'Walk Me Through Leads', icon: ClipboardList },
     { label: 'Find critical priority leads', icon: Target },
-    { label: 'Draft outreach for top lead', icon: Send },
     { label: 'Leads with rising momentum', icon: Zap },
     { label: 'Best leads to close this week', icon: Sparkles },
   ],
@@ -88,6 +128,28 @@ const PAGE_PROMPTS = {
     { label: 'Spending analysis', icon: BarChart3 },
     { label: 'Projected earnings', icon: TrendingUp },
     { label: 'Cost optimization tips', icon: Lightbulb },
+  ],
+};
+
+// COACH MODE prompts — tactical closing advice
+const COACH_PROMPTS = {
+  leads: [
+    { label: 'Best opener for this lead', icon: Phone },
+    { label: 'Handle price objection', icon: Shield },
+    { label: 'Follow-up email template', icon: Send },
+    { label: 'Next best action to close', icon: Target },
+  ],
+  home: [
+    { label: 'Who should I call right now?', icon: Phone },
+    { label: 'Revenue gap analysis', icon: DollarSign },
+    { label: 'Weekly closing game plan', icon: Target },
+    { label: 'Pipeline health check', icon: Activity },
+  ],
+  dashboard: [
+    { label: 'What deals are at risk?', icon: Shield },
+    { label: 'Commission forecast', icon: DollarSign },
+    { label: 'Top 3 actions today', icon: Target },
+    { label: 'Win rate improvement tips', icon: TrendingUp },
   ],
 };
 
@@ -146,10 +208,13 @@ const DEGEN_PROMPTS = {
 // ─── CONTEXTUAL QUICK ACTION BUTTONS (below chat input) ──────────────
 const QUICK_ACTIONS = {
   leads: [
+    { label: 'Walk Me Through Leads', prompt: 'Walk me through my top leads sorted by close probability. Show my top 5 highest-probability leads under $20K with name, company, deal value, close probability, recommended next action, and why each lead is closeable.', icon: ClipboardList },
+    { label: 'Leads in Austin', prompt: 'Show me leads in Austin', icon: Globe },
+    { label: 'Leads in NYC', prompt: 'Show me leads in New York', icon: Globe },
+    { label: '$50K+ Deals', prompt: 'Show me leads with $50K+ deal values', icon: DollarSign },
+    { label: 'SaaS Leads', prompt: 'Find SaaS companies in my pipeline', icon: Target },
     { label: 'Coach Me', prompt: 'Coach me on closing my current lead — what should I do right now?', icon: Trophy },
-    { label: 'Who Should I Call?', prompt: 'Based on my pipeline, who should I call right now for the highest chance of closing?', icon: Phone },
-    { label: 'Draft Outreach', prompt: 'Draft a multi-channel outreach sequence for my top lead', icon: Send },
-    { label: 'Revenue Report', prompt: 'Show me my revenue report — MRR, commission earned, distance to $25K goal', icon: DollarSign },
+    { label: 'Who to Call?', prompt: 'Based on my pipeline, who should I call right now for the highest chance of closing?', icon: Phone },
   ],
   trends: [
     { label: 'Best Plays Right Now', prompt: 'What are the best money plays right now based on current trends and prediction markets?', icon: Zap },
@@ -223,6 +288,153 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
     return `**TrendPulse Money Plays**\n\nBased on current signals, here are your top plays:\n\n---\n\n**1. BTC Prediction Play** (Kalshi)\n- BTC above $100K by June → YES at $0.42 (58% implied)\n- GOATED AI confidence: 72% → **+30% alpha edge**\n- Bet $100 → Win $238 if YES | Risk: $100\n- [Place Bet on Kalshi →]\n\n**2. SOL Momentum Trade**\n- SOL showing rising momentum (+6.3% 24h)\n- Entry: $198 | Target: $220 | Stop: $185\n- Risk/Reward: 1:1.7\n- [Copy Trade Setup →]\n\n**3. B2B Revenue Play**\n- Your pipeline has **${lostRevenue}** in lost revenue leads\n- Close just 3 of your top 10 → **$${top3Commission.toLocaleString()} in commission**\n- [Call Top Lead Now →]\n\n---\n\n**Strategy: Split your time 70/30**\n- 70% → B2B closing (guaranteed commission)\n- 30% → Prediction markets (alpha plays)\n- Target: **$25K MRR** from closing + **$5K/mo** from trading\n\n**Your Edge:**\n- Total pipeline commission: **$${pipelineCommission.toLocaleString()}**\n- Current MRR: **$${currentMRR.toLocaleString()}**\n- ${negotiatingLeads.length} deals in negotiation ready to close\n\nGo to **Markets** for live prediction data, or **Leads** to start closing.`;
   }
 
+  // Location-specific lead search (fallback)
+  const FALLBACK_LOCATIONS = [
+    'San Francisco', 'New York', 'Austin', 'Seattle', 'Boston', 'Chicago', 'Denver', 'Miami', 'LA', 'London',
+    'Toronto', 'Berlin', 'Paris', 'Amsterdam', 'Dublin', 'Singapore', 'Sydney', 'Tokyo', 'Hong Kong', 'Tel Aviv',
+    'Portland', 'Nashville', 'Atlanta', 'Dallas', 'Phoenix', 'San Diego', 'Philadelphia', 'Minneapolis', 'Detroit', 'Charlotte',
+    'Raleigh', 'Salt Lake City', 'Pittsburgh', 'Columbus', 'Indianapolis', 'Tampa', 'Orlando', 'Las Vegas', 'Kansas City', 'St Louis',
+  ];
+  const FALLBACK_ALIASES = {
+    'sf': 'San Francisco', 'nyc': 'New York', 'los angeles': 'LA', 'la': 'LA',
+    'vegas': 'Las Vegas', 'philly': 'Philadelphia', 'atl': 'Atlanta',
+  };
+
+  // Check if user is asking about a specific location
+  let searchLocation = null;
+  for (const [alias, mapped] of Object.entries(FALLBACK_ALIASES)) {
+    if (lower.includes(alias)) { searchLocation = mapped; break; }
+  }
+  if (!searchLocation) {
+    for (const loc of FALLBACK_LOCATIONS) {
+      if (lower.includes(loc.toLowerCase())) { searchLocation = loc; break; }
+    }
+  }
+
+  if (searchLocation && (lower.includes('lead') || lower.includes('show') || lower.includes('find') || lower.includes('search') || lower.includes('in '))) {
+    const locationLeads = leads.filter(l => l.location === searchLocation).sort((a, b) => b.score - a.score);
+    if (locationLeads.length === 0) {
+      return `**No leads found in ${searchLocation}.**\n\nOur database doesn't have leads in that location. Try searching in nearby cities:\n\n- **Austin**, **Dallas**, **Atlanta**, **Miami**, **Chicago**\n\nOr go to **Leads** to browse all ${leads.length.toLocaleString()} leads.`;
+    }
+    const top = locationLeads.slice(0, 5);
+    const totalValue = locationLeads.reduce((s, l) => s + l.dealValue, 0);
+    let res = `**Leads in ${searchLocation}** — ${locationLeads.length} found, **${fmt(totalValue)}** total pipeline\n\n---\n\n`;
+    top.forEach((l) => {
+      res += `[LEAD_CARD:${l.id}]\n`;
+      res += `   Score: **${l.score}**/100 | Value: **${fmt(l.dealValue)}** | ${l.priority.toUpperCase()} | Conv: ${l.conversionProbability}%\n\n`;
+    });
+    if (locationLeads.length > 5) {
+      res += `\n...and **${locationLeads.length - 5} more** in ${searchLocation}.\n\n`;
+    }
+    res += `---\n\nGo to **Leads** to see all results. Want outreach scripts for any of these?`;
+    return res;
+  }
+
+  // Check for unlisted cities
+  const UNLISTED = ['houston', 'san antonio', 'sacramento', 'san jose', 'washington', 'dc', 'new orleans', 'baltimore', 'memphis'];
+  for (const city of UNLISTED) {
+    if (lower.includes(city) && (lower.includes('lead') || lower.includes('show') || lower.includes('find'))) {
+      const name = city.charAt(0).toUpperCase() + city.slice(1);
+      return `**No leads found in ${name}.**\n\nThat city isn't in our current database. Try these nearby cities instead:\n\n- **Austin**, **Dallas**, **Atlanta**, **Miami**, **Nashville**\n\nOr go to **Leads** to browse all ${leads.length.toLocaleString()} leads.`;
+    }
+  }
+
+  // Deal size filter
+  const dealSizeMatch = lower.match(/\$\s*([\d,.]+)\s*[kK]/) || lower.match(/([\d,.]+)\s*[kK]\+?\s*(?:deal|lead|value)/);
+  if (dealSizeMatch && (lower.includes('deal') || lower.includes('lead') || lower.includes('show') || lower.includes('find') || lower.includes('above') || lower.includes('over'))) {
+    const minVal = parseFloat(dealSizeMatch[1].replace(/,/g, '')) * 1000;
+    const bigDeals = leads.filter(l => l.dealValue >= minVal).sort((a, b) => b.dealValue - a.dealValue);
+    if (bigDeals.length === 0) {
+      return `**No leads found with deal value above $${minVal.toLocaleString()}.**\n\nTry a lower threshold or go to **Leads** to browse all leads.`;
+    }
+    const top = bigDeals.slice(0, 5);
+    const totalValue = bigDeals.reduce((s, l) => s + l.dealValue, 0);
+    let res = `**$${(minVal/1000)}K+ Deals** — ${bigDeals.length} found, **${fmt(totalValue)}** total\n\n---\n\n`;
+    top.forEach((l) => {
+      res += `[LEAD_CARD:${l.id}]\n`;
+      res += `   **${fmt(l.dealValue)}** | ${l.location} | ${l.industry} | Score: ${l.score}/100\n\n`;
+    });
+    if (bigDeals.length > 5) res += `...and **${bigDeals.length - 5} more** above $${(minVal/1000)}K.\n\n`;
+    res += `---\n\nGo to **Leads** for full results.`;
+    return res;
+  }
+
+  // Industry filter
+  const FALLBACK_INDUSTRIES = ['SaaS', 'Fintech', 'AI/ML', 'Healthcare', 'Cybersecurity', 'EdTech', 'E-commerce', 'Gaming', 'Web3/Crypto'];
+  let searchIndustry = null;
+  if (/\bsaas\b/i.test(lower)) searchIndustry = 'SaaS';
+  else if (/\bfintech\b/i.test(lower)) searchIndustry = 'Fintech';
+  else if (/\bai\b|\bml\b/i.test(lower)) searchIndustry = 'AI/ML';
+  else if (/\bcyber/i.test(lower)) searchIndustry = 'Cybersecurity';
+  else if (/\bhealth/i.test(lower)) searchIndustry = 'Healthcare';
+  else if (/\bedtech\b|\beducation\b/i.test(lower)) searchIndustry = 'EdTech';
+  else if (/\bgaming\b/i.test(lower)) searchIndustry = 'Gaming';
+  else if (/\bcrypto\b|\bweb3\b/i.test(lower)) searchIndustry = 'Web3/Crypto';
+  else if (/\becommerce\b|\be-comm/i.test(lower)) searchIndustry = 'E-commerce';
+
+  if (searchIndustry && (lower.includes('lead') || lower.includes('find') || lower.includes('show') || lower.includes('compan'))) {
+    const indLeads = leads.filter(l => l.industry === searchIndustry).sort((a, b) => b.score - a.score);
+    if (indLeads.length === 0) {
+      return `**No ${searchIndustry} leads found.**\n\nTry another industry or go to **Leads** to browse all leads.`;
+    }
+    const top = indLeads.slice(0, 5);
+    const totalValue = indLeads.reduce((s, l) => s + l.dealValue, 0);
+    let res = `**${searchIndustry} Leads** — ${indLeads.length} found, **${fmt(totalValue)}** total pipeline\n\n---\n\n`;
+    top.forEach((l) => {
+      res += `[LEAD_CARD:${l.id}]\n`;
+      res += `   Score: **${l.score}**/100 | ${l.location} | **${fmt(l.dealValue)}** | ${l.status}\n\n`;
+    });
+    if (indLeads.length > 5) res += `...and **${indLeads.length - 5} more** ${searchIndustry} leads.\n\n`;
+    res += `---\n\nGo to **Leads** to see all. Want outreach for any of these?`;
+    return res;
+  }
+
+  // ── WALK ME THROUGH LEADS — structured walkthrough sorted by close probability ──
+  if (lower.includes('walk me through') || lower.includes('walkthrough') || (lower.includes('walk') && lower.includes('lead'))) {
+    const under20k = leads.filter(l => l.dealValue < 20000).sort((a, b) => b.conversionProbability - a.conversionProbability);
+    const topWalkthrough = (under20k.length > 0 ? under20k : leads.sort((a, b) => b.conversionProbability - a.conversionProbability)).slice(0, 5);
+    const totalValue = topWalkthrough.reduce((s, l) => s + l.dealValue, 0);
+    const nextActions = {
+      'new': 'Send initial outreach via best channel today',
+      'contacted': 'Schedule a discovery call this week',
+      'qualified': 'Prepare and send a tailored proposal',
+      'negotiation': 'Call now — push for verbal commitment today',
+      'proposal': 'Follow up on proposal and handle objections',
+      'won': 'Upsell or request referral',
+      'lost': 'Re-engage in 30 days with new angle',
+    };
+    let res = `**Lead Walkthrough — Top 5 Highest-Probability Leads${under20k.length > 0 ? ' Under $20K' : ''}**\n\nHere are your top 5 highest-probability leads${under20k.length > 0 ? ' under $20K' : ''} — sorted by close probability for speed-to-close:\n\n---\n\n`;
+    topWalkthrough.forEach((l, i) => {
+      const commission = Math.round(l.dealValue * 0.10);
+      const whyCloseable = l.conversionProbability >= 70 ? 'High engagement + strong buying signals' :
+        l.conversionProbability >= 50 ? 'Active interest + pain point alignment' :
+        l.momentum === 'rising' ? 'Rising momentum indicates growing urgency' :
+        'Recent activity shows continued evaluation';
+      res += `[LEAD_CARD:${l.id}]\n`;
+      res += `**${i + 1}. ${l.name}** at ${l.company}\n`;
+      res += `   Deal: **${fmt(l.dealValue)}** | Close Prob: **${l.conversionProbability}%** | Commission: **$${commission.toLocaleString()}**\n`;
+      res += `   Next Action: ${nextActions[l.status] || 'Follow up immediately'}\n`;
+      res += `   Why closeable: ${whyCloseable}\n\n`;
+    });
+    res += `---\n\n**Total pipeline shown:** ${fmt(totalValue)} | **Combined commission:** $${Math.round(totalValue * 0.10).toLocaleString()}\n\n`;
+    res += `**Speed-to-close tactics for sub-$20K deals:**\n- Same-day follow-up on every interaction\n- Simplified one-page proposals (no committee needed)\n- Create urgency: limited-time pricing or pilot window\n- Go direct to decision maker — skip gatekeepers\n\nWant outreach scripts for any of these? Or go to **Leads** for full pipeline.`;
+    return res;
+  }
+
+  // ── CLOSABILITY SCORE BREAKDOWN ──
+  if (lower.includes('closability') || lower.includes('closability score') || lower.includes('score breakdown') || (lower.includes('score') && lower.includes('break'))) {
+    const target = selectedLead || leads[0];
+    if (target) {
+      const budgetFit = Math.min(100, Math.round(50 + (target.score || 50) * 0.4 + (target.dealValue < 20000 ? 15 : target.dealValue < 50000 ? 5 : -5)));
+      const timing = target.momentum === 'rising' ? 85 : target.momentum === 'declining' ? 35 : 60;
+      const decisionMaker = target.conversionProbability >= 70 ? 90 : target.conversionProbability >= 50 ? 65 : 40;
+      const painUrgency = (target.painPoints || []).length >= 3 ? 85 : (target.painPoints || []).length >= 2 ? 65 : 45;
+      const competition = target.competitorUsing ? 50 : 75;
+      const overall = Math.round((budgetFit + timing + decisionMaker + painUrgency + competition) / 5);
+      return `**Closability Score Breakdown — ${target.name}**\n\n---\n\n**Overall Closability: ${overall}/100**\n\n| Factor | Score | Assessment |\n|--------|-------|------------|\n| Budget Fit | **${budgetFit}**/100 | ${budgetFit >= 70 ? 'Deal size matches typical spend' : 'May need budget adjustment'} |\n| Timing | **${timing}**/100 | ${timing >= 70 ? 'High engagement, strike now' : timing >= 50 ? 'Moderate — needs nurturing' : 'Low urgency — long cycle'} |\n| Decision Maker Access | **${decisionMaker}**/100 | ${decisionMaker >= 70 ? 'Direct access confirmed' : 'May need to reach higher'} |\n| Pain Urgency | **${painUrgency}**/100 | ${painUrgency >= 70 ? 'Critical pain — they need a solution' : 'Pain exists but not urgent'} |\n| Competition | **${competition}**/100 | ${target.competitorUsing ? `Using ${target.competitorUsing} — displacement needed` : 'No incumbent — greenfield opportunity'} |\n\n---\n\n**Recommendation:** ${overall >= 70 ? 'This lead is highly closeable. Prioritize immediate contact.' : overall >= 50 ? 'Solid opportunity. Focus on building urgency and demonstrating ROI.' : 'Needs more nurturing. Build relationship before pushing for close.'}\n\nWant me to draft outreach for ${target.name}? Or go to **Leads** for more analysis.`;
+    }
+  }
+
   if (lower.includes('lead') || lower.includes('find') || lower.includes('top') || lower.includes('pipeline') || lower.includes('hottest')) {
     const top = leads.slice(0, 5);
     const critical = leads.filter(l => l.priority === 'critical');
@@ -233,16 +445,14 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
     res += `Critical: **${critical.length}** | Rising momentum: **${rising.length}**\n\n`;
     res += `---\n\n`;
     res += `**Top 5 Leads by Score:**\n\n`;
-    top.forEach((l, i) => {
-      const medal = ['🔥', '🔥', '🔥', '⚡', '⚡'][i];
+    top.forEach((l) => {
       res += `[LEAD_CARD:${l.id}]\n`;
-      res += `   ${medal} Score: **${l.score}**/100 | Value: **${fmt(l.dealValue)}** | ${l.priority.toUpperCase()}\n`;
+      res += `   Score: **${l.score}**/100 | Value: **${fmt(l.dealValue)}** | ${l.priority.toUpperCase()}\n`;
       res += `   Method: ${l.bestMethod} | Timeline: ${l.decisionTimeline} | Conv: ${l.conversionProbability}%\n\n`;
     });
     res += `---\n\n`;
-    res += `**Quick Actions:**\n`;
     res += `Go to **Leads** to see all leads, or go to **Dashboard** for full pipeline metrics.\n\n`;
-    res += `Want me to draft outreach for any of these leads, or deep-dive on a specific company?`;
+    res += `Want me to search leads by city or industry?`;
     return res;
   }
 
@@ -390,8 +600,52 @@ function ParsedMessage({ content, onNavigate, onOpenLead, leads }) {
   );
 }
 
+// ─── STREAMING ASSISTANT MESSAGE ──────────────────────────────────────
+function StreamingAssistantMessage({ content, isLatest, onNavigate, onOpenLead, leads }) {
+  const { displayed, isStreaming } = useStreamingText(content, isLatest);
+  return (
+    <>
+      <ParsedMessage content={displayed} onNavigate={onNavigate} onOpenLead={onOpenLead} leads={leads} />
+      {isStreaming && (
+        <span className="inline-block w-1.5 h-3.5 bg-brand/70 ml-0.5 animate-pulse rounded-sm" style={{ verticalAlign: 'text-bottom' }} />
+      )}
+    </>
+  );
+}
+
+// ─── LOCATION-AWARE FOLLOW-UP SUGGESTIONS ───────────────────────────
+const LOCATION_SUGGESTIONS = {
+  'San Francisco': ['Austin', 'Seattle', 'LA'],
+  'New York': ['Boston', 'Philadelphia', 'Charlotte'],
+  'Austin': ['Dallas', 'Nashville', 'Denver'],
+  'Seattle': ['Portland', 'San Francisco', 'Vancouver'],
+  'Boston': ['New York', 'Raleigh', 'Philadelphia'],
+  'Chicago': ['Minneapolis', 'Detroit', 'Columbus'],
+  'Denver': ['Salt Lake City', 'Austin', 'Phoenix'],
+  'Miami': ['Tampa', 'Orlando', 'Atlanta'],
+  'Atlanta': ['Nashville', 'Charlotte', 'Raleigh'],
+  'Dallas': ['Austin', 'Phoenix', 'Nashville'],
+  'London': ['Dublin', 'Amsterdam', 'Paris'],
+  'Toronto': ['Montreal', 'Vancouver', 'New York'],
+};
+
+function detectLocationInResponse(content) {
+  const lower = content.toLowerCase();
+  if (lower.includes('no leads found in')) {
+    const match = content.match(/no leads found in (\w[\w\s]*)/i);
+    if (match) return { notFound: match[1].trim() };
+  }
+  // Detect which location was searched
+  for (const loc of Object.keys(LOCATION_SUGGESTIONS)) {
+    if (lower.includes(loc.toLowerCase()) && (lower.includes('lead') || lower.includes('found') || lower.includes('pipeline'))) {
+      return { found: loc };
+    }
+  }
+  return null;
+}
+
 // ─── ACTION BUTTONS PARSED FROM RESPONSES ──────────────────────────────
-function ResponseActions({ content, onNavigate }) {
+function ResponseActions({ content, onNavigate, onQuickAction }) {
   const mentionedPages = [];
   const lowerContent = content.toLowerCase();
   Object.entries(FEATURE_LINKS).forEach(([key, val]) => {
@@ -399,9 +653,49 @@ function ResponseActions({ content, onNavigate }) {
       mentionedPages.push(val);
     }
   });
-  if (mentionedPages.length === 0) return null;
-  // Deduplicate by page
-  const unique = [...new Map(mentionedPages.map(p => [p.page, p])).values()].slice(0, 4);
+
+  // Detect location context for follow-up suggestions
+  const locationCtx = detectLocationInResponse(content);
+  let locationButtons = [];
+  if (locationCtx) {
+    if (locationCtx.found && LOCATION_SUGGESTIONS[locationCtx.found]) {
+      locationButtons = LOCATION_SUGGESTIONS[locationCtx.found].map(city => ({
+        label: `Leads in ${city}`,
+        prompt: `Show me leads in ${city}`,
+      }));
+    } else if (locationCtx.notFound) {
+      // Suggest nearby available cities
+      const defaults = ['Austin', 'Miami', 'Atlanta', 'Dallas', 'Chicago'];
+      locationButtons = defaults.slice(0, 3).map(city => ({
+        label: `Try ${city}`,
+        prompt: `Show me leads in ${city}`,
+      }));
+    }
+  }
+
+  // Also detect industry in response for follow-up
+  const industryButtons = [];
+  const industries = ['SaaS', 'Fintech', 'AI/ML', 'Healthcare', 'Cybersecurity'];
+  if (lowerContent.includes('lead') && !lowerContent.includes('no leads found')) {
+    for (const ind of industries) {
+      if (lowerContent.includes(ind.toLowerCase())) {
+        // Suggest other industries
+        const others = industries.filter(i => i !== ind).slice(0, 2);
+        others.forEach(other => {
+          industryButtons.push({ label: `${other} leads`, prompt: `Find ${other} leads` });
+        });
+        break;
+      }
+    }
+  }
+
+  const hasNav = mentionedPages.length > 0;
+  const hasFollowUp = locationButtons.length > 0 || industryButtons.length > 0;
+  if (!hasNav && !hasFollowUp) return null;
+
+  const unique = [...new Map(mentionedPages.map(p => [p.page, p])).values()].slice(0, 3);
+  const allFollowUps = [...locationButtons, ...industryButtons].slice(0, 3);
+
   return (
     <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-white/[0.03]">
       {unique.map(p => (
@@ -417,13 +711,60 @@ function ResponseActions({ content, onNavigate }) {
           <ArrowRight size={9} />
         </button>
       ))}
+      {allFollowUps.map(f => (
+        <button
+          key={f.label}
+          onClick={() => onQuickAction && onQuickAction(f.prompt)}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium
+            bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 hover:border-cyan-500/40
+            transition-all duration-200"
+        >
+          <Globe size={11} />
+          {f.label}
+        </button>
+      ))}
     </div>
   );
 }
 
+// ─── CONTEXTUAL ORB BADGES & PROACTIVE SUGGESTIONS ──────────────────────
+const ORB_CONTEXT = {
+  leads: { badge: 'hot leads', modeLabel: 'Lead Intel Mode', icon: Target },
+  trends: { badge: 'new signals', modeLabel: 'Alpha Scanner', icon: TrendingUp },
+  dashboard: { badge: null, modeLabel: 'Pipeline Overview', icon: BarChart3 },
+  casino: { badge: null, modeLabel: 'Degen Casino', icon: Flame },
+  market: { badge: null, modeLabel: 'Market Analysis', icon: Globe },
+  home: { badge: null, modeLabel: 'Revenue Agent', icon: Sparkles },
+  wallet: { badge: null, modeLabel: 'Wallet Intel', icon: Wallet },
+  admin: { badge: null, modeLabel: 'Admin Console', icon: Shield },
+  launchpad: { badge: null, modeLabel: 'LaunchPad', icon: Zap },
+};
+
+const PROACTIVE_SUGGESTIONS = {
+  leads: [
+    'I found 3 leads with 80%+ close probability',
+    'Hot lead alert: 2 deals in negotiation need follow-up',
+    'Your top lead score just jumped — check pipeline',
+  ],
+  trends: [
+    'BTC breaking resistance — check alpha plays',
+    'New sector surge detected: AI/ML up 42%',
+    '2 prediction market edges found',
+  ],
+  dashboard: [
+    'Pipeline health: 3 deals need attention today',
+    'Revenue is trending up — keep the momentum',
+    'Weekly target: 2 more closes to hit goal',
+  ],
+  casino: [
+    'Degen alert: high EV play detected',
+    'Your betting edge is +12% this session',
+  ],
+};
+
 // ─── MAIN COMPONENT ────────────────────────────────────────────────────
 export default function AIOverlay() {
-  const { setAiOpen, leads: rawLeads, getLeads, page: currentPage, setPage, selectedLead, setSelectedLead, setDetailOpen, setPreviousPage, degenMode } = useStore();
+  const { aiOpen, setAiOpen, leads: rawLeads, getLeads, page: currentPage, setPage, selectedLead, setSelectedLead, setDetailOpen, setPreviousPage, degenMode } = useStore();
   const leads = rawLeads || [];
 
   useEffect(() => {
@@ -450,6 +791,7 @@ export default function AIOverlay() {
   }, [degenMode]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
+  const [thinkingLabel, setThinkingLabel] = useState('Thinking...');
   const [aiFailCount, setAiFailCount] = useState(0);
   const useAI = aiFailCount < 3; // Only disable after 3 consecutive failures
   const [coachMode, setCoachMode] = useState(false);
@@ -462,6 +804,46 @@ export default function AIOverlay() {
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+  // Proactive suggestion tooltip
+  const [proactiveTip, setProactiveTip] = useState(null);
+  const proactiveTimerRef = useRef(null);
+  const proactiveDismissRef = useRef(null);
+  useEffect(() => {
+    // Show proactive suggestions every 30-60s when orb is visible but chat is closed
+    const schedule = () => {
+      const delay = 30000 + Math.random() * 30000;
+      proactiveTimerRef.current = setTimeout(() => {
+        if (!useStore.getState().aiOpen) {
+          const pageSuggestions = PROACTIVE_SUGGESTIONS[currentPage] || PROACTIVE_SUGGESTIONS.dashboard;
+          const tip = pageSuggestions[Math.floor(Math.random() * pageSuggestions.length)];
+          setProactiveTip(tip);
+          // Auto-dismiss after 5s
+          proactiveDismissRef.current = setTimeout(() => setProactiveTip(null), 5000);
+        }
+        schedule();
+      }, delay);
+    };
+    schedule();
+    return () => {
+      clearTimeout(proactiveTimerRef.current);
+      clearTimeout(proactiveDismissRef.current);
+    };
+  }, [currentPage]);
+
+  // Orb badge context
+  const orbCtx = ORB_CONTEXT[currentPage] || ORB_CONTEXT.home;
+  const orbBadgeText = useMemo(() => {
+    if (currentPage === 'leads') {
+      const hot = leads.filter(l => l.conversionProbability >= 80).length;
+      return hot > 0 ? `${hot} hot leads` : null;
+    }
+    if (currentPage === 'trends') {
+      const rising = leads.filter(l => l.momentum === 'rising').length;
+      return rising > 2 ? `${Math.min(rising, 9)} new signals` : null;
+    }
+    return null;
+  }, [currentPage, leads]);
 
   const endRef = useRef(null);
   const inputRef = useRef(null);
@@ -498,16 +880,66 @@ export default function AIOverlay() {
     };
   }, [leads]);
 
-  // Quick action buttons based on current page
-  const quickActions = useMemo(() => {
-    return QUICK_ACTIONS[currentPage] || [];
+  // Determine contextual thinking label based on message content and page
+  const getThinkingLabel = useCallback((msg) => {
+    const lower = (msg || '').toLowerCase();
+    // Lead-related queries
+    if (/lead|pipeline|find|search|show me/.test(lower)) return 'Searching lead database...';
+    if (/outreach|script|email|call|sms|draft/.test(lower)) return 'Crafting outreach scripts...';
+    if (/clos|objection|negotiat|coach/.test(lower)) return 'Analyzing closing strategy...';
+    if (/trend|market|sector|surge|pump/.test(lower)) return 'Scanning market signals...';
+    if (/forecast|revenue|project/.test(lower)) return 'Running revenue forecast...';
+    if (/competitor|compet|intel/.test(lower)) return 'Gathering competitive intel...';
+    if (/idea|business|start/.test(lower)) return 'Generating business ideas...';
+    if (/analyz|report|deep dive/.test(lower)) return 'Running deep analysis...';
+    // Page-based defaults
+    if (currentPage === 'leads') return 'Analyzing lead data...';
+    if (currentPage === 'trends') return 'Scanning market signals...';
+    if (currentPage === 'dashboard') return 'Optimizing pipeline...';
+    if (currentPage === 'market') return 'Processing market data...';
+    if (currentPage === 'wallet') return 'Crunching revenue numbers...';
+    return 'Thinking...';
   }, [currentPage]);
 
-  // Suggested prompts based on current page and degen mode
+  // Quick action buttons based on current page, coach mode, and selected lead
+  const quickActions = useMemo(() => {
+    const base = QUICK_ACTIONS[currentPage] || [];
+
+    // When coach mode is on and on leads page, replace with coaching actions
+    if (coachMode && currentPage === 'leads') {
+      const coachActions = [
+        { label: 'Call Script', prompt: selectedLead ? `Write a word-for-word cold call script for ${selectedLead.name} at ${selectedLead.company}. Include opener, hook, value prop, and close.` : 'Write a cold call script for my top lead. Include opener, hook, value prop, and close.', icon: Phone },
+        { label: 'Handle Objections', prompt: selectedLead ? `Give me objection handling scripts for ${selectedLead.name} at ${selectedLead.company} in ${selectedLead.industry}. Cover: price, timing, competitor, and "not interested" objections.` : 'Give me objection handling scripts for common B2B objections: price, timing, competitor, and "not interested".', icon: Shield },
+        { label: 'Email Template', prompt: selectedLead ? `Write a follow-up email template for ${selectedLead.name} at ${selectedLead.company}. Pain points: ${(selectedLead.painPoints||[]).join(', ')}. Make it personal and compelling.` : 'Write a follow-up email template for a qualified lead that creates urgency and drives a meeting.', icon: Send },
+        { label: 'Next Best Action', prompt: selectedLead ? `What is the single best action I should take RIGHT NOW to close ${selectedLead.name} at ${selectedLead.company}? They are in ${selectedLead.status} stage, score ${selectedLead.score}/100. Be specific.` : 'What is the single best action I should take right now to close more deals? Look at my pipeline and be specific.', icon: Target },
+      ];
+      return coachActions;
+    }
+
+    // When a lead is selected on leads page, add outreach quick action
+    if (selectedLead && currentPage === 'leads') {
+      const firstName = selectedLead.name.split(' ')[0];
+      const outreachAction = {
+        label: `Draft outreach for ${firstName}`,
+        prompt: `Draft a multi-channel outreach sequence for ${selectedLead.name} at ${selectedLead.company}. Industry: ${selectedLead.industry}. Pain points: ${(selectedLead.painPoints||[]).join(', ')}. Include email, call script, and LinkedIn DM.`,
+        icon: Send,
+      };
+      // Prepend outreach action, avoid duplicates
+      const filtered = base.filter(a => !a.label.includes('Draft outreach'));
+      return [outreachAction, ...filtered].slice(0, 6);
+    }
+
+    return base;
+  }, [currentPage, coachMode, selectedLead]);
+
+  // Suggested prompts based on current page, coach mode, and degen mode
   const suggestedPrompts = useMemo(() => {
+    if (coachMode) {
+      return COACH_PROMPTS[currentPage] || COACH_PROMPTS.home;
+    }
     const prompts = degenMode ? DEGEN_PROMPTS : PAGE_PROMPTS;
     return prompts[currentPage] || prompts.home;
-  }, [currentPage, degenMode]);
+  }, [currentPage, degenMode, coachMode]);
 
   // Navigate to page helper
   const navigateTo = useCallback((pageId) => {
@@ -551,10 +983,18 @@ export default function AIOverlay() {
               : m.content
           }));
 
+        // Send a slim subset of leads for server-side search (top 2500 by score, minimal fields)
+        const slimLeads = leads.slice(0, 2500).map(l => ({
+          id: l.id, name: l.name, company: l.company, industry: l.industry,
+          location: l.location, score: l.score, dealValue: l.dealValue,
+          status: l.status, priority: l.priority, conversionProbability: l.conversionProbability,
+          bestMethod: l.bestMethod, email: l.email, phone: l.phone,
+        }));
+
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: apiMessages, degenMode }),
+          body: JSON.stringify({ messages: apiMessages, degenMode, leadData: slimLeads }),
         });
 
         const data = await res.json();
@@ -617,6 +1057,13 @@ export default function AIOverlay() {
           `${l.name} at ${l.company} (score: ${l.score}, value: ${fmt(l.dealValue)}, priority: ${l.priority}, status: ${l.status})`
         ).join('; ')}${leadCtx}${revenueCtx}${coachCtx}`;
 
+        const slimLeadsQA = leads.slice(0, 2500).map(l => ({
+          id: l.id, name: l.name, company: l.company, industry: l.industry,
+          location: l.location, score: l.score, dealValue: l.dealValue,
+          status: l.status, priority: l.priority, conversionProbability: l.conversionProbability,
+          bestMethod: l.bestMethod, email: l.email, phone: l.phone,
+        }));
+
         fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -628,6 +1075,7 @@ export default function AIOverlay() {
                 : m.content
             })),
             degenMode,
+            leadData: slimLeadsQA,
           }),
         })
           .then(r => r.json())
@@ -845,9 +1293,11 @@ export default function AIOverlay() {
             </div>
             <div className="flex flex-wrap gap-1">
               {[
+                { label: 'Get Lead Brief', action: `Give me a comprehensive lead brief for ${selectedLead.name} at ${selectedLead.company}. Include: background summary, industry (${selectedLead.industry}), company size, deal value ($${(selectedLead.dealValue||0).toLocaleString()}), pain points (${(selectedLead.painPoints||[]).join(', ')}), buying signals (${(selectedLead.buyingSignals||[]).join(', ')}), competitive landscape (using ${selectedLead.competitorUsing || 'unknown'}), decision timeline (${selectedLead.decisionTimeline || 'unknown'}), closability score breakdown (budget fit, timing, decision maker access, pain urgency, competition), and recommended strategy.` },
                 { label: 'Analyze Lead', action: `Analyze ${selectedLead.name} at ${selectedLead.company} — give me a full intelligence report with close probability, best approach, and revenue opportunity` },
-                { label: 'Outreach Script', action: `Write a cold outreach script for ${selectedLead.name} at ${selectedLead.company}. They're in ${selectedLead.industry}, pain points: ${(selectedLead.painPoints||[]).join(', ')}` },
-                { label: 'Revenue Report', action: `Generate a revenue deficit report for ${selectedLead.company}. They have ${selectedLead.employees||'50+'} employees, deal value $${(selectedLead.dealValue||0).toLocaleString()}. Show lost revenue analysis.` },
+                { label: `Draft Outreach for ${selectedLead.name.split(' ')[0]}`, action: `Draft a full multi-channel outreach sequence for ${selectedLead.name} at ${selectedLead.company}. Industry: ${selectedLead.industry}, pain points: ${(selectedLead.painPoints||[]).join(', ')}, buying signals: ${(selectedLead.buyingSignals||[]).join(', ')}. Include personalized email, cold call script, and LinkedIn DM.` },
+                { label: 'Coach Me', action: `Coach me on closing ${selectedLead.name} at ${selectedLead.company}. Status: ${selectedLead.status}, Score: ${selectedLead.score}/100, Deal: $${(selectedLead.dealValue||0).toLocaleString()}. What should I do RIGHT NOW?` },
+                { label: 'Closability Score', action: `Show me the closability score breakdown for ${selectedLead.name} at ${selectedLead.company}. Break down: Budget Fit, Timing, Decision Maker Access, Pain Urgency, and Competition. Score: ${selectedLead.score}, Conversion: ${selectedLead.conversionProbability}%, Momentum: ${selectedLead.momentum}, Pain Points: ${(selectedLead.painPoints||[]).join(', ')}, Competitor: ${selectedLead.competitorUsing || 'None'}` },
               ].map(qa => (
                 <button key={qa.label} onClick={() => { setInput(qa.action); }}
                   className="px-2 py-0.5 rounded-full text-[9px] font-medium bg-purple-500/15 text-purple-300 hover:bg-purple-500/25 transition-colors">
@@ -900,7 +1350,13 @@ export default function AIOverlay() {
                       }
                     >
                       {m.role === 'assistant' ? (
-                        <ParsedMessage content={m.content} onNavigate={navigateTo} onOpenLead={openLead} leads={leads} />
+                        <StreamingAssistantMessage
+                          content={m.content}
+                          isLatest={i === messages.length - 1 || (i === messages.length - 2 && typing)}
+                          onNavigate={navigateTo}
+                          onOpenLead={openLead}
+                          leads={leads}
+                        />
                       ) : (
                         m.content
                       )}
@@ -908,7 +1364,7 @@ export default function AIOverlay() {
 
                     {/* Action buttons for assistant messages */}
                     {m.role === 'assistant' && (
-                      <ResponseActions content={m.content} onNavigate={navigateTo} />
+                      <ResponseActions content={m.content} onNavigate={navigateTo} onQuickAction={handleQuickAction} />
                     )}
                   </div>
                 </div>
@@ -947,7 +1403,7 @@ export default function AIOverlay() {
                           />
                         ))}
                       </div>
-                      <span className="text-[10px] text-slate-500 ml-1">GOATED AI is thinking...</span>
+                      <span className="text-[10px] text-slate-500 ml-1">Searching leads...</span>
                     </div>
                   </div>
                 </div>

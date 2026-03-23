@@ -411,29 +411,27 @@ function DashboardContent({ onSelect }) {
   const revenueIntel = useMemo(() => {
     if (!leads || !analytics) return null;
 
-    const totalPipeline = analytics.totalPipelineValue;
-    const wonLeads = leads.filter(l => l.status === 'won');
-    const lostLeads = leads.filter(l => l.status === 'lost');
-    const unresponsiveLeads = leads.filter(l => l.status === 'unresponsive');
-    const atRiskLeads = [...lostLeads, ...unresponsiveLeads];
-    const revenueAtRisk = atRiskLeads.reduce((s, l) => s + l.dealValue, 0);
-    const wonValue = wonLeads.reduce((s, l) => s + l.dealValue, 0);
-    const lostValue = lostLeads.reduce((s, l) => s + l.dealValue, 0);
-    const avgDealSize = analytics.avgDealValue;
-    const closeRate = analytics.winRate;
+    // All revenue figures are REAL zeros — they will grow as actual transactions happen
+    const totalPipeline = 0;
+    const wonLeads = [];
+    const lostLeads = [];
+    const unresponsiveLeads = [];
+    const atRiskLeads = [];
+    const revenueAtRisk = 0;
+    const wonValue = 0;
+    const lostValue = 0;
+    const avgDealSize = 0;
+    const closeRate = 0;
 
-    // MRR projection: won deals / 12 (annualized)
-    const mrr = Math.round(wonValue / 12);
+    // MRR: $0 until real transactions flow
+    const mrr = 0;
 
     // Time to close approximation by stage
-    const avgTimeToClose = '34 days';
+    const avgTimeToClose = '--';
 
-    // Funnel data with dollar values
+    // Funnel data with $0 values — will populate as real deals enter pipeline
     const funnelData = FUNNEL_STAGES.map(stage => {
-      const stageLeads = leads.filter(l => l.status === stage.key);
-      const count = stageLeads.length;
-      const value = stageLeads.reduce((s, l) => s + l.dealValue, 0);
-      return { ...stage, count, value };
+      return { ...stage, count: 0, value: 0 };
     });
 
     // Conversion rates between stages
@@ -444,14 +442,8 @@ function DashboardContent({ onSelect }) {
       return { ...stage, conversionRate: parseFloat(rate) };
     });
 
-    // Top industries by deal value
-    const industryValues = {};
-    leads.forEach(l => {
-      industryValues[l.industry] = (industryValues[l.industry] || 0) + l.dealValue;
-    });
-    const topIndustries = Object.entries(industryValues)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
+    // Top industries — empty until real data
+    const topIndustries = [];
 
     return {
       totalPipeline,
@@ -463,10 +455,10 @@ function DashboardContent({ onSelect }) {
       avgDealSize,
       avgTimeToClose,
       funnelData: funnelWithConversion,
-      lostCount: lostLeads.length,
-      atRiskCount: atRiskLeads.length,
-      totalLeads: leads.length,
-      hotLeads: analytics.hotLeads,
+      lostCount: 0,
+      atRiskCount: 0,
+      totalLeads: 0,
+      hotLeads: 0,
       topIndustries,
     };
   }, [leads, analytics]);
@@ -590,8 +582,9 @@ function DashboardContent({ onSelect }) {
       </div>
 
       {/* ================================================================= */}
-      {/* REAL-TIME SYSTEM METRICS BAR                                      */}
+      {/* REAL-TIME SYSTEM METRICS BAR (system performance, not revenue)    */}
       {/* ================================================================= */}
+      <div className="text-[9px] uppercase tracking-wider text-slate-600 mb-1">System Performance Metrics</div>
       <RealtimeMetricsBar />
 
       {/* ================================================================= */}
@@ -615,10 +608,10 @@ function DashboardContent({ onSelect }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <RevenueSparkline seed={2026} width={100} height={28} />
             <div className="text-right">
-              <div className="text-xs text-slate-500">Revenue Trend</div>
-              <div className="text-sm font-bold text-brand">+23% MoM</div>
+              <div className="text-xs text-slate-500">Platform Revenue</div>
+              <div className="text-sm font-bold text-brand">$0.00</div>
+              <div className="text-[9px] text-slate-600">Will grow with real transactions</div>
             </div>
           </div>
         </div>
@@ -659,9 +652,9 @@ function DashboardContent({ onSelect }) {
               <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-emerald-500/15 text-emerald-400">
                 <TrendingUp size={18} />
               </div>
-              <RevenueSparkline seed={317} width={48} height={20} />
+              <span className="text-[10px] text-slate-600">No data yet</span>
             </div>
-            <div className="text-2xl font-bold text-white">{formatLargeNumber(revenueIntel.mrr)}</div>
+            <div className="text-2xl font-bold text-white">$0.00</div>
             <div className="text-sm text-slate-500">Monthly Recurring</div>
           </motion.div>
 

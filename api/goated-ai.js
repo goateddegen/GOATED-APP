@@ -323,23 +323,24 @@ function calcCorrelation(x, y) {
 function buildCorrelationMatrix(coins) {
   if (!coins || coins.length < 2) return [];
   const pairs = [];
-  const top = coins.slice(0, 10);
+  const top = coins.slice(0, 15); // Analyze top 15 assets for broader coverage
   for (let i = 0; i < top.length; i++) {
     for (let j = i + 1; j < top.length; j++) {
       const pi = top[i].sparkline7d || top[i].sparkline_in_7d?.price || [];
       const pj = top[j].sparkline7d || top[j].sparkline_in_7d?.price || [];
       const corr = calcCorrelation(pi, pj);
-      if (Math.abs(corr) > 0.3) {
+      if (Math.abs(corr) > 0.25) { // Lower threshold to capture more pairs
         pairs.push({
           a: top[i].symbol?.toUpperCase() || top[i].id,
           b: top[j].symbol?.toUpperCase() || top[j].id,
           correlation: corr,
-          label: corr > 0.7 ? 'strongly correlated' : corr > 0.4 ? 'correlated' : corr < -0.4 ? 'inversely correlated' : 'weakly correlated',
+          label: corr > 0.8 ? 'very strongly correlated' : corr > 0.6 ? 'strongly correlated' : corr > 0.4 ? 'correlated' : corr > 0.25 ? 'weakly correlated' : corr < -0.6 ? 'strongly inversely correlated' : corr < -0.4 ? 'inversely correlated' : 'weakly inversely correlated',
+          tradingImplication: corr > 0.7 ? 'Moves together — diversify away or use as confirmation signal' : corr < -0.5 ? 'Natural hedge — consider pair trade opportunity' : 'Low correlation — good for diversification',
         });
       }
     }
   }
-  return pairs.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation)).slice(0, 15);
+  return pairs.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation)).slice(0, 20);
 }
 
 // ─── AI Prediction Generator ────────────────────────────────────────────────
@@ -545,6 +546,137 @@ function calcPortfolioHeat(coins) {
   };
 }
 
+// ─── Industry Analysis Templates ─────────────────────────────────────────────
+
+const INDUSTRY_TEMPLATES = {
+  SaaS: {
+    keyMetrics: ['ARR', 'MRR Growth', 'Net Revenue Retention', 'CAC Payback', 'LTV:CAC Ratio', 'Churn Rate', 'Rule of 40'],
+    painPoints: ['Customer churn', 'Long sales cycles', 'Integration complexity', 'Feature parity with competitors', 'Scaling infrastructure costs'],
+    buyingSignals: ['Hiring SDRs/AEs', 'New funding round', 'CRM migration', 'Expanding into new markets', 'Product launch'],
+    closingStrategy: 'Lead with ROI calculator. SaaS buyers respond to payback period < 12 months. Offer pilot/POC with clear success metrics. Target the VP Sales or CRO — they own the budget.',
+    avgDealCycle: '45-90 days',
+    benchmarks: { avgDealSize: '$35K-$150K', winRate: '22-28%', avgDiscount: '15-20%' },
+  },
+  Fintech: {
+    keyMetrics: ['TPV', 'Take Rate', 'Regulatory Compliance Score', 'Fraud Rate', 'Customer Acquisition Cost', 'Revenue per User'],
+    painPoints: ['Regulatory compliance burden', 'Fraud prevention', 'Legacy system integration', 'Customer trust/security', 'Cross-border complexity'],
+    buyingSignals: ['New license application', 'Compliance audit', 'Series B+', 'International expansion', 'Partnership announcements'],
+    closingStrategy: 'Lead with compliance/security angle. Fintech buyers are risk-averse — show SOC2/ISO certs. Emphasize time-to-market acceleration. Target CPO or Head of Engineering.',
+    avgDealCycle: '60-120 days',
+    benchmarks: { avgDealSize: '$50K-$250K', winRate: '18-24%', avgDiscount: '10-15%' },
+  },
+  'AI/ML': {
+    keyMetrics: ['Model Accuracy', 'Inference Latency', 'Data Pipeline Throughput', 'GPU Utilization', 'Time to Production', 'Cost per Prediction'],
+    painPoints: ['Model deployment complexity', 'Data quality/labeling', 'GPU costs at scale', 'MLOps maturity', 'Talent shortage'],
+    buyingSignals: ['Hiring ML engineers', 'Cloud spend increase', 'New data partnerships', 'Model performance issues', 'Scaling challenges'],
+    closingStrategy: 'Lead with technical demo. AI buyers are technical — show benchmarks, not slides. Offer proof-of-concept on their data. Target CTO or VP Engineering.',
+    avgDealCycle: '30-75 days',
+    benchmarks: { avgDealSize: '$25K-$200K', winRate: '25-32%', avgDiscount: '12-18%' },
+  },
+  'E-commerce': {
+    keyMetrics: ['GMV', 'Conversion Rate', 'AOV', 'Cart Abandonment Rate', 'Customer Lifetime Value', 'Return Rate'],
+    painPoints: ['Cart abandonment', 'Customer acquisition costs rising', 'Inventory management', 'Shipping/logistics complexity', 'Personalization at scale'],
+    buyingSignals: ['Peak season prep', 'New marketplace launch', 'Replatforming', 'International expansion', 'DTC pivot'],
+    closingStrategy: 'Lead with revenue impact. E-comm buyers want to see GMV lift. Show A/B test results from similar companies. Target VP Marketing or Head of E-commerce. Create urgency around peak seasons.',
+    avgDealCycle: '30-60 days',
+    benchmarks: { avgDealSize: '$20K-$100K', winRate: '28-35%', avgDiscount: '18-25%' },
+  },
+};
+
+function generateIndustryReport(industry) {
+  const template = INDUSTRY_TEMPLATES[industry];
+  if (!template) return null;
+  return {
+    industry,
+    keyMetrics: template.keyMetrics,
+    commonPainPoints: template.painPoints,
+    buyingSignals: template.buyingSignals,
+    recommendedStrategy: template.closingStrategy,
+    avgDealCycle: template.avgDealCycle,
+    benchmarks: template.benchmarks,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+// ─── Deep Research Mode ──────────────────────────────────────────────────────
+
+function generateResearchReport(topic, coins, news) {
+  const report = {
+    topic,
+    generatedAt: new Date().toISOString(),
+    engineVersion: '2.0.0',
+    sections: {},
+  };
+
+  // Market Overview
+  if (coins && coins.length > 0) {
+    const totalMcap = coins.reduce((s, c) => s + (c.market_cap || c.marketCap || 0), 0);
+    const avg24h = coins.reduce((s, c) => s + (c.price_change_percentage_24h || c.change24h || 0), 0) / coins.length;
+    const topGainers = [...coins].sort((a, b) => (b.price_change_percentage_24h || b.change24h || 0) - (a.price_change_percentage_24h || a.change24h || 0)).slice(0, 5);
+    const topLosers = [...coins].sort((a, b) => (a.price_change_percentage_24h || a.change24h || 0) - (b.price_change_percentage_24h || b.change24h || 0)).slice(0, 5);
+
+    report.sections.marketOverview = {
+      totalMarketCap: totalMcap,
+      avgChange24h: Math.round(avg24h * 100) / 100,
+      sentiment: avg24h > 2 ? 'bullish' : avg24h < -2 ? 'bearish' : 'neutral',
+      topGainers: topGainers.map(c => ({ symbol: (c.symbol || '').toUpperCase(), change: Math.round((c.price_change_percentage_24h || c.change24h || 0) * 100) / 100 })),
+      topLosers: topLosers.map(c => ({ symbol: (c.symbol || '').toUpperCase(), change: Math.round((c.price_change_percentage_24h || c.change24h || 0) * 100) / 100 })),
+    };
+  }
+
+  // Technical Analysis Summary
+  if (coins && coins.length > 0) {
+    const techSummary = coins.slice(0, 10).map(coin => {
+      const prices = coin.sparkline7d || coin.sparkline_in_7d?.price || [];
+      return {
+        symbol: (coin.symbol || '').toUpperCase(),
+        rsi: calcRSI(prices),
+        macd: calcMACD(prices),
+        bollinger: calcBollingerBands(prices),
+        volatility: calcVolatilityRegime(prices),
+        breakout: predictBreakout(coin),
+      };
+    });
+    report.sections.technicalAnalysis = techSummary;
+  }
+
+  // Correlation Matrix
+  if (coins && coins.length >= 2) {
+    report.sections.correlations = buildCorrelationMatrix(coins);
+  }
+
+  // News Sentiment
+  if (news && news.length > 0) {
+    const newsIntel = processNewsIntelligence(news);
+    report.sections.newsSentiment = newsIntel.summary;
+    report.sections.topStories = newsIntel.articles.slice(0, 10).map(a => ({
+      title: a.title,
+      sentiment: a.aiSentiment.label,
+      impact: a.impact,
+      assets: a.assetMentions,
+    }));
+  }
+
+  // Industry Analysis (if topic matches an industry)
+  const matchedIndustry = Object.keys(INDUSTRY_TEMPLATES).find(k => topic.toLowerCase().includes(k.toLowerCase()));
+  if (matchedIndustry) {
+    report.sections.industryAnalysis = generateIndustryReport(matchedIndustry);
+  }
+
+  // Regime Detection
+  if (coins) {
+    report.sections.marketRegime = detectMarketRegime(coins);
+  }
+
+  // Predictions for top assets
+  if (coins) {
+    const predictions = generatePredictions(coins, null, report.sections.marketRegime);
+    report.sections.predictions = predictions.slice(0, 10);
+  }
+
+  return report;
+}
+
 // ─── Cache ──────────────────────────────────────────────────────────────────
 
 let cache = { data: null, ts: 0, ttl: 30_000 };
@@ -603,7 +735,7 @@ export default async function handler(req, res) {
       const { type, data } = req.body || {};
 
       // Whitelist valid types
-      const VALID_TYPES = ['analyze', 'predict', 'sentiment'];
+      const VALID_TYPES = ['analyze', 'predict', 'sentiment', 'research', 'industry'];
       if (!type || !VALID_TYPES.includes(type)) {
         return res.status(400).json({ error: `Invalid type. Must be one of: ${VALID_TYPES.join(', ')}` });
       }
@@ -642,7 +774,38 @@ export default async function handler(req, res) {
         return res.status(200).json(analyzeSentimentAdvanced(cleanText));
       }
 
-      return res.status(400).json({ error: 'Invalid request type. Use: analyze, predict, sentiment' });
+      // Deep Research mode: structured research report on any topic
+      if (type === 'research') {
+        const topic = data?.topic;
+        if (!topic || typeof topic !== 'string' || topic.length > 500) {
+          return res.status(400).json({ error: 'Research topic required (string, max 500 chars)' });
+        }
+        // Fetch fresh market data for the report
+        const [marketsRes, newsRes] = await Promise.allSettled([
+          fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=true&price_change_percentage=1h,24h,7d', { signal: AbortSignal.timeout(8000) }).then(r => r.json()),
+          fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN&sortOrder=popular', { signal: AbortSignal.timeout(5000) }).then(r => r.json()),
+        ]);
+        const coins = marketsRes.status === 'fulfilled' ? marketsRes.value : [];
+        const news = newsRes.status === 'fulfilled' ? (newsRes.value.Data || []).slice(0, 25) : [];
+        const report = generateResearchReport(topic, coins, news);
+        return res.status(200).json(report);
+      }
+
+      // Industry analysis template
+      if (type === 'industry') {
+        const industry = data?.industry;
+        if (!industry || typeof industry !== 'string') {
+          return res.status(400).json({ error: 'Industry name required' });
+        }
+        const report = generateIndustryReport(industry);
+        if (!report) {
+          const available = Object.keys(INDUSTRY_TEMPLATES);
+          return res.status(200).json({ error: `Industry "${industry}" not found. Available: ${available.join(', ')}`, available });
+        }
+        return res.status(200).json(report);
+      }
+
+      return res.status(400).json({ error: 'Invalid request type. Use: analyze, predict, sentiment, research, industry' });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

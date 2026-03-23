@@ -1,5 +1,5 @@
 import React from 'react';
-import { Keyboard, X, Home, LayoutDashboard, Users, TrendingUp, BarChart3, Wallet, Bot, Search, Eye, Shield, Rocket, User, MessageSquare, Radar, Dice5 } from 'lucide-react';
+import { Keyboard, X, Home, LayoutDashboard, Users, TrendingUp, BarChart3, Wallet, Bot, Search, Eye, Shield, Rocket, User, Dice5, Flame } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 
 const sections = [
@@ -14,8 +14,6 @@ const sections = [
       { key: 'L', label: 'Leads', icon: Users, color: '#f59e0b' },
       { key: 'R', label: 'LaunchPad', icon: Rocket, color: '#ec4899' },
       { key: 'P', label: 'Casino', icon: Dice5, color: '#eab308' },
-      { key: 'V', label: 'Comms', icon: MessageSquare, color: '#06b6d4' },
-      { key: 'F', label: 'Finder', icon: Radar, color: '#8b5cf6' },
       { key: 'W', label: 'Wallet', icon: Wallet, color: '#3b82f6' },
       { key: 'X', label: 'Admin', icon: Shield, color: '#ef4444' },
     ]
@@ -28,6 +26,7 @@ const sections = [
       { key: 'G', label: 'Open GOATED AI', icon: Bot, color: '#a855f7' },
       { key: 'A', label: 'Account settings', icon: User, color: '#ec4899' },
       { key: 'S', label: 'Toggle sidebar', icon: Eye, color: '#06b6d4' },
+      { key: 'Shift+D', label: 'Toggle DEGEN Mode', icon: Flame, color: '#f97316' },
       { key: '?', label: 'Show this guide', icon: Keyboard, color: '#f59e0b' },
       { key: 'ESC', label: 'Close any overlay', icon: X, color: '#64748b' },
     ]

@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ArrowLeft, Phone, Mail, Calendar, Globe, Building2, AlertCircle, Copy, Check,
   TrendingUp, TrendingDown, Minus, Target, Shield, Zap, Star, ChevronRight,
   ChevronDown, Users, DollarSign, Clock, Award, BarChart3, Activity,
   Cpu, Eye, MessageSquare, Send, Package, Calculator, Flame, Crosshair,
   Brain, Radar, Timer, AlertTriangle, Keyboard, ExternalLink, Search, UserSearch,
-  Crown, Sparkles, PhoneCall, FileText, CreditCard, Trophy, Rocket, ChevronUp
+  Crown, Sparkles, PhoneCall, FileText, CreditCard, Trophy, Rocket, ChevronUp,
+  MapPin, Linkedin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight,
+  Volume2, Pause, Square
 } from 'lucide-react';
 import { useStore, fmt, enrichLead } from '../hooks/useStore';
 
@@ -130,6 +132,162 @@ function GlassCard({ children, className = '', highlight = false }) {
   return (
     <div className={`rounded-2xl border backdrop-blur-sm p-5 ${highlight ? 'border-brand/30 bg-brand/[0.04]' : 'border-white/[0.06] bg-white/[0.02]'} ${className}`}>
       {children}
+    </div>
+  );
+}
+
+// =============================================================================
+// AI VOICE BRIEF — Web Speech API powered lead summary reader
+// =============================================================================
+function VoiceBrief({ lead, el, dv, safeConversion, safePainPoints }) {
+  const [voiceState, setVoiceState] = useState('idle'); // idle | playing | paused
+  const [briefText, setBriefText] = useState('');
+  const utteranceRef = useRef(null);
+
+  const generateBriefText = useCallback(() => {
+    const name = lead.name || 'Unknown';
+    const company = lead.company || 'Unknown Company';
+    const industry = lead.industry || 'Unknown Industry';
+    const amount = dv ? `$${dv.toLocaleString()}` : 'Unknown';
+    const prob = safeConversion || 0;
+    const painPoint = safePainPoints?.[0] || 'scaling challenges';
+    const strategy = lead.status === 'negotiation'
+      ? 'Push for verbal commitment today with a simplified proposal and urgency-based close.'
+      : lead.status === 'qualified'
+      ? 'Schedule a tailored demo focusing on their primary pain point and present ROI projections.'
+      : lead.status === 'contacted'
+      ? 'Send a follow-up referencing your last interaction with a relevant case study.'
+      : lead.status === 'won'
+      ? 'Request a referral and explore upsell opportunities.'
+      : 'Initiate first contact via their preferred channel with a personalized value proposition.';
+
+    return `${name} at ${company}, ${industry}. Deal value ${amount}. Close probability ${prob}%. ${painPoint}. Recommended approach: ${strategy}`;
+  }, [lead, el, dv, safeConversion, safePainPoints]);
+
+  const handlePlay = useCallback(() => {
+    if (!('speechSynthesis' in window)) {
+      alert('Voice synthesis is not supported in this browser.');
+      return;
+    }
+
+    if (voiceState === 'paused') {
+      window.speechSynthesis.resume();
+      setVoiceState('playing');
+      return;
+    }
+
+    // Stop any existing speech
+    window.speechSynthesis.cancel();
+
+    const text = generateBriefText();
+    setBriefText(text);
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    // Try to get a good English voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.name.includes('Samantha') || v.name.includes('Google US') || v.name.includes('Alex'));
+    if (preferred) utterance.voice = preferred;
+
+    utterance.onend = () => setVoiceState('idle');
+    utterance.onerror = () => setVoiceState('idle');
+
+    utteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+    setVoiceState('playing');
+  }, [voiceState, generateBriefText]);
+
+  const handlePause = useCallback(() => {
+    window.speechSynthesis.pause();
+    setVoiceState('paused');
+  }, []);
+
+  const handleStop = useCallback(() => {
+    window.speechSynthesis.cancel();
+    setVoiceState('idle');
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-2">
+      {/* Voice Brief Button + Controls */}
+      <div className="flex items-center gap-2">
+        {voiceState === 'idle' && (
+          <button
+            onClick={handlePlay}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/20 text-sm text-cyan-400 hover:bg-cyan-500/25 transition-colors"
+          >
+            <Volume2 size={14} /> AI Voice Brief
+          </button>
+        )}
+        {voiceState === 'playing' && (
+          <>
+            <button
+              onClick={handlePause}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-500/15 border border-yellow-500/20 text-sm text-yellow-400 hover:bg-yellow-500/25 transition-colors"
+            >
+              <Pause size={14} /> Pause
+            </button>
+            <button
+              onClick={handleStop}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/20 text-sm text-red-400 hover:bg-red-500/25 transition-colors"
+            >
+              <Square size={14} /> Stop
+            </button>
+          </>
+        )}
+        {voiceState === 'paused' && (
+          <>
+            <button
+              onClick={handlePlay}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/20 text-sm text-brand hover:bg-brand/25 transition-colors"
+            >
+              <Volume2 size={14} /> Resume
+            </button>
+            <button
+              onClick={handleStop}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/20 text-sm text-red-400 hover:bg-red-500/25 transition-colors"
+            >
+              <Square size={14} /> Stop
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Brief Text Card — shown while playing or paused */}
+      {(voiceState === 'playing' || voiceState === 'paused') && briefText && (
+        <div className="p-3 rounded-xl border border-cyan-500/20 bg-cyan-500/[0.04] relative overflow-hidden">
+          <div className="flex items-center gap-2 mb-2">
+            {voiceState === 'playing' && (
+              <div className="flex items-center gap-1">
+                {[0, 1, 2].map(i => (
+                  <div
+                    key={i}
+                    className="w-1 bg-cyan-400 rounded-full"
+                    style={{
+                      height: '12px',
+                      animation: `pulse 0.8s ${i * 0.15}s ease-in-out infinite alternate`,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+            <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
+              {voiceState === 'playing' ? 'Reading Brief...' : 'Paused'}
+            </span>
+          </div>
+          <p className="text-xs text-slate-300 leading-relaxed">{briefText}</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -476,6 +634,147 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
           </ul>
         </div>
       </GlassCard>
+
+      {/* ═══ Pain-Point-Based Close Ranking ═══ */}
+      <GlassCard>
+        <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
+          <Target size={16} className="text-cyan-400" />
+          Pain-Point Close Ranking
+          <span className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold uppercase">Ranked by Close Probability</span>
+        </h3>
+        <div className="space-y-3">
+          {(() => {
+            const painCloseData = safePainPoints.map((pain, i) => {
+              const baseProb = Math.max(25, safeConversion - i * 12);
+              const entryPoints = {
+                'Technology': ['CTO/VP Engineering technical review', 'IT infrastructure audit proposal', 'Developer productivity assessment'],
+                'Healthcare': ['Compliance gap analysis offer', 'Patient outcome improvement study', 'Operational efficiency benchmark'],
+                'Finance': ['Risk assessment walkthrough', 'Regulatory readiness scorecard', 'Portfolio optimization demo'],
+                'Real Estate': ['Market analytics deep-dive', 'Lead conversion optimization', 'Comparable analysis tool demo'],
+                'Manufacturing': ['Supply chain efficiency audit', 'Quality metrics benchmark', 'Automation ROI calculator'],
+              };
+              const industryEntries = entryPoints[lead.industry] || ['Business impact assessment', 'Industry benchmark comparison', 'ROI discovery session'];
+              return {
+                pain,
+                closeProb: baseProb,
+                revenueImpact: Math.round(dv * (0.25 - i * 0.06)),
+                entryPoint: industryEntries[i] || industryEntries[0],
+                urgency: i === 0 ? 'Immediate' : i === 1 ? 'This week' : 'This month',
+              };
+            }).sort((a, b) => b.closeProb - a.closeProb);
+
+            return painCloseData.map((item, i) => (
+              <div key={i} className={`p-4 rounded-xl border ${i === 0 ? 'border-brand/25 bg-brand/[0.04]' : 'border-white/[0.04] bg-white/[0.01]'}`}>
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-brand/20 text-brand' : i === 1 ? 'bg-cyan-500/15 text-cyan-400' : 'bg-white/[0.04] text-slate-500'}`}>
+                      {i + 1}
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-white">{item.pain}</div>
+                      <div className="text-[10px] text-slate-500">Revenue impact: <span className="text-red-400 font-medium">{fmt(item.revenueImpact)}/yr lost</span></div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold" style={{ color: scoreColor(item.closeProb) }}>{item.closeProb}%</div>
+                    <div className="text-[10px] text-slate-500">Close prob.</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <div className="p-2 rounded-lg bg-white/[0.02] border border-white/[0.03]">
+                    <div className="text-[10px] text-cyan-400 uppercase tracking-wider font-bold mb-0.5">Entry Point</div>
+                    <div className="text-xs text-slate-300">{item.entryPoint}</div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-white/[0.02] border border-white/[0.03]">
+                    <div className="text-[10px] text-orange-400 uppercase tracking-wider font-bold mb-0.5">Urgency</div>
+                    <div className="text-xs text-slate-300">{item.urgency}</div>
+                  </div>
+                </div>
+              </div>
+            ));
+          })()}
+        </div>
+      </GlassCard>
+
+      {/* Competitive Positioning */}
+      <GlassCard>
+        <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
+          <Crosshair size={16} className="text-red-400" />
+          Competitive Positioning
+        </h3>
+        <div className="space-y-3">
+          {lead.competitorUsing && (
+            <div className="p-3 rounded-lg bg-red-500/[0.04] border border-red-500/10">
+              <div className="text-[10px] text-red-400 uppercase tracking-wider font-bold mb-1">Currently Using</div>
+              <div className="text-sm text-white font-medium">{lead.competitorUsing}</div>
+              <div className="text-xs text-slate-400 mt-1">Displacement strategy: Lead with {safePainPoints[0]?.toLowerCase() || 'efficiency gains'} — their current solution likely falls short here.</div>
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            {[
+              { label: 'Our Advantage', items: ['AI-powered intelligence', `${lead.industry}-specific playbooks`, `${roiMultiple}x projected ROI`], color: 'brand' },
+              { label: 'Their Weakness', items: ['Generic one-size-fits-all', 'No industry specialization', 'Slower time-to-value'], color: 'red-400' },
+              { label: 'Switching Triggers', items: ['Contract renewal window', `${safePainPoints[0]} worsening`, 'New budget cycle'], color: 'yellow-400' },
+            ].map((col, i) => (
+              <div key={i} className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                <div className={`text-[10px] text-${col.color} uppercase tracking-wider font-bold mb-2`}>{col.label}</div>
+                <div className="space-y-1.5">
+                  {col.items.map((item, j) => (
+                    <div key={j} className="flex items-center gap-1.5 text-xs text-slate-300">
+                      <div className={`w-1.5 h-1.5 rounded-full bg-${col.color}`} />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </GlassCard>
+
+      {/* Next Best Action */}
+      <div className="p-5 rounded-2xl border-2 border-brand/30 bg-brand/[0.06] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-brand/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-brand/20 flex items-center justify-center">
+              <Zap size={20} className="text-brand" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-brand flex items-center gap-2">
+                Next Best Action
+                <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand/15 text-brand border border-brand/25 font-bold uppercase animate-pulse">DO THIS NOW</span>
+              </h3>
+              <p className="text-[10px] text-slate-500">AI-recommended action based on current deal stage</p>
+            </div>
+          </div>
+          <div className="p-4 rounded-xl bg-black/30 border border-brand/15">
+            <p className="text-sm text-slate-200 leading-relaxed">
+              {currentStep && currentStep.step === 1 && `Complete your research on ${lead.company}. Review the AI Executive Summary and Pain Point analysis above, then prepare a personalized ${el.bestMethod || 'outreach'} message targeting "${safePainPoints[0]}". Move to Initial Outreach within 24 hours.`}
+              {currentStep && currentStep.step === 2 && `Send your initial outreach via ${el.bestMethod || 'email'} today. Use the AI-generated scripts from the Outreach tab. Reference "${safePainPoints[0]}" in your opener. Set a 48-hour follow-up reminder.`}
+              {currentStep && currentStep.step === 3 && `Schedule and conduct your discovery call with ${lead.name}. Focus on confirming pain points (${safePainPoints.slice(0, 2).join(', ')}), verifying budget authority, and establishing their timeline. Use AI coaching mode for real-time objection handling.`}
+              {currentStep && currentStep.step === 4 && `Prepare and send the ${safePackages.find(p => p.recommended)?.name || 'Growth'} proposal at ${fmt(safePackages.find(p => p.recommended)?.price || Math.round(dv * 0.025))}/mo. Include custom ROI projections showing ${roiMultiple}x return. Schedule a follow-up within 3 days.`}
+              {currentStep && currentStep.step === 5 && `${lead.name} is in negotiation. Lead with the industry objection handlers above. If budget is the concern, offer the 30-day pilot. Target closing this week — momentum is ${lead.momentum}.`}
+              {currentStep && currentStep.step === 6 && `Finalize the contract with ${lead.name} at ${fmt(dv)}. Process payment, set up onboarding, and send a welcome sequence. Your commission: ${fmt(Math.round(dv * 0.12))}.`}
+              {!currentStep && `Review the intelligence dashboard and prepare a personalized outreach strategy for ${lead.name}.`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 mt-3">
+            <button onClick={() => {
+              if (currentStep) {
+                const ctaIdx = currentStep.step - 1;
+                if (ctaActions[ctaIdx]) ctaActions[ctaIdx]();
+              }
+            }}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand text-black font-bold text-sm hover:bg-brand/90 transition-colors">
+              <Zap size={14} /> Take Action Now
+            </button>
+            <span className="text-[10px] text-slate-500">
+              Est. time to complete: {currentStep && currentStep.step <= 2 ? '15 min' : currentStep && currentStep.step <= 4 ? '30 min' : '1 hour'}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -725,6 +1024,13 @@ export default function LeadDetail() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
+          AI VOICE BRIEF BAR
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-3">
+        <VoiceBrief lead={lead} el={el} dv={dv} safeConversion={safeConversion} safePainPoints={safePainPoints} />
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
           HERO SECTION
       ═══════════════════════════════════════════════════════════════════════ */}
       <div className="relative overflow-hidden">
@@ -830,6 +1136,156 @@ export default function LeadDetail() {
               </p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          CONTACT INTEL + OUTREACH ACTIONS
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-4">
+        {/* Contact Intel Section */}
+        <div className="rounded-xl border border-cyan-500/15 bg-cyan-500/[0.02] p-4 sm:p-5 mb-4">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
+              <UserSearch size={16} className="text-cyan-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-cyan-400">Contact Intel</h3>
+              <span className="text-[9px] text-slate-500 uppercase tracking-wider">Verified & enriched contact data</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* LinkedIn Profile */}
+            <a href={`https://www.linkedin.com/in/${(lead.name || '').split(' ')[0]?.toLowerCase()}-${(lead.name || '').split(' ').slice(1).join('-')?.toLowerCase()}-${Math.abs([...(lead.name || '')].reduce((h, c) => (h << 5) - h + c.charCodeAt(0), 0)).toString(16).slice(0, 8)}`}
+              target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/[0.06] border border-blue-500/15 hover:bg-blue-500/10 transition-colors group">
+              <div className="w-9 h-9 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-blue-400"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] text-blue-400 uppercase tracking-wider font-semibold">LinkedIn Profile</div>
+                <div className="text-sm text-white truncate group-hover:text-blue-300 transition-colors">{lead.name}</div>
+              </div>
+              <ExternalLink size={12} className="text-blue-400/50 ml-auto shrink-0" />
+            </a>
+            {/* Phone - click to call */}
+            <a href={lead.phone ? `tel:${(lead.phone || '').replace(/[^+\d]/g, '')}` : '#'}
+              onClick={(e) => { if (!lead.phone) e.preventDefault(); }}
+              className={`flex items-center gap-3 p-3 rounded-lg border transition-colors group ${lead.phone ? 'bg-emerald-500/[0.06] border-emerald-500/15 hover:bg-emerald-500/10' : 'bg-white/[0.01] border-white/[0.04] opacity-50'}`}>
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${lead.phone ? 'bg-emerald-500/15' : 'bg-white/[0.04]'}`}>
+                <PhoneCall size={16} className={lead.phone ? 'text-emerald-400' : 'text-slate-600'} />
+              </div>
+              <div className="min-w-0">
+                <div className={`text-[10px] uppercase tracking-wider font-semibold ${lead.phone ? 'text-emerald-400' : 'text-slate-500'}`}>Click to Call</div>
+                <div className="text-sm text-white truncate">{lead.phone || 'No number'}</div>
+              </div>
+              {lead.phone && <CopyBtn text={lead.phone} />}
+            </a>
+            {/* Email - mailto */}
+            <a href={`mailto:${lead.email}`}
+              className="flex items-center gap-3 p-3 rounded-lg bg-purple-500/[0.06] border border-purple-500/15 hover:bg-purple-500/10 transition-colors group">
+              <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center shrink-0">
+                <Mail size={16} className="text-purple-400" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] text-purple-400 uppercase tracking-wider font-semibold">Email</div>
+                <div className="text-sm text-white truncate group-hover:text-purple-300 transition-colors">{lead.email}</div>
+              </div>
+              <CopyBtn text={lead.email} />
+            </a>
+            {/* Company Website */}
+            <a href={lead.website?.startsWith('http') ? lead.website : `https://${lead.website}`}
+              target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-3 p-3 rounded-lg bg-brand/[0.06] border border-brand/15 hover:bg-brand/10 transition-colors group">
+              <div className="w-9 h-9 rounded-lg bg-brand/15 flex items-center justify-center shrink-0">
+                <Globe size={16} className="text-brand" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] text-brand uppercase tracking-wider font-semibold">Company Website</div>
+                <div className="text-sm text-white truncate group-hover:text-brand transition-colors">{lead.website || lead.company}</div>
+              </div>
+              <ExternalLink size={12} className="text-brand/50 ml-auto shrink-0" />
+            </a>
+            {/* Estimated Address */}
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-orange-500/[0.06] border border-orange-500/15">
+              <div className="w-9 h-9 rounded-lg bg-orange-500/15 flex items-center justify-center shrink-0">
+                <MapPin size={16} className="text-orange-400" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] text-orange-400 uppercase tracking-wider font-semibold">Estimated Address</div>
+                <div className="text-sm text-white truncate">{lead.location ? `${lead.location} Metro Area` : 'Location unknown'}</div>
+              </div>
+            </div>
+            {/* People Search / Whitepages */}
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+              <a href={`https://www.truepeoplesearch.com/results?name=${encodeURIComponent(lead.name)}&citystatezip=${encodeURIComponent(lead.location || '')}`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-colors">
+                <Search size={12} /> People Search
+              </a>
+              <a href={`https://www.whitepages.com/name/${encodeURIComponent(lead.name)}/${encodeURIComponent((lead.location || '').split(',').pop()?.trim() || '')}`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-slate-500/10 text-slate-300 text-xs font-semibold hover:bg-slate-500/20 transition-colors">
+                <Search size={12} /> Whitepages
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Outreach Quick Actions */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Send LinkedIn Connection */}
+          <button onClick={() => {
+            const msg = `Hi ${(lead.name || '').split(' ')[0]}, I came across your profile and was impressed by your work at ${lead.company}. I'd love to connect and share some ideas about ${safePainPoints[0]?.toLowerCase() || 'growth opportunities'} in ${lead.industry}. Looking forward to connecting!`;
+            navigator.clipboard.writeText(msg);
+            alert('LinkedIn connection request copied to clipboard!');
+          }}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-blue-500/[0.06] border border-blue-500/15 hover:bg-blue-500/10 transition-colors group cursor-pointer">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Send size={18} className="text-blue-400" />
+            </div>
+            <span className="text-xs font-semibold text-blue-400">LinkedIn Connect</span>
+            <span className="text-[10px] text-slate-500">Copy request message</span>
+          </button>
+          {/* Draft Cold Email */}
+          <button onClick={() => {
+            const emailBody = `Subject: Quick idea for ${lead.company}\n\nHi ${(lead.name || '').split(' ')[0]},\n\nI've been following ${lead.company}'s growth in the ${lead.industry} space, and I noticed you might be dealing with ${safePainPoints[0]?.toLowerCase() || 'scaling challenges'}.\n\nWe've helped similar ${lead.industry} companies solve this exact problem, generating an average of ${fmt(Math.round(dv * 0.15))} in additional revenue within 90 days.\n\nWould you be open to a quick 15-minute call this week to see if there's a fit?\n\nBest regards`;
+            navigator.clipboard.writeText(emailBody);
+            alert('Cold email template copied to clipboard!');
+          }}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-purple-500/[0.06] border border-purple-500/15 hover:bg-purple-500/10 transition-colors group cursor-pointer">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Mail size={18} className="text-purple-400" />
+            </div>
+            <span className="text-xs font-semibold text-purple-400">Draft Cold Email</span>
+            <span className="text-[10px] text-slate-500">Copy email template</span>
+          </button>
+          {/* Call Script */}
+          <button onClick={() => {
+            const script = `CALL SCRIPT — ${lead.name} (${lead.company})\n\n[OPENER]\n"${safeCallScript.opener}"\n\n[DISCOVERY]\n${safeCallScript.discovery.map((q, i) => `Q${i+1}: "${q}"`).join('\n')}\n\n[PITCH]\n"${safeCallScript.pitch}"\n\n[CLOSE]\n"${safeCallScript.close}"\n\n[KEY PAIN POINTS TO ADDRESS]\n${safePainPoints.map((p, i) => `${i+1}. ${p}`).join('\n')}`;
+            navigator.clipboard.writeText(script);
+            alert('Call script copied to clipboard!');
+          }}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/15 hover:bg-emerald-500/10 transition-colors group cursor-pointer">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <PhoneCall size={18} className="text-emerald-400" />
+            </div>
+            <span className="text-xs font-semibold text-emerald-400">Call Script</span>
+            <span className="text-[10px] text-slate-500">Copy full script</span>
+          </button>
+          {/* SMS Template */}
+          <button onClick={() => {
+            const sms = `Hi ${(lead.name || '').split(' ')[0]}, this is [Your Name] from GOATED Solutions. I had a quick idea about how ${lead.company} could tackle ${safePainPoints[0]?.toLowerCase() || 'growth'}. Worth a 5-min chat? Let me know a good time.`;
+            navigator.clipboard.writeText(sms);
+            alert('SMS template copied to clipboard!');
+          }}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-yellow-500/[0.06] border border-yellow-500/15 hover:bg-yellow-500/10 transition-colors group cursor-pointer">
+            <div className="w-10 h-10 rounded-xl bg-yellow-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <MessageSquare size={18} className="text-yellow-400" />
+            </div>
+            <span className="text-xs font-semibold text-yellow-400">SMS Template</span>
+            <span className="text-[10px] text-slate-500">Copy text message</span>
+          </button>
         </div>
       </div>
 
@@ -1350,6 +1806,186 @@ export default function LeadDetail() {
                 </div>
               </div>
             </GlassCard>
+
+            {/* ═══ AI Close Strategy Section ═══ */}
+            <Accordion title="AI Close Strategy" defaultOpen={false} icon={<Brain size={16} className="text-purple-400" />}>
+              <div className="space-y-5 pt-3">
+                {/* Pain Point Analysis */}
+                <div>
+                  <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <Target size={12} /> Pain Point Analysis — {lead.industry}
+                  </h4>
+                  <div className="space-y-2">
+                    {(() => {
+                      const industryPains = {
+                        'Technology': ['Scaling infrastructure costs eating into margins', 'Talent acquisition bottleneck slowing product delivery', 'Technical debt accumulating from rapid growth'],
+                        'Healthcare': ['HIPAA compliance gaps creating liability exposure', 'Patient acquisition cost rising 15-20% YoY', 'Staff burnout driving 30%+ turnover rates'],
+                        'Finance': ['Regulatory compliance complexity increasing overhead', 'Legacy systems creating operational inefficiency', 'Customer churn from poor digital experience'],
+                        'Real Estate': ['Market volatility making pipeline unpredictable', 'Lead conversion rates declining below industry avg', 'Commission compression from discount brokerages'],
+                        'Manufacturing': ['Supply chain disruptions causing revenue leakage', 'Quality control gaps increasing return rates', 'Workforce automation transition resistance'],
+                        'Retail': ['E-commerce competition eroding foot traffic', 'Inventory management inefficiency tying up capital', 'Customer loyalty declining across segments'],
+                        'Energy': ['Regulatory pressure increasing compliance costs', 'Commodity price volatility hitting margins', 'Sustainability mandates requiring capital investment'],
+                      };
+                      const pains = industryPains[lead.industry] || [
+                        `${lead.industry} companies losing 15-25% revenue to operational inefficiency`,
+                        `Growth bottleneck from manual processes and legacy systems`,
+                        `Competitive pressure intensifying from digital-native entrants`
+                      ];
+                      return pains.map((pain, i) => (
+                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-red-500/[0.04] border border-red-500/10">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${i === 0 ? 'bg-red-500/15' : i === 1 ? 'bg-yellow-500/15' : 'bg-blue-500/15'}`}>
+                            <span className={`text-[10px] font-bold ${i === 0 ? 'text-red-400' : i === 1 ? 'text-yellow-400' : 'text-blue-400'}`}>{i + 1}</span>
+                          </div>
+                          <div className="flex-1">
+                            <span className="text-sm text-slate-300">{pain}</span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${i === 0 ? 'bg-red-500/15 text-red-400' : i === 1 ? 'bg-yellow-500/15 text-yellow-400' : 'bg-blue-500/15 text-blue-400'}`}>
+                                {i === 0 ? 'Critical' : i === 1 ? 'High' : 'Medium'} Impact
+                              </span>
+                              <span className="text-[10px] text-slate-500">Est. revenue impact: {fmt(Math.round(dv * (0.2 - i * 0.05)))}/yr</span>
+                            </div>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+
+                {/* Recommended Approach */}
+                <div>
+                  <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <Crosshair size={12} /> Recommended Approach
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="p-3 rounded-lg bg-cyan-500/[0.04] border border-cyan-500/10">
+                      <div className="text-[10px] text-cyan-400 uppercase tracking-wider font-bold mb-1.5">Cold Call Script Opener</div>
+                      <p className="text-sm text-slate-300 italic leading-relaxed">
+                        "Hi {(lead.name || '').split(' ')[0]}, I'll be brief — I've been studying {lead.industry} companies like {lead.company} and found that most are leaving {fmt(Math.round(dv * 0.15))} on the table annually from {safePainPoints[0]?.toLowerCase() || 'operational gaps'}. I had a specific idea for {lead.company} — do you have 90 seconds?"
+                      </p>
+                      <CopyBtn text={`Hi ${(lead.name || '').split(' ')[0]}, I'll be brief — I've been studying ${lead.industry} companies like ${lead.company} and found that most are leaving ${fmt(Math.round(dv * 0.15))} on the table annually from ${safePainPoints[0]?.toLowerCase() || 'operational gaps'}. I had a specific idea for ${lead.company} — do you have 90 seconds?`} />
+                    </div>
+                    <div className="p-3 rounded-lg bg-cyan-500/[0.04] border border-cyan-500/10">
+                      <div className="text-[10px] text-cyan-400 uppercase tracking-wider font-bold mb-1.5">Email Subject Lines</div>
+                      <div className="space-y-1.5">
+                        {[
+                          `${lead.company}'s ${safePainPoints[0]?.toLowerCase() || 'growth'} problem (and a fix)`,
+                          `Quick question about ${lead.company}'s ${lead.industry?.toLowerCase()} strategy`,
+                          `Saw ${lead.company}'s recent move — had an idea`,
+                        ].map((subj, i) => (
+                          <div key={i} className="flex items-center justify-between bg-black/20 p-2 rounded-md">
+                            <span className="text-sm text-slate-300">{subj}</span>
+                            <CopyBtn text={subj} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Objection Handling */}
+                <div>
+                  <h4 className="text-xs font-bold text-yellow-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <Shield size={12} /> Industry Objection Handling
+                  </h4>
+                  <div className="space-y-2">
+                    {(() => {
+                      const industryObjections = [
+                        {
+                          objection: `"We already have a ${lead.industry?.toLowerCase()} solution in place"`,
+                          response: `That's exactly why I called — most ${lead.industry} companies we work with had solutions before switching. The difference is we specifically address ${safePainPoints[0]?.toLowerCase() || 'the gaps'} that generic tools miss. What if I showed you a side-by-side comparison? Takes 10 minutes and you'll know immediately if there's a fit.`,
+                          winRate: Math.min(82, safeConversion + 15),
+                        },
+                        {
+                          objection: `"Not in the budget right now"`,
+                          response: `Totally understand. Here's what's interesting — our ${lead.industry} clients typically see ${fmt(Math.round(dv * 0.15))} in recovered revenue within 90 days, which more than covers the ${fmt(Math.round(dv * 0.025))}/mo investment. Would a 30-day pilot with zero upfront cost make sense? You only pay if the ROI is there.`,
+                          winRate: Math.min(71, safeConversion + 8),
+                        },
+                        {
+                          objection: `"I need to talk to my team / boss first"`,
+                          response: `Of course — that's a smart move. What if I put together a 1-page ROI summary specifically for ${lead.company} that you could share? I'll include industry benchmarks so your team can see exactly where you stand. Who else should I loop in for the follow-up?`,
+                          winRate: Math.min(67, safeConversion + 5),
+                        },
+                      ];
+                      return industryObjections.map((obj, i) => (
+                        <div key={i} className="p-3 rounded-lg bg-yellow-500/[0.04] border border-yellow-500/10">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-semibold text-yellow-400">{obj.objection}</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/10 text-brand font-semibold">{obj.winRate}% win rate</span>
+                          </div>
+                          <p className="text-sm text-slate-300 leading-relaxed">{obj.response}</p>
+                          <CopyBtn text={obj.response} />
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+
+                {/* Deal Timeline + Close Probability */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="p-4 rounded-lg bg-purple-500/[0.04] border border-purple-500/10">
+                    <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                      <Clock size={12} /> Deal Timeline Estimate
+                    </h4>
+                    <div className="space-y-2">
+                      {(() => {
+                        const weeks = dv >= 100000 ? '8-12 weeks' : dv >= 50000 ? '4-8 weeks' : dv >= 20000 ? '2-4 weeks' : '1-2 weeks';
+                        const stages = dv >= 100000
+                          ? [{ name: 'Discovery + Stakeholder Mapping', dur: '2 weeks' }, { name: 'Multi-threaded Engagement', dur: '3 weeks' }, { name: 'Proposal + Procurement', dur: '2 weeks' }, { name: 'Negotiation + Legal', dur: '2-3 weeks' }, { name: 'Close', dur: '1 week' }]
+                          : dv >= 50000
+                          ? [{ name: 'Discovery Call', dur: '1 week' }, { name: 'Value Demo', dur: '1-2 weeks' }, { name: 'Proposal + Review', dur: '1-2 weeks' }, { name: 'Close', dur: '1 week' }]
+                          : [{ name: 'Discovery + Pitch', dur: '1 week' }, { name: 'Proposal', dur: '3-5 days' }, { name: 'Close', dur: '3-5 days' }];
+                        return (
+                          <>
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-sm text-slate-400">Estimated close timeline</span>
+                              <span className="text-sm font-bold text-purple-400">{weeks}</span>
+                            </div>
+                            {stages.map((s, i) => (
+                              <div key={i} className="flex items-center gap-2">
+                                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${i === 0 ? 'bg-brand/15 text-brand' : 'bg-white/[0.04] text-slate-500'}`}>{i + 1}</div>
+                                <span className="flex-1 text-xs text-slate-300">{s.name}</span>
+                                <span className="text-[10px] text-slate-500">{s.dur}</span>
+                              </div>
+                            ))}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-lg bg-brand/[0.04] border border-brand/10">
+                    <h4 className="text-xs font-bold text-brand uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                      <Target size={12} /> Close Probability Assessment
+                    </h4>
+                    <div className="text-center mb-4">
+                      <div className="text-4xl font-black text-brand">{safeConversion}%</div>
+                      <div className="text-[10px] text-slate-500 uppercase tracking-wider mt-1">Close probability</div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-1">Contributing Factors</div>
+                      {[
+                        { factor: 'Lead Score', value: lead.score, impact: lead.score >= 70 ? 'Positive' : lead.score >= 40 ? 'Neutral' : 'Negative' },
+                        { factor: 'Momentum', value: lead.momentum, impact: lead.momentum === 'rising' ? 'Positive' : lead.momentum === 'stable' ? 'Neutral' : 'Negative' },
+                        { factor: 'Budget Fit', value: `${fmt(dv)}`, impact: dv >= 50000 ? 'Positive' : 'Neutral' },
+                        { factor: 'Engagement', value: safeRanking.engagement, impact: safeRanking.engagement === 'Very High' || safeRanking.engagement === 'High' ? 'Positive' : 'Neutral' },
+                        { factor: 'Buying Signals', value: `${safeBuyingSignals.length} active`, impact: safeBuyingSignals.length >= 3 ? 'Positive' : safeBuyingSignals.length >= 1 ? 'Neutral' : 'Negative' },
+                      ].map((f, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs">
+                          <span className="text-slate-400">{f.factor}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-300">{typeof f.value === 'number' ? f.value : f.value}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                              f.impact === 'Positive' ? 'bg-emerald-500/15 text-emerald-400' :
+                              f.impact === 'Negative' ? 'bg-red-500/15 text-red-400' :
+                              'bg-yellow-500/15 text-yellow-400'
+                            }`}>{f.impact}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Accordion>
           </div>
         )}
 

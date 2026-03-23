@@ -22,8 +22,11 @@ export default function SearchModal() {
       pages: [
         { id: 'home', name: 'Home' }, { id: 'dashboard', name: 'Dashboard' }, { id: 'leads', name: 'Leads' },
         { id: 'trends', name: 'Trend Pulse' }, { id: 'market', name: 'Markets' },
-        { id: 'wallet', name: 'Wallet' }, { id: 'launchpad', name: 'LaunchPad' }, { id: 'casino', name: 'Casino' }, { id: 'comms', name: 'Comms' }, { id: 'finder', name: 'Finder' }, { id: 'admin', name: 'Admin' },
-      ].filter(p => p.name.toLowerCase().includes(query))
+        { id: 'wallet', name: 'Wallet' }, { id: 'launchpad', name: 'LaunchPad' }, { id: 'casino', name: 'Casino' }, { id: 'admin', name: 'Admin' },
+      ].filter(p => p.name.toLowerCase().includes(query)),
+      actions: [
+        { id: 'toggle-degen', name: 'Toggle DEGEN Mode', desc: 'Casino, Alpha Plays, Insider Intel, Market Signals' },
+      ].filter(a => a.name.toLowerCase().includes(query) || a.desc.toLowerCase().includes(query))
     };
   }, [q, leads]);
 
@@ -31,6 +34,7 @@ export default function SearchModal() {
   const flatResults = useMemo(() => {
     const items = [];
     results.pages.forEach(p => items.push({ type: 'page', data: p }));
+    if (results.actions) results.actions.forEach(a => items.push({ type: 'action', data: a }));
     results.leads.forEach(l => items.push({ type: 'lead', data: l }));
     return items;
   }, [results]);
@@ -41,6 +45,10 @@ export default function SearchModal() {
   const selectItem = useCallback((item) => {
     if (item.type === 'page') {
       setPage(item.data.id);
+    } else if (item.type === 'action') {
+      if (item.data.id === 'toggle-degen') {
+        useStore.getState().toggleDegenMode();
+      }
     } else {
       setSelectedLead(item.data);
       setDetailOpen(true);
@@ -105,6 +113,27 @@ export default function SearchModal() {
                 })}
               </div>
             )}
+            {results.actions && results.actions.length > 0 && (
+              <div className="mb-2">
+                <div className="px-3 py-1.5 text-xs text-slate-500 font-medium uppercase">Actions</div>
+                {results.actions.map(a => {
+                  itemCounter++;
+                  const idx = itemCounter;
+                  return (
+                    <button key={a.id} onClick={() => selectItem({ type: 'action', data: a })}
+                      data-active={idx === activeIdx}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-slate-200 transition-colors ${idx === activeIdx ? 'bg-orange-500/10 text-orange-400' : 'hover:bg-white/[0.02]'}`}>
+                      <span className="text-lg">🔥</span>
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-sm font-medium ${idx === activeIdx ? 'text-orange-400' : 'text-white'}`}>{a.name}</div>
+                        <div className="text-xs text-slate-500 truncate">{a.desc}</div>
+                      </div>
+                      {idx === activeIdx && <CornerDownLeft size={14} className="text-orange-400/50" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             {results.leads.length > 0 && (
               <div>
                 <div className="px-3 py-1.5 text-xs text-slate-500 font-medium uppercase">Leads</div>
@@ -129,7 +158,7 @@ export default function SearchModal() {
                 })}
               </div>
             )}
-            {results.leads.length === 0 && results.pages.length === 0 && (
+            {results.leads.length === 0 && results.pages.length === 0 && (!results.actions || results.actions.length === 0) && (
               <div className="py-8 text-center text-slate-500">No results for "{q}"</div>
             )}
           </div>
