@@ -348,8 +348,11 @@ export default function App() {
       const state = useStore.getState();
       if (state.searchOpen || state.accountModalOpen) return;
 
-      // If AI overlay is open, only allow Escape (handled above) — don't navigate
-      if (state.aiOpen) return;
+      // If AI overlay is open, allow 'G' to toggle it closed, block other keybinds
+      if (state.aiOpen) {
+        if (key === 'g') { e.preventDefault(); setAiOpen(false); }
+        return;
+      }
 
       // If keybinds modal is open, handle navigation keys then close
       if (state.keybindsOpen) {
@@ -393,7 +396,7 @@ export default function App() {
       // Action keys
       if (key === 's') { e.preventDefault(); toggleSidebar(); }
       else if (key === '/' || key === '?') { e.preventDefault(); setKeybindsOpen(true); }
-      else if (key === 'g') { e.preventDefault(); setAiOpen(true); }
+      else if (key === 'g') { e.preventDefault(); setAiOpen(!useStore.getState().aiOpen); }
       else if (key === 'a') { e.preventDefault(); setAccountModalOpen(true); }
     };
     window.addEventListener('keydown', onKey);
@@ -454,9 +457,9 @@ export default function App() {
       <AnimatePresence>
         {searchOpen && <SearchModal key="search" />}
         {keybindsOpen && <KeybindsModal key="keybinds" />}
-        {aiOpen && <AIOverlay key="ai" />}
         {accountModalOpen && <AccountModal key="account" />}
       </AnimatePresence>
+      <AIOverlay />
       {!onboardingComplete && <Onboarding />}
       {degenToast && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[999] px-5 py-3 rounded-xl text-sm font-semibold shadow-2xl border border-white/10 backdrop-blur-md"

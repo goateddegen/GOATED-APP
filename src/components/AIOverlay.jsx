@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Send, Minimize2,
   Globe, Users, TrendingUp, Lightbulb,
-  ChevronRight,
+  ChevronRight, ChevronDown, Check,
   BarChart3, Wallet, Zap, Target, ArrowRight,
   MessageSquare, Sparkles, LayoutDashboard, ExternalLink, Phone, UserSearch,
   Trophy, Flame, DollarSign, Clock, Activity, Shield, ClipboardList, FileText,
@@ -872,6 +873,39 @@ function ContextSummaryCard({ currentPage, leads, degenMode, onAction }) {
   );
 }
 
+// ─── CONTEXT TIPS PER PAGE ──────────────────────────────────────────────
+const CONTEXT_TIPS = {
+  leads: "I found 3 high-probability leads ready to close",
+  trends: "BTC sentiment shifted bullish \u2014 see alpha plays",
+  dashboard: "Your pipeline is empty \u2014 let me find leads",
+  casino: "Try Price Prediction \u2014 most popular game",
+  launchpad: "10 live predictions to track",
+  home: "Welcome! Press Shift+D for DEGEN mode",
+};
+
+// ─── CLOSE COACH STEPS ────────────────────────────────────────────────
+const CLOSE_COACH_STEPS = [
+  { label: 'Research', key: 'research' },
+  { label: 'First Contact', key: 'contact' },
+  { label: 'Discovery Call', key: 'discovery' },
+  { label: 'Proposal Sent', key: 'proposal' },
+  { label: 'Negotiation', key: 'negotiation' },
+  { label: 'Close', key: 'close' },
+];
+
+function getCoachStepFromStatus(status) {
+  const map = {
+    'new': 0,
+    'contacted': 1,
+    'qualified': 2,
+    'proposal': 3,
+    'negotiation': 4,
+    'won': 5,
+    'lost': 0,
+  };
+  return map[status] ?? 0;
+}
+
 // ─── MAIN COMPONENT ────────────────────────────────────────────────────
 export default function AIOverlay() {
   const { aiOpen, setAiOpen, leads: rawLeads, getLeads, page: currentPage, setPage, selectedLead, setSelectedLead, setDetailOpen, setPreviousPage, degenMode } = useStore();
@@ -882,9 +916,9 @@ export default function AIOverlay() {
   }, [rawLeads, getLeads]);
 
   // Initial messages based on mode
-  const NORMAL_INTRO = "I'm **GOATED AI** — your revenue intelligence agent and deep research assistant.\n\nI have access to all platform data and can help with:\n- **Deep Research** — markets, companies, industries, competitive analysis\n- **Lead Intelligence** — search 500K+ leads, generate call scripts & SMS sequences\n- **Market Analysis** — real-time sentiment across all social platforms\n- **Predictive Analytics** — spread analysis, trend correlation, price predictions\n- **Direct Outreach** — VoIP scripts, SMS campaigns, voicemail drops\n- **General AI** — coding, writing, analysis, strategy, anything\n\nAll platform features (**Leads**, **TrendPulse**, **Dashboard**, **Markets**, **Wallet**) are embedded and accessible. Ask me anything.";
+  const NORMAL_INTRO = "I'm **GOATED AI** \u2014 your revenue intelligence agent and deep research assistant.\n\nI have access to all platform data and can help with:\n- **Deep Research** \u2014 markets, companies, industries, competitive analysis\n- **Lead Intelligence** \u2014 search 500K+ leads, generate call scripts & SMS sequences\n- **Market Analysis** \u2014 real-time sentiment across all social platforms\n- **Predictive Analytics** \u2014 spread analysis, trend correlation, price predictions\n- **Direct Outreach** \u2014 VoIP scripts, SMS campaigns, voicemail drops\n- **General AI** \u2014 coding, writing, analysis, strategy, anything\n\nAll platform features (**Leads**, **TrendPulse**, **Dashboard**, **Markets**, **Wallet**) are embedded and accessible. Ask me anything.";
 
-  const DEGEN_INTRO = "**WOLF MODE ACTIVATED** — I'm your GOATED AI degen co-pilot and I'm ready to make it rain.\n\nListen up king, here's what I bring to the table:\n- **Alpha Intelligence** — find the plays before anyone else, ape into the right deals\n- **Lead Sniping** — 500K+ targets scored and ranked, I'll tell you exactly who to call and what to say\n- **Market Pulse** — real-time degen sentiment, whale movements, what's pumping and what's dumping\n- **Prediction Markets** — spreads, odds, probability scoring — gamble smarter not harder\n- **Outreach Warfare** — VoIP scripts, SMS blasts, voicemail drops that actually convert\n- **Big Brain Mode** — strategy, analysis, whatever you need, I don't miss\n\nAll features unlocked: **Leads**, **TrendPulse**, **Dashboard**, **Markets**, **Wallet**\n\nLFG. What are we closing today?";
+  const DEGEN_INTRO = "**WOLF MODE ACTIVATED** \u2014 I'm your GOATED AI degen co-pilot and I'm ready to make it rain.\n\nListen up king, here's what I bring to the table:\n- **Alpha Intelligence** \u2014 find the plays before anyone else, ape into the right deals\n- **Lead Sniping** \u2014 500K+ targets scored and ranked, I'll tell you exactly who to call and what to say\n- **Market Pulse** \u2014 real-time degen sentiment, whale movements, what's pumping and what's dumping\n- **Prediction Markets** \u2014 spreads, odds, probability scoring \u2014 gamble smarter not harder\n- **Outreach Warfare** \u2014 VoIP scripts, SMS blasts, voicemail drops that actually convert\n- **Big Brain Mode** \u2014 strategy, analysis, whatever you need, I don't miss\n\nAll features unlocked: **Leads**, **TrendPulse**, **Dashboard**, **Markets**, **Wallet**\n\nLFG. What are we closing today?";
 
   // Core state
   const [messages, setMessages] = useState([
@@ -903,7 +937,7 @@ export default function AIOverlay() {
   const [typing, setTyping] = useState(false);
   const [thinkingLabel, setThinkingLabel] = useState('Thinking...');
   const [aiFailCount, setAiFailCount] = useState(0);
-  const useAI = aiFailCount < 3; // Only disable after 3 consecutive failures
+  const useAI = aiFailCount < 3;
   const [coachMode, setCoachMode] = useState(false);
 
   // Mobile detection
@@ -915,12 +949,37 @@ export default function AIOverlay() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Proactive suggestion tooltip
+  // ─── CONTEXT TIP (auto-shows on page nav) ────────────────────────
+  const [contextTip, setContextTip] = useState(null);
+  const contextTipTimerRef = useRef(null);
+  const contextTipHideRef = useRef(null);
+  const prevPageRef = useRef(currentPage);
+
+  useEffect(() => {
+    clearTimeout(contextTipTimerRef.current);
+    clearTimeout(contextTipHideRef.current);
+    // Only show tip if page changed or on initial mount
+    if (currentPage !== prevPageRef.current || !prevPageRef.current) {
+      prevPageRef.current = currentPage;
+      contextTipTimerRef.current = setTimeout(() => {
+        if (!useStore.getState().aiOpen) {
+          const tip = CONTEXT_TIPS[currentPage] || CONTEXT_TIPS.home;
+          setContextTip(tip);
+          contextTipHideRef.current = setTimeout(() => setContextTip(null), 8000);
+        }
+      }, 3000);
+    }
+    return () => {
+      clearTimeout(contextTipTimerRef.current);
+      clearTimeout(contextTipHideRef.current);
+    };
+  }, [currentPage]);
+
+  // Proactive suggestion tooltip (existing — fires periodically when closed)
   const [proactiveTip, setProactiveTip] = useState(null);
   const proactiveTimerRef = useRef(null);
   const proactiveDismissRef = useRef(null);
   useEffect(() => {
-    // Show proactive suggestions every 30-60s when orb is visible but chat is closed
     const schedule = () => {
       const delay = 30000 + Math.random() * 30000;
       proactiveTimerRef.current = setTimeout(() => {
@@ -928,7 +987,6 @@ export default function AIOverlay() {
           const pageSuggestions = PROACTIVE_SUGGESTIONS[currentPage] || PROACTIVE_SUGGESTIONS.dashboard;
           const tip = pageSuggestions[Math.floor(Math.random() * pageSuggestions.length)];
           setProactiveTip(tip);
-          // Auto-dismiss after 5s
           proactiveDismissRef.current = setTimeout(() => setProactiveTip(null), 5000);
         }
         schedule();
@@ -954,6 +1012,46 @@ export default function AIOverlay() {
     }
     return null;
   }, [currentPage, leads]);
+
+  // Lead mini-card data for orb overlay
+  const leadMiniCard = useMemo(() => {
+    if (currentPage !== 'leads' || !selectedLead) return null;
+    const nextActions = {
+      'new': 'Send cold email',
+      'contacted': 'Schedule call',
+      'qualified': 'Send proposal',
+      'negotiation': 'Follow up',
+      'proposal': 'Handle objections',
+      'won': 'Request referral',
+      'lost': 'Re-engage later',
+    };
+    return {
+      name: selectedLead.name,
+      company: selectedLead.company,
+      probability: selectedLead.conversionProbability,
+      nextAction: nextActions[selectedLead.status] || 'Follow up',
+    };
+  }, [currentPage, selectedLead]);
+
+  // Close Coach checklist state
+  const [leadViewStart, setLeadViewStart] = useState(null);
+  const [researchChecked, setResearchChecked] = useState(false);
+  useEffect(() => {
+    if (selectedLead) {
+      setLeadViewStart(Date.now());
+      setResearchChecked(false);
+    }
+  }, [selectedLead?.id]);
+  useEffect(() => {
+    if (!selectedLead || !leadViewStart) return;
+    const timer = setTimeout(() => setResearchChecked(true), 5000);
+    return () => clearTimeout(timer);
+  }, [selectedLead?.id, leadViewStart]);
+
+  const closeCoachStep = useMemo(() => {
+    if (!selectedLead) return 0;
+    return getCoachStepFromStatus(selectedLead.status);
+  }, [selectedLead]);
 
   const endRef = useRef(null);
   const inputRef = useRef(null);
@@ -993,7 +1091,6 @@ export default function AIOverlay() {
   // Determine contextual thinking label based on message content and page
   const getThinkingLabel = useCallback((msg) => {
     const lower = (msg || '').toLowerCase();
-    // Lead-related queries
     if (/lead|pipeline|find|search|show me/.test(lower)) return 'Searching lead database...';
     if (/outreach|script|email|call|sms|draft/.test(lower)) return 'Crafting outreach scripts...';
     if (/clos|objection|negotiat|coach/.test(lower)) return 'Analyzing closing strategy...';
@@ -1002,7 +1099,6 @@ export default function AIOverlay() {
     if (/competitor|compet|intel/.test(lower)) return 'Gathering competitive intel...';
     if (/idea|business|start/.test(lower)) return 'Generating business ideas...';
     if (/analyz|report|deep dive/.test(lower)) return 'Running deep analysis...';
-    // Page-based defaults
     if (currentPage === 'leads') return 'Analyzing lead data...';
     if (currentPage === 'trends') return 'Scanning market signals...';
     if (currentPage === 'dashboard') return 'Optimizing pipeline...';
@@ -1014,19 +1110,14 @@ export default function AIOverlay() {
   // Quick action buttons based on current page, coach mode, and selected lead
   const quickActions = useMemo(() => {
     const base = QUICK_ACTIONS[currentPage] || [];
-
-    // When coach mode is on and on leads page, replace with coaching actions
     if (coachMode && currentPage === 'leads') {
-      const coachActions = [
+      return [
         { label: 'Call Script', prompt: selectedLead ? `Write a word-for-word cold call script for ${selectedLead.name} at ${selectedLead.company}. Include opener, hook, value prop, and close.` : 'Write a cold call script for my top lead. Include opener, hook, value prop, and close.', icon: Phone },
         { label: 'Handle Objections', prompt: selectedLead ? `Give me objection handling scripts for ${selectedLead.name} at ${selectedLead.company} in ${selectedLead.industry}. Cover: price, timing, competitor, and "not interested" objections.` : 'Give me objection handling scripts for common B2B objections: price, timing, competitor, and "not interested".', icon: Shield },
         { label: 'Email Template', prompt: selectedLead ? `Write a follow-up email template for ${selectedLead.name} at ${selectedLead.company}. Pain points: ${(selectedLead.painPoints||[]).join(', ')}. Make it personal and compelling.` : 'Write a follow-up email template for a qualified lead that creates urgency and drives a meeting.', icon: Send },
         { label: 'Next Best Action', prompt: selectedLead ? `What is the single best action I should take RIGHT NOW to close ${selectedLead.name} at ${selectedLead.company}? They are in ${selectedLead.status} stage, score ${selectedLead.score}/100. Be specific.` : 'What is the single best action I should take right now to close more deals? Look at my pipeline and be specific.', icon: Target },
       ];
-      return coachActions;
     }
-
-    // When a lead is selected on leads page, add outreach quick action
     if (selectedLead && currentPage === 'leads') {
       const firstName = selectedLead.name.split(' ')[0];
       const outreachAction = {
@@ -1034,19 +1125,15 @@ export default function AIOverlay() {
         prompt: `Draft a multi-channel outreach sequence for ${selectedLead.name} at ${selectedLead.company}. Industry: ${selectedLead.industry}. Pain points: ${(selectedLead.painPoints||[]).join(', ')}. Include email, call script, and LinkedIn DM.`,
         icon: Send,
       };
-      // Prepend outreach action, avoid duplicates
       const filtered = base.filter(a => !a.label.includes('Draft outreach'));
       return [outreachAction, ...filtered].slice(0, 6);
     }
-
     return base;
   }, [currentPage, coachMode, selectedLead]);
 
   // Suggested prompts based on current page, coach mode, and degen mode
   const suggestedPrompts = useMemo(() => {
-    if (coachMode) {
-      return COACH_PROMPTS[currentPage] || COACH_PROMPTS.home;
-    }
+    if (coachMode) return COACH_PROMPTS[currentPage] || COACH_PROMPTS.home;
     const prompts = degenMode ? DEGEN_PROMPTS : PAGE_PROMPTS;
     return prompts[currentPage] || prompts.home;
   }, [currentPage, degenMode, coachMode]);
@@ -1054,7 +1141,6 @@ export default function AIOverlay() {
   // Navigate to page helper
   const navigateTo = useCallback((pageId) => {
     setPage(pageId);
-    // Don't close overlay - companion mode stays open
   }, [setPage]);
 
   // Open a specific lead's detail page
@@ -1074,7 +1160,9 @@ export default function AIOverlay() {
     setTyping(true);
     setThinkingLabel(getThinkingLabel(msg));
 
-    // Build context about pipeline for the AI
+    // Auto-expand when sending
+    if (!aiOpen) setAiOpen(true);
+
     const leadCtx = selectedLead ? `\n\nCurrently viewing lead: ${selectedLead.name} at ${selectedLead.company} (${selectedLead.industry}), Score: ${selectedLead.score}/100, Deal: $${(selectedLead.dealValue||0).toLocaleString()}, Status: ${selectedLead.status}, Priority: ${selectedLead.priority}, Phone: ${selectedLead.phone||'N/A'}, Email: ${selectedLead.email||'N/A'}, Website: ${selectedLead.website||'N/A'}, Location: ${selectedLead.location||'N/A'}, Pain Points: ${(selectedLead.painPoints||[]).join(', ')}, Buying Signals: ${(selectedLead.buyingSignals||[]).join(', ')}, Best Method: ${selectedLead.bestMethod||'email'}` : '';
     const revenueCtx = `\n\nRevenue tracking: Current MRR: $${revenueStats.currentMRR.toLocaleString()}, Goal: $${revenueStats.mrrGoal.toLocaleString()}/mo, Distance to goal: $${revenueStats.distanceToGoal.toLocaleString()}, Won deals: ${revenueStats.wonDeals}, Pending commission: $${revenueStats.pendingCommission.toLocaleString()}, Deals in negotiation: ${revenueStats.negotiatingCount}, Pipeline health: ${revenueStats.pipelineHealth}, This week: ${revenueStats.weekActivity.calls} calls made, ${revenueStats.weekActivity.outreach} outreach sent, Closing streak: ${revenueStats.streakDays} days`;
     const coachCtx = coachMode ? '\n\nCOACH MODE IS ON: Act as a real-time closing coach. Be proactive, suggest next actions, celebrate wins, give specific dollar amounts for commission, create urgency based on decision timelines, and reference their pipeline goals.' : '';
@@ -1082,7 +1170,6 @@ export default function AIOverlay() {
       `${l.name} at ${l.company} (score: ${l.score}, value: ${fmt(l.dealValue)}, priority: ${l.priority}, status: ${l.status})`
     ).join('; ')}${leadCtx}${revenueCtx}${coachCtx}`;
 
-    // Try real AI API first
     if (useAI) {
       try {
         const apiMessages = newMessages
@@ -1093,26 +1180,21 @@ export default function AIOverlay() {
               ? `${m.content}\n\n[${pipelineContext}]`
               : m.content
           }));
-
-        // Send a slim subset of leads for server-side search (top 2500 by score, minimal fields)
         const slimLeads = leads.slice(0, 2500).map(l => ({
           id: l.id, name: l.name, company: l.company, industry: l.industry,
           location: l.location, score: l.score, dealValue: l.dealValue,
           status: l.status, priority: l.priority, conversionProbability: l.conversionProbability,
           bestMethod: l.bestMethod, email: l.email, phone: l.phone,
         }));
-
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ messages: apiMessages, degenMode, leadData: slimLeads, currentPage }),
         });
-
         const data = await res.json();
-
         if (!data.fallback && data.content) {
           setMessages(p => [...p, { role: 'assistant', content: data.content }]);
-          setAiFailCount(0); // Reset on success
+          setAiFailCount(0);
           setTyping(false);
           return;
         }
@@ -1122,13 +1204,12 @@ export default function AIOverlay() {
       }
     }
 
-    // Fallback to template responses
     setTimeout(() => {
       const res = getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats });
       setMessages(p => [...p, { role: 'assistant', content: res }]);
       setTyping(false);
     }, 600 + Math.random() * 400);
-  }, [input, typing, messages, leads, useAI, degenMode, coachMode, selectedLead, revenueStats]);
+  }, [input, typing, messages, leads, useAI, degenMode, coachMode, selectedLead, revenueStats, aiOpen]);
 
   // Coach Mode: proactive suggestions when viewing a lead
   const prevSelectedRef = useRef(selectedLead?.id);
@@ -1139,9 +1220,9 @@ export default function AIOverlay() {
       const daysInStage = 1 + Math.floor(Math.random() * 5);
       let proactiveMsg = '';
       if (selectedLead.status === 'negotiation') {
-        proactiveMsg = `**Coach Alert:** You should call **${selectedLead.name}** now — they've been in Negotiation for ${daysInStage} days. This deal is worth **$${commission.toLocaleString()} in commission**. Decision timeline: ${selectedLead.decisionTimeline || '2 weeks'}. Don't let this one slip!`;
+        proactiveMsg = `**Coach Alert:** You should call **${selectedLead.name}** now \u2014 they've been in Negotiation for ${daysInStage} days. This deal is worth **$${commission.toLocaleString()} in commission**. Decision timeline: ${selectedLead.decisionTimeline || '2 weeks'}. Don't let this one slip!`;
       } else if (selectedLead.status === 'qualified') {
-        proactiveMsg = `**Coach Alert:** **${selectedLead.name}** is qualified and ready for a demo. Commission opportunity: **$${commission.toLocaleString()}**. Their pain points are ${(selectedLead.painPoints||[]).slice(0, 2).join(' and ')} — lead with those.`;
+        proactiveMsg = `**Coach Alert:** **${selectedLead.name}** is qualified and ready for a demo. Commission opportunity: **$${commission.toLocaleString()}**. Their pain points are ${(selectedLead.painPoints||[]).slice(0, 2).join(' and ')} \u2014 lead with those.`;
       } else if (selectedLead.status === 'won') {
         proactiveMsg = `**Great call!** That's **$${commission.toLocaleString()} in commission** from closing ${selectedLead.name}! Now ask for a referral to 10x this win.`;
       } else {
@@ -1153,8 +1234,9 @@ export default function AIOverlay() {
 
   // Quick action handler - sets input and sends
   const handleQuickAction = useCallback((label) => {
+    // Auto-expand when using quick actions
+    if (!aiOpen) setAiOpen(true);
     setInput(label);
-    // Use a microtask to ensure state is set before sending
     setTimeout(() => {
       const newMessages = [...messages, { role: 'user', content: label }];
       setMessages(newMessages);
@@ -1217,443 +1299,621 @@ export default function AIOverlay() {
       }
       setInput('');
     }, 10);
-  }, [messages, leads, useAI, degenMode, coachMode, selectedLead, revenueStats]);
-
-  // ─── PANEL LAYOUT ───────────────────────────────────────────────────
-  // Always right panel on desktop, full screen on mobile
-  const panelClasses = isMobile
-    ? 'fixed inset-0 z-50 flex flex-col'
-    : 'fixed top-9 right-0 bottom-0 z-50 w-[320px] flex flex-col';
+  }, [messages, leads, useAI, degenMode, coachMode, selectedLead, revenueStats, aiOpen]);
 
   // ─── RENDER ──────────────────────────────────────────────────────────
+  // The floating orb is ALWAYS visible. The expanded panel appears when aiOpen is true.
+  const orbColor = degenMode ? 'orange' : 'green';
+
   return (
     <>
-      {/* Backdrop for mobile */}
-      {isMobile && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50"
-          onClick={() => setAiOpen(false)}
-        />
-      )}
+      {/* ── CSS for orb pulse animation ─────────────────────────────── */}
+      <style>{`
+        @keyframes orbPulse {
+          0%, 100% { box-shadow: 0 0 8px 2px ${degenMode ? 'rgba(249,115,22,0.3)' : 'rgba(16,185,129,0.3)'}, 0 0 20px 4px ${degenMode ? 'rgba(249,115,22,0.1)' : 'rgba(16,185,129,0.1)'}; }
+          50% { box-shadow: 0 0 16px 6px ${degenMode ? 'rgba(249,115,22,0.5)' : 'rgba(16,185,129,0.5)'}, 0 0 32px 8px ${degenMode ? 'rgba(249,115,22,0.15)' : 'rgba(16,185,129,0.15)'}; }
+        }
+        @keyframes tipSlideIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes tipSlideOut {
+          from { opacity: 1; transform: translateY(0); }
+          to { opacity: 0; transform: translateY(8px); }
+        }
+      `}</style>
 
-      {/* Main Panel */}
-      <div
-        className={panelClasses}
-        style={{
-          background: 'rgba(3, 7, 15, 0.97)',
-          backdropFilter: 'blur(24px) saturate(1.6)',
-          borderLeft: isMobile ? 'none' : '1px solid rgba(16,185,129,0.08)',
-          animation: 'slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-        }}
-      >
-        {/* ── HEADER ────────────────────────────────────────────────── */}
-        <div
-          className="shrink-0 p-3 border-b border-white/[0.03]"
-          style={{
-            background: 'linear-gradient(135deg, rgba(16,185,129,0.03), rgba(6,182,212,0.01), transparent)',
-          }}
-        >
-          {/* Top bar */}
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.1))',
-                    boxShadow: '0 0 20px rgba(16,185,129,0.1)',
-                  }}
-                >
-                  <GoatIcon className="w-4 h-4 text-brand" />
-                </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-brand border-2"
-                  style={{ borderColor: 'rgba(5,10,20,0.9)' }} />
-              </div>
-              <div>
-                <div className="font-bold text-xs flex items-center gap-1.5">
-                  <span className="glitter-text">GOATED AI</span>
-                  {useAI && (
-                    <span className="text-[8px] px-1 py-0.5 rounded-full font-semibold tracking-wider"
-                      style={{
-                        background: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(6,182,212,0.15))',
-                        color: '#10b981',
-                        border: '1px solid rgba(16,185,129,0.2)',
-                      }}
-                    >
-                      LIVE
-                    </span>
-                  )}
-                </div>
-                <div className="text-[9px] text-slate-500">Agent · {currentPage}</div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1">
-              {/* Coach Mode Toggle */}
-              <button
-                onClick={() => setCoachMode(!coachMode)}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 ${
-                  coachMode
-                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                    : 'bg-white/[0.03] text-slate-500 border border-white/[0.05] hover:text-amber-400 hover:bg-amber-500/10'
-                }`}
-                title="Toggle Coach Mode"
-              >
-                <Trophy size={11} />
-                COACH
-              </button>
-              <button
-                onClick={() => setAiOpen(false)}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
-              >
-                <X size={15} />
-              </button>
-            </div>
-          </div>
-
-          {/* Quick action chips */}
-            <div className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              {suggestedPrompts.map(a => (
-                <button
-                  key={a.label}
-                  onClick={() => handleQuickAction(a.label)}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium
-                    whitespace-nowrap transition-all duration-200 shrink-0"
-                  style={{
-                    background: 'rgba(16,185,129,0.05)',
-                    border: '1px solid rgba(16,185,129,0.1)',
-                    color: '#94a3b8',
-                  }}
-                  onMouseEnter={e => {
-                    e.target.style.background = 'rgba(16,185,129,0.12)';
-                    e.target.style.borderColor = 'rgba(16,185,129,0.25)';
-                    e.target.style.color = '#e2e8f0';
-                  }}
-                  onMouseLeave={e => {
-                    e.target.style.background = 'rgba(16,185,129,0.05)';
-                    e.target.style.borderColor = 'rgba(16,185,129,0.1)';
-                    e.target.style.color = '#94a3b8';
-                  }}
-                >
-                  <a.icon size={11} className="text-brand shrink-0" />
-                  {a.label}
-                </button>
-              ))}
-            </div>
-        </div>
-
-        {/* ── COACH MODE MINI DASHBOARD ──────────────────────────────── */}
-        {coachMode && (
-          <div className="mx-2 mt-1 p-2 rounded-xl border"
-            style={{
-              background: 'linear-gradient(135deg, rgba(245,158,11,0.05), rgba(245,158,11,0.02))',
-              borderColor: 'rgba(245,158,11,0.15)',
-            }}
+      {/* ── FLOATING ORB (always visible) ────────────────────────────── */}
+      <AnimatePresence>
+        {!aiOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2"
           >
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <Trophy size={10} className="text-amber-400" />
-              <span className="text-[9px] font-bold text-amber-400 tracking-wider">COACH MODE</span>
-              <div className="flex-1" />
-              <span className="text-[9px] text-amber-400/60">{revenueStats.streakDays}-day streak</span>
-              <Flame size={10} className="text-amber-400" />
-            </div>
-            <div className="grid grid-cols-3 gap-1.5">
-              <div className="text-center p-1 rounded-lg bg-black/30">
-                <div className="text-[10px] font-bold text-white">${revenueStats.currentMRR >= 1000 ? `${(revenueStats.currentMRR / 1000).toFixed(1)}K` : revenueStats.currentMRR}</div>
-                <div className="text-[8px] text-slate-500">MRR</div>
-              </div>
-              <div className="text-center p-1 rounded-lg bg-black/30">
-                <div className="text-[10px] font-bold text-amber-400">{revenueStats.negotiatingCount}</div>
-                <div className="text-[8px] text-slate-500">In Progress</div>
-              </div>
-              <div className="text-center p-1 rounded-lg bg-black/30">
-                <div className="text-[10px] font-bold text-brand">${revenueStats.pendingCommission >= 1000 ? `${(revenueStats.pendingCommission / 1000).toFixed(0)}K` : revenueStats.pendingCommission}</div>
-                <div className="text-[8px] text-slate-500">Pending $</div>
-              </div>
-            </div>
-            <div className="mt-1.5 h-1 rounded-full bg-black/30 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${Math.min(100, (revenueStats.currentMRR / revenueStats.mrrGoal) * 100)}%`,
-                  background: 'linear-gradient(90deg, #f59e0b, #10b981)',
-                }}
-              />
-            </div>
-            <div className="flex justify-between mt-0.5">
-              <span className="text-[8px] text-slate-500">${revenueStats.distanceToGoal >= 1000 ? `${(revenueStats.distanceToGoal / 1000).toFixed(1)}K` : revenueStats.distanceToGoal} to goal</span>
-              <span className="text-[8px] text-slate-500">${revenueStats.mrrGoal >= 1000 ? `${(revenueStats.mrrGoal / 1000).toFixed(0)}K` : revenueStats.mrrGoal} MRR</span>
-            </div>
-          </div>
-        )}
-
-        {/* ── CONTEXT SUMMARY CARD ──────────────────────────────────── */}
-        {messages.length <= 1 && !coachMode && (
-          <ContextSummaryCard
-            currentPage={currentPage}
-            leads={leads}
-            degenMode={degenMode}
-            onAction={handleQuickAction}
-          />
-        )}
-
-        {/* ── QUICK INSIGHT BUTTONS ───────────────────────────────────── */}
-        {messages.length <= 1 && (
-          <div className="mx-2 mt-1">
-            <div className="flex items-center gap-1.5 mb-1 px-0.5">
-              <Brain size={9} className={degenMode ? 'text-orange-400' : 'text-brand'} />
-              <span className={`text-[9px] font-bold tracking-wider uppercase ${degenMode ? 'text-orange-400' : 'text-slate-500'}`}>
-                {degenMode ? 'Alpha Intel' : 'Quick Insights'}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-1">
-              {(degenMode ? DEGEN_INSIGHTS : QUICK_INSIGHTS).map(qi => (
-                <button
-                  key={qi.label}
-                  onClick={() => handleQuickAction(qi.prompt)}
-                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-all text-left"
+            {/* Context tip toast */}
+            <AnimatePresence>
+              {(contextTip || proactiveTip) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.25 }}
+                  className="max-w-[280px] px-3 py-2 rounded-xl text-[11px] font-medium text-slate-200 cursor-pointer"
                   style={{
-                    background: degenMode ? 'rgba(249,115,22,0.06)' : 'rgba(16,185,129,0.04)',
-                    border: degenMode ? '1px solid rgba(249,115,22,0.12)' : '1px solid rgba(16,185,129,0.08)',
-                    color: '#94a3b8',
+                    background: 'rgba(3, 7, 15, 0.95)',
+                    backdropFilter: 'blur(16px)',
+                    border: `1px solid ${degenMode ? 'rgba(249,115,22,0.2)' : 'rgba(16,185,129,0.15)'}`,
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                   }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = degenMode ? 'rgba(249,115,22,0.15)' : 'rgba(16,185,129,0.12)';
-                    e.currentTarget.style.borderColor = degenMode ? 'rgba(249,115,22,0.3)' : 'rgba(16,185,129,0.25)';
-                    e.currentTarget.style.color = degenMode ? '#f97316' : '#10b981';
+                  onClick={() => { setContextTip(null); setProactiveTip(null); setAiOpen(true); }}
+                >
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={12} className={degenMode ? 'text-orange-400 shrink-0' : 'text-brand shrink-0'} />
+                    <span>{contextTip || proactiveTip}</span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Lead mini-card (when on leads page with a lead selected) */}
+            <AnimatePresence>
+              {leadMiniCard && !aiOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.25 }}
+                  className="w-[260px] px-3 py-2.5 rounded-xl cursor-pointer"
+                  style={{
+                    background: 'rgba(3, 7, 15, 0.95)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(168,85,247,0.2)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                   }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = degenMode ? 'rgba(249,115,22,0.06)' : 'rgba(16,185,129,0.04)';
-                    e.currentTarget.style.borderColor = degenMode ? 'rgba(249,115,22,0.12)' : 'rgba(16,185,129,0.08)';
-                    e.currentTarget.style.color = '#94a3b8';
+                  onClick={() => setAiOpen(true)}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-[11px] font-semibold text-white truncate">{leadMiniCard.name}</div>
+                    <span className="text-[10px] font-bold text-purple-400">{leadMiniCard.probability}%</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 mb-1.5">{leadMiniCard.company}</div>
+                  <div className="flex items-center gap-1.5 text-[10px] font-medium text-brand">
+                    <ArrowRight size={10} />
+                    <span>Next: {leadMiniCard.nextAction}</span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Close Coach checklist (when lead is selected) */}
+            <AnimatePresence>
+              {selectedLead && currentPage === 'leads' && !aiOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.25, delay: 0.1 }}
+                  className="w-[220px] px-3 py-2.5 rounded-xl"
+                  style={{
+                    background: 'rgba(3, 7, 15, 0.95)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(245,158,11,0.15)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                   }}
                 >
-                  <qi.icon size={10} className={`shrink-0 ${degenMode ? 'text-orange-500' : 'text-brand'}`} />
-                  {qi.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── LEAD CONTEXT BANNER ────────────────────────────────────── */}
-        {selectedLead && (
-          <div className="mx-2 mt-1 p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 text-[9px] font-bold">
-                  {selectedLead.name.split(' ').map(n => n[0]).join('')}
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-white">{selectedLead.name}</div>
-                  <div className="text-[10px] text-slate-400">{selectedLead.company} · {selectedLead.industry}</div>
-                </div>
-              </div>
-              <span className="text-[10px] font-bold text-purple-400">{selectedLead.score}/100</span>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {[
-                { label: 'Get Lead Brief', action: `Give me a comprehensive lead brief for ${selectedLead.name} at ${selectedLead.company}. Include: background summary, industry (${selectedLead.industry}), company size, deal value ($${(selectedLead.dealValue||0).toLocaleString()}), pain points (${(selectedLead.painPoints||[]).join(', ')}), buying signals (${(selectedLead.buyingSignals||[]).join(', ')}), competitive landscape (using ${selectedLead.competitorUsing || 'unknown'}), decision timeline (${selectedLead.decisionTimeline || 'unknown'}), closability score breakdown (budget fit, timing, decision maker access, pain urgency, competition), and recommended strategy.` },
-                { label: 'Analyze Lead', action: `Analyze ${selectedLead.name} at ${selectedLead.company} — give me a full intelligence report with close probability, best approach, and revenue opportunity` },
-                { label: `Draft Outreach for ${selectedLead.name.split(' ')[0]}`, action: `Draft a full multi-channel outreach sequence for ${selectedLead.name} at ${selectedLead.company}. Industry: ${selectedLead.industry}, pain points: ${(selectedLead.painPoints||[]).join(', ')}, buying signals: ${(selectedLead.buyingSignals||[]).join(', ')}. Include personalized email, cold call script, and LinkedIn DM.` },
-                { label: 'Coach Me', action: `Coach me on closing ${selectedLead.name} at ${selectedLead.company}. Status: ${selectedLead.status}, Score: ${selectedLead.score}/100, Deal: $${(selectedLead.dealValue||0).toLocaleString()}. What should I do RIGHT NOW?` },
-                { label: 'Closability Score', action: `Show me the closability score breakdown for ${selectedLead.name} at ${selectedLead.company}. Break down: Budget Fit, Timing, Decision Maker Access, Pain Urgency, and Competition. Score: ${selectedLead.score}, Conversion: ${selectedLead.conversionProbability}%, Momentum: ${selectedLead.momentum}, Pain Points: ${(selectedLead.painPoints||[]).join(', ')}, Competitor: ${selectedLead.competitorUsing || 'None'}` },
-              ].map(qa => (
-                <button key={qa.label} onClick={() => { setInput(qa.action); }}
-                  className="px-2 py-0.5 rounded-full text-[9px] font-medium bg-purple-500/15 text-purple-300 hover:bg-purple-500/25 transition-colors">
-                  {qa.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── MESSAGES AREA ──────────────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-3 space-y-2.5">
-            {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                style={{ animation: `slideInUp 0.3s ease-out ${Math.min(i * 0.05, 0.3)}s both` }}>
-                <div className="flex gap-2 max-w-[88%]">
-                  {/* Assistant avatar */}
-                  {m.role === 'assistant' && (
-                    <div className="shrink-0 mt-1">
-                      <div className="w-6 h-6 rounded-lg flex items-center justify-center"
-                        style={{
-                          background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.1))',
-                        }}
-                      >
-                        <GoatIcon className="w-3.5 h-3.5 text-brand" />
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <div
-                      className={`px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${
-                        m.role === 'user'
-                          ? 'rounded-2xl rounded-br-md'
-                          : 'rounded-2xl rounded-bl-md'
-                      }`}
-                      style={
-                        m.role === 'user'
-                          ? {
-                              background: 'linear-gradient(135deg, #10b981, #059669)',
-                              color: '#000',
-                              fontWeight: 500,
-                            }
-                          : {
-                              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.6))',
-                              border: '1px solid rgba(255,255,255,0.04)',
-                              color: '#cbd5e1',
-                            }
-                      }
-                    >
-                      {m.role === 'assistant' ? (
-                        <StreamingAssistantMessage
-                          content={m.content}
-                          isLatest={i === messages.length - 1 || (i === messages.length - 2 && typing)}
-                          onNavigate={navigateTo}
-                          onOpenLead={openLead}
-                          leads={leads}
-                        />
-                      ) : (
-                        m.content
-                      )}
-                    </div>
-
-                    {/* Action buttons for assistant messages */}
-                    {m.role === 'assistant' && (
-                      <ResponseActions content={m.content} onNavigate={navigateTo} onQuickAction={handleQuickAction} />
-                    )}
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Trophy size={10} className="text-amber-400" />
+                    <span className="text-[9px] font-bold text-amber-400 tracking-wider uppercase">Close Coach</span>
                   </div>
-                </div>
-              </div>
-            ))}
+                  <div className="space-y-1">
+                    {CLOSE_COACH_STEPS.map((step, idx) => {
+                      const isCompleted = idx === 0 ? researchChecked : idx <= closeCoachStep;
+                      const isCurrent = idx === (closeCoachStep + (researchChecked ? 0 : 0));
+                      return (
+                        <div key={step.key} className="flex items-center gap-2">
+                          <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[7px] shrink-0 ${
+                            isCompleted ? 'bg-brand/20 text-brand' : 'bg-white/[0.03] text-slate-600'
+                          }`}
+                            style={isCompleted ? { border: '1px solid rgba(16,185,129,0.3)' } : { border: '1px solid rgba(255,255,255,0.05)' }}
+                          >
+                            {isCompleted && <Check size={8} />}
+                          </div>
+                          <span className={`text-[10px] ${isCompleted ? 'text-slate-300 line-through opacity-60' : 'text-slate-400'}`}>
+                            {step.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {/* Typing indicator */}
-            {typing && (
-              <div className="flex justify-start" style={{ animation: 'slideInUp 0.2s ease-out' }}>
-                <div className="flex gap-2">
-                  <div className="shrink-0 mt-1">
-                    <div className="w-6 h-6 rounded-lg flex items-center justify-center"
-                      style={{
-                        background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.1))',
-                      }}
-                    >
-                      <GoatIcon className="w-3.5 h-3.5 text-brand" />
-                    </div>
-                  </div>
-                  <div className="px-4 py-3 rounded-2xl rounded-bl-md"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.6))',
-                      border: '1px solid rgba(255,255,255,0.04)',
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="flex gap-1">
-                        {[0, 1, 2].map(idx => (
-                          <div
-                            key={idx}
-                            className="w-1.5 h-1.5 rounded-full"
-                            style={{
-                              background: 'linear-gradient(135deg, #10b981, #06b6d4)',
-                              animation: `bounce 0.6s ${idx * 0.15}s infinite`,
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-[10px] text-slate-500 ml-1">{thinkingLabel}</span>
-                    </div>
-                  </div>
-                </div>
+            {/* Orb badge */}
+            {orbBadgeText && (
+              <div className="absolute -top-1 -left-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold text-white z-10"
+                style={{
+                  background: degenMode ? 'linear-gradient(135deg, #f97316, #ef4444)' : 'linear-gradient(135deg, #10b981, #06b6d4)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                }}
+              >
+                {orbBadgeText}
               </div>
             )}
 
-            <div ref={endRef} />
-          </div>
-        </div>
-
-        {/* ── INPUT AREA ────────────────────────────────────────────── */}
-        <div className="shrink-0 border-t border-white/[0.03] p-3"
-          style={{ background: 'rgba(5, 10, 20, 0.5)' }}>
-
-          {/* Contextual quick action pills */}
-          {quickActions.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-2">
-              {quickActions.map(qa => (
-                <button
-                  key={qa.label}
-                  onClick={() => setInput(qa.prompt)}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium
-                    transition-all duration-200 whitespace-nowrap"
-                  style={{
-                    background: 'rgba(16,185,129,0.06)',
-                    border: '1px solid rgba(16,185,129,0.1)',
-                    color: '#64748b',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'rgba(16,185,129,0.15)';
-                    e.currentTarget.style.borderColor = 'rgba(16,185,129,0.3)';
-                    e.currentTarget.style.color = '#10b981';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'rgba(16,185,129,0.06)';
-                    e.currentTarget.style.borderColor = 'rgba(16,185,129,0.1)';
-                    e.currentTarget.style.color = '#64748b';
-                  }}
-                >
-                  <qa.icon size={9} />
-                  {qa.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
-              placeholder={coachMode ? "Ask your closing coach..." : "Ask GOATED AI anything..."}
-              className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-all placeholder-slate-600"
-              style={{
-                background: 'rgba(15, 23, 42, 0.6)',
-                border: coachMode ? '1px solid rgba(245,158,11,0.15)' : '1px solid rgba(16,185,129,0.08)',
-                color: '#e2e8f0',
-              }}
-              onFocus={e => {
-                e.target.style.borderColor = coachMode ? 'rgba(245,158,11,0.35)' : 'rgba(16,185,129,0.25)';
-                e.target.style.boxShadow = coachMode ? '0 0 0 3px rgba(245,158,11,0.05)' : '0 0 0 3px rgba(16,185,129,0.05)';
-              }}
-              onBlur={e => {
-                e.target.style.borderColor = coachMode ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.08)';
-                e.target.style.boxShadow = 'none';
-              }}
-            />
+            {/* The orb button */}
             <button
-              onClick={send}
-              disabled={typing || !input.trim()}
-              className="px-4 py-2.5 rounded-xl font-medium transition-all duration-200 flex items-center gap-1.5
-                disabled:opacity-30 disabled:cursor-not-allowed"
+              onClick={() => setAiOpen(true)}
+              className="w-12 h-12 rounded-full flex items-center justify-center relative transition-transform hover:scale-110 active:scale-95"
               style={{
-                background: input.trim() && !typing
-                  ? 'linear-gradient(135deg, #10b981, #059669)'
-                  : 'rgba(16,185,129,0.1)',
-                color: input.trim() && !typing ? '#000' : '#10b981',
-                boxShadow: input.trim() && !typing
-                  ? '0 0 20px rgba(16,185,129,0.2), 0 4px 12px rgba(0,0,0,0.3)'
-                  : 'none',
+                background: degenMode
+                  ? 'linear-gradient(135deg, #f97316, #ef4444)'
+                  : 'linear-gradient(135deg, #10b981, #059669)',
+                animation: 'orbPulse 3s ease-in-out infinite',
+              }}
+              title="Open GOATED AI (G)"
+            >
+              <Sparkles size={22} className="text-white" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── EXPANDED CHAT PANEL ──────────────────────────────────────── */}
+      <AnimatePresence>
+        {aiOpen && (
+          <>
+            {/* Backdrop for mobile */}
+            {isMobile && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-40 bg-black/50"
+                onClick={() => setAiOpen(false)}
+              />
+            )}
+
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.95 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className={
+                isMobile
+                  ? 'fixed inset-2 z-50 flex flex-col rounded-2xl overflow-hidden'
+                  : 'fixed bottom-6 right-6 z-50 w-[400px] flex flex-col rounded-2xl overflow-hidden'
+              }
+              style={{
+                maxHeight: isMobile ? undefined : '70vh',
+                background: 'rgba(3, 7, 15, 0.97)',
+                backdropFilter: 'blur(24px) saturate(1.6)',
+                border: `1px solid ${degenMode ? 'rgba(249,115,22,0.15)' : 'rgba(16,185,129,0.12)'}`,
+                boxShadow: `0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.02), 0 0 40px ${degenMode ? 'rgba(249,115,22,0.08)' : 'rgba(16,185,129,0.08)'}`,
               }}
             >
-              <Send size={15} />
-            </button>
-          </div>
-        </div>
-      </div>
+              {/* ── HEADER ────────────────────────────────────────────────── */}
+              <div
+                className="shrink-0 p-3 border-b border-white/[0.03]"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(16,185,129,0.03), rgba(6,182,212,0.01), transparent)',
+                }}
+              >
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{
+                          background: degenMode
+                            ? 'linear-gradient(135deg, rgba(249,115,22,0.15), rgba(239,68,68,0.1))'
+                            : 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.1))',
+                          boxShadow: degenMode ? '0 0 20px rgba(249,115,22,0.1)' : '0 0 20px rgba(16,185,129,0.1)',
+                        }}
+                      >
+                        <GoatIcon className={`w-4 h-4 ${degenMode ? 'text-orange-400' : 'text-brand'}`} />
+                      </div>
+                      <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${degenMode ? 'bg-orange-400' : 'bg-brand'} border-2`}
+                        style={{ borderColor: 'rgba(5,10,20,0.9)' }} />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs flex items-center gap-1.5">
+                        <span className="glitter-text">GOATED AI</span>
+                        {useAI && (
+                          <span className="text-[8px] px-1 py-0.5 rounded-full font-semibold tracking-wider"
+                            style={{
+                              background: degenMode
+                                ? 'linear-gradient(135deg, rgba(249,115,22,0.2), rgba(239,68,68,0.15))'
+                                : 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(6,182,212,0.15))',
+                              color: degenMode ? '#f97316' : '#10b981',
+                              border: `1px solid ${degenMode ? 'rgba(249,115,22,0.2)' : 'rgba(16,185,129,0.2)'}`,
+                            }}
+                          >
+                            LIVE
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[9px] text-slate-500">Agent &middot; {currentPage}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setCoachMode(!coachMode)}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 ${
+                        coachMode
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                          : 'bg-white/[0.03] text-slate-500 border border-white/[0.05] hover:text-amber-400 hover:bg-amber-500/10'
+                      }`}
+                      title="Toggle Coach Mode"
+                    >
+                      <Trophy size={11} />
+                      COACH
+                    </button>
+                    <button
+                      onClick={() => setAiOpen(false)}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/[0.05] transition-all"
+                      title="Minimize (G or Escape)"
+                    >
+                      <ChevronDown size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick action chips */}
+                <div className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                  {suggestedPrompts.map(a => (
+                    <button
+                      key={a.label}
+                      onClick={() => handleQuickAction(a.label)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium
+                        whitespace-nowrap transition-all duration-200 shrink-0"
+                      style={{
+                        background: degenMode ? 'rgba(249,115,22,0.05)' : 'rgba(16,185,129,0.05)',
+                        border: `1px solid ${degenMode ? 'rgba(249,115,22,0.1)' : 'rgba(16,185,129,0.1)'}`,
+                        color: '#94a3b8',
+                      }}
+                      onMouseEnter={e => {
+                        e.target.style.background = degenMode ? 'rgba(249,115,22,0.12)' : 'rgba(16,185,129,0.12)';
+                        e.target.style.borderColor = degenMode ? 'rgba(249,115,22,0.25)' : 'rgba(16,185,129,0.25)';
+                        e.target.style.color = '#e2e8f0';
+                      }}
+                      onMouseLeave={e => {
+                        e.target.style.background = degenMode ? 'rgba(249,115,22,0.05)' : 'rgba(16,185,129,0.05)';
+                        e.target.style.borderColor = degenMode ? 'rgba(249,115,22,0.1)' : 'rgba(16,185,129,0.1)';
+                        e.target.style.color = '#94a3b8';
+                      }}
+                    >
+                      <a.icon size={11} className={`${degenMode ? 'text-orange-400' : 'text-brand'} shrink-0`} />
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── COACH MODE MINI DASHBOARD ──────────────────────────────── */}
+              {coachMode && (
+                <div className="mx-2 mt-1 p-2 rounded-xl border"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(245,158,11,0.05), rgba(245,158,11,0.02))',
+                    borderColor: 'rgba(245,158,11,0.15)',
+                  }}
+                >
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Trophy size={10} className="text-amber-400" />
+                    <span className="text-[9px] font-bold text-amber-400 tracking-wider">COACH MODE</span>
+                    <div className="flex-1" />
+                    <span className="text-[9px] text-amber-400/60">{revenueStats.streakDays}-day streak</span>
+                    <Flame size={10} className="text-amber-400" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <div className="text-center p-1 rounded-lg bg-black/30">
+                      <div className="text-[10px] font-bold text-white">${revenueStats.currentMRR >= 1000 ? `${(revenueStats.currentMRR / 1000).toFixed(1)}K` : revenueStats.currentMRR}</div>
+                      <div className="text-[8px] text-slate-500">MRR</div>
+                    </div>
+                    <div className="text-center p-1 rounded-lg bg-black/30">
+                      <div className="text-[10px] font-bold text-amber-400">{revenueStats.negotiatingCount}</div>
+                      <div className="text-[8px] text-slate-500">In Progress</div>
+                    </div>
+                    <div className="text-center p-1 rounded-lg bg-black/30">
+                      <div className="text-[10px] font-bold text-brand">${revenueStats.pendingCommission >= 1000 ? `${(revenueStats.pendingCommission / 1000).toFixed(0)}K` : revenueStats.pendingCommission}</div>
+                      <div className="text-[8px] text-slate-500">Pending $</div>
+                    </div>
+                  </div>
+                  <div className="mt-1.5 h-1 rounded-full bg-black/30 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min(100, (revenueStats.currentMRR / revenueStats.mrrGoal) * 100)}%`,
+                        background: 'linear-gradient(90deg, #f59e0b, #10b981)',
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-between mt-0.5">
+                    <span className="text-[8px] text-slate-500">${revenueStats.distanceToGoal >= 1000 ? `${(revenueStats.distanceToGoal / 1000).toFixed(1)}K` : revenueStats.distanceToGoal} to goal</span>
+                    <span className="text-[8px] text-slate-500">${revenueStats.mrrGoal >= 1000 ? `${(revenueStats.mrrGoal / 1000).toFixed(0)}K` : revenueStats.mrrGoal} MRR</span>
+                  </div>
+                </div>
+              )}
+
+              {/* ── CONTEXT SUMMARY CARD ──────────────────────────────────── */}
+              {messages.length <= 1 && !coachMode && (
+                <ContextSummaryCard
+                  currentPage={currentPage}
+                  leads={leads}
+                  degenMode={degenMode}
+                  onAction={handleQuickAction}
+                />
+              )}
+
+              {/* ── QUICK INSIGHT BUTTONS ───────────────────────────────────── */}
+              {messages.length <= 1 && (
+                <div className="mx-2 mt-1">
+                  <div className="flex items-center gap-1.5 mb-1 px-0.5">
+                    <Brain size={9} className={degenMode ? 'text-orange-400' : 'text-brand'} />
+                    <span className={`text-[9px] font-bold tracking-wider uppercase ${degenMode ? 'text-orange-400' : 'text-slate-500'}`}>
+                      {degenMode ? 'Alpha Intel' : 'Quick Insights'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    {(degenMode ? DEGEN_INSIGHTS : QUICK_INSIGHTS).map(qi => (
+                      <button
+                        key={qi.label}
+                        onClick={() => handleQuickAction(qi.prompt)}
+                        className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-all text-left"
+                        style={{
+                          background: degenMode ? 'rgba(249,115,22,0.06)' : 'rgba(16,185,129,0.04)',
+                          border: degenMode ? '1px solid rgba(249,115,22,0.12)' : '1px solid rgba(16,185,129,0.08)',
+                          color: '#94a3b8',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = degenMode ? 'rgba(249,115,22,0.15)' : 'rgba(16,185,129,0.12)';
+                          e.currentTarget.style.borderColor = degenMode ? 'rgba(249,115,22,0.3)' : 'rgba(16,185,129,0.25)';
+                          e.currentTarget.style.color = degenMode ? '#f97316' : '#10b981';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = degenMode ? 'rgba(249,115,22,0.06)' : 'rgba(16,185,129,0.04)';
+                          e.currentTarget.style.borderColor = degenMode ? 'rgba(249,115,22,0.12)' : 'rgba(16,185,129,0.08)';
+                          e.currentTarget.style.color = '#94a3b8';
+                        }}
+                      >
+                        <qi.icon size={10} className={`shrink-0 ${degenMode ? 'text-orange-500' : 'text-brand'}`} />
+                        {qi.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── LEAD CONTEXT BANNER ────────────────────────────────────── */}
+              {selectedLead && (
+                <div className="mx-2 mt-1 p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 text-[9px] font-bold">
+                        {selectedLead.name.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-white">{selectedLead.name}</div>
+                        <div className="text-[10px] text-slate-400">{selectedLead.company} &middot; {selectedLead.industry}</div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-purple-400">{selectedLead.score}/100</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {[
+                      { label: 'Get Lead Brief', action: `Give me a comprehensive lead brief for ${selectedLead.name} at ${selectedLead.company}. Include: background summary, industry (${selectedLead.industry}), company size, deal value ($${(selectedLead.dealValue||0).toLocaleString()}), pain points (${(selectedLead.painPoints||[]).join(', ')}), buying signals (${(selectedLead.buyingSignals||[]).join(', ')}), competitive landscape (using ${selectedLead.competitorUsing || 'unknown'}), decision timeline (${selectedLead.decisionTimeline || 'unknown'}), closability score breakdown (budget fit, timing, decision maker access, pain urgency, competition), and recommended strategy.` },
+                      { label: 'Analyze Lead', action: `Analyze ${selectedLead.name} at ${selectedLead.company} \u2014 give me a full intelligence report with close probability, best approach, and revenue opportunity` },
+                      { label: `Draft Outreach for ${selectedLead.name.split(' ')[0]}`, action: `Draft a full multi-channel outreach sequence for ${selectedLead.name} at ${selectedLead.company}. Industry: ${selectedLead.industry}, pain points: ${(selectedLead.painPoints||[]).join(', ')}, buying signals: ${(selectedLead.buyingSignals||[]).join(', ')}. Include personalized email, cold call script, and LinkedIn DM.` },
+                      { label: 'Coach Me', action: `Coach me on closing ${selectedLead.name} at ${selectedLead.company}. Status: ${selectedLead.status}, Score: ${selectedLead.score}/100, Deal: $${(selectedLead.dealValue||0).toLocaleString()}. What should I do RIGHT NOW?` },
+                      { label: 'Closability Score', action: `Show me the closability score breakdown for ${selectedLead.name} at ${selectedLead.company}. Break down: Budget Fit, Timing, Decision Maker Access, Pain Urgency, and Competition. Score: ${selectedLead.score}, Conversion: ${selectedLead.conversionProbability}%, Momentum: ${selectedLead.momentum}, Pain Points: ${(selectedLead.painPoints||[]).join(', ')}, Competitor: ${selectedLead.competitorUsing || 'None'}` },
+                    ].map(qa => (
+                      <button key={qa.label} onClick={() => { setInput(qa.action); }}
+                        className="px-2 py-0.5 rounded-full text-[9px] font-medium bg-purple-500/15 text-purple-300 hover:bg-purple-500/25 transition-colors">
+                        {qa.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── MESSAGES AREA ──────────────────────────────────────────── */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-3 space-y-2.5">
+                  {messages.map((m, i) => (
+                    <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      style={{ animation: `slideInUp 0.3s ease-out ${Math.min(i * 0.05, 0.3)}s both` }}>
+                      <div className="flex gap-2 max-w-[88%]">
+                        {m.role === 'assistant' && (
+                          <div className="shrink-0 mt-1">
+                            <div className="w-6 h-6 rounded-lg flex items-center justify-center"
+                              style={{
+                                background: degenMode
+                                  ? 'linear-gradient(135deg, rgba(249,115,22,0.15), rgba(239,68,68,0.1))'
+                                  : 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.1))',
+                              }}
+                            >
+                              <GoatIcon className={`w-3.5 h-3.5 ${degenMode ? 'text-orange-400' : 'text-brand'}`} />
+                            </div>
+                          </div>
+                        )}
+
+                        <div>
+                          <div
+                            className={`px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${
+                              m.role === 'user'
+                                ? 'rounded-2xl rounded-br-md'
+                                : 'rounded-2xl rounded-bl-md'
+                            }`}
+                            style={
+                              m.role === 'user'
+                                ? {
+                                    background: degenMode
+                                      ? 'linear-gradient(135deg, #f97316, #ea580c)'
+                                      : 'linear-gradient(135deg, #10b981, #059669)',
+                                    color: '#000',
+                                    fontWeight: 500,
+                                  }
+                                : {
+                                    background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.6))',
+                                    border: '1px solid rgba(255,255,255,0.04)',
+                                    color: '#cbd5e1',
+                                  }
+                            }
+                          >
+                            {m.role === 'assistant' ? (
+                              <StreamingAssistantMessage
+                                content={m.content}
+                                isLatest={i === messages.length - 1 || (i === messages.length - 2 && typing)}
+                                onNavigate={navigateTo}
+                                onOpenLead={openLead}
+                                leads={leads}
+                              />
+                            ) : (
+                              m.content
+                            )}
+                          </div>
+
+                          {m.role === 'assistant' && (
+                            <ResponseActions content={m.content} onNavigate={navigateTo} onQuickAction={handleQuickAction} />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Typing indicator */}
+                  {typing && (
+                    <div className="flex justify-start" style={{ animation: 'slideInUp 0.2s ease-out' }}>
+                      <div className="flex gap-2">
+                        <div className="shrink-0 mt-1">
+                          <div className="w-6 h-6 rounded-lg flex items-center justify-center"
+                            style={{
+                              background: degenMode
+                                ? 'linear-gradient(135deg, rgba(249,115,22,0.15), rgba(239,68,68,0.1))'
+                                : 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.1))',
+                            }}
+                          >
+                            <GoatIcon className={`w-3.5 h-3.5 ${degenMode ? 'text-orange-400' : 'text-brand'}`} />
+                          </div>
+                        </div>
+                        <div className="px-4 py-3 rounded-2xl rounded-bl-md"
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.6))',
+                            border: '1px solid rgba(255,255,255,0.04)',
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="flex gap-1">
+                              {[0, 1, 2].map(idx => (
+                                <div
+                                  key={idx}
+                                  className="w-1.5 h-1.5 rounded-full"
+                                  style={{
+                                    background: degenMode
+                                      ? 'linear-gradient(135deg, #f97316, #ef4444)'
+                                      : 'linear-gradient(135deg, #10b981, #06b6d4)',
+                                    animation: `bounce 0.6s ${idx * 0.15}s infinite`,
+                                  }}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-[10px] text-slate-500 ml-1">{thinkingLabel}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div ref={endRef} />
+                </div>
+              </div>
+
+              {/* ── INPUT AREA ────────────────────────────────────────────── */}
+              <div className="shrink-0 border-t border-white/[0.03] p-3"
+                style={{ background: 'rgba(5, 10, 20, 0.5)' }}>
+
+                {quickActions.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {quickActions.map(qa => (
+                      <button
+                        key={qa.label}
+                        onClick={() => setInput(qa.prompt)}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium
+                          transition-all duration-200 whitespace-nowrap"
+                        style={{
+                          background: degenMode ? 'rgba(249,115,22,0.06)' : 'rgba(16,185,129,0.06)',
+                          border: `1px solid ${degenMode ? 'rgba(249,115,22,0.1)' : 'rgba(16,185,129,0.1)'}`,
+                          color: '#64748b',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = degenMode ? 'rgba(249,115,22,0.15)' : 'rgba(16,185,129,0.15)';
+                          e.currentTarget.style.borderColor = degenMode ? 'rgba(249,115,22,0.3)' : 'rgba(16,185,129,0.3)';
+                          e.currentTarget.style.color = degenMode ? '#f97316' : '#10b981';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = degenMode ? 'rgba(249,115,22,0.06)' : 'rgba(16,185,129,0.06)';
+                          e.currentTarget.style.borderColor = degenMode ? 'rgba(249,115,22,0.1)' : 'rgba(16,185,129,0.1)';
+                          e.currentTarget.style.color = '#64748b';
+                        }}
+                      >
+                        <qa.icon size={9} />
+                        {qa.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
+                    placeholder={coachMode ? "Ask your closing coach..." : "Ask GOATED AI anything..."}
+                    className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-all placeholder-slate-600"
+                    style={{
+                      background: 'rgba(15, 23, 42, 0.6)',
+                      border: coachMode ? '1px solid rgba(245,158,11,0.15)' : `1px solid ${degenMode ? 'rgba(249,115,22,0.08)' : 'rgba(16,185,129,0.08)'}`,
+                      color: '#e2e8f0',
+                    }}
+                    onFocus={e => {
+                      e.target.style.borderColor = coachMode ? 'rgba(245,158,11,0.35)' : (degenMode ? 'rgba(249,115,22,0.25)' : 'rgba(16,185,129,0.25)');
+                      e.target.style.boxShadow = coachMode ? '0 0 0 3px rgba(245,158,11,0.05)' : (degenMode ? '0 0 0 3px rgba(249,115,22,0.05)' : '0 0 0 3px rgba(16,185,129,0.05)');
+                    }}
+                    onBlur={e => {
+                      e.target.style.borderColor = coachMode ? 'rgba(245,158,11,0.15)' : (degenMode ? 'rgba(249,115,22,0.08)' : 'rgba(16,185,129,0.08)');
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                  <button
+                    onClick={send}
+                    disabled={typing || !input.trim()}
+                    className="px-4 py-2.5 rounded-xl font-medium transition-all duration-200 flex items-center gap-1.5
+                      disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{
+                      background: input.trim() && !typing
+                        ? (degenMode ? 'linear-gradient(135deg, #f97316, #ea580c)' : 'linear-gradient(135deg, #10b981, #059669)')
+                        : (degenMode ? 'rgba(249,115,22,0.1)' : 'rgba(16,185,129,0.1)'),
+                      color: input.trim() && !typing ? '#000' : (degenMode ? '#f97316' : '#10b981'),
+                      boxShadow: input.trim() && !typing
+                        ? (degenMode ? '0 0 20px rgba(249,115,22,0.2), 0 4px 12px rgba(0,0,0,0.3)' : '0 0 20px rgba(16,185,129,0.2), 0 4px 12px rgba(0,0,0,0.3)')
+                        : 'none',
+                    }}
+                  >
+                    <Send size={15} />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   );
 }
