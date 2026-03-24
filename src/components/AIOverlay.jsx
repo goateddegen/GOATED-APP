@@ -90,21 +90,21 @@ const PAGE_PROMPTS = {
     { label: 'Market trends today', icon: TrendingUp },
   ],
   dashboard: [
-    { label: 'Pipeline health check', icon: BarChart3 },
-    { label: 'Revenue forecast this quarter', icon: TrendingUp },
+    { label: 'Pipeline review', icon: BarChart3 },
+    { label: 'Performance brief', icon: TrendingUp },
     { label: 'Which leads need follow-up?', icon: Users },
     { label: 'Show me win/loss trends', icon: Target },
   ],
   leads: [
-    { label: 'Walk Me Through Leads', icon: ClipboardList },
-    { label: 'Find critical priority leads', icon: Target },
-    { label: 'Leads with rising momentum', icon: Zap },
+    { label: 'Walk me through top leads', icon: ClipboardList },
+    { label: 'Close strategy for lead', icon: Target },
+    { label: 'Find $20K+ deals', icon: DollarSign },
     { label: 'Best leads to close this week', icon: Sparkles },
   ],
   trends: [
-    { label: 'What sectors are surging?', icon: TrendingUp },
-    { label: 'Show declining markets', icon: BarChart3 },
-    { label: 'AI industry outlook', icon: Lightbulb },
+    { label: 'Market pulse', icon: TrendingUp },
+    { label: 'Best alpha plays', icon: Zap },
+    { label: 'Deep research trends', icon: Lightbulb },
     { label: 'Compare fintech vs SaaS', icon: Globe },
   ],
   market: [
@@ -114,10 +114,16 @@ const PAGE_PROMPTS = {
     { label: 'Investment signals', icon: Zap },
   ],
   launchpad: [
-    { label: 'Best live events to bet on', icon: Zap },
-    { label: 'Startup idea generator', icon: Lightbulb },
+    { label: 'Top incubator projects', icon: Zap },
+    { label: 'Prediction accuracy', icon: Target },
     { label: 'Market event analysis', icon: Globe },
-    { label: 'Incubator project review', icon: Target },
+    { label: 'Startup idea generator', icon: Lightbulb },
+  ],
+  casino: [
+    { label: 'Best odds right now', icon: Flame },
+    { label: 'My betting history', icon: Clock },
+    { label: 'High EV plays', icon: Zap },
+    { label: 'Risk analysis', icon: Shield },
   ],
   admin: [
     { label: 'System health overview', icon: BarChart3 },
@@ -777,6 +783,12 @@ const PROACTIVE_SUGGESTIONS = {
   casino: [
     'Degen alert: high EV play detected',
     'Your betting edge is +12% this session',
+    'Best odds shifted on 3 markets',
+  ],
+  launchpad: [
+    'New prediction market opened with thin spreads',
+    '2 incubator projects hit funding milestones',
+    'Prediction accuracy update: 78% this week',
   ],
 };
 
@@ -981,7 +993,7 @@ export default function AIOverlay() {
   const proactiveDismissRef = useRef(null);
   useEffect(() => {
     const schedule = () => {
-      const delay = 30000 + Math.random() * 30000;
+      const delay = 30000; // Exactly 30 seconds between proactive tips
       proactiveTimerRef.current = setTimeout(() => {
         if (!useStore.getState().aiOpen) {
           const pageSuggestions = PROACTIVE_SUGGESTIONS[currentPage] || PROACTIVE_SUGGESTIONS.dashboard;
@@ -1131,12 +1143,21 @@ export default function AIOverlay() {
     return base;
   }, [currentPage, coachMode, selectedLead]);
 
-  // Suggested prompts based on current page, coach mode, and degen mode
+  // Suggested prompts based on current page, coach mode, degen mode, and selected lead
   const suggestedPrompts = useMemo(() => {
     if (coachMode) return COACH_PROMPTS[currentPage] || COACH_PROMPTS.home;
     const prompts = degenMode ? DEGEN_PROMPTS : PAGE_PROMPTS;
-    return prompts[currentPage] || prompts.home;
-  }, [currentPage, degenMode, coachMode]);
+    let result = prompts[currentPage] || prompts.home;
+    // Dynamically inject selected lead name into leads prompts
+    if (currentPage === 'leads' && selectedLead && !degenMode) {
+      result = result.map(p =>
+        p.label === 'Close strategy for lead'
+          ? { ...p, label: `Close strategy for ${selectedLead.name.split(' ')[0]}` }
+          : p
+      );
+    }
+    return result;
+  }, [currentPage, degenMode, coachMode, selectedLead]);
 
   // Navigate to page helper
   const navigateTo = useCallback((pageId) => {
@@ -1301,17 +1322,90 @@ export default function AIOverlay() {
     }, 10);
   }, [messages, leads, useAI, degenMode, coachMode, selectedLead, revenueStats, aiOpen]);
 
+  // ─── DRAG STATE FOR CHAT BUBBLE ────────────────────────────────────
+  const [dragPos, setDragPos] = useState(null); // { x, y } or null for default
+  const dragRef = useRef(null);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ mouseX: 0, mouseY: 0, elX: 0, elY: 0 });
+
+  const onDragStart = useCallback((e) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    const el = dragRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    dragStartRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      elX: rect.left,
+      elY: rect.top,
+    };
+    const onMouseMove = (ev) => {
+      const dx = ev.clientX - dragStartRef.current.mouseX;
+      const dy = ev.clientY - dragStartRef.current.mouseY;
+      const newX = dragStartRef.current.elX + dx;
+      const newY = dragStartRef.current.elY + dy;
+      // Clamp to viewport
+      const maxX = window.innerWidth - 350;
+      const maxY = window.innerHeight - 100;
+      setDragPos({
+        x: Math.max(0, Math.min(newX, maxX)),
+        y: Math.max(0, Math.min(newY, maxY)),
+      });
+    };
+    const onMouseUp = () => {
+      isDraggingRef.current = false;
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, []);
+
+  // Reset drag position when closing
+  useEffect(() => {
+    if (!aiOpen) setDragPos(null);
+  }, [aiOpen]);
+
+  // ─── UNREAD BADGE — count AI suggestions when chat is closed ─────
+  const [unreadCount, setUnreadCount] = useState(0);
+  const lastSeenMsgCount = useRef(1); // starts at 1 (intro message)
+
+  useEffect(() => {
+    if (aiOpen) {
+      // Mark all as read when chat opens
+      lastSeenMsgCount.current = messages.length;
+      setUnreadCount(0);
+    } else {
+      // Count new assistant messages since last open
+      const newAssistantMsgs = messages.slice(lastSeenMsgCount.current).filter(m => m.role === 'assistant').length;
+      if (newAssistantMsgs > 0) {
+        setUnreadCount(c => c + newAssistantMsgs);
+      }
+    }
+  }, [aiOpen, messages.length]);
+
   // ─── RENDER ──────────────────────────────────────────────────────────
   // The floating orb is ALWAYS visible. The expanded panel appears when aiOpen is true.
   const orbColor = degenMode ? 'orange' : 'green';
 
   return (
     <>
-      {/* ── CSS for orb pulse animation ─────────────────────────────── */}
+      {/* ── CSS for orb pulse + fire animation ─────────────────────── */}
       <style>{`
         @keyframes orbPulse {
           0%, 100% { box-shadow: 0 0 8px 2px ${degenMode ? 'rgba(249,115,22,0.3)' : 'rgba(16,185,129,0.3)'}, 0 0 20px 4px ${degenMode ? 'rgba(249,115,22,0.1)' : 'rgba(16,185,129,0.1)'}; }
           50% { box-shadow: 0 0 16px 6px ${degenMode ? 'rgba(249,115,22,0.5)' : 'rgba(16,185,129,0.5)'}, 0 0 32px 8px ${degenMode ? 'rgba(249,115,22,0.15)' : 'rgba(16,185,129,0.15)'}; }
+        }
+        @keyframes fireFlicker {
+          0%, 100% { transform: scaleY(1) scaleX(1); opacity: 0.7; }
+          25% { transform: scaleY(1.3) scaleX(0.8); opacity: 0.9; }
+          50% { transform: scaleY(0.9) scaleX(1.1); opacity: 0.6; }
+          75% { transform: scaleY(1.2) scaleX(0.9); opacity: 0.85; }
+        }
+        @keyframes fireGlow {
+          0%, 100% { box-shadow: 0 0 12px 4px rgba(249,115,22,0.4), 0 0 24px 8px rgba(239,68,68,0.15), 0 -8px 16px rgba(249,115,22,0.3); }
+          50% { box-shadow: 0 0 20px 8px rgba(249,115,22,0.6), 0 0 36px 12px rgba(239,68,68,0.2), 0 -12px 20px rgba(249,115,22,0.45); }
         }
         @keyframes tipSlideIn {
           from { opacity: 0; transform: translateY(8px); }
@@ -1321,6 +1415,12 @@ export default function AIOverlay() {
           from { opacity: 1; transform: translateY(0); }
           to { opacity: 0; transform: translateY(8px); }
         }
+        .ai-drag-handle {
+          cursor: grab;
+          user-select: none;
+          -webkit-user-select: none;
+        }
+        .ai-drag-handle:active { cursor: grabbing; }
       `}</style>
 
       {/* ── FLOATING ORB (always visible) ────────────────────────────── */}
@@ -1432,19 +1532,23 @@ export default function AIOverlay() {
               )}
             </AnimatePresence>
 
-            {/* Orb badge */}
-            {orbBadgeText && (
+            {/* Orb badge — dynamic: show unread count OR contextual badge */}
+            {(unreadCount > 0 || orbBadgeText) && (
               <div className="absolute -top-1 -left-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold text-white z-10"
                 style={{
-                  background: degenMode ? 'linear-gradient(135deg, #f97316, #ef4444)' : 'linear-gradient(135deg, #10b981, #06b6d4)',
+                  background: unreadCount > 0
+                    ? 'linear-gradient(135deg, #ef4444, #dc2626)'
+                    : (degenMode ? 'linear-gradient(135deg, #f97316, #ef4444)' : 'linear-gradient(135deg, #10b981, #06b6d4)'),
                   boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                  minWidth: unreadCount > 0 ? '16px' : undefined,
+                  textAlign: 'center',
                 }}
               >
-                {orbBadgeText}
+                {unreadCount > 0 ? unreadCount : orbBadgeText}
               </div>
             )}
 
-            {/* The orb button */}
+            {/* The orb button — with fire animation in DEGEN mode */}
             <button
               onClick={() => setAiOpen(true)}
               className="w-12 h-12 rounded-full flex items-center justify-center relative transition-transform hover:scale-110 active:scale-95"
@@ -1452,11 +1556,37 @@ export default function AIOverlay() {
                 background: degenMode
                   ? 'linear-gradient(135deg, #f97316, #ef4444)'
                   : 'linear-gradient(135deg, #10b981, #059669)',
-                animation: 'orbPulse 3s ease-in-out infinite',
+                animation: degenMode ? 'fireGlow 2s ease-in-out infinite' : 'orbPulse 3s ease-in-out infinite',
               }}
               title="Open GOATED AI (G)"
             >
-              <Sparkles size={22} className="text-white" />
+              {/* Fire particles for DEGEN mode */}
+              {degenMode && (
+                <>
+                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-3 h-4 rounded-full pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(to top, #f97316, #ef4444, transparent)',
+                      animation: 'fireFlicker 0.8s ease-in-out infinite',
+                      filter: 'blur(2px)',
+                    }}
+                  />
+                  <div className="absolute -top-1.5 left-[40%] w-2 h-3 rounded-full pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(to top, #fbbf24, #f97316, transparent)',
+                      animation: 'fireFlicker 0.6s ease-in-out infinite 0.15s',
+                      filter: 'blur(1.5px)',
+                    }}
+                  />
+                  <div className="absolute -top-1 left-[55%] w-1.5 h-2.5 rounded-full pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(to top, #fcd34d, #fbbf24, transparent)',
+                      animation: 'fireFlicker 0.7s ease-in-out infinite 0.3s',
+                      filter: 'blur(1px)',
+                    }}
+                  />
+                </>
+              )}
+              {degenMode ? <Flame size={22} className="text-white relative z-10" /> : <Sparkles size={22} className="text-white" />}
             </button>
           </motion.div>
         )}
@@ -1478,6 +1608,7 @@ export default function AIOverlay() {
             )}
 
             <motion.div
+              ref={dragRef}
               initial={{ opacity: 0, y: 40, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 40, scale: 0.95 }}
@@ -1485,23 +1616,37 @@ export default function AIOverlay() {
               className={
                 isMobile
                   ? 'fixed inset-2 z-50 flex flex-col rounded-2xl overflow-hidden'
-                  : 'fixed bottom-6 right-6 z-50 w-[400px] flex flex-col rounded-2xl overflow-hidden'
+                  : 'z-50 w-[350px] flex flex-col rounded-2xl overflow-hidden'
               }
               style={{
-                maxHeight: isMobile ? undefined : '70vh',
+                ...(isMobile ? {} : dragPos
+                  ? { position: 'fixed', left: dragPos.x, top: dragPos.y }
+                  : { position: 'fixed', bottom: 24, right: 24 }
+                ),
+                maxHeight: isMobile ? undefined : '500px',
                 background: 'rgba(3, 7, 15, 0.97)',
                 backdropFilter: 'blur(24px) saturate(1.6)',
                 border: `1px solid ${degenMode ? 'rgba(249,115,22,0.15)' : 'rgba(16,185,129,0.12)'}`,
                 boxShadow: `0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.02), 0 0 40px ${degenMode ? 'rgba(249,115,22,0.08)' : 'rgba(16,185,129,0.08)'}`,
               }}
             >
-              {/* ── HEADER ────────────────────────────────────────────────── */}
+              {/* ── HEADER with drag handle ────────────────────────────── */}
               <div
-                className="shrink-0 p-3 border-b border-white/[0.03]"
+                className="shrink-0 border-b border-white/[0.03]"
                 style={{
                   background: 'linear-gradient(135deg, rgba(16,185,129,0.03), rgba(6,182,212,0.01), transparent)',
                 }}
               >
+                {/* Drag handle bar */}
+                {!isMobile && (
+                  <div
+                    className="ai-drag-handle flex items-center justify-center pt-2 pb-0"
+                    onMouseDown={onDragStart}
+                  >
+                    <div className="w-8 h-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors" />
+                  </div>
+                )}
+                <div className="p-3 pt-1.5">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <div className="relative">
@@ -1592,6 +1737,7 @@ export default function AIOverlay() {
                       {a.label}
                     </button>
                   ))}
+                </div>
                 </div>
               </div>
 
