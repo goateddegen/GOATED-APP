@@ -13,6 +13,8 @@
 // Returns: Unified sentiment dashboard with alpha signals
 // =============================================================================
 
+import { callClaude } from './lib/anthropic.js';
+
 const ALLOWED_ORIGINS = [process.env.CORS_ORIGIN || 'https://goated.solutions', 'http://localhost:5173', 'http://localhost:5174'];
 function getCorsOrigin(req) {
   const origin = req.headers?.origin || '';
@@ -264,6 +266,35 @@ function generateAlphaPlays(topCoins, sentiment, fearGreed) {
   return plays;
 }
 
+// ─── Claude AI Sentiment Analysis ────────────────────────────────────────────
+
+async function analyzeNewsWithClaude(news) {
+  if (!news || news.length === 0) return null;
+  const headlines = news.slice(0, 15).map(n => n.title).filter(Boolean);
+  if (headlines.length === 0) return null;
+
+  const text = await callClaude(
+    'You are GOATED\'s sentiment analysis AI. Respond ONLY with valid JSON, no markdown fences.',
+    `Analyze these crypto/market news headlines for sentiment. Return JSON:
+{
+  "overallSentiment": { "direction": "bullish|bearish|neutral", "score": 0-100, "confidence": 0-100 },
+  "headlines": [{ "index": 0, "sentiment": "bullish|bearish|neutral", "score": 0-100, "keyDriver": "1-3 word reason" }],
+  "narrativeSummary": "2-sentence market narrative from these headlines",
+  "dominantThemes": ["theme1", "theme2", "theme3"]
+}
+
+Headlines:\n${headlines.map((h, i) => `${i}. ${h}`).join('\n')}`,
+    700
+  );
+  if (!text) return null;
+  try {
+    const clean = text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+    return JSON.parse(clean);
+  } catch {
+    return null;
+  }
+}
+
 // ─── Main Handler ─────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
@@ -348,10 +379,33 @@ export default async function handler(req, res) {
       active: m.active ?? true,
     }));
 
+    // AI-powered sentiment analysis (non-blocking fallback)
+    let aiSentiment = null;
+    try {
+      aiSentiment = await analyzeNewsWithClaude(news);
+      // If AI analysis succeeded, overlay AI scores onto formatted news
+      if (aiSentiment?.headlines && Array.isArray(aiSentiment.headlines)) {
+        aiSentiment.headlines.forEach(h => {
+          if (h.index >= 0 && h.index < formattedNews.length) {
+            formattedNews[h.index].aiSentiment = h.sentiment;
+            formattedNews[h.index].aiScore = h.score;
+            formattedNews[h.index].aiKeyDriver = h.keyDriver;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Claude sentiment analysis failed:', e.message);
+    }
+
     // Build response
     const result = {
       timestamp: new Date().toISOString(),
       sentiment,
+      aiSentiment: aiSentiment ? {
+        overallSentiment: aiSentiment.overallSentiment,
+        narrativeSummary: aiSentiment.narrativeSummary,
+        dominantThemes: aiSentiment.dominantThemes,
+      } : null,
       fearGreed: fearGreed ? {
         current: parseInt(fearGreed[0]?.value || 50),
         label: fearGreed[0]?.value_classification || 'Neutral',

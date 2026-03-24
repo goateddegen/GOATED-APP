@@ -22,6 +22,8 @@
 // light randomisation on liveActivity timestamps to simulate real-time feed.
 // =============================================================================
 
+import { callClaude } from './lib/anthropic.js';
+
 const ALLOWED_ORIGINS = [process.env.CORS_ORIGIN || 'https://goated.solutions', 'http://localhost:5173', 'http://localhost:5174'];
 function getCorsOrigin(req) {
   const origin = req.headers?.origin || '';
@@ -761,6 +763,42 @@ function computeStats() {
 }
 
 // ---------------------------------------------------------------------------
+// Claude AI Play Enrichment
+// ---------------------------------------------------------------------------
+async function enrichPlaysWithClaude(plays) {
+  if (!plays || plays.length === 0) return null;
+  const summary = plays.slice(0, 10).map(p => ({
+    id: p.id,
+    name: p.name,
+    category: p.category,
+    successRate: p.successRate,
+    avgROI: p.avgROI,
+    difficulty: p.difficulty,
+    leadsGenerated: p.leadsGenerated,
+    timeToResults: p.timeToResults,
+  }));
+
+  const text = await callClaude(
+    'You are GOATED\'s sales strategy AI. Respond ONLY with valid JSON, no markdown fences.',
+    `Score and rank these B2B sales plays. Return JSON array:
+[{ "id": "play_id", "conviction": 1-100, "thesis": "1-sentence why this play wins", "riskAdjustedRank": 1-N }]
+
+Rank by risk-adjusted return (ROI * successRate / difficulty-weight where Beginner=1, Intermediate=2, Advanced=3).
+Be specific and actionable in each thesis.
+
+Plays:\n${JSON.stringify(summary)}`,
+    800
+  );
+  if (!text) return null;
+  try {
+    const clean = text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+    return JSON.parse(clean);
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
 export default async function handler(req, res) {
@@ -825,11 +863,37 @@ export default async function handler(req, res) {
     const liveActivity = generateLiveActivity(20);
     const stats = computeStats();
 
+    // AI enrichment — score conviction, add thesis, rank by risk-adjusted return
+    let aiEnrichment = null;
+    try {
+      const enrichmentData = await enrichPlaysWithClaude(filtered);
+      if (enrichmentData && Array.isArray(enrichmentData)) {
+        // Merge AI enrichment into plays
+        const enrichMap = new Map(enrichmentData.map(e => [e.id, e]));
+        filtered = filtered.map(p => {
+          const ai = enrichMap.get(p.id);
+          if (ai) {
+            return {
+              ...p,
+              aiConviction: ai.conviction,
+              aiThesis: ai.thesis,
+              aiRiskAdjustedRank: ai.riskAdjustedRank,
+            };
+          }
+          return p;
+        });
+        aiEnrichment = { enriched: true, playsScored: enrichmentData.length };
+      }
+    } catch (e) {
+      console.warn('Claude plays enrichment failed:', e.message);
+    }
+
     return res.status(200).json({
       plays: filtered,
       liveActivity,
       stats,
       total,
+      aiEnrichment,
       lastUpdated: new Date().toISOString(),
       _meta: {
         dataType: 'live-generated',

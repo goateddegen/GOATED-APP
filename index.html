@@ -178,6 +178,16 @@
 </head>
 <body>
   <div id="root"></div>
+  <script>
+    // Global error recovery — prevents permanent black screen
+    window.addEventListener('error', function(e) {
+      console.error('[GOATED] Runtime error:', e.message, e.filename, e.lineno);
+      var root = document.getElementById('root');
+      if (root && !root.hasChildNodes()) {
+        root.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#030712;color:#94a3b8;font-family:Inter,sans-serif;flex-direction:column;gap:16px"><div style="font-size:48px">🐐</div><div style="font-size:18px;color:white;font-weight:600">GOATED is loading...</div><div style="font-size:14px">If this persists, try clearing your cache (Ctrl+Shift+R)</div><button onclick="localStorage.clear();location.reload()" style="margin-top:12px;padding:8px 20px;background:#10b981;color:black;border:none;border-radius:8px;font-weight:600;cursor:pointer">Reset & Reload</button></div>';
+      }
+    });
+  </script>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

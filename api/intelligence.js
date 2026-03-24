@@ -18,6 +18,8 @@
 // All data is cached with short TTLs for real-time feel without rate limits.
 // =============================================================================
 
+import { callClaude } from './lib/anthropic.js';
+
 const ALLOWED_ORIGINS = [process.env.CORS_ORIGIN || 'https://goated.solutions', 'http://localhost:5173', 'http://localhost:5174'];
 function getCorsOrigin(req) {
   const origin = req.headers?.origin || '';
@@ -666,8 +668,45 @@ export default async function handler(req, res) {
       );
     }
 
+    // Generate AI market intelligence brief from raw data
+    let aiBrief = null;
+    if (section === 'all') {
+      try {
+        const briefData = {
+          topCoins: (result.prices || []).slice(0, 5).map(c => ({ symbol: c.symbol, price: c.price, change24h: c.change24h })),
+          sentiment: result.sentiment ? { composite: result.sentiment.composite, label: result.sentiment.label } : null,
+          fearGreed: result.fearGreed?.current || null,
+          newsCount: (result.news || []).length,
+          topHeadlines: (result.news || []).slice(0, 3).map(n => n.title),
+          trendingCount: (result.trending || []).length,
+          predictionMarkets: (result.predictions || []).slice(0, 3).map(p => ({ question: p.question, yesPrice: p.yesPrice })),
+        };
+        const briefText = await callClaude(
+          'You are GOATED\'s market intelligence AI. Respond ONLY with valid JSON, no markdown fences.',
+          `Generate a concise market intelligence brief from this data. Return JSON:
+{
+  "headline": "1-sentence market headline",
+  "brief": "3-4 sentence executive summary covering market conditions, key movers, and outlook",
+  "riskLevel": "low|moderate|elevated|high",
+  "topOpportunity": "1 sentence on the best opportunity right now",
+  "watchList": ["SYMBOL1", "SYMBOL2", "SYMBOL3"]
+}
+
+Market Data:\n${JSON.stringify(briefData)}`,
+          500
+        );
+        if (briefText) {
+          const clean = briefText.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+          aiBrief = JSON.parse(clean);
+        }
+      } catch (e) {
+        console.warn('[Intelligence] AI brief generation failed:', e.message);
+      }
+    }
+
     return res.status(200).json({
       ...result,
+      aiBrief,
       _meta: {
         generatedAt: new Date().toISOString(),
         sections: sections,

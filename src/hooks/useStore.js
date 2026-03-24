@@ -1300,6 +1300,93 @@ export const useStore = create((set, get) => ({
     return result;
   },
 
+  // ─── TRANSACTIONS & INVOICES ─────────────────────────────────────────────
+  // Persisted to localStorage for durability across sessions
+  transactions: typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('goated_transactions') || '[]') : [],
+  invoices: typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('goated_invoices') || '[]') : [],
+
+  addTransaction: (tx) => {
+    const transaction = {
+      id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      ...tx,
+      timestamp: tx.timestamp || new Date().toISOString(),
+    };
+    const updated = [...get().transactions, transaction];
+    localStorage.setItem('goated_transactions', JSON.stringify(updated));
+    set({ transactions: updated });
+    return transaction;
+  },
+
+  getTransactions: (filters = {}) => {
+    let txs = get().transactions;
+    if (filters.type && filters.type !== 'all') {
+      txs = txs.filter(t => t.type === filters.type);
+    }
+    if (filters.user) {
+      const u = filters.user.toLowerCase();
+      txs = txs.filter(t => (t.user || '').toLowerCase().includes(u));
+    }
+    if (filters.dateRange && filters.dateRange !== 'all') {
+      const now = Date.now();
+      const ranges = { today: 86400000, week: 604800000, month: 2592000000 };
+      const cutoff = now - (ranges[filters.dateRange] || 0);
+      txs = txs.filter(t => new Date(t.timestamp).getTime() >= cutoff);
+    }
+    if (filters.startDate) {
+      txs = txs.filter(t => new Date(t.timestamp) >= new Date(filters.startDate));
+    }
+    if (filters.endDate) {
+      txs = txs.filter(t => new Date(t.timestamp) <= new Date(filters.endDate));
+    }
+    return txs;
+  },
+
+  addInvoice: (invoice) => {
+    const inv = {
+      id: 'INV-' + String(get().invoices.length + 1).padStart(4, '0'),
+      ...invoice,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      paidAt: null,
+    };
+    const updated = [...get().invoices, inv];
+    localStorage.setItem('goated_invoices', JSON.stringify(updated));
+    set({ invoices: updated });
+    return inv;
+  },
+
+  updateInvoice: (id, changes) => {
+    const updated = get().invoices.map(inv =>
+      inv.id === id ? { ...inv, ...changes } : inv
+    );
+    localStorage.setItem('goated_invoices', JSON.stringify(updated));
+    set({ invoices: updated });
+  },
+
+  // Update a lead's status (and auto-create transaction when moved to 'won')
+  updateLeadStatus: (leadId, newStatus) => {
+    const s = get();
+    const leads = s.leads;
+    if (!leads) return;
+    const idx = leads.findIndex(l => l.id === leadId);
+    if (idx === -1) return;
+    const lead = leads[idx];
+    const oldStatus = lead.status;
+    leads[idx] = { ...lead, status: newStatus };
+    set({ leads: [...leads] });
+    // Auto-create transaction when deal is moved to 'won'
+    if (newStatus === 'won' && oldStatus !== 'won') {
+      const dealValue = lead.dealValue || lead.value || 0;
+      s.addTransaction({
+        type: 'deal_closed',
+        amount: dealValue,
+        fee: +(dealValue * 0.12).toFixed(2),
+        user: lead.name || lead.company || 'Unknown',
+        description: `Deal closed: ${lead.company || lead.name}`,
+      });
+    }
+  },
+
   // Confetti burst for celebrations (degen mode only)
   triggerConfetti: () => {
     if (!get().degenMode) return;

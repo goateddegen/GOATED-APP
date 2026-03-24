@@ -2329,6 +2329,77 @@ function CreatorProgramBanner({ showToast }) {
 }
 
 // ===========================================================================================
+// DEGEN PLAYS SECTION — Top 5 highest-value speed-close leads with one-click actions
+// ===========================================================================================
+function DegenPlaysSection({ degenPlays, totalDegenPipeline, totalEstCommission, showToast, onSelect }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mb-4 rounded-xl border border-red-500/30 bg-gradient-to-r from-red-500/[0.06] via-orange-500/[0.04] to-yellow-500/[0.06] overflow-hidden">
+      <button onClick={() => setOpen(!open)} className="w-full px-4 py-3 flex items-center justify-between hover:bg-orange-500/[0.03] transition-colors">
+        <div className="flex items-center gap-2">
+          <Zap size={18} className="text-red-400" />
+          <span className="text-sm font-black tracking-wider text-red-400 uppercase">DEGEN PLAYS</span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30 font-bold">{degenPlays.length} PLAYS</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-4 text-[11px]">
+            <span className="text-orange-300 font-bold">Total DEGEN Pipeline: <span className="text-white font-black">{fmt(totalDegenPipeline)}</span></span>
+            <span className="text-slate-500">|</span>
+            <span className="text-emerald-400 font-bold">Est. Commission: <span className="text-white font-black">{fmt(totalEstCommission)}</span></span>
+          </div>
+          {open ? <ChevronUp size={16} className="text-orange-400" /> : <ChevronDown size={16} className="text-orange-400" />}
+        </div>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-2">
+          {/* Mobile aggregate */}
+          <div className="sm:hidden flex items-center gap-3 text-[11px] pb-2 border-b border-orange-500/15">
+            <span className="text-orange-300 font-bold">Pipeline: <span className="text-white font-black">{fmt(totalDegenPipeline)}</span></span>
+            <span className="text-emerald-400 font-bold">Commission: <span className="text-white font-black">{fmt(totalEstCommission)}</span></span>
+          </div>
+          {degenPlays.map((l, i) => (
+            <div key={l.id} className="flex items-center gap-3 p-3 rounded-xl bg-black/30 border border-orange-500/15 hover:border-orange-500/30 transition-all cursor-pointer group"
+              onClick={() => onSelect(l)}>
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-red-500/30 to-orange-500/30 flex items-center justify-center text-xs font-black text-orange-400 border border-orange-500/30">
+                #{i + 1}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm text-white truncate">{l.name}</span>
+                  <span className="text-[10px] text-slate-500 truncate">{l.company}</span>
+                  {(l.conversionProbability || 0) > 70 && (l.dealValue || 0) > 15000 && (
+                    <span className="text-[8px] px-1.5 py-0 rounded font-black bg-red-500/20 text-red-400 border border-red-500/30">SPEED CLOSE</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 text-[11px] mt-0.5">
+                  <span className="text-orange-300 font-mono font-bold">{fmt(l.dealValue || 0)}</span>
+                  <span className="text-slate-500">{l.conversionProbability || 50}% close</span>
+                  <span className="text-emerald-400 font-bold">Commission: {fmt(l.estCommission)}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <button onClick={e => { e.stopPropagation(); showToast(`Instant call script generated for ${l.name}`); }}
+                  className="px-2.5 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 text-[10px] font-bold border border-emerald-500/25 hover:bg-emerald-500/25 transition-colors flex items-center gap-1">
+                  <Phone size={10} />Script
+                </button>
+                <button onClick={e => { e.stopPropagation(); showToast(`Fire email drafted for ${l.name}`); }}
+                  className="px-2.5 py-1.5 rounded-lg bg-orange-500/15 text-orange-400 text-[10px] font-bold border border-orange-500/25 hover:bg-orange-500/25 transition-colors flex items-center gap-1">
+                  <Mail size={10} />Fire Email
+                </button>
+                <button onClick={e => { e.stopPropagation(); showToast(`LinkedIn blitz initiated for ${l.name}`); }}
+                  className="px-2.5 py-1.5 rounded-lg bg-blue-500/15 text-blue-400 text-[10px] font-bold border border-blue-500/25 hover:bg-blue-500/25 transition-colors flex items-center gap-1">
+                  <Linkedin size={10} />Blitz
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===========================================================================================
 // MAIN COMPONENT
 // ===========================================================================================
 export default function LeadsPage({ onSelect }) {
@@ -2911,6 +2982,30 @@ export default function LeadsPage({ onSelect }) {
         </div>
       )}
 
+      {/* DEGEN PLAYS — Top 5 highest-value speed-close leads */}
+      {degenMode && (() => {
+        const degenPlays = (allLeads || [])
+          .filter(l => l.status !== 'won' && l.status !== 'lost' && l.dealValue > 0)
+          .map(l => ({
+            ...l,
+            degenScore: (l.dealValue || 0) * ((l.conversionProbability || 50) / 100),
+            estCommission: Math.round((l.dealValue || 0) * 0.12),
+          }))
+          .sort((a, b) => b.degenScore - a.degenScore)
+          .slice(0, 5);
+        const totalDegenPipeline = degenPlays.reduce((s, l) => s + (l.dealValue || 0), 0);
+        const totalEstCommission = degenPlays.reduce((s, l) => s + l.estCommission, 0);
+        return degenPlays.length > 0 ? (
+          <DegenPlaysSection
+            degenPlays={degenPlays}
+            totalDegenPipeline={totalDegenPipeline}
+            totalEstCommission={totalEstCommission}
+            showToast={showToast}
+            onSelect={handleSelectLead}
+          />
+        ) : null;
+      })()}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <div className="flex items-center gap-3">
@@ -3301,6 +3396,7 @@ export default function LeadsPage({ onSelect }) {
                             <span className="font-medium text-sm truncate">{l.name}</span>
                             {isAlphaPriority && <span className="inline-flex items-center gap-0.5 px-1.5 py-0 rounded text-[9px] font-bold bg-orange-500/15 text-orange-400 border border-orange-500/25"><Crown size={8} />ALPHA</span>}
                             {!isAlphaPriority && l.score > 90 && <span className="inline-flex items-center gap-0.5 px-1.5 py-0 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"><Flame size={8} />HOT</span>}
+                            {degenMode && (l.conversionProbability || 0) > 70 && dv > 15000 && <span className="inline-flex items-center gap-0.5 px-1.5 py-0 rounded text-[9px] font-black bg-gradient-to-r from-red-500/20 to-orange-500/20 text-red-400 border border-red-500/30 animate-pulse"><Zap size={8} />SPEED CLOSE</span>}
                           </div>
                           <div className="text-[11px] text-slate-500 truncate">{l.title}</div>
                         </div>

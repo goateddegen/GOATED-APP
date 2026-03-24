@@ -435,9 +435,47 @@ function generateTransactionLog() {
 
 // ─── Master Wallet Section ───────────────────────────────────────────────
 function MasterWalletSection() {
+  const { transactions, addTransaction } = useStore();
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  // Calculate wallet balance from fee revenue
+  const totalFeeRevenue = transactions.reduce((sum, tx) => sum + (tx.fee || 0), 0);
+  const totalWithdrawn = transactions.filter(tx => tx.type === 'withdrawal').reduce((sum, tx) => sum + (tx.amount || 0), 0);
+  const pendingSettlement = transactions.filter(tx => {
+    const age = Date.now() - new Date(tx.timestamp).getTime();
+    return age < 172800000 && tx.fee > 0; // < 48 hours
+  }).reduce((sum, tx) => sum + (tx.fee || 0), 0);
+  const balance = totalFeeRevenue - totalWithdrawn;
+  const available = Math.max(0, balance - pendingSettlement);
+
+  const recentTxs = [...transactions].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 10);
+
+  const handleWithdraw = () => {
+    const amt = parseFloat(withdrawAmount);
+    if (!amt || amt < 50 || amt > available || !withdrawAddress) return;
+    addTransaction({
+      type: 'withdrawal',
+      amount: amt,
+      fee: 0,
+      user: 'Admin',
+      description: `Withdrawal to ${withdrawAddress}`,
+    });
+    setWithdrawAmount('');
+    setWithdrawAddress('');
+    setShowWithdraw(false);
+    setShowConfirm(false);
+  };
+
+  const typeColors = {
+    deal_closed: 'text-emerald-400',
+    bet_placed: 'text-orange-400',
+    bet_won: 'text-yellow-400',
+    deposit: 'text-blue-400',
+    withdrawal: 'text-red-400',
+  };
 
   return (
     <div className="space-y-4">
@@ -448,7 +486,7 @@ function MasterWalletSection() {
             <Wallet size={16} className="text-emerald-400" />
             <span className="text-[10px] text-emerald-400/70 uppercase tracking-wider">Total Balance</span>
           </div>
-          <div className="text-2xl font-bold text-emerald-400">$0.00</div>
+          <div className="text-2xl font-bold text-emerald-400">${balance.toFixed(2)}</div>
           <div className="text-[10px] text-slate-500 mt-1">Platform wallet — grows with transaction fees</div>
         </div>
         <div className="px-4 py-4 rounded-xl bg-blue-500/[0.06] border border-blue-500/20">
@@ -456,7 +494,7 @@ function MasterWalletSection() {
             <DollarSign size={16} className="text-blue-400" />
             <span className="text-[10px] text-blue-400/70 uppercase tracking-wider">Available to Withdraw</span>
           </div>
-          <div className="text-2xl font-bold text-blue-400">$0.00</div>
+          <div className="text-2xl font-bold text-blue-400">${available.toFixed(2)}</div>
           <div className="text-[10px] text-slate-500 mt-1">After pending settlements</div>
         </div>
         <div className="px-4 py-4 rounded-xl bg-purple-500/[0.06] border border-purple-500/20">
@@ -464,7 +502,7 @@ function MasterWalletSection() {
             <Clock size={16} className="text-purple-400" />
             <span className="text-[10px] text-purple-400/70 uppercase tracking-wider">Pending Settlement</span>
           </div>
-          <div className="text-2xl font-bold text-purple-400">$0.00</div>
+          <div className="text-2xl font-bold text-purple-400">${pendingSettlement.toFixed(2)}</div>
           <div className="text-[10px] text-slate-500 mt-1">Processing within 24-48h</div>
         </div>
       </div>
@@ -472,11 +510,29 @@ function MasterWalletSection() {
       {/* Recent Wallet Transactions */}
       <div>
         <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Recent Wallet Transactions</div>
-        <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 text-center">
-          <Receipt size={24} className="text-slate-600 mx-auto mb-2" />
-          <p className="text-sm text-slate-500">No transactions yet</p>
-          <p className="text-[10px] text-slate-600 mt-1">Transactions will appear here as the platform processes fees</p>
-        </div>
+        {recentTxs.length > 0 ? (
+          <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
+            {recentTxs.map(tx => (
+              <div key={tx.id} className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.02] hover:bg-white/[0.01] transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className={`text-[10px] font-medium uppercase ${typeColors[tx.type] || 'text-slate-400'}`}>{tx.type.replace('_', ' ')}</span>
+                  <span className="text-[11px] text-slate-400">{tx.user || '--'}</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-[11px] font-mono text-white">${(tx.amount || 0).toFixed(2)}</span>
+                  {tx.fee > 0 && <span className="text-[10px] font-mono text-emerald-400">+${tx.fee.toFixed(2)} fee</span>}
+                  <span className="text-[10px] text-slate-600">{new Date(tx.timestamp).toLocaleString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 text-center">
+            <Receipt size={24} className="text-slate-600 mx-auto mb-2" />
+            <p className="text-sm text-slate-500">No transactions yet</p>
+            <p className="text-[10px] text-slate-600 mt-1">Transactions will appear here as the platform processes fees</p>
+          </div>
+        )}
       </div>
 
       {/* Withdraw Button */}
@@ -496,7 +552,7 @@ function MasterWalletSection() {
           <div className="text-sm font-medium text-white">Withdraw to External Wallet</div>
           <div>
             <label className="text-[10px] text-slate-500 uppercase tracking-wider">Amount (USD)</label>
-            <input type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} placeholder="0.00"
+            <input type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} placeholder="0.00" min="50" max={available}
               className="w-full mt-1 px-3 py-2 bg-black/30 border border-white/[0.06] rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40" />
           </div>
           <div>
@@ -504,9 +560,28 @@ function MasterWalletSection() {
             <input type="text" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} placeholder="Wallet address or bank account"
               className="w-full mt-1 px-3 py-2 bg-black/30 border border-white/[0.06] rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40" />
           </div>
-          <button disabled className="px-4 py-2 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm font-medium opacity-50 cursor-not-allowed">
-            Insufficient balance
-          </button>
+          {!showConfirm ? (
+            <button
+              onClick={() => {
+                const amt = parseFloat(withdrawAmount);
+                if (amt >= 50 && amt <= available && withdrawAddress) setShowConfirm(true);
+              }}
+              disabled={!withdrawAmount || parseFloat(withdrawAmount) < 50 || parseFloat(withdrawAmount) > available || !withdrawAddress}
+              className="px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+              {available < 50 ? 'Insufficient balance' : 'Request Withdrawal'}
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+              <AlertTriangle size={14} className="text-yellow-400 flex-shrink-0" />
+              <span className="text-[11px] text-yellow-300 flex-1">Confirm withdrawal of ${parseFloat(withdrawAmount).toFixed(2)} to {withdrawAddress}?</span>
+              <button onClick={handleWithdraw} className="px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded text-[11px] font-medium hover:bg-emerald-500/30 transition-colors">
+                Confirm
+              </button>
+              <button onClick={() => setShowConfirm(false)} className="px-3 py-1.5 bg-white/[0.04] border border-white/[0.06] text-slate-400 rounded text-[11px] hover:bg-white/[0.08] transition-colors">
+                Cancel
+              </button>
+            </div>
+          )}
         </motion.div>
       )}
     </div>
@@ -515,22 +590,55 @@ function MasterWalletSection() {
 
 // ─── Invoicing Section ───────────────────────────────────────────────────
 function InvoicingSection() {
+  const { invoices, addInvoice, updateInvoice } = useStore();
   const [invoiceFilter, setInvoiceFilter] = useState('all');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [formData, setFormData] = useState({ recipientEmail: '', amount: '', description: '', dueDate: '' });
 
-  // Empty invoices — will populate with real data
-  const invoices = [];
+  const now = new Date();
+  const enrichedInvoices = invoices.map(inv => {
+    if (inv.status === 'pending' && inv.dueDate && new Date(inv.dueDate) < now) {
+      return { ...inv, status: 'overdue' };
+    }
+    return inv;
+  });
 
-  const filteredInvoices = invoiceFilter === 'all' ? invoices : invoices.filter(i => i.status === invoiceFilter);
+  const filteredInvoices = invoiceFilter === 'all' ? enrichedInvoices : enrichedInvoices.filter(i => i.status === invoiceFilter);
+
+  const totalInvoiced = enrichedInvoices.reduce((s, i) => s + (i.amount || 0), 0);
+  const totalPaid = enrichedInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + (i.amount || 0), 0);
+  const totalPending = enrichedInvoices.filter(i => i.status === 'pending').reduce((s, i) => s + (i.amount || 0), 0);
+  const totalOverdue = enrichedInvoices.filter(i => i.status === 'overdue').reduce((s, i) => s + (i.amount || 0), 0);
+
+  const handleCreate = () => {
+    if (!formData.recipientEmail || !formData.amount) return;
+    addInvoice({
+      recipientEmail: formData.recipientEmail,
+      amount: parseFloat(formData.amount),
+      description: formData.description,
+      dueDate: formData.dueDate || null,
+    });
+    setFormData({ recipientEmail: '', amount: '', description: '', dueDate: '' });
+    setShowCreateForm(false);
+  };
+
+  const handleMarkPaid = (id) => {
+    updateInvoice(id, { status: 'paid', paidAt: new Date().toISOString() });
+  };
+
+  const handleSendReminder = (inv) => {
+    alert(`Reminder sent to ${inv.recipientEmail} for invoice ${inv.id} ($${inv.amount.toFixed(2)})`);
+  };
 
   return (
     <div className="space-y-4">
       {/* Invoice Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Total Invoiced', value: '$0.00', color: '#10b981' },
-          { label: 'Paid', value: '$0.00', color: '#22c55e' },
-          { label: 'Pending', value: '$0.00', color: '#f59e0b' },
-          { label: 'Overdue', value: '$0.00', color: '#ef4444' },
+          { label: 'Total Invoiced', value: `$${totalInvoiced.toFixed(2)}`, color: '#10b981' },
+          { label: 'Paid', value: `$${totalPaid.toFixed(2)}`, color: '#22c55e' },
+          { label: 'Pending', value: `$${totalPending.toFixed(2)}`, color: '#f59e0b' },
+          { label: 'Overdue', value: `$${totalOverdue.toFixed(2)}`, color: '#ef4444' },
         ].map(s => (
           <div key={s.label} className="px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] text-center">
             <div className="text-[10px] text-slate-500 uppercase tracking-wider">{s.label}</div>
@@ -539,8 +647,13 @@ function InvoicingSection() {
         ))}
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2">
+      {/* Create Invoice Button + Filter Tabs */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button onClick={() => setShowCreateForm(!showCreateForm)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 rounded-lg text-xs font-semibold transition-colors">
+          <DollarSign size={13} /> Create Invoice
+        </button>
+        <div className="h-4 w-px bg-white/[0.06] mx-1" />
         {['all', 'paid', 'pending', 'overdue'].map(f => (
           <button key={f} onClick={() => setInvoiceFilter(f)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border capitalize ${
@@ -553,12 +666,103 @@ function InvoicingSection() {
         ))}
       </div>
 
-      {/* Invoice List */}
-      <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 text-center">
-        <FileText size={24} className="text-slate-600 mx-auto mb-2" />
-        <p className="text-sm text-slate-500">No invoices yet</p>
-        <p className="text-[10px] text-slate-600 mt-1">Invoices will be generated automatically as transactions occur</p>
-      </div>
+      {/* Create Invoice Form */}
+      {showCreateForm && (
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+          className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 space-y-3">
+          <div className="text-sm font-medium text-white">New Invoice</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider">Recipient Email *</label>
+              <input type="email" value={formData.recipientEmail} onChange={e => setFormData(p => ({ ...p, recipientEmail: e.target.value }))}
+                placeholder="client@company.com"
+                className="w-full mt-1 px-3 py-2 bg-black/30 border border-white/[0.06] rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40" />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider">Amount (USD) *</label>
+              <input type="number" value={formData.amount} onChange={e => setFormData(p => ({ ...p, amount: e.target.value }))}
+                placeholder="0.00" min="0" step="0.01"
+                className="w-full mt-1 px-3 py-2 bg-black/30 border border-white/[0.06] rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40" />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider">Description</label>
+              <input type="text" value={formData.description} onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
+                placeholder="Services rendered, deal commission, etc."
+                className="w-full mt-1 px-3 py-2 bg-black/30 border border-white/[0.06] rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40" />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider">Due Date</label>
+              <input type="date" value={formData.dueDate} onChange={e => setFormData(p => ({ ...p, dueDate: e.target.value }))}
+                className="w-full mt-1 px-3 py-2 bg-black/30 border border-white/[0.06] rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleCreate}
+              disabled={!formData.recipientEmail || !formData.amount}
+              className="px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+              Create Invoice
+            </button>
+            <button onClick={() => setShowCreateForm(false)}
+              className="px-4 py-2 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-slate-400 rounded-lg text-sm transition-colors">
+              Cancel
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Invoice Table */}
+      {filteredInvoices.length > 0 ? (
+        <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden">
+          <div className="grid grid-cols-6 gap-2 px-4 py-2.5 border-b border-white/[0.04] text-[10px] text-slate-500 uppercase tracking-wider font-medium">
+            <span>ID</span>
+            <span>Recipient</span>
+            <span className="text-right">Amount</span>
+            <span>Status</span>
+            <span>Due Date</span>
+            <span className="text-right">Actions</span>
+          </div>
+          {filteredInvoices.map(inv => (
+            <div key={inv.id} className="grid grid-cols-6 gap-2 px-4 py-2.5 border-b border-white/[0.02] items-center hover:bg-white/[0.01] transition-colors">
+              <span className="text-[11px] font-mono text-slate-300">{inv.id}</span>
+              <span className="text-[11px] text-slate-300 truncate">{inv.recipientEmail}</span>
+              <span className="text-[11px] font-mono text-right text-white font-medium">${inv.amount.toFixed(2)}</span>
+              <span>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                  inv.status === 'paid' ? 'bg-emerald-500/15 text-emerald-400' :
+                  inv.status === 'overdue' ? 'bg-red-500/15 text-red-400' :
+                  'bg-yellow-500/15 text-yellow-400'
+                }`}>
+                  {inv.status}
+                </span>
+              </span>
+              <span className="text-[11px] text-slate-400">{inv.dueDate || '--'}</span>
+              <div className="flex items-center gap-1.5 justify-end">
+                {inv.status !== 'paid' && (
+                  <>
+                    <button onClick={() => handleMarkPaid(inv.id)}
+                      className="px-2 py-1 rounded text-[10px] font-medium bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors border border-emerald-500/20">
+                      Mark Paid
+                    </button>
+                    <button onClick={() => handleSendReminder(inv)}
+                      className="px-2 py-1 rounded text-[10px] font-medium bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 transition-colors border border-blue-500/20">
+                      Remind
+                    </button>
+                  </>
+                )}
+                {inv.status === 'paid' && (
+                  <span className="text-[10px] text-slate-500">Paid {inv.paidAt ? new Date(inv.paidAt).toLocaleDateString() : ''}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 text-center">
+          <FileText size={24} className="text-slate-600 mx-auto mb-2" />
+          <p className="text-sm text-slate-500">No invoices {invoiceFilter !== 'all' ? `with status "${invoiceFilter}"` : 'yet'}</p>
+          <p className="text-[10px] text-slate-600 mt-1">Click "Create Invoice" to generate your first invoice</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -682,6 +886,7 @@ function TransactionFeeDisplay() {
 
 // ─── Transaction Activity Log ────────────────────────────────────────────
 function TransactionActivityLog() {
+  const { getTransactions, transactions: allTransactions } = useStore();
   const [typeFilter, setTypeFilter] = useState('all');
   const [dateRange, setDateRange] = useState('all');
   const [searchUser, setSearchUser] = useState('');
@@ -696,20 +901,49 @@ function TransactionActivityLog() {
     { key: 'subscription', label: 'Subscription', color: 'text-purple-400' },
   ];
 
-  // Empty log — will populate with real-time data
-  const transactions = [];
+  const typeColorMap = {
+    deal_closed: '#10b981', bet_placed: '#f97316', bet_won: '#eab308',
+    deposit: '#3b82f6', withdrawal: '#ef4444', subscription: '#a855f7',
+  };
+
+  // Apply filters
+  const transactions = getTransactions({ type: typeFilter, user: searchUser, dateRange });
+  const sorted = [...transactions].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  // Running totals (computed from ALL transactions, not filtered)
+  const totalVolume = allTransactions.reduce((s, t) => s + (t.amount || 0), 0);
+  const totalFees = allTransactions.reduce((s, t) => s + (t.fee || 0), 0);
+  const netRevenue = totalFees - allTransactions.filter(t => t.type === 'withdrawal').reduce((s, t) => s + (t.amount || 0), 0);
+  const dealsCount = allTransactions.filter(t => t.type === 'deal_closed').length;
+  const betsCount = allTransactions.filter(t => t.type === 'bet_placed').length;
+  const withdrawCount = allTransactions.filter(t => t.type === 'withdrawal').length;
+
+  const exportCSV = () => {
+    const headers = ['ID', 'Timestamp', 'Type', 'User', 'Amount', 'Fee', 'Description'];
+    const rows = sorted.map(t => [
+      t.id, t.timestamp, t.type, t.user || '', (t.amount || 0).toFixed(2), (t.fee || 0).toFixed(2), t.description || ''
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `goated_transactions_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-4">
       {/* Running Totals */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
         {[
-          { label: 'Total Transactions', value: '0', color: '#64748b' },
-          { label: 'Total Volume', value: '$0.00', color: '#10b981' },
-          { label: 'Total Fees Collected', value: '$0.00', color: '#22c55e' },
-          { label: 'Deals Closed', value: '0', color: '#3b82f6' },
-          { label: 'Bets Processed', value: '0', color: '#f97316' },
-          { label: 'Withdrawals', value: '0', color: '#ef4444' },
+          { label: 'Total Transactions', value: String(allTransactions.length), color: '#64748b' },
+          { label: 'Total Volume', value: `$${totalVolume.toFixed(2)}`, color: '#10b981' },
+          { label: 'Total Fees Collected', value: `$${totalFees.toFixed(2)}`, color: '#22c55e' },
+          { label: 'Net Revenue', value: `$${netRevenue.toFixed(2)}`, color: '#3b82f6' },
+          { label: 'Bets Processed', value: String(betsCount), color: '#f97316' },
+          { label: 'Withdrawals', value: String(withdrawCount), color: '#ef4444' },
         ].map(s => (
           <div key={s.label} className="px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] text-center">
             <div className="text-[9px] text-slate-500 uppercase tracking-wider">{s.label}</div>
@@ -762,11 +996,17 @@ function TransactionActivityLog() {
         </div>
 
         {/* User Search */}
-        <div className="flex items-center gap-1.5 ml-auto">
+        <div className="flex items-center gap-1.5">
           <Search size={12} className="text-slate-500" />
           <input type="text" value={searchUser} onChange={e => setSearchUser(e.target.value)} placeholder="Search user..."
             className="px-2 py-1 bg-black/30 border border-white/[0.06] rounded text-[11px] text-white placeholder-slate-600 focus:outline-none focus:border-blue-500/40 w-32" />
         </div>
+
+        {/* CSV Export */}
+        <button onClick={exportCSV} disabled={allTransactions.length === 0}
+          className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-400 rounded-lg text-[11px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          <Download size={12} /> Export CSV
+        </button>
       </div>
 
       {/* Transaction Table */}
@@ -781,8 +1021,26 @@ function TransactionActivityLog() {
           <span className="text-right">Status</span>
         </div>
 
+        {/* Transaction Rows */}
+        {sorted.map(tx => (
+          <div key={tx.id} className="grid grid-cols-6 gap-2 px-4 py-2.5 border-b border-white/[0.02] items-center hover:bg-white/[0.01] transition-colors">
+            <span className="text-[10px] text-slate-500 font-mono">{new Date(tx.timestamp).toLocaleString()}</span>
+            <span className="text-[11px] text-slate-300 truncate">{tx.user || '--'}</span>
+            <span className="text-[10px] font-medium uppercase" style={{ color: typeColorMap[tx.type] || '#94a3b8' }}>
+              {tx.type.replace(/_/g, ' ')}
+            </span>
+            <span className="text-[11px] font-mono text-right text-white">${(tx.amount || 0).toFixed(2)}</span>
+            <span className="text-[11px] font-mono text-right text-emerald-400">{tx.fee > 0 ? `+$${tx.fee.toFixed(2)}` : '--'}</span>
+            <span className="text-right">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-emerald-500/15 text-emerald-400">
+                Completed
+              </span>
+            </span>
+          </div>
+        ))}
+
         {/* Empty State */}
-        {transactions.length === 0 && (
+        {sorted.length === 0 && (
           <div className="px-4 py-8 text-center">
             <Activity size={24} className="text-slate-600 mx-auto mb-2" />
             <p className="text-sm text-slate-500">No transactions recorded yet</p>

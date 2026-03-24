@@ -463,6 +463,14 @@ export default async function handler(req, res) {
     // Alpha signals — coins with notable signals
     const alphaPlays = processedMarkets.filter(c => c.alphaSignal.strength !== 'low').slice(0, 10);
 
+    // AI enrichment (non-blocking — fallback to null if unavailable)
+    let aiInsights = null;
+    try {
+      aiInsights = await generateMarketIntelligence(sentiment, topGainers, topLosers, processedNews);
+    } catch (e) {
+      console.warn('Claude enrichment failed:', e.message);
+    }
+
     const response = {
       markets: processedMarkets,
       trending: trendingCoins,
@@ -472,6 +480,7 @@ export default async function handler(req, res) {
       topGainers,
       topLosers,
       alphaPlays,
+      aiInsights,
       timestamp: new Date().toISOString(),
       _meta: {
         sources: {

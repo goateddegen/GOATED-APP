@@ -459,7 +459,9 @@ export default function App() {
         {keybindsOpen && <KeybindsModal key="keybinds" />}
         {accountModalOpen && <AccountModal key="account" />}
       </AnimatePresence>
-      <AIOverlay />
+      <PageErrorBoundary pageKey="ai-overlay">
+        <AIOverlay />
+      </PageErrorBoundary>
       {!onboardingComplete && <Onboarding />}
       {degenToast && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[999] px-5 py-3 rounded-xl text-sm font-semibold shadow-2xl border border-white/10 backdrop-blur-md"

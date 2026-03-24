@@ -1908,6 +1908,42 @@ export default function TrendsPage() {
             </motion.div>
           )}
 
+          {/* DEGEN: Whale Wallet Movements */}
+          {degenMode && (
+            <div className="rounded-xl border border-orange-500/20 bg-black/30 overflow-hidden">
+              <div className="px-4 py-3 border-b border-orange-500/15 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Radar size={16} className="text-orange-400" />
+                  <h3 className="text-sm font-black text-orange-400 uppercase tracking-wider">Whale Wallet Movements</h3>
+                  <span className="text-[9px] bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />LIVE</span>
+                </div>
+                <span className="text-[10px] text-slate-600">Top wallets tracked on-chain</span>
+              </div>
+              <div className="p-4 space-y-2 max-h-[280px] overflow-y-auto scrollbar-hide">
+                {[
+                  { wallet: '0x7a16...f3d2', action: 'BUY', asset: 'ETH', amount: '12,500 ETH', usd: '$47.5M', time: '3m ago', impact: 'HIGH', note: 'Moved from Binance to cold wallet' },
+                  { wallet: '0xdead...beef', action: 'SELL', asset: 'BTC', amount: '850 BTC', usd: '$82.4M', time: '8m ago', impact: 'HIGH', note: 'OTC desk transfer detected' },
+                  { wallet: '0x1337...4200', action: 'STAKE', asset: 'SOL', amount: '250,000 SOL', usd: '$50M', time: '12m ago', impact: 'MEDIUM', note: 'Marinade Finance stake — long-term hold signal' },
+                  { wallet: '0xcafe...babe', action: 'BUY', asset: 'LINK', amount: '2.1M LINK', usd: '$33.6M', time: '18m ago', impact: 'MEDIUM', note: 'Accumulated over 3 txns — whale DCA pattern' },
+                  { wallet: '0xb00b...face', action: 'TRANSFER', asset: 'USDT', amount: '100M USDT', usd: '$100M', time: '22m ago', impact: 'HIGH', note: 'Tether Treasury to Kraken — buying pressure incoming' },
+                  { wallet: '0x4206...6969', action: 'BUY', asset: 'PEPE', amount: '500B PEPE', usd: '$6M', time: '31m ago', impact: 'LOW', note: 'Known meme whale — accumulation phase' },
+                  { wallet: '0xfeed...c0de', action: 'UNSTAKE', asset: 'ETH', amount: '8,000 ETH', usd: '$30.4M', time: '45m ago', impact: 'MEDIUM', note: 'Lido unstake — potential sell pressure' },
+                ].map((w, i) => (
+                  <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-surface-2/30 border border-white/5 hover:border-orange-500/20 transition-all">
+                    <span className={`text-[10px] font-black px-2 py-1 rounded ${w.action === 'BUY' || w.action === 'STAKE' ? 'bg-emerald-500/15 text-emerald-400' : w.action === 'SELL' || w.action === 'UNSTAKE' ? 'bg-red-500/15 text-red-400' : 'bg-yellow-500/15 text-yellow-400'}`}>{w.action}</span>
+                    <span className="text-[11px] font-mono text-slate-500 w-24">{w.wallet}</span>
+                    <span className="text-sm font-bold text-orange-300">{w.asset}</span>
+                    <span className="text-[11px] text-white font-mono">{w.amount}</span>
+                    <span className="text-[11px] text-slate-400 font-mono">{w.usd}</span>
+                    <span className="text-[10px] text-slate-600 flex-1 truncate">{w.note}</span>
+                    <span className="text-[10px] text-slate-600">{w.time}</span>
+                    {w.impact === 'HIGH' && <span className="text-[8px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 font-bold">HIGH</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Metrics */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 flex items-center gap-4">
@@ -2429,6 +2465,59 @@ export default function TrendsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{data.alphaPlays.map((p, i) => <AlphaCard key={`auto-${i}`} play={p} />)}</div>
             </div>
           )}
+
+          {/* DEGEN-ONLY: High Risk / High Reward Plays + Leveraged Positions */}
+          {degenMode && (
+            <div className="space-y-4">
+              <div className="bg-gradient-to-r from-red-500/10 via-orange-500/5 to-yellow-500/10 border border-red-500/20 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Flame size={16} className="text-red-400" />
+                  <h3 className="text-sm font-black text-red-400 uppercase tracking-wider">High Risk / High Reward Plays</h3>
+                  <span className="text-[9px] bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full font-bold border border-red-500/30">DEGEN ONLY</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mb-3">These plays are hidden in normal mode. Extreme risk, extreme upside. NFA - DYOR.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[
+                    { title: 'PEPE Meme Supercycle Play', asset: 'PEPE', direction: 'long', confidence: 65, risk: 'extreme', entry: '$0.000012', exit: '$0.000035', profitTarget: '+191%', stopLossPercent: '-40%', description: 'Meme coin momentum accelerating. Social volume 5x avg. Whale wallets accumulating 500B+ tokens. If BTC breaks ATH, memes historically do 5-20x.', thesis: 'Retail FOMO cycle beginning. CEX listings incoming. Community growth exponential. This is the degen play of the cycle.', timeToPlay: 'NOW', goatedScore: 58, assetClass: 'CRYPTO' },
+                    { title: 'Leveraged AI Token Basket', asset: 'FET + RNDR + TAO', direction: 'long', confidence: 72, risk: 'high', entry: 'Market', exit: '+100% avg', profitTarget: '+80-150%', stopLossPercent: '-30%', description: 'AI narrative still has legs. On-chain metrics show accumulation. If NVDA earnings beat, AI tokens pump 24-48hrs later.', thesis: 'Narrative momentum + fundamental growth + catalyst alignment = asymmetric upside.', timeToPlay: 'This Week', goatedScore: 70, assetClass: 'CRYPTO' },
+                    { title: 'BTC $150K Call Options Play', asset: 'BTC Options', direction: 'long', confidence: 55, risk: 'extreme', entry: '$150K Dec calls @ $2,800', exit: '$8,000-$15,000', profitTarget: '+185-435%', stopLossPercent: '-100% (premium)', description: 'Out-of-money calls for asymmetric exposure. If BTC hits $130K+, these calls go 5-10x. Max loss = premium paid.', thesis: 'Options market underpricing tail risk to upside. Implied vol compressed. Cheap lottery ticket.', timeToPlay: 'This Month', goatedScore: 52, assetClass: 'CRYPTO' },
+                    { title: 'Short Treasuries (TLT) via Puts', asset: 'TLT Puts', direction: 'short', confidence: 68, risk: 'high', entry: '$88 puts', exit: '$80', profitTarget: '+120%', stopLossPercent: '-60%', description: 'If inflation re-accelerates, 10Y yield spikes and TLT dumps. Contrarian macro bet against consensus rate cut narrative.', thesis: 'CPI has bottomed. Services inflation sticky. Market overpricing dovish pivot.', timeToPlay: 'This Month', goatedScore: 63, assetClass: 'STOCKS' },
+                  ].map((p, i) => <AlphaCard key={`degen-hr-${i}`} play={p} />)}
+                </div>
+              </div>
+
+              {/* Leveraged Position Suggestions */}
+              <div className="bg-black/30 border border-orange-500/20 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Target size={16} className="text-orange-400" />
+                  <h3 className="text-sm font-black text-orange-400 uppercase tracking-wider">Leveraged Position Suggestions</h3>
+                  <span className="text-[9px] bg-orange-500/15 text-orange-400 px-2 py-0.5 rounded-full font-bold border border-orange-500/30">HIGH LEVERAGE</span>
+                </div>
+                <div className="space-y-2">
+                  {[
+                    { asset: 'BTC', leverage: '3x', direction: 'LONG', trigger: 'if breaks $100K', entry: '$100,200', target: '$115,000', confidence: 85, pnl: '+44.4%' },
+                    { asset: 'ETH', leverage: '5x', direction: 'LONG', trigger: 'if breaks $4,000', entry: '$4,020', target: '$4,800', confidence: 78, pnl: '+97%' },
+                    { asset: 'SOL', leverage: '4x', direction: 'LONG', trigger: 'if holds $200 support', entry: '$202', target: '$260', confidence: 80, pnl: '+115%' },
+                    { asset: 'NVDA', leverage: '2x', direction: 'LONG', trigger: 'if breaks $180 resistance', entry: '$181', target: '$210', confidence: 82, pnl: '+32%' },
+                    { asset: 'DOGE', leverage: '10x', direction: 'LONG', trigger: 'if Elon tweets', entry: '$0.19', target: '$0.35', confidence: 60, pnl: '+842%' },
+                  ].map((p, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-surface-2/50 border border-white/5 hover:border-orange-500/20 transition-all">
+                      <span className={`text-[10px] font-black px-2 py-1 rounded ${p.direction === 'LONG' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'}`}>{p.leverage} {p.direction}</span>
+                      <span className="text-sm font-bold text-white">{p.asset}</span>
+                      <span className="text-[11px] text-slate-400 flex-1">{p.trigger}</span>
+                      <span className="text-[10px] text-slate-500">Entry: <span className="text-white font-mono">{p.entry}</span></span>
+                      <span className="text-[10px] text-slate-500">Target: <span className="text-emerald-400 font-mono">{p.target}</span></span>
+                      <span className="text-[10px] font-black text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">{p.pnl}</span>
+                      <div className="flex items-center gap-1">
+                        <div className="w-8 h-1.5 bg-white/5 rounded-full overflow-hidden"><div className="h-full rounded-full bg-orange-400" style={{ width: `${p.confidence}%` }} /></div>
+                        <span className="text-[9px] text-slate-500">{p.confidence}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -2549,6 +2638,7 @@ export default function TrendsPage() {
                 <th className="text-left py-3 px-4">#</th><th className="text-left py-3 px-4">Asset</th><th className="text-right py-3 px-4">Price</th>
                 <th className="text-right py-3 px-4">1h</th><th className="text-right py-3 px-4">24h</th><th className="text-right py-3 px-4">7d</th>
                 <th className="text-right py-3 px-4">Volume</th><th className="text-right py-3 px-4">Mkt Cap</th><th className="text-right py-3 px-4 w-24">7d</th>
+                {degenMode && <th className="text-center py-3 px-4 text-orange-400 font-bold">Degen Signals</th>}
               </tr></thead>
               <tbody>
                 {filteredCoins.map(c => (
@@ -2562,6 +2652,17 @@ export default function TrendsPage() {
                     <td className="py-3 px-4 text-right text-slate-400 text-xs">{fmtVol(c.volume24h)}</td>
                     <td className="py-3 px-4 text-right text-slate-400 text-xs">{fmtVol(c.marketCap)}</td>
                     <td className="py-3 px-4 text-right"><Spark data={c.sparkline7d} w={72} h={20} /></td>
+                    {degenMode && (() => {
+                      const h1 = c.change1h || 0;
+                      const h24 = c.change24h || 0;
+                      const momentum = h1 > 2 && h24 > 5 ? 'STRONG BUY' : h1 > 1 && h24 > 2 ? 'BUY' : h1 < -2 && h24 < -5 ? 'STRONG SELL' : h1 < -1 && h24 < -2 ? 'SELL' : Math.abs(h24) < 1 ? 'CRAB' : 'HOLD';
+                      const mColor = momentum.includes('BUY') ? 'text-emerald-400 bg-emerald-500/15 border-emerald-500/25' : momentum.includes('SELL') ? 'text-red-400 bg-red-500/15 border-red-500/25' : momentum === 'CRAB' ? 'text-slate-400 bg-slate-500/10 border-slate-500/20' : 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
+                      return (
+                        <td className="py-3 px-4 text-center">
+                          <span className={`text-[9px] font-black px-2 py-1 rounded-full border ${mColor}`}>{momentum}</span>
+                        </td>
+                      );
+                    })()}
                   </tr>
                 ))}
               </tbody>
