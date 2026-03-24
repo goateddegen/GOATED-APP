@@ -200,7 +200,7 @@ function generateIncubatorProjects() {
     },
     {
       id: 'proj-3', name: 'ChainGuard', tagline: 'Real-time smart contract security',
-      category: 'Web3', stage: 'prototype', teamSize: 3, fundingRaised: 150000,
+      category: 'Web3', stage: 'beta', teamSize: 3, fundingRaised: 150000,
       communityMembers: 890, upvotes: 312, monthlyGrowth: 28,
       founder: '@diamondhands', founderAvatar: '#10b981',
       description: 'Automated smart contract auditing and real-time vulnerability monitoring for DeFi protocols.',
@@ -256,7 +256,7 @@ function generateIncubatorProjects() {
     },
     {
       id: 'proj-10', name: 'LiquidLayer', tagline: 'Cross-chain liquidity aggregation',
-      category: 'DeFi', stage: 'prototype', teamSize: 4, fundingRaised: 300000,
+      category: 'DeFi', stage: 'beta', teamSize: 4, fundingRaised: 300000,
       communityMembers: 1600, upvotes: 278, monthlyGrowth: 37,
       founder: '@apemaxi', founderAvatar: '#f97316',
       description: 'Aggregate liquidity across 8 chains for the best swap rates. One click, best execution.',
@@ -699,7 +699,7 @@ function LeaderboardRow({ user, degenMode }) {
 }
 
 // Incubator project card
-function ProjectCard({ project, degenMode, onUpvote, onView }) {
+function ProjectCard({ project, degenMode, onUpvote, onView, onVote, hasVoted }) {
   const stageInfo = PROJECT_STAGES[project.stage];
   const accentColor = degenMode ? '#f97316' : '#00ff88';
   const categoryIcon = {
@@ -787,6 +787,9 @@ function ProjectCard({ project, degenMode, onUpvote, onView }) {
         )}
       </div>
 
+      {/* Milestone progress */}
+      <MilestoneTracker stage={project.stage} degenMode={degenMode} />
+
       <div className="flex gap-2">
         <button
           onClick={() => onUpvote(project.id)}
@@ -794,6 +797,17 @@ function ProjectCard({ project, degenMode, onUpvote, onView }) {
         >
           <ThumbsUp size={12} />
           {project.upvotes}
+        </button>
+        <button
+          onClick={() => onVote && onVote(project.id)}
+          className={'flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-bold transition-all border ' +
+            (hasVoted
+              ? 'bg-brand/15 text-brand border-brand/20'
+              : 'bg-white/[0.04] text-slate-400 border-white/[0.06] hover:bg-white/[0.06] hover:text-white')
+          }
+        >
+          <Vote size={12} />
+          {hasVoted ? 'Voted' : 'Vote'}
         </button>
         <button
           onClick={() => onView(project.id)}
@@ -1440,6 +1454,197 @@ export default function LaunchPadPage() {
         ))}
       </div>
 
+      {/* DEAL FLOW TAB */}
+      {tab === 'dealflow' && (
+        <div>
+          <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-brand/[0.05] to-blue-500/[0.03] border border-brand/10">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h2 className="text-lg font-black flex items-center gap-2">
+                  <Handshake size={20} style={{ color: accentColor }} />
+                  Deal Flow
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">Featured projects seeking partnerships and investment</p>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                <CircleDollarSign size={12} className="text-emerald-400" />
+                <span>{dealFlowProjects.length} active deals</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            {[
+              { label: 'Active Deals', value: dealFlowProjects.length, icon: Briefcase, color: '#a855f7' },
+              { label: 'Total Seeking', value: fmtMoney(dealFlowProjects.reduce((s, d) => s + d.seeking, 0)), icon: DollarSign, color: '#10b981' },
+              { label: 'Avg Team Size', value: Math.round(dealFlowProjects.reduce((s, d) => s + d.teamSize, 0) / dealFlowProjects.length), icon: Users, color: '#06b6d4' },
+              { label: 'Hot Deals', value: dealFlowProjects.filter(d => d.hot).length, icon: Flame, color: '#f59e0b' },
+            ].map((s, i) => (
+              <div key={i} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                <div className="flex items-center gap-2 mb-1">
+                  <s.icon size={14} style={{ color: s.color }} />
+                  <span className="text-[10px] text-slate-500">{s.label}</span>
+                </div>
+                <div className="text-lg font-black text-white">{s.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
+            {DEAL_FLOW_CATEGORIES.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setDealCatFilter(cat)}
+                className={'px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ' +
+                  (dealCatFilter === cat
+                    ? degenMode
+                      ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20'
+                      : 'bg-brand/15 text-brand border border-brand/20'
+                    : 'text-slate-500 hover:text-slate-300 bg-white/[0.02] border border-white/[0.04]')
+                }
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredDeals.map(deal => (
+              <DealFlowCard key={deal.id} deal={deal} degenMode={degenMode} />
+            ))}
+          </div>
+
+          {filteredDeals.length === 0 && (
+            <div className="text-center py-16 text-slate-500">
+              <Briefcase size={32} className="mx-auto mb-3 opacity-30" />
+              <p className="text-sm">No deals in this category</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* PRIVATE DEALS TAB (DEGEN GATED) */}
+      {tab === 'privatedeals' && (
+        <div>
+          <div className="mb-6 p-4 rounded-xl border"
+            style={{
+              background: degenMode
+                ? 'linear-gradient(135deg, rgba(249,115,22,0.05), rgba(168,85,247,0.03))'
+                : 'rgba(255,255,255,0.015)',
+              borderColor: degenMode ? '#f9731620' : 'rgba(255,255,255,0.06)',
+            }}>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h2 className="text-lg font-black flex items-center gap-2">
+                  {degenMode ? <Gem size={20} className="text-orange-400" /> : <Lock size={20} className="text-slate-500" />}
+                  Private Deals
+                  {degenMode && <span className="text-[9px] px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-400 font-bold tracking-wider">DEGEN ACCESS</span>}
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  {degenMode
+                    ? 'Exclusive early access deals, token launches, and private investment rounds'
+                    : 'Enable DEGEN mode to unlock exclusive private deals and early access opportunities'}
+                </p>
+              </div>
+              {degenMode && (
+                <div className="flex items-center gap-2 text-[10px] text-orange-400 font-bold">
+                  <ShieldCheck size={14} />
+                  {privateDeals.length} exclusive deals
+                </div>
+              )}
+            </div>
+          </div>
+
+          {!degenMode && (
+            <div className="mb-6 p-6 rounded-xl border border-white/[0.06] bg-white/[0.01] text-center">
+              <Lock size={40} className="mx-auto mb-3 text-slate-600" />
+              <h3 className="text-base font-black text-white mb-1">DEGEN Mode Required</h3>
+              <p className="text-sm text-slate-400 mb-4 max-w-md mx-auto">
+                Private deals are exclusive to DEGEN mode users. Enable DEGEN mode in settings to access token launches, private rounds, and early access opportunities.
+              </p>
+              <div className="flex items-center justify-center gap-1 text-[10px] text-slate-600">
+                <Shield size={10} />Verified deals only &mdash; curated by the GOATED team
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {privateDeals.map(deal => (
+              <PrivateDealCard key={deal.id} deal={deal} degenMode={degenMode} locked={!degenMode} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* AD FLOW TAB */}
+      {tab === 'adflow' && (
+        <div>
+          <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-yellow-500/[0.03] via-transparent to-brand/[0.03] border"
+            style={{ borderColor: accentColor + '15' }}>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h2 className="text-lg font-black flex items-center gap-2">
+                  <Megaphone size={20} style={{ color: accentColor }} />
+                  Ad Flow
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">Promoted projects and sponsored content from the GOATED ecosystem</p>
+              </div>
+              <button
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all hover:brightness-110"
+                style={{ background: accentColor + '12', color: accentColor, borderColor: accentColor + '25' }}
+              >
+                <Plus size={14} />
+                Promote Your Project
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            {[
+              { label: 'Active Campaigns', value: adFlowProjects.length, icon: Megaphone, color: '#a855f7' },
+              { label: 'Total Impressions', value: fmtNum(adFlowProjects.reduce((s, a) => s + a.impressions, 0)), icon: Eye, color: '#06b6d4' },
+              { label: 'Total Clicks', value: fmtNum(adFlowProjects.reduce((s, a) => s + a.clicks, 0)), icon: Target, color: '#10b981' },
+              { label: 'Avg CTR', value: (adFlowProjects.reduce((s, a) => s + a.ctr, 0) / adFlowProjects.length).toFixed(1) + '%', icon: BarChart2, color: '#f59e0b' },
+            ].map((s, i) => (
+              <div key={i} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                <div className="flex items-center gap-2 mb-1">
+                  <s.icon size={14} style={{ color: s.color }} />
+                  <span className="text-[10px] text-slate-500">{s.label}</span>
+                </div>
+                <div className="text-lg font-black text-white">{s.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Featured section */}
+          {adFlowProjects.filter(a => a.type === 'featured').length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Star size={12} className="text-yellow-400" />
+                Featured Projects
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {adFlowProjects.filter(a => a.type === 'featured').map(ad => (
+                  <AdFlowCard key={ad.id} ad={ad} degenMode={degenMode} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mb-6">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Megaphone size={12} />
+              Sponsored &amp; Banners
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {adFlowProjects.filter(a => a.type !== 'featured').map(ad => (
+                <AdFlowCard key={ad.id} ad={ad} degenMode={degenMode} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* PREDICTIONS TAB */}
       {tab === 'events' && (
         <div>
@@ -1559,14 +1764,56 @@ export default function LaunchPadPage() {
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">Build, launch, and scale your startup with AI-powered tools and the GOATED network</p>
               </div>
-              <button
-                onClick={() => setShowSubmitModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-black hover:brightness-110 transition-all"
-                style={{ background: accentColor }}
-              >
-                <Plus size={14} />
-                Submit Project
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowSubmitModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-black hover:brightness-110 transition-all"
+                  style={{ background: accentColor }}
+                >
+                  <Plus size={14} />
+                  Submit Project
+                </button>
+                <button
+                  onClick={() => setShowSubmitModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all hover:brightness-110"
+                  style={{ background: accentColor + '12', color: accentColor, borderColor: accentColor + '25' }}
+                >
+                  <Rocket size={14} />
+                  Apply for Incubation
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Milestone Tracker Overview */}
+          <div className="mb-6 p-4 rounded-xl bg-white/[0.015] border border-white/[0.04]">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Milestone size={12} />
+              Incubation Milestones
+            </h3>
+            <div className="grid grid-cols-5 gap-2">
+              {STAGE_ORDER.map((s, i) => {
+                const info = PROJECT_STAGES[s];
+                const count = projects.filter(p => p.stage === s).length;
+                const descriptions = {
+                  idea: 'Concept validation & market research',
+                  prototype: 'MVP development & early testing',
+                  beta: 'Beta testing & user feedback',
+                  launch: 'Public launch & growth',
+                  scale: 'Scaling & expansion',
+                };
+                return (
+                  <div key={s} className="text-center p-3 rounded-lg border relative"
+                    style={{ background: info.color + '06', borderColor: info.color + '15' }}>
+                    <div className="text-2xl font-black" style={{ color: info.color }}>{count}</div>
+                    <div className="text-[10px] font-bold" style={{ color: info.color }}>{info.label}</div>
+                    <div className="text-[8px] text-slate-600 mt-1">{descriptions[s]}</div>
+                    {i < STAGE_ORDER.length - 1 && (
+                      <ArrowRight size={10} className="absolute -right-1.5 top-1/2 -translate-y-1/2 text-slate-700 hidden sm:block" />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -1588,27 +1835,16 @@ export default function LaunchPadPage() {
             ))}
           </div>
 
-          {/* Stage pipeline overview */}
+          {/* Community Voting Section */}
           <div className="mb-6 p-4 rounded-xl bg-white/[0.015] border border-white/[0.04]">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <GitBranch size={12} />
-              Pipeline Overview
+              <Vote size={12} />
+              Community Voting
             </h3>
-            <div className="grid grid-cols-4 gap-3">
-              {STAGE_ORDER.map(s => {
-                const info = PROJECT_STAGES[s];
-                const count = projects.filter(p => p.stage === s).length;
-                return (
-                  <div key={s} className="text-center p-3 rounded-lg border"
-                    style={{
-                      background: info.color + '08',
-                      borderColor: info.color + '20',
-                    }}>
-                    <div className="text-2xl font-black" style={{ color: info.color }}>{count}</div>
-                    <div className="text-[10px] font-bold mt-0.5" style={{ color: info.color }}>{info.label}</div>
-                  </div>
-                );
-              })}
+            <p className="text-[11px] text-slate-500 mb-3">Vote on projects you believe in. Top-voted projects get priority for incubation resources, mentorship, and funding.</p>
+            <div className="flex items-center gap-4 text-[10px]">
+              <span className="text-slate-500">Your votes: <span className="font-bold text-white">{Object.values(projectVotes).filter(Boolean).length}</span></span>
+              <span className="text-slate-500">Total projects: <span className="font-bold text-white">{projects.length}</span></span>
             </div>
           </div>
 
@@ -1675,6 +1911,8 @@ export default function LaunchPadPage() {
                 degenMode={degenMode}
                 onUpvote={handleUpvote}
                 onView={() => {}}
+                onVote={handleVote}
+                hasVoted={!!projectVotes[project.id]}
               />
             ))}
           </div>

@@ -540,9 +540,9 @@ function AlphaCard({ play }) {
         <div className="text-sm font-bold text-white leading-snug">
           {play.direction === 'long' ? 'BUY' : 'SHORT'} {play.asset}
           {play.entry ? ` at ${play.entry}` : ''}
-          {play.stopLoss && play.stopLoss !== 'N/A (binary)' ? ` — stop at ${play.stopLoss}` : ''}
+          {play.stopLoss ? ` — stop at ${play.stopLoss}` : ''}
           {play.exit ? ` — target ${play.exit}` : ''}
-          {play.assetClass === 'PREDICTION MKT' && play.entry ? '' : !play.entry ? ` — wait for entry confirmation` : ''}
+          {!play.entry ? ` — wait for entry confirmation` : ''}
         </div>
         <div className="grid grid-cols-3 gap-2 mt-2">
           <div className="bg-emerald-500/10 border border-emerald-500/15 rounded-lg px-2 py-1.5 text-center">
@@ -560,7 +560,7 @@ function AlphaCard({ play }) {
         </div>
         <div className="flex items-center gap-2 pt-1.5">
           <button
-            onClick={(e) => { e.stopPropagation(); const text = `${play.direction === 'long' ? 'BUY' : 'SHORT'} ${play.asset}${play.entry ? ` @ ${play.entry}` : ''}${play.stopLoss && play.stopLoss !== 'N/A (binary)' ? ` | SL: ${play.stopLoss}` : ''}${play.exit ? ` | TP: ${play.exit}` : ''} | ${play.timeframe} | Risk: ${play.risk || 'medium'}`; navigator.clipboard.writeText(text).catch(() => {}); }}
+            onClick={(e) => { e.stopPropagation(); const text = `${play.direction === 'long' ? 'BUY' : 'SHORT'} ${play.asset}${play.entry ? ` @ ${play.entry}` : ''}${play.stopLoss ? ` | SL: ${play.stopLoss}` : ''}${play.exit ? ` | TP: ${play.exit}` : ''} | ${play.timeframe} | Risk: ${play.risk || 'medium'}`; navigator.clipboard.writeText(text).catch(() => {}); }}
             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-brand/10 text-brand font-bold text-[11px] border border-brand/20 hover:bg-brand/20 hover:border-brand/40 transition-all cursor-pointer"
           >
             <Copy size={11} />Copy Trade Setup
@@ -599,13 +599,13 @@ const PREMIUM_ALPHA_PLAYS = [
     sparklineData: Array.from({length: 30}, (_, i) => 170 + Math.sin(i/5)*15 + i*1.2),
   },
   {
-    type: 'prediction-arb', title: 'Fed Rate Cut Prediction Market Arb',
-    description: 'Kalshi prices June rate cut at 62% while GOATED prices it at 68%. 6% spread opportunity on a high-conviction macro event with CME FedWatch confirming 70%+ probability.',
-    thesis: 'The market is mispricing the dovish Fed pivot. CPI trending down for 4 consecutive months, unemployment ticking up. CME FedWatch at 72% for June cut. Buy YES on GOATED at $0.68 (better than Kalshi $0.62). Risk/reward: 1.47x if YES wins, lose $0.68 if NO.',
-    asset: 'Fed Rate Cut YES', direction: 'long', confidence: 74, goatedScore: 78, timeframe: 'Jun 2026', risk: 'low',
-    assetClass: 'PREDICTION MKT', category: 'Macro', entry: '$0.68 (YES)', exit: '$1.00 at resolution', stopLoss: 'N/A (binary)',
-    profitTarget: '+47%', stopLossPercent: '-68% (binary)',
-    convictionScore: 7, convictionReasoning: 'CME FedWatch at 72% confirms mispricing. CPI trend supports. Spread arb between platforms provides edge.',
+    type: 'macro-catalyst', title: 'Fed Rate Cut Macro Play',
+    description: 'CME FedWatch at 72% for June rate cut. CPI trending down for 4 consecutive months. Risk assets historically rally 15-25% in the 3 months following first rate cut.',
+    thesis: 'The dovish Fed pivot is approaching. CPI trending down, unemployment ticking up. Rate cuts benefit risk assets — BTC, SOL, and growth stocks are the primary beneficiaries. Position ahead of the cut announcement for maximum alpha.',
+    asset: 'BTC + SOL + QQQ', direction: 'long', confidence: 74, goatedScore: 78, timeframe: '2-8 weeks', risk: 'medium',
+    assetClass: 'CRYPTO + MACRO', category: 'Macro', entry: 'BTC $95K-$98K, SOL $190-$200', exit: 'BTC $115K+, SOL $250+', stopLoss: 'BTC $89K, SOL $175',
+    profitTarget: '+20-30%', stopLossPercent: '-8%',
+    convictionScore: 7, convictionReasoning: 'CME FedWatch at 72% confirms dovish pivot. CPI trend supports. Historical rate cut rallies are strong.',
     timeToPlay: 'This Month',
     sparklineData: Array.from({length: 30}, (_, i) => 0.55 + Math.sin(i/6)*0.05 + i*0.004),
   },
@@ -632,13 +632,13 @@ const PREMIUM_ALPHA_PLAYS = [
     sparklineData: Array.from({length: 30}, (_, i) => 3400 + Math.sin(i/5)*200 + i*15),
   },
   {
-    type: 'event-driven', title: 'Senate Election Prediction Spread',
-    description: 'Democrats polling at 48% for Senate control but prediction markets only price it at 46%. Historical polling accuracy suggests 52-55% true probability — 6-9% edge available.',
-    thesis: 'Midterm election cycles with incumbent party losing presidency (not applicable here but same voter dynamics) show higher turnout for opposition. Key swing states (PA, GA, AZ) trending blue in recent special elections. Buy YES at $0.46, true value likely $0.52+.',
-    asset: 'DEM Senate YES', direction: 'long', confidence: 65, goatedScore: 68, timeframe: 'Nov 2026', risk: 'high',
-    assetClass: 'PREDICTION MKT', category: 'Macro', entry: '$0.46 (YES)', exit: '$1.00 at resolution', stopLoss: 'N/A (binary)',
-    profitTarget: '+117%', stopLossPercent: '-46% (binary)',
-    convictionScore: 6, convictionReasoning: 'Polling-prediction market divergence is notable but election outcomes are inherently uncertain. Edge is modest.',
+    type: 'event-driven', title: 'Election Cycle Defense Stocks Play',
+    description: 'Defense sector historically outperforms by 8-12% during election years regardless of outcome. LMT, RTX, and GD showing accumulation patterns.',
+    thesis: 'Bipartisan support for defense spending provides floor. Both parties competing on national security. Geopolitical tensions adding tailwinds. Defense ETFs at technical breakout levels with volume confirmation.',
+    asset: 'LMT + RTX + GD', direction: 'long', confidence: 65, goatedScore: 68, timeframe: '3-6 months', risk: 'low',
+    assetClass: 'STOCKS', category: 'Stocks', entry: 'LMT $470, RTX $120, GD $295', exit: 'LMT $530+, RTX $140+, GD $340+', stopLoss: 'LMT $445, RTX $112, GD $278',
+    profitTarget: '+12-17%', stopLossPercent: '-5.7%',
+    convictionScore: 6, convictionReasoning: 'Historical election cycle pattern is reliable. Bipartisan defense spending support. Technical breakout levels aligning.',
     timeToPlay: 'This Month',
     sparklineData: Array.from({length: 30}, (_, i) => 0.42 + Math.sin(i/7)*0.03 + i*0.001),
   },
@@ -2532,7 +2532,7 @@ export default function TrendsPage() {
           {/* Asset class filter summary */}
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-[10px] text-slate-600 uppercase tracking-wider">Asset Classes:</span>
-            {['CRYPTO', 'STOCKS', 'PREDICTION MKT', 'CRYPTO + MACRO'].map(cls => {
+            {['CRYPTO', 'STOCKS', 'CRYPTO + MACRO'].map(cls => {
               const count = [...PREMIUM_ALPHA_PLAYS, ...(data?.alphaPlays || [])].filter(p => (p.assetClass || 'CRYPTO') === cls).length;
               if (count === 0) return null;
               return (
