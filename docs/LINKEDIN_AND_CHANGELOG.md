@@ -45,16 +45,52 @@ DM me or check it out: [Link]
 GOATED Solutions
 Mar 2026 - Present
 
-Building the AI-powered Revenue Operating System that combines real-time market intelligence, 500K+ B2B leads, prediction markets, and direct outreach tools — all free to use.
+Building the B2B Sales Intelligence + Degen Alpha Platform that combines AI-powered lead intelligence, TrendPulse alpha intel, prediction markets, casino games, and an AI Sales Coach — all at $0 platform fee.
 
 Key achievements:
-- Built full-stack platform (React, Node, Solana, AI) as a solo founder
-- Built custom AI engine with technical analysis (RSI, MACD, Bollinger Bands), market regime detection, multi-source sentiment fusion, and predictive scoring — proprietary, not a ChatGPT wrapper
-- Created multi-asset intelligence dashboard covering crypto, stocks, forex, commodities, and 25+ prediction markets
-- Developed "DEGEN MODE" with real alpha intel: whale radar, intent surge alerts, snipe queue, and high-conviction trade setups
-- Pioneered commission-only SaaS model: $0 upfront, 10% on closed deals
+- Built full-stack platform as a solo founder (React 18, Vite, Tailwind CSS, Zustand, Three.js)
+- AI-Powered Lead Intelligence with 500K+ scored leads via Apollo.io integration
+- TrendPulse Alpha Intel with deep research, sentiment analysis, and live market data (CoinGecko, Kalshi, Polymarket)
+- DEGEN Mode (Shift+D) with casino games, alpha plays, closer leaderboards, and betting
+- LaunchPad for prediction markets and project incubation
+- AI Sales Coach with MEDDPICC framework, objection handling, and close playbooks
+- Voice Briefings via Web Speech API for lead summaries
+- Partner Program with Whop integration (Free, Featured $499/mo, Premium $2,499/mo, Enterprise)
+- Pioneered $0 platform fee model: 10-15% on closed deals, 2-5% betting spreads, 1-2% crypto fees
 
-Tech stack: React 18, Vite, Zustand, Framer Motion, Three.js, Supabase, Vercel, Solana/Web3, Custom AI Engine, Claude Haiku (chat only)
+Tech stack: React 18, Vite, Tailwind CSS, Zustand, Three.js, Supabase, Vercel Serverless + Edge Caching, Claude AI (Anthropic), CoinGecko, Kalshi, Polymarket, Apollo.io, Whop
+
+---
+
+## v5.1 CHANGELOG — MARCH 2026
+
+### Platform Identity
+- **GOATED Solutions** — B2B Sales Intelligence + Degen Alpha Platform
+- $0 platform fee, 10-15% commission on closed deals, 2-5% betting spreads, 1-2% crypto transaction fees
+
+### Core Features (v5.1)
+- **AI-Powered Lead Intelligence** — 500K+ scored leads via Apollo.io integration
+- **TrendPulse Alpha Intel** — Deep research, sentiment analysis, live market data (CoinGecko, Kalshi, Polymarket)
+- **DEGEN Mode (Shift+D)** — Casino games, alpha plays, closer leaderboards, betting
+- **LaunchPad** — Prediction markets and project incubator ($499-$2,499/mo featured listings)
+- **AI Sales Coach** — Objection handling, MEDDPICC framework, close playbooks
+- **Voice Briefings** — Web Speech API lead summaries
+- **Partner Program** — Free Listing, Featured ($499/mo), Premium ($2,499/mo), Enterprise (custom) with Whop integration
+- **Homepage Partner Program** — Public-facing partner tiers and sign-up
+
+### Tech Stack
+- React 18 + Vite + Tailwind CSS + Zustand + Three.js
+- Vercel Serverless + Edge Caching
+- Claude AI (Anthropic) for LLM features
+- CoinGecko, Kalshi, Polymarket, Apollo.io APIs
+- Supabase for auth + real-time data
+- Whop integration for creator economy
+
+### Fixes
+- Markets merge (consolidated market views)
+- Fake revenue cleanup (removed placeholder revenue data)
+- Homepage partner program section added
+- Keybind fixes
 
 ---
 
@@ -122,15 +158,15 @@ Tech stack: React 18, Vite, Zustand, Framer Motion, Three.js, Supabase, Vercel, 
 
 ### Why GOATED is Unique:
 
-1. **Commission-Only Model** — No other platform in the sales intelligence space offers $0 upfront with commission-only pricing. This is the Stripe model applied to sales tools.
+1. **$0 Platform Fee Model** — No other platform in the sales intelligence space offers $0 upfront with multi-stream revenue (10-15% commissions, 2-5% betting spreads, 1-2% crypto fees). This is the Stripe model applied to sales + degen alpha.
 
-2. **DEGEN MODE** — No enterprise software has a "fun mode." This is inherently viral, screenshot-worthy, and creates brand identity that competitors can't replicate without looking ridiculous.
+2. **DEGEN Mode (Shift+D)** — Casino games, alpha plays, closer leaderboards, and betting. No enterprise software has this. Inherently viral, screenshot-worthy, and creates brand identity that competitors can't replicate.
 
-3. **Full-Stack Revenue OS** — Others do one thing: Apollo = leads, Gong = calls, Polymarket = bets. GOATED does ALL of it in one place.
+3. **Full-Stack Platform** — AI-Powered Lead Intelligence + TrendPulse Alpha Intel + DEGEN Mode + LaunchPad + AI Sales Coach + Voice Briefings. Others do one thing. GOATED does ALL of it in one place.
 
-4. **AI-Native Architecture** — Built with AI from day one, not bolted on. The AI copilot isn't a chatbot — it's a deep research agent that can analyze your entire pipeline, generate outreach, and predict close probability.
+4. **AI-Native Architecture** — Built with Claude AI (Anthropic) from day one. AI Sales Coach with MEDDPICC framework, objection handling, close playbooks. Voice Briefings via Web Speech API. Not a chatbot — a deep research agent.
 
-5. **Crypto + B2B Convergence** — First platform to bridge Web3 finance with B2B sales. Settle commissions on-chain. Trade prediction markets with the same tool you use to close deals.
+5. **Sales + Degen Convergence** — First platform to bridge B2B sales intelligence with degen alpha, prediction markets, and casino. LaunchPad for project incubation. Partner program with Whop integration for creator economy.
 
 ### Verticals to Conquer:
 

@@ -2,15 +2,27 @@
 
 **The 6-Month Masterplan**
 
-**Date:** March 2026 | **Version:** 1.0
+**Date:** March 2026 | **Version:** 5.1
 
 ---
 
 ## EXECUTIVE SUMMARY
 
-This document outlines the concrete, month-by-month operational plan to take GOATED from v4.0 launch to $100,000+ in monthly recurring revenue within 6 months. Every milestone, every lever, every number is grounded in achievable targets based on comparable company trajectories and our specific market positioning.
+This document outlines the concrete, month-by-month operational plan to take GOATED from v5.1 launch to $100,000+ in monthly recurring revenue within 6 months. Every milestone, every lever, every number is grounded in achievable targets based on comparable company trajectories and our specific market positioning.
 
-**The core thesis:** A free, AI-native revenue intelligence platform with a 10% commission model can acquire users at near-zero CAC and monetize through aligned incentives. Product-led growth, not outbound sales, drives the flywheel.
+**Platform:** B2B Sales Intelligence + Degen Alpha Platform
+**Tech Stack:** React 18 + Vite + Tailwind CSS + Zustand + Three.js | Vercel Serverless + Edge Caching | Claude AI (Anthropic) | CoinGecko, Kalshi, Polymarket, Apollo.io | Supabase | Whop
+
+**Core Features (Live in v5.1):**
+- AI-Powered Lead Intelligence (500K+ scored leads, Apollo.io integration)
+- TrendPulse Alpha Intel (deep research, sentiment analysis, live market data)
+- DEGEN Mode (Shift+D) — Casino games, alpha plays, closer leaderboards, betting
+- LaunchPad (prediction markets, project incubator)
+- AI Sales Coach (objection handling, MEDDPICC framework, close playbooks)
+- Voice Briefings (Web Speech API lead summaries)
+- Partner Program (Free, Featured $499/mo, Premium $2,499/mo, Enterprise custom) with Whop integration
+
+**The core thesis:** A $0 platform fee B2B Sales Intelligence + Degen Alpha Platform with multi-stream revenue (10-15% commission on deals, 2-5% betting spreads, 1-2% crypto fees, LaunchPad listings $499-$2,499/mo) can acquire users at near-zero CAC and monetize through aligned incentives. Product-led growth, not outbound sales, drives the flywheel.
 
 ---
 

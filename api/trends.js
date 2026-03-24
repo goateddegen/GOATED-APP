@@ -6,6 +6,8 @@
 // No API keys required for core functionality.
 // =============================================================================
 
+import { callClaude } from './lib/anthropic.js';
+
 const ALLOWED_ORIGINS = [process.env.CORS_ORIGIN || 'https://goated.solutions', 'http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5174'];
 function getCorsOrigin(req) {
   const origin = req.headers?.origin || '';
@@ -372,6 +374,47 @@ function formatLarge(n) {
   if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
   if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
   return '$' + n.toFixed(0);
+}
+
+// ---------------------------------------------------------------------------
+// Claude AI Enrichment
+// ---------------------------------------------------------------------------
+async function enrichWithClaude(data, prompt) {
+  const text = await callClaude(
+    'You are GOATED\'s elite market intelligence AI. Respond ONLY with valid JSON, no markdown fences.',
+    `${prompt}\n\nData:\n${JSON.stringify(data)}`,
+    600
+  );
+  if (!text) return null;
+  try {
+    // Strip markdown code fences if present
+    const clean = text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+    return JSON.parse(clean);
+  } catch {
+    return null;
+  }
+}
+
+async function generateMarketIntelligence(sentiment, topGainers, topLosers, news) {
+  const summary = {
+    fearGreed: sentiment?.fearGreed?.value,
+    breadth: sentiment?.marketBreadth,
+    avgChange: sentiment?.avgChange24h,
+    btcDom: sentiment?.btcDominance,
+    topGainers: topGainers?.slice(0, 3).map(c => ({ symbol: c.symbol, change24h: c.change24h })),
+    topLosers: topLosers?.slice(0, 3).map(c => ({ symbol: c.symbol, change24h: c.change24h })),
+    recentHeadlines: news?.slice(0, 5).map(n => n.title),
+  };
+
+  return enrichWithClaude(summary, `Analyze this crypto market snapshot and return JSON with:
+{
+  "sentiment": { "direction": "bullish|bearish|neutral", "confidence": 1-100, "reasoning": "1 sentence" },
+  "marketSummary": "1 concise sentence summarizing current market state",
+  "actionablePlays": [
+    { "play": "description", "asset": "SYMBOL", "direction": "long|short|hold", "timeframe": "e.g. 4h-24h" }
+  ]
+}
+Return exactly 3 actionable plays. Be specific and data-driven.`);
 }
 
 // ---------------------------------------------------------------------------

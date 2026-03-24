@@ -402,7 +402,15 @@ CLOSE PROBABILITY PRIORITY: Prioritize by close probability. For sub-$20K deals:
 
 CURRENT PAGE CONTEXT: ${pageContext}
 
-PLATFORM: **Leads** (500K+ scored leads), **Dashboard** (KPIs), **Trends** (sentiment), **Casino** (prediction markets), **Wallet** (Solana/USDC), **Admin** (team mgmt).
+PLATFORM FEATURES:
+- **Leads** — 500K+ scored B2B leads with AI enrichment, close probability, and outreach automation
+- **Dashboard** — Real-time KPIs, pipeline analytics, revenue forecasting, and deal velocity tracking
+- **TrendPulse** — Live crypto market data, AI-powered sentiment analysis, Fear & Greed Index, news aggregation, prediction markets from Polymarket & Kalshi with spread comparison, Deep Research with structured reports, and actionable alpha plays
+- **Wallet** — Solana/USDC wallet integration, commission tracking, and earnings projections
+- **Admin** — Team performance analytics, user management, system health monitoring
+- **Launchpad** — Live events, startup incubation, prediction market bets, and high-growth opportunities
+- **Intelligence** — AI-driven market briefs, consumer behavior analysis, revenue reports, and lead deep-dives powered by Claude
+- **Plays** — 32+ sales playbooks across Cold Outreach, Inbound Funnels, Closing Plays, Retention & Upsell, and Automation with live activity feed
 
 RESPONSE MODE: ${activeMode.description}`;
 
@@ -508,7 +516,7 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-4-6',
         max_tokens: maxTokens,
         temperature: activeMode.temperature,
         system: systemPrompt,

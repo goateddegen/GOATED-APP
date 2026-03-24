@@ -1,6 +1,6 @@
 # GOATED Solutions - API Routes
 
-Vercel Serverless Functions powering the GOATED Solutions platform.
+Vercel Serverless Functions powering the GOATED Solutions B2B Sales Intelligence + Degen Alpha Platform (v5.1).
 
 ## API Endpoints
 

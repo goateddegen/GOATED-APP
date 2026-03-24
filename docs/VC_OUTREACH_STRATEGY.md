@@ -2,7 +2,10 @@
 
 **Strategic Fundraising Playbook**
 
-**Date:** March 2026 | **Version:** 1.0 | **Round:** Pre-Seed ($500K)
+**Date:** March 2026 | **Version:** 5.1 | **Round:** Pre-Seed ($500K)
+
+> **Platform:** B2B Sales Intelligence + Degen Alpha Platform | $0 platform fee, 10-15% commission on closed deals, 2-5% betting spreads, 1-2% crypto fees, LaunchPad listings $499-$2,499/mo
+> **Tech Stack:** React 18 + Vite + Tailwind CSS + Zustand + Three.js | Vercel Serverless + Edge Caching | Claude AI (Anthropic) | CoinGecko, Kalshi, Polymarket, Apollo.io | Supabase | Whop
 
 ---
 
@@ -123,7 +126,7 @@ For investors where no warm intro path exists, cold email is the fallback. The k
 **Cold email template (personalize heavily per recipient):**
 
 ```
-Subject: Free Apollo alternative -- 10% commission model (live platform)
+Subject: B2B Sales Intelligence + Degen Alpha -- $0 platform fee (live v5.1)
 
 Hi [First Name],
 
@@ -131,16 +134,17 @@ I read your [specific piece -- blog post / tweet / podcast appearance] about
 [specific topic -- e.g., "commission-based SaaS replacing subscriptions"].
 That thesis is exactly what I'm building.
 
-GOATED is an AI-native revenue intelligence platform. It replaces Apollo,
-Outreach, and market intelligence tools -- all free. We earn 10% commission
-on deals closed through the platform.
+GOATED is a B2B Sales Intelligence + Degen Alpha Platform. $0 platform fee.
+We earn 10-15% on closed deals, 2-5% on betting spreads, and 1-2% on crypto.
 
-What's live today:
-- 500K+ AI-scored leads
-- Real-time market intelligence (CoinGecko, Polymarket, sentiment analysis)
-- AI co-pilot powered by Claude (Anthropic)
-- VoIP/SMS outreach suite
-- Solana wallet integration for crypto-native payments
+What's live today (v5.1):
+- AI-Powered Lead Intelligence (500K+ scored leads, Apollo.io integration)
+- TrendPulse Alpha Intel (deep research, sentiment, CoinGecko/Kalshi/Polymarket)
+- DEGEN Mode (Shift+D) -- casino games, alpha plays, closer leaderboards, betting
+- LaunchPad -- prediction markets + project incubator ($499-$2,499/mo listings)
+- AI Sales Coach (MEDDPICC, objection handling, close playbooks)
+- Voice Briefings (Web Speech API lead summaries)
+- Partner program with Whop integration
 
 Platform: [URL]
 
