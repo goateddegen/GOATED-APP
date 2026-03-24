@@ -9,7 +9,7 @@ import {
   ArrowUpRight, ArrowDownRight, Minus, Signal, LayoutGrid, List,
   PieChart, LineChart, Hash, ShieldCheck, Percent, Coins, Building2,
   Landmark, Fuel, Gem, Scale, Vote, Cpu, Banknote, CircleDollarSign,
-  ChevronUp, Star, Eye, Wifi, Layers,
+  ChevronUp, Star, Eye, Wifi, Layers, Copy, Download, Play,
 } from 'lucide-react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
@@ -531,23 +531,42 @@ function AlphaCard({ play }) {
           )}
         </div>
       )}
-      {/* Actionable Play */}
-      <div className="p-2.5 rounded-lg bg-brand/5 border border-brand/10 text-[11px] space-y-1">
-        <div className="flex items-center gap-1.5">
-          <Target size={11} className="text-brand shrink-0" />
-          <span className="text-brand font-black uppercase tracking-wider text-[10px]">PLAY:</span>
-          <span className="text-slate-200 font-medium">
-            {play.direction === 'long' ? 'Long' : 'Short'} {play.asset}
-            {play.entry ? ` above ${play.entry}` : ''}
-            {play.stopLoss ? ` with stop at ${play.stopLoss}` : ''}
-            {play.exit ? ` — target ${play.exit}` : ''}
-            {!play.entry && !play.exit ? ` · ${play.timeframe} horizon · Watch for confirmation before entering` : ''}
-          </span>
+      {/* ACTION Section */}
+      <div className="p-3 rounded-lg bg-brand/5 border border-brand/15 text-[11px] space-y-2">
+        <div className="flex items-center gap-1.5 mb-1">
+          <Target size={12} className="text-brand shrink-0" />
+          <span className="text-brand font-black uppercase tracking-wider text-[11px]">ACTION:</span>
         </div>
-        <div className="flex items-center gap-3 text-[10px] text-slate-500">
-          <span>{goatedScore}/100 GOATED Score</span>
-          <span>{play.timeframe}</span>
-          <span className="ml-auto text-brand font-bold">Actionable Setup</span>
+        <div className="text-sm font-bold text-white leading-snug">
+          {play.direction === 'long' ? 'BUY' : 'SHORT'} {play.asset}
+          {play.entry ? ` at ${play.entry}` : ''}
+          {play.stopLoss && play.stopLoss !== 'N/A (binary)' ? ` — stop at ${play.stopLoss}` : ''}
+          {play.exit ? ` — target ${play.exit}` : ''}
+          {play.assetClass === 'PREDICTION MKT' && play.entry ? '' : !play.entry ? ` — wait for entry confirmation` : ''}
+        </div>
+        <div className="grid grid-cols-3 gap-2 mt-2">
+          <div className="bg-emerald-500/10 border border-emerald-500/15 rounded-lg px-2 py-1.5 text-center">
+            <div className="text-[8px] text-slate-600 uppercase">Profit Potential</div>
+            <div className="text-xs font-black text-emerald-400">{play.profitTarget || (play.exit ? `Target ${play.exit}` : '+10-25%')}</div>
+          </div>
+          <div className={`border rounded-lg px-2 py-1.5 text-center ${play.risk === 'high' || play.risk === 'extreme' ? 'bg-red-500/10 border-red-500/15' : play.risk === 'medium' ? 'bg-amber-500/10 border-amber-500/15' : 'bg-emerald-500/10 border-emerald-500/15'}`}>
+            <div className="text-[8px] text-slate-600 uppercase">Risk Level</div>
+            <div className={`text-xs font-black capitalize ${play.risk === 'high' || play.risk === 'extreme' ? 'text-red-400' : play.risk === 'medium' ? 'text-amber-400' : 'text-emerald-400'}`}>{play.risk || 'medium'}</div>
+          </div>
+          <div className="bg-blue-500/10 border border-blue-500/15 rounded-lg px-2 py-1.5 text-center">
+            <div className="text-[8px] text-slate-600 uppercase">Time Horizon</div>
+            <div className="text-xs font-black text-blue-400">{play.timeframe || 'TBD'}</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 pt-1.5">
+          <button
+            onClick={(e) => { e.stopPropagation(); const text = `${play.direction === 'long' ? 'BUY' : 'SHORT'} ${play.asset}${play.entry ? ` @ ${play.entry}` : ''}${play.stopLoss && play.stopLoss !== 'N/A (binary)' ? ` | SL: ${play.stopLoss}` : ''}${play.exit ? ` | TP: ${play.exit}` : ''} | ${play.timeframe} | Risk: ${play.risk || 'medium'}`; navigator.clipboard.writeText(text).catch(() => {}); }}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-brand/10 text-brand font-bold text-[11px] border border-brand/20 hover:bg-brand/20 hover:border-brand/40 transition-all cursor-pointer"
+          >
+            <Copy size={11} />Copy Trade Setup
+          </button>
+          <span className="text-[10px] text-slate-500">{goatedScore}/100 Score</span>
+          {play.timeToPlay && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${play.timeToPlay === 'Urgent' || play.timeToPlay === 'NOW' ? 'bg-red-500/15 text-red-400 border border-red-500/30' : 'bg-brand/10 text-brand border border-brand/20'}`}>{play.timeToPlay}</span>}
         </div>
       </div>
     </motion.div>
@@ -1992,32 +2011,108 @@ export default function TrendsPage() {
             </div>
           )}
 
-          {/* ─── Market Regime — Prominent Banner ─── */}
+          {/* ─── Market Regime — Prominent Banner with Guidance ─── */}
           <div className="rounded-xl overflow-hidden" style={{
-            background: `linear-gradient(135deg, ${regime.color}08 0%, rgba(0,0,0,0.4) 50%, ${regime.color}05 100%)`,
-            border: `1px solid ${regime.color}30`,
+            background: `linear-gradient(135deg, ${regime.color}10 0%, rgba(0,0,0,0.4) 50%, ${regime.color}08 100%)`,
+            border: `2px solid ${regime.color}40`,
           }}>
-            <div className="p-5 flex items-center gap-5">
+            <div className="p-5 flex items-start gap-5">
               <div className="flex flex-col items-center gap-1">
-                <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ backgroundColor: `${regime.color}15`, border: `2px solid ${regime.color}40` }}>
-                  <span className="text-3xl font-black" style={{ color: regime.color }}>{regime.score}</span>
+                <div className="w-24 h-24 rounded-2xl flex items-center justify-center" style={{ backgroundColor: `${regime.color}15`, border: `2px solid ${regime.color}40` }}>
+                  <span className="text-4xl font-black" style={{ color: regime.color }}>{regime.score}</span>
                 </div>
                 <span className="text-[9px] text-slate-500">REGIME SCORE</span>
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <Brain size={16} className="text-purple-400" />
-                  <span className="text-[10px] text-slate-600 uppercase tracking-wider">Market Regime</span>
+                  <Brain size={18} className="text-purple-400" />
+                  <span className="text-xs text-slate-500 uppercase tracking-wider font-bold">Market Regime</span>
                   <span className="text-[9px] bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded-full font-semibold">GOATED AI</span>
                 </div>
-                <div className="text-2xl font-black uppercase tracking-wider mb-1" style={{ color: regime.color || '#6366f1' }}>{regime.regime}</div>
-                <p className="text-xs text-slate-400 leading-relaxed mb-3">{regime.description}</p>
+                <div className="text-3xl font-black uppercase tracking-wider mb-1" style={{ color: regime.color || '#6366f1' }}>{regime.regime}</div>
+                <p className="text-xs text-slate-400 leading-relaxed mb-2">{regime.description}</p>
+                {/* Regime-specific actionable guidance */}
+                <div className="p-3 rounded-lg mb-3" style={{ backgroundColor: `${regime.color}08`, border: `1px solid ${regime.color}20` }}>
+                  <div className="text-[10px] font-black uppercase tracking-wider mb-1" style={{ color: regime.color }}>GUIDANCE:</div>
+                  <p className="text-sm font-semibold text-white leading-relaxed">
+                    {regime.score >= 70
+                      ? 'BULL RUN: Maximize long exposure on momentum leaders. Reduce hedges. Add to winners on pullbacks. Watch for overextension above 85.'
+                      : regime.score >= 50
+                      ? 'RISK-ON: Maintain long bias but be selective. Focus on high-conviction setups. Keep 20% dry powder for dips.'
+                      : regime.score >= 35
+                      ? 'NEUTRAL: Reduce position sizes. Wait for directional confirmation. Equal weight longs and hedges. Preserve capital.'
+                      : 'RISK-OFF: Tighten all stops. Increase cash position to 40-60%. Reduce leverage. Only take high-conviction counter-trend plays.'}
+                  </p>
+                </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-bold px-3 py-1.5 rounded-lg" style={{ backgroundColor: `${regime.color}20`, color: regime.color, border: `1px solid ${regime.color}30` }}>{regime.action}</span>
-                  <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${regime.score}%`, backgroundColor: regime.color, boxShadow: `0 0 8px ${regime.color}40` }} /></div>
+                  <span className="text-sm font-black px-4 py-2 rounded-lg" style={{ backgroundColor: `${regime.color}20`, color: regime.color, border: `1px solid ${regime.color}30` }}>{regime.action}</span>
+                  <div className="flex-1 h-2.5 bg-white/5 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${regime.score}%`, backgroundColor: regime.color, boxShadow: `0 0 8px ${regime.color}40` }} /></div>
                   <span className="text-xs text-slate-500 font-mono">{regime.score}/100</span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* ─── Top 3 Moves Right Now ─── */}
+          <div className="bg-gradient-to-r from-brand/8 via-transparent to-cyan-500/5 border border-brand/15 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Rocket size={18} className="text-brand" />
+              <h3 className="text-lg font-black text-white uppercase tracking-tight">Top 3 Moves Right Now</h3>
+              <span className="text-[9px] bg-brand/10 text-brand px-2 py-0.5 rounded-full font-bold border border-brand/20">ACTIONABLE</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {(() => {
+                const topCoins = (data?.coins || []).filter(c => c.change24h != null).sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h));
+                const moves = [
+                  {
+                    rank: 1,
+                    action: regime.score >= 50 ? 'BUY' : 'WATCH',
+                    asset: topCoins[0]?.symbol || 'BTC',
+                    price: topCoins[0] ? fmtPrice(topCoins[0].price) : '$97,000',
+                    reasoning: topCoins[0] ? `${topCoins[0].symbol} ${topCoins[0].change24h > 0 ? 'up' : 'down'} ${Math.abs(topCoins[0].change24h).toFixed(1)}% — strongest momentum in the market right now` : 'Leading market momentum',
+                    risk: 'medium',
+                    horizon: '24-48h',
+                  },
+                  {
+                    rank: 2,
+                    action: regime.score >= 60 ? 'ACCUMULATE' : 'REDUCE',
+                    asset: 'ETH',
+                    price: topCoins.find(c => c.symbol === 'ETH') ? fmtPrice(topCoins.find(c => c.symbol === 'ETH').price) : '$3,800',
+                    reasoning: 'ETH/BTC ratio at historically low levels. Mean reversion potential with upcoming catalysts.',
+                    risk: 'medium',
+                    horizon: '1-4 weeks',
+                  },
+                  {
+                    rank: 3,
+                    action: regime.score >= 50 ? 'LONG' : 'HEDGE',
+                    asset: regime.score >= 50 ? 'SOL' : 'GOLD',
+                    price: regime.score >= 50
+                      ? (topCoins.find(c => c.symbol === 'SOL') ? fmtPrice(topCoins.find(c => c.symbol === 'SOL').price) : '$198')
+                      : '$2,648',
+                    reasoning: regime.score >= 50
+                      ? 'Solana ecosystem TVL expanding. High beta play on risk-on regime.'
+                      : 'Gold as portfolio hedge in risk-off environment. Central bank demand strong.',
+                    risk: regime.score >= 50 ? 'medium' : 'low',
+                    horizon: '1-2 weeks',
+                  },
+                ];
+                return moves.map((m, i) => (
+                  <div key={i} className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-4 hover:border-brand/20 transition-all">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-6 h-6 rounded-full bg-brand/15 text-brand text-xs font-black flex items-center justify-center">#{m.rank}</span>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase ${m.action === 'BUY' || m.action === 'LONG' || m.action === 'ACCUMULATE' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : m.action === 'REDUCE' || m.action === 'HEDGE' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20' : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'}`}>{m.action}</span>
+                      <span className="text-sm font-black text-white">{m.asset}</span>
+                      <span className="ml-auto text-xs font-mono text-slate-400">{m.price}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed mb-2">{m.reasoning}</p>
+                    <div className="flex items-center gap-3 text-[10px]">
+                      <span className={`${m.risk === 'high' ? 'text-red-400' : m.risk === 'medium' ? 'text-amber-400' : 'text-emerald-400'}`}>{m.risk} risk</span>
+                      <span className="text-slate-600">|</span>
+                      <span className="text-blue-400">{m.horizon}</span>
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
           </div>
 
@@ -2290,9 +2385,14 @@ export default function TrendsPage() {
                     <span className="text-[10px] text-slate-700 ml-auto">{ago(a.publishedAt)}</span>
                   </div>
                   <p className="text-sm text-slate-300 leading-snug group-hover:text-white line-clamp-2">{a.title}</p>
-                  <div className="mt-1.5 text-[10px] flex items-center gap-1">
+                  <div className="mt-1.5 text-[10px] flex items-center gap-1 p-1.5 rounded bg-brand/5 border border-brand/10">
+                    <Play size={9} className="text-brand flex-shrink-0" />
                     <span className="text-brand font-black">PLAY:</span>
-                    <span className="text-slate-500">{a.sentiment === 'bullish' ? 'Watch for momentum continuation — potential long setup' : a.sentiment === 'bearish' ? 'Monitor for short-term risk — consider reducing exposure' : 'Wait for directional confirmation before acting'}</span>
+                    <span className="text-slate-400">{
+                      a.sentiment === 'bullish'
+                        ? (a.title || '').toLowerCase().includes('btc') || (a.title || '').toLowerCase().includes('bitcoin') ? 'Long BTC, ride momentum' : (a.title || '').toLowerCase().includes('sol') ? 'Long SOL ecosystem' : 'Risk-on — long momentum leaders'
+                        : a.sentiment === 'bearish' ? 'Reduce exposure, tighten stops' : 'Wait for confirmation'
+                    }</span>
                   </div>
                 </a>
               ))}
@@ -2609,17 +2709,51 @@ export default function TrendsPage() {
                       <span className="text-[10px] text-slate-700">{ago(a.publishedAt)}</span>
                     </div>
                     <p className="text-sm text-slate-200 leading-snug group-hover:text-white mb-1.5">{a.title}</p>
+                    {/* PLAY badge — actionable trade implied by news */}
+                    {(() => {
+                      const tl = (a.title || '').toLowerCase();
+                      let playText = '';
+                      if (a.sentiment === 'bullish') {
+                        if (tl.includes('bitcoin') || tl.includes('btc')) playText = 'Long BTC — momentum continuation play';
+                        else if (tl.includes('solana') || tl.includes('sol')) playText = 'Long SOL — ecosystem growth trade';
+                        else if (tl.includes('ethereum') || tl.includes('eth')) playText = 'Long ETH — technical breakout setup';
+                        else if (tl.includes('rate cut') || tl.includes('fed')) playText = 'Long risk assets (BTC, SOL) — dovish Fed catalyst';
+                        else if (tl.includes('nvidia') || tl.includes('ai')) playText = 'Long NVDA / AI basket — sector momentum';
+                        else if (tl.includes('whale') || tl.includes('institutional')) playText = 'Follow smart money — accumulate majors';
+                        else if (tl.includes('meme') || tl.includes('doge') || tl.includes('pepe')) playText = 'High-risk meme rotation — small position only';
+                        else playText = 'Risk-on — look for long setups on momentum leaders';
+                      } else if (a.sentiment === 'bearish') {
+                        if (tl.includes('crash') || tl.includes('plunge')) playText = 'Reduce exposure — hedge or tighten stops';
+                        else if (tl.includes('hack') || tl.includes('exploit')) playText = 'Avoid affected protocol — wait for resolution';
+                        else if (tl.includes('oil') || tl.includes('commodit')) playText = 'Short commodities or reduce long exposure';
+                        else playText = 'Risk-off — consider reducing positions or adding hedges';
+                      } else {
+                        playText = 'Wait for directional confirmation before acting';
+                      }
+                      return (
+                        <div className="flex items-center gap-2 mb-1.5 p-2 rounded-lg bg-brand/5 border border-brand/10">
+                          <Play size={10} className="text-brand flex-shrink-0" />
+                          <span className="text-[10px] text-brand font-black uppercase">PLAY:</span>
+                          <span className="text-[10px] text-slate-300 flex-1">{playText}</span>
+                        </div>
+                      );
+                    })()}
                     {/* Category + keyword tags */}
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1 items-center">
                       {(a.categories || []).slice(0, 3).map(c => (
                         <span key={c} className="text-[9px] bg-brand/10 text-brand px-1.5 py-0.5 rounded-full border border-brand/10">{c}</span>
                       ))}
                       {keywords.slice(0, 4).map(k => (
                         <span key={k} className="text-[9px] bg-white/5 text-slate-500 px-1.5 py-0.5 rounded-full">{k}</span>
                       ))}
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(a.url || '#', '_blank'); }}
+                        className="ml-auto text-[10px] font-bold px-2.5 py-1 rounded-lg bg-brand/10 text-brand border border-brand/20 hover:bg-brand/20 transition-all flex items-center gap-1"
+                      >
+                        <ExternalLink size={9} />Act on This
+                      </button>
                     </div>
                   </div>
-                  {a.url && <ExternalLink size={14} className="text-slate-700 group-hover:text-brand flex-shrink-0 mt-1" />}
                 </Wrapper>
               );
             })}
@@ -3107,21 +3241,65 @@ export default function TrendsPage() {
                 <p className="text-sm text-slate-300 leading-relaxed">{researchReport.risk}</p>
               </div>
 
-              {/* Recommended Plays */}
-              <div className="bg-white/[0.02] border border-brand/20 rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <Zap size={14} className="text-brand" />
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Recommended Plays</h3>
-                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand/10 text-brand font-bold">ALPHA</span>
+              {/* Recommended Plays — Actionable */}
+              <div className="bg-white/[0.02] border-2 border-brand/25 rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <Target size={16} className="text-brand" />
+                  <h3 className="text-base font-black text-white uppercase tracking-wider">Actionable Recommendations</h3>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand/10 text-brand font-bold border border-brand/20">ALPHA</span>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {researchReport.plays.map((p, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-brand/5 border border-brand/10">
-                      <Crosshair size={12} className="text-brand flex-shrink-0" />
-                      <p className="text-sm text-slate-200">{p}</p>
+                    <div key={i} className="flex items-start gap-3 p-3.5 rounded-lg bg-brand/5 border border-brand/15">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand/15 text-brand text-[10px] font-black flex items-center justify-center mt-0.5">{i + 1}</span>
+                      <div className="flex-1">
+                        <p className="text-sm text-white font-medium">{p}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Generate Alpha Report button */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    const report = researchReport;
+                    const text = [
+                      `GOATED Alpha Report — ${new Date().toLocaleDateString()}`,
+                      `${'='.repeat(50)}`,
+                      ``,
+                      `TITLE: ${report.title}`,
+                      `SENTIMENT: ${report.sentimentLabel} (${report.sentiment}/100)`,
+                      ``,
+                      `EXECUTIVE SUMMARY:`,
+                      report.summary,
+                      ``,
+                      `KEY FINDINGS:`,
+                      ...report.findings.map((f, i) => `  ${i + 1}. ${f}`),
+                      ``,
+                      `RISK ASSESSMENT:`,
+                      report.risk,
+                      ``,
+                      `ACTIONABLE RECOMMENDATIONS:`,
+                      ...report.plays.map((p, i) => `  ${i + 1}. ${p}`),
+                      ``,
+                      `${'='.repeat(50)}`,
+                      `Generated by GOATED Intelligence — Not Financial Advice`,
+                    ].join('\n');
+                    const blob = new Blob([text], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `goated-alpha-report-${new Date().toISOString().slice(0,10)}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand/10 text-brand font-bold text-xs border border-brand/20 hover:bg-brand/20 hover:border-brand/40 transition-all"
+                >
+                  <Download size={14} />Generate Alpha Report
+                </button>
+                <span className="text-[10px] text-slate-600">Downloads a summary of this research as a text file</span>
               </div>
 
               {/* Disclaimer */}

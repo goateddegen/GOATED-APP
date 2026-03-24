@@ -7,7 +7,8 @@ import {
   Layers, Crown, Lightbulb, Building2, CheckCircle2, XCircle, RefreshCw,
   Plus, Briefcase, Milestone, ArrowRight, Eye, Hash, X, Share2, MessageCircle,
   Medal, Award, ThumbsUp, Filter, ChevronDown, Send, GitBranch, Cpu,
-  Code2, Coins, Wifi, Database
+  Code2, Coins, Wifi, Database, Lock, Megaphone, BadgeCheck,
+  CircleDollarSign, Gem, ShieldCheck, Banknote, BarChart2
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { useGoatedAI } from '../hooks/useGoatedAI';
@@ -26,9 +27,12 @@ function seedRng(s) {
 }
 
 const TABS = [
+  { id: 'dealflow', label: 'Deal Flow', icon: Briefcase },
+  { id: 'privatedeals', label: 'Private Deals', icon: Lock },
+  { id: 'incubator', label: 'Incubator', icon: Rocket },
+  { id: 'adflow', label: 'Ad Flow', icon: Megaphone },
   { id: 'events', label: 'Predictions', icon: Zap },
   { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
-  { id: 'incubator', label: 'Incubator', icon: Rocket },
 ];
 
 const EVENT_CATEGORIES = ['All', 'Crypto', 'Politics', 'Tech', 'Business', 'Sports', 'Culture'];
@@ -43,11 +47,16 @@ const PROJECT_CATEGORIES = ['All', 'DeFi', 'AI', 'SaaS', 'Web3', 'FinTech', 'Inf
 const PROJECT_STAGES = {
   idea: { label: 'Idea', color: '#94a3b8', step: 0 },
   prototype: { label: 'Prototype', color: '#a855f7', step: 1 },
-  launch: { label: 'Launch', color: '#3b82f6', step: 2 },
-  scale: { label: 'Scale', color: '#10b981', step: 3 },
+  beta: { label: 'Beta', color: '#f59e0b', step: 2 },
+  launch: { label: 'Launch', color: '#3b82f6', step: 3 },
+  scale: { label: 'Scale', color: '#10b981', step: 4 },
 };
 
-const STAGE_ORDER = ['idea', 'prototype', 'launch', 'scale'];
+const STAGE_ORDER = ['idea', 'prototype', 'beta', 'launch', 'scale'];
+
+const DEAL_FUNDING_STAGES = ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Growth'];
+
+const DEAL_FLOW_CATEGORIES = ['All', 'DeFi', 'AI', 'SaaS', 'Web3', 'FinTech', 'Infrastructure', 'Gaming'];
 
 const SIM_USERS = [
   '@closerking', '@degenmaster', '@alphawhale', '@diamondhands', '@moonboy99',
@@ -255,6 +264,133 @@ function generateIncubatorProjects() {
     },
   ];
   return projects;
+}
+
+function generateDealFlowProjects() {
+  const rng = seedRng(55555);
+  const randInt = (min, max) => Math.floor(rng() * (max - min + 1)) + min;
+  return [
+    {
+      id: 'deal-1', name: 'ArcLayer Protocol', category: 'DeFi',
+      tagline: 'Next-gen L2 with native yield for staked assets',
+      fundingStage: 'Series A', teamSize: 18, traction: { users: 42000, revenue: 1800000, growth: 28 },
+      seeking: 8000000, tags: ['L2', 'Yield', 'Staking'], hot: true,
+    },
+    {
+      id: 'deal-2', name: 'CognitiveOS', category: 'AI',
+      tagline: 'Enterprise AI orchestration platform for Fortune 500',
+      fundingStage: 'Series B', teamSize: 45, traction: { users: 320, revenue: 12000000, growth: 65 },
+      seeking: 25000000, tags: ['Enterprise', 'AI Agents', 'Automation'], hot: true,
+    },
+    {
+      id: 'deal-3', name: 'VaultKey', category: 'Web3',
+      tagline: 'Self-custodial wallet with MPC and social recovery',
+      fundingStage: 'Seed', teamSize: 7, traction: { users: 8500, revenue: 0, growth: 120 },
+      seeking: 3000000, tags: ['Wallet', 'MPC', 'Security'], hot: false,
+    },
+    {
+      id: 'deal-4', name: 'DataLoom', category: 'SaaS',
+      tagline: 'Real-time data mesh for distributed teams',
+      fundingStage: 'Pre-Seed', teamSize: 3, traction: { users: 150, revenue: 24000, growth: 45 },
+      seeking: 750000, tags: ['Data', 'Collaboration', 'Real-time'], hot: false,
+    },
+    {
+      id: 'deal-5', name: 'PayGrid', category: 'FinTech',
+      tagline: 'Cross-border B2B payments on stablecoin rails',
+      fundingStage: 'Series A', teamSize: 22, traction: { users: 1200, revenue: 5400000, growth: 38 },
+      seeking: 12000000, tags: ['Payments', 'Stablecoin', 'B2B'], hot: true,
+    },
+    {
+      id: 'deal-6', name: 'NodeForge', category: 'Infrastructure',
+      tagline: 'One-click validator infrastructure for PoS chains',
+      fundingStage: 'Seed', teamSize: 5, traction: { users: 620, revenue: 380000, growth: 52 },
+      seeking: 2000000, tags: ['Validators', 'Staking', 'DevOps'], hot: false,
+    },
+    {
+      id: 'deal-7', name: 'PixelVerse', category: 'Gaming',
+      tagline: 'On-chain gaming engine with composable NFT assets',
+      fundingStage: 'Seed', teamSize: 9, traction: { users: 15000, revenue: 200000, growth: 88 },
+      seeking: 4000000, tags: ['Gaming', 'NFT', 'Engine'], hot: true,
+    },
+    {
+      id: 'deal-8', name: 'SynthLab', category: 'AI',
+      tagline: 'Synthetic data generation for ML model training',
+      fundingStage: 'Pre-Seed', teamSize: 4, traction: { users: 90, revenue: 45000, growth: 70 },
+      seeking: 1200000, tags: ['ML', 'Synthetic Data', 'Privacy'], hot: false,
+    },
+  ];
+}
+
+function generatePrivateDeals() {
+  return [
+    {
+      id: 'priv-1', name: 'PHANTOM Token Launch', type: 'Token Launch',
+      description: 'Exclusive pre-sale allocation for the Phantom Protocol governance token. 50x potential from IDO price.',
+      allocation: '$500 - $5,000', roi: '15-50x projected', closes: '48h',
+      minTier: 'degen', tags: ['Token', 'Governance', 'Early Access'],
+    },
+    {
+      id: 'priv-2', name: 'ArcLayer Private Round', type: 'Private Round',
+      description: 'Strategic round at $0.08/token before public sale at $0.25. 6-month cliff, 12-month vest.',
+      allocation: '$1,000 - $25,000', roi: '3.1x at IDO', closes: '5d',
+      minTier: 'degen', tags: ['L2', 'Private Sale', 'Vesting'],
+    },
+    {
+      id: 'priv-3', name: 'CognitiveOS SAFE Note', type: 'Equity',
+      description: 'Participate in the $25M Series B at a $180M valuation. AI enterprise with $12M ARR.',
+      allocation: '$5,000 - $50,000', roi: 'Equity upside', closes: '12d',
+      minTier: 'degen', tags: ['Equity', 'AI', 'Series B'],
+    },
+    {
+      id: 'priv-4', name: 'DEGEN Genesis NFT Mint', type: 'NFT Drop',
+      description: 'Genesis collection of 2,222 NFTs. Holders get lifetime access to all future private deals.',
+      allocation: '0.5 SOL per mint', roi: 'Access + utility', closes: '24h',
+      minTier: 'degen', tags: ['NFT', 'Access Pass', 'Genesis'],
+    },
+    {
+      id: 'priv-5', name: 'PixelVerse Seed Extension', type: 'Private Round',
+      description: 'Last chance to join the seed round. Gaming engine with 15K users and growing 88% MoM.',
+      allocation: '$2,000 - $10,000', roi: '8-20x projected', closes: '3d',
+      minTier: 'degen', tags: ['Gaming', 'Seed', 'Extension'],
+    },
+  ];
+}
+
+function generateAdFlowProjects() {
+  const rng = seedRng(33333);
+  const randInt = (min, max) => Math.floor(rng() * (max - min + 1)) + min;
+  return [
+    {
+      id: 'ad-1', name: 'ArcLayer Protocol', tagline: 'The fastest L2 with native yield -- now live on mainnet',
+      category: 'DeFi', type: 'featured', impressions: 284000, clicks: 12400, ctr: 4.4,
+      image: null, link: '#', badge: 'Promoted',
+    },
+    {
+      id: 'ad-2', name: 'CognitiveOS', tagline: 'Deploy AI agents across your entire org in minutes, not months',
+      category: 'AI', type: 'featured', impressions: 156000, clicks: 8900, ctr: 5.7,
+      image: null, link: '#', badge: 'Promoted',
+    },
+    {
+      id: 'ad-3', name: 'PayGrid', tagline: 'Stop paying 3% on cross-border transfers. Pay 0.1% with stablecoins.',
+      category: 'FinTech', type: 'sponsored', impressions: 98000, clicks: 5200, ctr: 5.3,
+      image: null, link: '#', badge: 'Sponsored',
+    },
+    {
+      id: 'ad-4', name: 'PixelVerse', tagline: 'Build games that players actually own. Open beta starts now.',
+      category: 'Gaming', type: 'banner', impressions: 210000, clicks: 9800, ctr: 4.7,
+      image: null, link: '#', badge: 'Promoted',
+    },
+    {
+      id: 'ad-5', name: 'VaultKey', tagline: 'The wallet that recovers itself. No seed phrases. No stress.',
+      category: 'Web3', type: 'sponsored', impressions: 72000, clicks: 4100, ctr: 5.7,
+      image: null, link: '#', badge: 'Sponsored',
+    },
+    {
+      id: 'ad-6', name: 'NodeForge', tagline: 'Run validators in 1 click. Earn staking rewards without the DevOps.',
+      category: 'Infrastructure', type: 'banner', impressions: 45000, clicks: 2300, ctr: 5.1,
+      image: null, link: '#', badge: 'Promoted',
+    },
+  ];
 }
 
 const fmtNum = (n) => {
@@ -836,6 +972,296 @@ function SubmitProjectModal({ onClose, degenMode }) {
   );
 }
 
+// Deal Flow project card
+function DealFlowCard({ deal, degenMode }) {
+  const accentColor = degenMode ? '#f97316' : '#00ff88';
+  const stageColors = {
+    'Pre-Seed': '#94a3b8', 'Seed': '#a855f7', 'Series A': '#3b82f6', 'Series B': '#10b981', 'Growth': '#f59e0b',
+  };
+  const stageColor = stageColors[deal.fundingStage] || '#64748b';
+  const categoryIcon = {
+    DeFi: Coins, AI: Cpu, SaaS: Code2, Web3: Database, FinTech: DollarSign,
+    Infrastructure: Layers, Gaming: Rocket,
+  }[deal.category] || Briefcase;
+  const CatIcon = categoryIcon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={'rounded-xl border p-4 transition-all duration-200 hover:border-white/[0.08] group ' +
+        (degenMode ? 'alpha-panel degen-fire-border' : '')}
+      style={{ background: 'rgba(255,255,255,0.015)', borderColor: deal.hot ? stageColor + '30' : 'rgba(255,255,255,0.04)' }}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+            style={{ background: stageColor + '15', border: '1px solid ' + stageColor + '25' }}>
+            <CatIcon size={16} style={{ color: stageColor }} />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white group-hover:text-brand transition-colors flex items-center gap-2">
+              {deal.name}
+              {deal.hot && <Flame size={12} className="text-orange-400" />}
+            </h3>
+            <p className="text-[10px] text-slate-500">{deal.tagline}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-1 mb-3">
+        <span className="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider"
+          style={{ background: stageColor + '20', color: stageColor, border: '1px solid ' + stageColor + '30' }}>
+          {deal.fundingStage}
+        </span>
+        {deal.tags.map(tag => (
+          <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-slate-500 border border-white/[0.05]">
+            {tag}
+          </span>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mb-3 p-2 rounded-lg bg-white/[0.02] border border-white/[0.03]">
+        <div className="text-center">
+          <div className="text-[9px] text-slate-500 mb-0.5">Team</div>
+          <div className="text-xs font-bold text-white flex items-center justify-center gap-1">
+            <Users size={10} className="text-slate-400" />{deal.teamSize}
+          </div>
+        </div>
+        <div className="text-center border-x border-white/[0.04]">
+          <div className="text-[9px] text-slate-500 mb-0.5">Users</div>
+          <div className="text-xs font-bold text-white">{fmtNum(deal.traction.users)}</div>
+        </div>
+        <div className="text-center">
+          <div className="text-[9px] text-slate-500 mb-0.5">Revenue</div>
+          <div className="text-xs font-bold text-white">{deal.traction.revenue > 0 ? fmtMoney(deal.traction.revenue) : '--'}</div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-[10px] text-slate-500">
+          Seeking <span className="text-white font-bold">{fmtMoney(deal.seeking)}</span>
+        </div>
+        <span className="flex items-center gap-0.5 text-[10px] text-emerald-400 font-bold">
+          <TrendingUp size={10} />+{deal.traction.growth}% /mo
+        </span>
+      </div>
+
+      <button
+        className="w-full py-2 rounded-lg text-xs font-bold transition-all text-black hover:brightness-110 flex items-center justify-center gap-1.5"
+        style={{ background: accentColor }}
+      >
+        <Briefcase size={12} />
+        Connect
+      </button>
+    </motion.div>
+  );
+}
+
+// Private deal card (DEGEN only)
+function PrivateDealCard({ deal, degenMode, locked }) {
+  const accentColor = '#f97316';
+  const typeColors = {
+    'Token Launch': '#f59e0b', 'Private Round': '#a855f7', 'Equity': '#3b82f6', 'NFT Drop': '#ec4899',
+  };
+  const typeColor = typeColors[deal.type] || '#64748b';
+
+  if (locked) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-xl border p-4 relative overflow-hidden"
+        style={{ background: 'rgba(255,255,255,0.01)', borderColor: 'rgba(255,255,255,0.04)' }}
+      >
+        <div className="absolute inset-0 backdrop-blur-sm bg-black/60 z-10 flex flex-col items-center justify-center">
+          <Lock size={24} className="text-slate-500 mb-2" />
+          <p className="text-xs font-bold text-slate-400">DEGEN Mode Required</p>
+          <p className="text-[10px] text-slate-600 mt-1">Enable DEGEN mode to access private deals</p>
+        </div>
+        <div className="opacity-20">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-9 h-9 rounded-lg bg-white/[0.04]" />
+            <div>
+              <div className="h-3 w-24 bg-white/[0.06] rounded" />
+              <div className="h-2 w-16 bg-white/[0.04] rounded mt-1" />
+            </div>
+          </div>
+          <div className="h-8 bg-white/[0.03] rounded mb-2" />
+          <div className="h-8 bg-white/[0.03] rounded" />
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl border p-4 transition-all duration-200 hover:border-orange-500/20 group alpha-panel degen-fire-border"
+      style={{ background: 'rgba(255,255,255,0.015)', borderColor: 'rgba(249,115,22,0.15)' }}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+            style={{ background: typeColor + '15', border: '1px solid ' + typeColor + '25' }}>
+            <Gem size={16} style={{ color: typeColor }} />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white group-hover:text-orange-400 transition-colors">{deal.name}</h3>
+            <span className="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider"
+              style={{ background: typeColor + '20', color: typeColor }}>
+              {deal.type}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 text-[10px] text-orange-400 font-bold">
+          <Clock size={10} />Closes in {deal.closes}
+        </div>
+      </div>
+
+      <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">{deal.description}</p>
+
+      <div className="grid grid-cols-2 gap-2 mb-3 p-2 rounded-lg bg-white/[0.02] border border-orange-500/10">
+        <div>
+          <div className="text-[9px] text-slate-500 mb-0.5">Allocation</div>
+          <div className="text-xs font-bold text-white">{deal.allocation}</div>
+        </div>
+        <div>
+          <div className="text-[9px] text-slate-500 mb-0.5">Expected ROI</div>
+          <div className="text-xs font-bold text-emerald-400">{deal.roi}</div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-1 mb-3">
+        {deal.tags.map(tag => (
+          <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-orange-500/[0.08] text-orange-300 border border-orange-500/15">
+            {tag}
+          </span>
+        ))}
+      </div>
+
+      <button
+        className="w-full py-2 rounded-lg text-xs font-bold transition-all text-black hover:brightness-110 flex items-center justify-center gap-1.5 bg-orange-500"
+      >
+        <ShieldCheck size={12} />
+        Access Deal
+      </button>
+    </motion.div>
+  );
+}
+
+// Ad Flow card
+function AdFlowCard({ ad, degenMode }) {
+  const accentColor = degenMode ? '#f97316' : '#00ff88';
+  const catColors = {
+    DeFi: '#f59e0b', AI: '#a855f7', SaaS: '#3b82f6', Web3: '#10b981',
+    FinTech: '#06b6d4', Infrastructure: '#ec4899', Gaming: '#ef4444',
+  };
+  const catColor = catColors[ad.category] || '#64748b';
+  const isFeatured = ad.type === 'featured';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={'rounded-xl border p-4 transition-all duration-200 hover:border-white/[0.08] group relative ' +
+        (isFeatured ? 'ring-1 ring-brand/10' : '') +
+        (degenMode ? ' alpha-panel degen-fire-border' : '')}
+      style={{
+        background: isFeatured
+          ? 'linear-gradient(135deg, rgba(0,255,136,0.02), rgba(168,85,247,0.02))'
+          : 'rgba(255,255,255,0.015)',
+        borderColor: isFeatured ? accentColor + '20' : 'rgba(255,255,255,0.04)',
+      }}
+    >
+      <div className="absolute top-3 right-3">
+        <span className={'text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ' +
+          (ad.badge === 'Promoted'
+            ? 'bg-brand/15 text-brand border border-brand/20'
+            : 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/20'
+          )
+        }>
+          {ad.badge}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-10 h-10 rounded-lg flex items-center justify-center"
+          style={{ background: catColor + '15', border: '1px solid ' + catColor + '25' }}>
+          <Megaphone size={18} style={{ color: catColor }} />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-white group-hover:text-brand transition-colors">{ad.name}</h3>
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-slate-500">{ad.category}</span>
+        </div>
+      </div>
+
+      <p className="text-[12px] text-slate-300 mb-3 leading-relaxed font-medium">{ad.tagline}</p>
+
+      <div className="flex items-center gap-4 mb-3 text-[10px] text-slate-500">
+        <span className="flex items-center gap-1"><Eye size={10} />{fmtNum(ad.impressions)} views</span>
+        <span className="flex items-center gap-1"><BarChart2 size={10} />{ad.ctr}% CTR</span>
+      </div>
+
+      <button
+        className="w-full py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 border hover:brightness-110"
+        style={{ background: accentColor + '12', color: accentColor, borderColor: accentColor + '25' }}
+      >
+        <ExternalLink size={12} />
+        Learn More
+      </button>
+    </motion.div>
+  );
+}
+
+// Milestone progress bar for incubator
+function MilestoneTracker({ stage, degenMode }) {
+  const accentColor = degenMode ? '#f97316' : '#00ff88';
+  const stageInfo = PROJECT_STAGES[stage];
+  const currentStep = stageInfo.step;
+  const progress = ((currentStep) / (STAGE_ORDER.length - 1)) * 100;
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-2">
+        {STAGE_ORDER.map((s, i) => {
+          const info = PROJECT_STAGES[s];
+          const isComplete = i < currentStep;
+          const isCurrent = i === currentStep;
+          return (
+            <div key={s} className="flex flex-col items-center flex-1">
+              <div
+                className={'w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-black transition-all ' +
+                  (isComplete ? 'text-black' : isCurrent ? 'text-black ring-2 ring-offset-1 ring-offset-black' : 'text-slate-600 border border-white/[0.08]')}
+                style={{
+                  background: isComplete || isCurrent ? info.color : 'rgba(255,255,255,0.03)',
+                  ringColor: isCurrent ? info.color : 'transparent',
+                }}
+              >
+                {isComplete ? <CheckCircle2 size={12} /> : i + 1}
+              </div>
+              <span className={'text-[8px] font-bold mt-1 ' + (isComplete || isCurrent ? '' : 'text-slate-600')}
+                style={{ color: isComplete || isCurrent ? info.color : undefined }}>
+                {info.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+        <motion.div
+          className="h-full rounded-full"
+          style={{ background: stageInfo.color }}
+          initial={{ width: 0 }}
+          animate={{ width: progress + '%' }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+        />
+      </div>
+    </div>
+  );
+}
+
 // Announcement banner for homepage upsell
 export function LaunchPadBanner({ degenMode }) {
   const accentColor = degenMode ? '#f97316' : '#00ff88';
@@ -883,16 +1309,21 @@ export function LaunchPadBanner({ degenMode }) {
 export default function LaunchPadPage() {
   const degenMode = useStore(s => s.degenMode);
   const { regime } = useGoatedAI();
-  const [tab, setTab] = useState('events');
+  const [tab, setTab] = useState('dealflow');
   const [catFilter, setCatFilter] = useState('All');
   const [projCatFilter, setProjCatFilter] = useState('All');
   const [projStageFilter, setProjStageFilter] = useState('All');
+  const [dealCatFilter, setDealCatFilter] = useState('All');
   const [events, setEvents] = useState(generateEvents);
   const leaderboard = useMemo(generateLeaderboard, []);
   const [projects, setProjects] = useState(generateIncubatorProjects);
+  const dealFlowProjects = useMemo(generateDealFlowProjects, []);
+  const privateDeals = useMemo(generatePrivateDeals, []);
+  const adFlowProjects = useMemo(generateAdFlowProjects, []);
   const [expandedEvent, setExpandedEvent] = useState(null);
   const [totalTrackingNow, setTotalTrackingNow] = useState(0);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [projectVotes, setProjectVotes] = useState({});
 
   useEffect(() => {
     setTotalTrackingNow(events.reduce((s, e) => s + e.trackingNow, 0));
@@ -943,6 +1374,15 @@ export default function LaunchPadPage() {
     return result;
   }, [projects, projCatFilter, projStageFilter]);
 
+  const filteredDeals = useMemo(() =>
+    dealCatFilter === 'All' ? dealFlowProjects : dealFlowProjects.filter(d => d.category === dealCatFilter),
+    [dealFlowProjects, dealCatFilter]
+  );
+
+  const handleVote = useCallback((projectId) => {
+    setProjectVotes(prev => ({ ...prev, [projectId]: !prev[projectId] }));
+  }, []);
+
   const accentColor = degenMode ? '#f97316' : '#00ff88';
 
   return (
@@ -961,7 +1401,7 @@ export default function LaunchPadPage() {
                 LaunchPad
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/15 text-brand font-bold tracking-wider">BETA</span>
               </h1>
-              <p className="text-xs text-slate-500">Predictions, accuracy leaderboard & startup incubator</p>
+              <p className="text-xs text-slate-500">Deal flow, incubator, predictions & closing platform</p>
             </div>
           </div>
           <LiveIndicator count={totalTrackingNow} degenMode={degenMode} />

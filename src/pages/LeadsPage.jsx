@@ -417,34 +417,16 @@ const DEFICIT_CATEGORIES = [
   { key: 'crm', label: 'CRM / Pipeline', icon: Database, minLoss: 1500, maxLoss: 20000, desc: 'No CRM system — leaking deals' },
 ];
 
-// Generate deficit data for a lead deterministically
+// Generate deficit data for a lead — PRE-REVENUE: all values $0 until real analytics flow
 function getLeadDeficits(lead, index) {
-  const seed = (index + 1) * 7919; // prime multiplier for spread
-  const mult = industryMultipliers[lead.industry] || 2.0;
-  const empFactor = (lead.employees || 50) > 200 ? 1.8 : (lead.employees || 50) > 50 ? 1.3 : 1.0;
-  const dealFactor = (lead.dealValue || 10000) / 30000;
+  const deficits = DEFICIT_CATEGORIES.map((cat) => ({
+    ...cat,
+    severity: 0,
+    monthlyLoss: 0,
+    status: 'healthy',
+  }));
 
-  const deficits = DEFICIT_CATEGORIES.map((cat, ci) => {
-    const catSeed = seed + ci * 31;
-    const severity = simpleHash(catSeed); // 0-1: 0 = healthy, 1 = critical
-    const isDeficient = severity > 0.3; // 70% chance of deficit
-    const rawLoss = isDeficient
-      ? Math.round(seededRange(catSeed + 100, cat.minLoss, cat.maxLoss) * mult * empFactor * dealFactor / 100) * 100
-      : 0;
-    return {
-      ...cat,
-      severity: isDeficient ? severity : 0,
-      monthlyLoss: rawLoss,
-      status: severity > 0.75 ? 'critical' : severity > 0.55 ? 'high' : severity > 0.3 ? 'medium' : 'healthy',
-    };
-  });
-
-  const totalMonthlyLoss = deficits.reduce((s, d) => s + d.monthlyLoss, 0);
-  const deficitScore = Math.min(100, Math.round(deficits.filter(d => d.severity > 0.3).length / DEFICIT_CATEGORIES.length * 100 * (1 + simpleHash(seed + 999) * 0.3)));
-  const opportunityValue = Math.round(totalMonthlyLoss * 12 * (1 + simpleHash(seed + 500) * 0.4));
-  const lostRevenue = Math.round(totalMonthlyLoss * (6 + seededRange(seed + 200, 0, 18))); // 6-24 months accumulated
-
-  return { deficits, totalMonthlyLoss, deficitScore, opportunityValue, lostRevenue };
+  return { deficits, totalMonthlyLoss: 0, deficitScore: 0, opportunityValue: 0, lostRevenue: 0 };
 }
 
 // Generate contact intel for a lead
@@ -501,20 +483,12 @@ function RevenueIntelligencePanel({ leads, allLeads }) {
     const wonLeads = [];
     const lostLeads = [];
 
-    // Aggregate deficit data across visible leads
+    // PRE-REVENUE: All deficit/opportunity data zeroed until real analytics flow
     let totalMonthlyDeficit = 0;
     let totalOpportunity = 0;
     let avgDeficitScore = 0;
     const catTotals = DEFICIT_CATEGORIES.map(() => 0);
     const sampleSize = Math.min(leads.length, 100);
-    for (let i = 0; i < sampleSize; i++) {
-      const d = getLeadDeficits(leads[i], i);
-      totalMonthlyDeficit += d.totalMonthlyLoss;
-      totalOpportunity += d.opportunityValue;
-      avgDeficitScore += d.deficitScore;
-      d.deficits.forEach((def, ci) => { catTotals[ci] += def.monthlyLoss; });
-    }
-    if (sampleSize > 0) avgDeficitScore = Math.round(avgDeficitScore / sampleSize);
 
     return { totalPipeline, lostRevenue, closeRate, revenuePerDeal, wonCount: wonLeads.length, lostCount: lostLeads.length, totalMonthlyDeficit, totalOpportunity, avgDeficitScore, catTotals, sampleSize };
   }, [leads, allLeads]);
@@ -859,7 +833,7 @@ function MoneyMachinePanel({ allLeads, onSelect }) {
                       Step 1: Call your top 5 leads
                       <PhoneCall size={14} className="text-brand" />
                     </div>
-                    <div className="text-[10px] text-slate-500">Est. revenue impact: {fmt(Math.round(top5.reduce((s, l) => s + (l.dealValue || 0) * 0.12, 0)))}</div>
+                    <div className="text-[10px] text-slate-500">Est. revenue impact: $0.00 (Pre-Revenue)</div>
                   </div>
                 </div>
                 <div className="ml-8 space-y-1.5">
@@ -897,7 +871,7 @@ function MoneyMachinePanel({ allLeads, onSelect }) {
                       Step 2: Send 20 outreach messages
                       <Send size={14} className="text-cyan-400" />
                     </div>
-                    <div className="text-[10px] text-slate-500">Est. revenue impact: {fmt(Math.round(20 * avgDealSize * 0.12 * 0.05))}/mo from 5% conversion</div>
+                    <div className="text-[10px] text-slate-500">Est. revenue impact: $0.00/mo (Pre-Revenue)</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.04]">
@@ -2310,11 +2284,11 @@ function CreatorProgramBanner({ showToast }) {
           <div className="flex items-center gap-4 mt-2">
             <div className="flex items-center gap-1.5">
               <Users size={12} className="text-amber-400/70" />
-              <span className="text-[10px] text-slate-500"><span className="text-amber-400 font-bold">247</span> creators earning</span>
+              <span className="text-[10px] text-slate-500"><span className="text-amber-400 font-bold">0</span> creators earning</span>
             </div>
             <div className="flex items-center gap-1.5">
               <DollarSign size={12} className="text-emerald-400/70" />
-              <span className="text-[10px] text-slate-500"><span className="text-emerald-400 font-bold">$45K</span> paid out this month</span>
+              <span className="text-[10px] text-slate-500"><span className="text-emerald-400 font-bold">$0</span> paid out this month</span>
             </div>
           </div>
         </div>

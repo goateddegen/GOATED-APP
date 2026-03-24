@@ -1712,7 +1712,7 @@ export default function CasinoPage() {
                         {ppResult.won ? 'YOU WON!' : 'YOU LOST'}
                       </h3>
                       <p className="text-slate-400 text-sm mb-1">{ppCoin} went <span className={ppResult.direction === 'up' ? 'text-emerald-400' : 'text-red-400'}>{ppResult.direction.toUpperCase()} ({ppResult.change}%)</span></p>
-                      <p className="text-slate-500 text-xs">${ppResult.startPrice.toLocaleString()} -> ${ppResult.endPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+                      <p className="text-slate-500 text-xs">${ppResult.startPrice.toLocaleString()} {'→'} ${ppResult.endPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
                       {ppResult.won && (
                         <>
                           <p className="text-brand font-bold mt-2 text-lg">+{ppResult.payout} GOAT</p>
@@ -2005,7 +2005,7 @@ export default function CasinoPage() {
                             {(pdPlayerValues[pdPlayerValues.length - 1] || 0) >= 0 ? '+' : ''}{(pdPlayerValues[pdPlayerValues.length - 1] || 0).toFixed(2)}%
                           </motion.div>
                           <div className="text-xs text-slate-500 mt-1">
-                            {gameBet} GOAT -> {Math.floor(gameBet * (1 + (pdPlayerValues[pdPlayerValues.length - 1] || 0) / 100))} GOAT
+                            {gameBet} GOAT {'→'} {Math.floor(gameBet * (1 + (pdPlayerValues[pdPlayerValues.length - 1] || 0) / 100))} GOAT
                           </div>
                         </motion.div>
                         <motion.div
@@ -2024,7 +2024,7 @@ export default function CasinoPage() {
                             {(pdBotValues[pdBotValues.length - 1] || 0) >= 0 ? '+' : ''}{(pdBotValues[pdBotValues.length - 1] || 0).toFixed(2)}%
                           </motion.div>
                           <div className="text-xs text-slate-500 mt-1">
-                            {gameBet} GOAT -> {Math.floor(gameBet * (1 + (pdBotValues[pdBotValues.length - 1] || 0) / 100))} GOAT
+                            {gameBet} GOAT {'→'} {Math.floor(gameBet * (1 + (pdBotValues[pdBotValues.length - 1] || 0) / 100))} GOAT
                           </div>
                         </motion.div>
                       </div>

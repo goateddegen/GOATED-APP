@@ -1213,6 +1213,25 @@ export default function AdminPage() {
 
   return (
     <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5 pb-24">
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {/* PRE-REVENUE STAGE BANNER                                              */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+        className="rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 p-4 flex items-center gap-4"
+      >
+        <div className="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center flex-shrink-0">
+          <Rocket size={22} className="text-amber-400" />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-sm font-black text-amber-400 uppercase tracking-wider">Pre-Revenue Stage</span>
+            <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25 font-bold uppercase tracking-wider">Phase 0</span>
+          </div>
+          <p className="text-xs text-slate-400">All revenue, MRR, pipeline, and commission figures are <span className="font-bold text-white">$0.00</span>. No deals have been closed yet. Values will update automatically as real transactions flow through the platform.</p>
+        </div>
+      </motion.div>
+
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">

@@ -75,8 +75,11 @@ const FEATURE_LINKS = {
   events:     { page: 'launchpad', label: 'LaunchPad',  icon: Zap },
   incubator:  { page: 'launchpad', label: 'LaunchPad',  icon: Zap },
   startup:    { page: 'launchpad', label: 'LaunchPad',  icon: Zap },
-  gamble:     { page: 'launchpad', label: 'LaunchPad',  icon: Zap },
-  betting:    { page: 'launchpad', label: 'LaunchPad',  icon: Zap },
+  gamble:     { page: 'casino',    label: 'Casino',     icon: Flame },
+  betting:    { page: 'casino',    label: 'Casino',     icon: Flame },
+  casino:     { page: 'casino',    label: 'Casino',     icon: Flame },
+  roulette:   { page: 'casino',    label: 'Casino',     icon: Flame },
+  games:      { page: 'casino',    label: 'Casino',     icon: Flame },
 };
 
 // Snap modes removed — AI overlay is always right panel

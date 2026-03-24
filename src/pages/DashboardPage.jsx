@@ -582,6 +582,22 @@ function DashboardContent({ onSelect }) {
       </div>
 
       {/* ================================================================= */}
+      {/* PRE-REVENUE BANNER                                                */}
+      {/* ================================================================= */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+        className="rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 p-3 flex items-center gap-3"
+      >
+        <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+          <DollarSign size={16} className="text-amber-400" />
+        </div>
+        <div>
+          <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Pre-Revenue</span>
+          <p className="text-[11px] text-slate-500">All revenue, pipeline, and MRR figures are $0.00. Values update automatically when real transactions flow.</p>
+        </div>
+      </motion.div>
+
+      {/* ================================================================= */}
       {/* REAL-TIME SYSTEM METRICS BAR (system performance, not revenue)    */}
       {/* ================================================================= */}
       <div className="text-[9px] uppercase tracking-wider text-slate-600 mb-1">System Performance Metrics</div>
