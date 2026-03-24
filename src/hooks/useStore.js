@@ -187,13 +187,37 @@ const titles = [
 ];
 
 const locations = [
-  'San Francisco', 'New York', 'Austin', 'Seattle', 'Boston', 'Chicago', 'Denver', 'Miami', 'LA', 'London',
+  'San Francisco, CA', 'New York, NY', 'Austin, TX', 'Seattle, WA', 'Boston, MA', 'Chicago, IL', 'Denver, CO', 'Miami, FL', 'Los Angeles, CA', 'London',
   'Toronto', 'Berlin', 'Paris', 'Amsterdam', 'Dublin', 'Singapore', 'Sydney', 'Tokyo', 'Hong Kong', 'Tel Aviv',
-  'Portland', 'Nashville', 'Atlanta', 'Dallas', 'Phoenix', 'San Diego', 'Philadelphia', 'Minneapolis', 'Detroit', 'Charlotte',
-  'Raleigh', 'Salt Lake City', 'Pittsburgh', 'Columbus', 'Indianapolis', 'Tampa', 'Orlando', 'Las Vegas', 'Kansas City', 'St Louis',
+  'Portland, OR', 'Nashville, TN', 'Atlanta, GA', 'Dallas, TX', 'Phoenix, AZ', 'San Diego, CA', 'Philadelphia, PA', 'Minneapolis, MN', 'Detroit, MI', 'Charlotte, NC',
+  'Raleigh, NC', 'Salt Lake City, UT', 'Pittsburgh, PA', 'Columbus, OH', 'Indianapolis, IN', 'Tampa, FL', 'Orlando, FL', 'Las Vegas, NV', 'Kansas City, MO', 'St Louis, MO',
   'Vancouver', 'Montreal', 'Melbourne', 'Auckland', 'Stockholm', 'Copenhagen', 'Oslo', 'Helsinki', 'Zurich', 'Munich',
   'Barcelona', 'Lisbon', 'Warsaw', 'Prague', 'Vienna', 'Milan', 'Rome', 'Bangkok', 'Seoul', 'Taipei',
   'Dubai', 'Riyadh', 'Cape Town', 'Lagos', 'Nairobi', 'Cairo', 'Mumbai', 'Bangalore', 'Delhi', 'Jakarta',
+];
+
+// Company descriptions for enrichment
+const companyDescriptions = [
+  'Fast-growing startup focused on AI-powered workflow automation for mid-market companies',
+  'Enterprise SaaS platform providing real-time analytics and business intelligence dashboards',
+  'B2B marketplace connecting supply chain partners with data-driven matching algorithms',
+  'Cloud-native infrastructure company offering scalable DevOps and deployment solutions',
+  'Digital transformation consultancy specializing in legacy system modernization',
+  'Vertical SaaS provider serving the healthcare and compliance automation market',
+  'E-commerce enablement platform with AI-driven product recommendations and personalization',
+  'Cybersecurity firm offering zero-trust network access and endpoint protection',
+  'Fintech company building next-gen payment rails and embedded finance APIs',
+  'HR technology platform automating recruiting, onboarding, and workforce management',
+  'Marketing automation suite with multi-channel campaign orchestration and attribution',
+  'PropTech startup digitizing commercial real estate transactions and property management',
+  'EdTech company offering adaptive learning platforms and corporate training solutions',
+  'Clean energy technology provider with smart grid optimization and EV charging networks',
+  'Logistics optimization platform using machine learning for route planning and fleet management',
+  'Regional service business with strong local reputation and steady referral pipeline',
+  'Professional services firm expanding into new markets with digital-first strategy',
+  'Manufacturing company investing in Industry 4.0 automation and predictive maintenance',
+  'Media and content studio producing branded content and influencer marketing campaigns',
+  'Legal technology company streamlining contract management and compliance workflows',
 ];
 
 const painPoints = [
@@ -429,6 +453,8 @@ function generateLeads(count = DEFAULT_LEAD_COUNT) {
       email,
       phone: `+1 (${usAreaCodes[(rand() * areaCodeLen) | 0]}) ${((rand() * 900) | 0) + 100}-${((rand() * 9000) | 0) + 1000}`,
       linkedin_url: `https://www.linkedin.com/in/${fn}-${ln}-${((rand() * 900000) | 0) + 100000}`,
+      linkedin_company_url: `https://www.linkedin.com/company/${slug}`,
+      company_description: companyDescriptions[(rand() * companyDescriptions.length) | 0],
       company,
       title: titles[(rand() * titLen) | 0],
       industry,

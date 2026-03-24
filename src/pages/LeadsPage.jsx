@@ -67,14 +67,14 @@ const perPageOptions = [25, 50, 100, 250];
 // Region mapping for geographic grouping
 // ---------------------------------------------------------------------------
 const REGION_MAP = {
-  'North America - West': ['San Francisco', 'LA', 'Seattle', 'Portland', 'Denver', 'Phoenix', 'Las Vegas', 'San Diego', 'Salt Lake City', 'Vancouver'],
-  'North America - East': ['New York', 'Boston', 'Miami', 'Atlanta', 'Philadelphia', 'Charlotte', 'Raleigh', 'Tampa', 'Orlando', 'Pittsburgh', 'Montreal'],
-  'North America - Central': ['Austin', 'Chicago', 'Dallas', 'Nashville', 'Minneapolis', 'Detroit', 'Columbus', 'Indianapolis', 'Kansas City', 'St Louis', 'Toronto'],
-  'Europe - West': ['London', 'Paris', 'Amsterdam', 'Dublin', 'Lisbon', 'Barcelona', 'Milan', 'Rome'],
-  'Europe - North': ['Stockholm', 'Copenhagen', 'Oslo', 'Helsinki'],
-  'Europe - Central': ['Berlin', 'Munich', 'Zurich', 'Vienna', 'Prague', 'Warsaw'],
-  'Asia Pacific': ['Singapore', 'Sydney', 'Tokyo', 'Hong Kong', 'Seoul', 'Taipei', 'Bangkok', 'Melbourne', 'Auckland', 'Jakarta', 'Mumbai', 'Bangalore', 'Delhi'],
-  'Middle East & Africa': ['Dubai', 'Riyadh', 'Tel Aviv', 'Cape Town', 'Lagos', 'Nairobi', 'Cairo'],
+  'West Coast': ['San Francisco, CA', 'Los Angeles, CA', 'Seattle, WA', 'Portland, OR', 'San Diego, CA', 'Las Vegas, NV', 'Phoenix, AZ', 'Salt Lake City, UT', 'Denver, CO'],
+  'East Coast': ['New York, NY', 'Boston, MA', 'Miami, FL', 'Philadelphia, PA', 'Charlotte, NC', 'Raleigh, NC', 'Tampa, FL', 'Orlando, FL', 'Pittsburgh, PA', 'Atlanta, GA'],
+  'Midwest': ['Chicago, IL', 'Minneapolis, MN', 'Detroit, MI', 'Columbus, OH', 'Indianapolis, IN', 'Kansas City, MO', 'St Louis, MO'],
+  'South': ['Austin, TX', 'Dallas, TX', 'Nashville, TN'],
+  'International - Canada': ['Vancouver', 'Montreal', 'Toronto'],
+  'International - Europe': ['London', 'Paris', 'Amsterdam', 'Dublin', 'Lisbon', 'Barcelona', 'Milan', 'Rome', 'Stockholm', 'Copenhagen', 'Oslo', 'Helsinki', 'Berlin', 'Munich', 'Zurich', 'Vienna', 'Prague', 'Warsaw'],
+  'International - Asia Pacific': ['Singapore', 'Sydney', 'Tokyo', 'Hong Kong', 'Seoul', 'Taipei', 'Bangkok', 'Melbourne', 'Auckland', 'Jakarta', 'Mumbai', 'Bangalore', 'Delhi'],
+  'International - Middle East & Africa': ['Dubai', 'Riyadh', 'Tel Aviv', 'Cape Town', 'Lagos', 'Nairobi', 'Cairo'],
 };
 
 function getRegion(location) {
@@ -1335,17 +1335,22 @@ function LeadMapView({ leads, allLeads, onSelect, showToast }) {
 
   // Map locations to approximate coordinates for the WorldMap
   const locationCoords = {
-    'New York': [-74, 40.7], 'San Francisco': [-122.4, 37.8], 'Austin': [-97.7, 30.3],
-    'Seattle': [-122.3, 47.6], 'Boston': [-71.1, 42.4], 'Chicago': [-87.6, 41.9],
-    'Denver': [-104.9, 39.7], 'Miami': [-80.2, 25.8], 'LA': [-118.2, 34.1],
+    'New York, NY': [-74, 40.7], 'San Francisco, CA': [-122.4, 37.8], 'Austin, TX': [-97.7, 30.3],
+    'Seattle, WA': [-122.3, 47.6], 'Boston, MA': [-71.1, 42.4], 'Chicago, IL': [-87.6, 41.9],
+    'Denver, CO': [-104.9, 39.7], 'Miami, FL': [-80.2, 25.8], 'Los Angeles, CA': [-118.2, 34.1],
     'London': [-0.1, 51.5], 'Toronto': [-79.4, 43.7], 'Berlin': [13.4, 52.5],
     'Paris': [2.3, 48.9], 'Singapore': [103.8, 1.4], 'Sydney': [151.2, -33.9],
     'Tokyo': [139.7, 35.7], 'Tel Aviv': [34.8, 32.1], 'Dubai': [55.3, 25.3],
-    'Amsterdam': [4.9, 52.4], 'Dublin': [-6.3, 53.3], 'Portland': [-122.7, 45.5],
-    'Atlanta': [-84.4, 33.8], 'Dallas': [-96.8, 32.8], 'Phoenix': [-112.1, 33.4],
-    'Nashville': [-86.8, 36.2], 'Mumbai': [72.9, 19.1], 'Hong Kong': [114.2, 22.3],
+    'Amsterdam': [4.9, 52.4], 'Dublin': [-6.3, 53.3], 'Portland, OR': [-122.7, 45.5],
+    'Atlanta, GA': [-84.4, 33.8], 'Dallas, TX': [-96.8, 32.8], 'Phoenix, AZ': [-112.1, 33.4],
+    'Nashville, TN': [-86.8, 36.2], 'Mumbai': [72.9, 19.1], 'Hong Kong': [114.2, 22.3],
     'Stockholm': [18.1, 59.3], 'Zurich': [8.5, 47.4], 'Seoul': [127, 37.6],
-    'Bangalore': [77.6, 13], 'São Paulo': [-46.6, -23.6], 'Mexico City': [-99.1, 19.4],
+    'Bangalore': [77.6, 13], 'Philadelphia, PA': [-75.2, 40], 'Charlotte, NC': [-80.8, 35.2],
+    'Raleigh, NC': [-78.6, 35.8], 'Tampa, FL': [-82.5, 28], 'Orlando, FL': [-81.4, 28.5],
+    'Pittsburgh, PA': [-80, 40.4], 'Minneapolis, MN': [-93.3, 44.9], 'Detroit, MI': [-83.1, 42.3],
+    'Columbus, OH': [-83, 40], 'Indianapolis, IN': [-86.2, 39.8], 'Kansas City, MO': [-94.6, 39.1],
+    'St Louis, MO': [-90.2, 38.6], 'San Diego, CA': [-117.2, 32.7], 'Las Vegas, NV': [-115.1, 36.2],
+    'Salt Lake City, UT': [-111.9, 40.8],
   };
 
   // Aggregate leads by location
@@ -2665,6 +2670,35 @@ export default function LeadsPage({ onSelect }) {
       });
     }
 
+    // Deal size tier filter
+    if (dealSizeTier !== 'all') {
+      filtered = filtered.filter(l => {
+        const dv = l.dealValue || 0;
+        if (dealSizeTier === 'quick') return dv >= 8500 && dv < 15000;
+        if (dealSizeTier === 'mid') return dv >= 15000 && dv < 25000;
+        if (dealSizeTier === 'enterprise') return dv >= 25000 && dv <= 50000;
+        return true;
+      });
+    }
+
+    // Region filter
+    if (filterRegion !== 'all') {
+      const regionCities = REGION_MAP[filterRegion] || [];
+      filtered = filtered.filter(l => regionCities.includes(l.location));
+    }
+
+    // Smart Queue: auto-prioritize by close probability * deal value
+    if (smartQueueEnabled) {
+      filtered.sort((a, b) => {
+        const aProb = getCloseProbability(a, 0);
+        const bProb = getCloseProbability(b, 0);
+        const aScore = aProb * (a.dealValue || 0);
+        const bScore = bProb * (b.dealValue || 0);
+        return bScore - aScore;
+      });
+      return filtered;
+    }
+
     // Multi-factor sort: user profile boost -> $20K+ deals first -> geographic grouping -> score
     filtered.sort((a, b) => {
       // User profiling boost: if user has clicked 3+ leads, boost matching leads
@@ -2688,7 +2722,7 @@ export default function LeadsPage({ onSelect }) {
     });
 
     return filtered;
-  }, [activeLeads, search, filterPriority, filterStatus, aiFilters, sortField, sortDirection, liveMode, liveLeads, userPreferences]);
+  }, [activeLeads, search, filterPriority, filterStatus, aiFilters, sortField, sortDirection, liveMode, liveLeads, userPreferences, dealSizeTier, filterRegion, smartQueueEnabled]);
 
   // Apply "Load More" pattern: show visibleCount leads
   const filteredLeads = useMemo(() => {
@@ -2795,6 +2829,19 @@ export default function LeadsPage({ onSelect }) {
 
   // DEGEN intel panel state - closed by default
   const [degenIntelOpen, setDegenIntelOpen] = useState(false);
+
+  // Deal size tier filter
+  const [dealSizeTier, setDealSizeTier] = useState('all'); // 'all' | 'quick' | 'mid' | 'enterprise'
+
+  // Smart Queue toggle
+  const [smartQueueEnabled, setSmartQueueEnabled] = useState(false);
+
+  // Region filter
+  const [filterRegion, setFilterRegion] = useState('all');
+
+  // SMS / LinkedIn outreach quick action state
+  const [smsLeadId, setSmsLeadId] = useState(null);
+  const [linkedinLeadId, setLinkedinLeadId] = useState(null);
 
   return (
     <div className="p-4 sm:p-6">
@@ -3033,6 +3080,105 @@ export default function LeadsPage({ onSelect }) {
         </div>
       </div>
 
+      {/* Geographic Grouping + Deal Size Tiers + Smart Queue + User Profile */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
+        {/* Geographic Grouping */}
+        <div className="bg-surface-3 rounded-xl p-3.5 border border-white/[0.03]">
+          <div className="flex items-center gap-2 text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">
+            <MapPin size={13} className="text-brand" /> Regions
+          </div>
+          <div className="space-y-1">
+            {regionBreakdown.slice(0, 6).map(([region, count]) => (
+              <button key={region} onClick={() => setFilterRegion(filterRegion === region ? 'all' : region)}
+                className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors ${filterRegion === region ? 'bg-brand/15 text-brand border border-brand/25' : 'hover:bg-white/[0.02] text-slate-400'}`}>
+                <span className="truncate">{region}</span>
+                <span className="font-mono font-bold text-slate-500 ml-2">{count.toLocaleString()}</span>
+              </button>
+            ))}
+            {filterRegion !== 'all' && (
+              <button onClick={() => setFilterRegion('all')} className="w-full text-center text-[10px] text-red-400 hover:text-red-300 mt-1">Clear region filter</button>
+            )}
+          </div>
+        </div>
+
+        {/* Deal Size Tiers + Smart Queue */}
+        <div className="bg-surface-3 rounded-xl p-3.5 border border-white/[0.03]">
+          <div className="flex items-center gap-2 text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">
+            <DollarSign size={13} className="text-brand" /> Deal Tiers
+          </div>
+          <div className="space-y-1.5 mb-3">
+            {[
+              { key: 'all', label: 'All Sizes', range: '$8.5K - $50K', color: 'slate' },
+              { key: 'quick', label: 'Quick Close', range: '$8.5K - $15K', color: 'emerald' },
+              { key: 'mid', label: 'Mid-Market', range: '$15K - $25K', color: 'blue' },
+              { key: 'enterprise', label: 'Enterprise', range: '$25K - $50K', color: 'purple' },
+            ].map(tier => (
+              <button key={tier.key} onClick={() => { setDealSizeTier(tier.key); setVisibleCount(35); }}
+                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs transition-colors border ${dealSizeTier === tier.key
+                  ? `bg-${tier.color}-500/15 text-${tier.color}-400 border-${tier.color}-500/25`
+                  : 'bg-white/[0.01] border-white/[0.03] text-slate-400 hover:bg-white/[0.02]'}`}>
+                <span className="font-medium">{tier.label}</span>
+                <span className="text-[10px] text-slate-500">{tier.range}</span>
+              </button>
+            ))}
+          </div>
+          {/* Smart Queue Toggle */}
+          <button onClick={() => setSmartQueueEnabled(!smartQueueEnabled)}
+            className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-colors border ${smartQueueEnabled
+              ? 'bg-brand/15 text-brand border-brand/25'
+              : 'bg-white/[0.02] border-white/[0.04] text-slate-400 hover:text-white'}`}>
+            <Zap size={13} /> Smart Queue {smartQueueEnabled ? 'ON' : 'OFF'}
+          </button>
+          {smartQueueEnabled && <div className="text-[10px] text-brand/60 text-center mt-1">Sorted by close probability x deal value</div>}
+        </div>
+
+        {/* User Profile / Engagement Tracker */}
+        <div className="bg-surface-3 rounded-xl p-3.5 border border-white/[0.03]">
+          <div className="flex items-center gap-2 text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">
+            <UserSearch size={13} className="text-brand" /> Your Profile
+          </div>
+          {userPreferences.hasData ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-500">Top Industry</span>
+                <span className="font-bold text-brand">{userPreferences.topIndustry || '--'}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-500">Top Region</span>
+                <span className="font-bold text-cyan-400">{userPreferences.topRegion || '--'}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-500">Avg Deal Size</span>
+                <span className="font-bold text-white">{fmt(Math.round(userPreferences.avgDealSize))}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-500">Leads Viewed</span>
+                <span className="font-bold text-white">{userProfile.dealSizes.length}</span>
+              </div>
+              <div className="mt-1 p-2 rounded-lg bg-brand/[0.04] border border-brand/15 text-center">
+                <div className="text-[10px] text-brand font-bold">PERSONALIZED FEED ACTIVE</div>
+                <div className="text-[9px] text-slate-500">Leads matching your preferences are boosted</div>
+              </div>
+              {/* Industry breakdown */}
+              <div className="mt-1">
+                <div className="text-[10px] text-slate-600 mb-1">Industries you engage with most:</div>
+                <div className="flex flex-wrap gap-1">
+                  {Object.entries(userProfile.industries).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([ind, cnt]) => (
+                    <span key={ind} className="px-1.5 py-0.5 rounded-full text-[9px] bg-brand/10 text-brand/80 border border-brand/15">{ind} ({cnt})</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <Brain size={24} className="mx-auto text-slate-600 mb-2" />
+              <div className="text-xs text-slate-500">Click on 3+ leads to activate</div>
+              <div className="text-[10px] text-slate-600 mt-1">AI learns your preferences and boosts similar leads</div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Quick Actions + Filters */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <button onClick={handleExportSelected} disabled={isProcessing || selectedIds.size === 0}
@@ -3116,6 +3262,7 @@ export default function LeadsPage({ onSelect }) {
                 <th className="px-3 py-3 text-left text-xs text-emerald-400 font-medium uppercase tracking-wider">Opportunity</th>
                 {degenMode && <th className="px-3 py-3 text-left text-xs text-orange-400 font-bold uppercase tracking-wider">Whale Score</th>}
                 {degenMode && <th className="px-3 py-3 text-left text-xs text-orange-400 font-bold uppercase tracking-wider">Bag Size</th>}
+                <th className="px-3 py-3 text-left text-xs text-amber-400 font-medium uppercase tracking-wider">Timeline</th>
                 <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider">Source</th>
                 <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider">Region</th>
                 <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider">Actions</th>
@@ -3130,7 +3277,7 @@ export default function LeadsPage({ onSelect }) {
                 const isAlphaPriority = degenMode && l.score > 85;
                 const leadDeficits = getLeadDeficits(l, startIndex + i);
                 const isContactExpanded = expandedContactRows.has(l.id);
-                const tableCols = degenMode ? 20 : 18;
+                const tableCols = degenMode ? 21 : 19;
                 return (
                   <React.Fragment key={l.id}>
                   <tr onClick={() => handleSelectLead(l)}
@@ -3232,6 +3379,14 @@ export default function LeadsPage({ onSelect }) {
                       </td>
                     )}
 
+                    {/* Closing Timeline */}
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-1">
+                        <Timer size={11} className={l.decisionTimeline === 'This week' ? 'text-emerald-400' : l.decisionTimeline === '2 weeks' ? 'text-amber-400' : 'text-slate-500'} />
+                        <span className={`text-[11px] font-medium ${l.decisionTimeline === 'This week' ? 'text-emerald-400' : l.decisionTimeline === '2 weeks' ? 'text-amber-400' : 'text-slate-400'}`}>{l.decisionTimeline || '--'}</span>
+                      </div>
+                    </td>
+
                     <td className="px-3 py-2.5">{l.lead_source && <DataSourceBadge source={l.lead_source} />}</td>
 
                     <td className="px-3 py-2.5">
@@ -3288,6 +3443,16 @@ export default function LeadsPage({ onSelect }) {
                           title="Contact Intel">
                           <Crosshair size={13} />
                         </button>
+                        <button onClick={e => { e.stopPropagation(); const firstName = l.name.split(' ')[0]; const sms = `Hi ${firstName}, this is [Your Name] from GOATED. I have insights on how ${l.company} could capture more revenue in ${l.industry}. Worth a quick chat? Reply YES for details.`; navigator.clipboard.writeText(sms).then(() => showToast('SMS template copied')); }}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                          title="Copy SMS Template">
+                          <MessageSquare size={13} />
+                        </button>
+                        <button onClick={e => { e.stopPropagation(); const firstName = l.name.split(' ')[0]; const msg = `Hi ${firstName}, I came across ${l.company} and was impressed by your work in ${l.industry}. I help similar companies unlock hidden revenue through digital optimization. Would love to connect.`; navigator.clipboard.writeText(msg).then(() => showToast('LinkedIn message copied')); }}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                          title="Copy LinkedIn Message">
+                          <Linkedin size={13} />
+                        </button>
                         <button onClick={e => e.stopPropagation()} className={`p-1.5 rounded-lg text-slate-500 ${degenMode ? 'hover:text-orange-400 hover:bg-orange-500/10' : 'hover:text-brand hover:bg-brand/10'} transition-colors`}><Mail size={13} /></button>
                       </div>
                     </td>
@@ -3297,12 +3462,12 @@ export default function LeadsPage({ onSelect }) {
                 );
               })}
               {leads.length === 0 && !liveLoading && (
-                <tr><td colSpan={degenMode ? 20 : 18} className="px-4 py-12 text-center text-slate-500 text-sm">
+                <tr><td colSpan={degenMode ? 21 : 19} className="px-4 py-12 text-center text-slate-500 text-sm">
                   {aiFilters ? 'No leads match your AI query. Try a different prompt or clear filters.' : 'No leads match your filters.'}
                 </td></tr>
               )}
               {leads.length === 0 && liveLoading && (
-                <tr><td colSpan={degenMode ? 20 : 18} className="px-4 py-12 text-center text-slate-500 text-sm">
+                <tr><td colSpan={degenMode ? 21 : 19} className="px-4 py-12 text-center text-slate-500 text-sm">
                   <Loader2 size={24} className="animate-spin mx-auto mb-2 text-brand" /> Loading live data...
                 </td></tr>
               )}

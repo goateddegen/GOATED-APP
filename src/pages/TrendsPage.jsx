@@ -562,7 +562,10 @@ const PREMIUM_ALPHA_PLAYS = [
     description: 'Bitcoin and gold are both reacting to the same macro catalyst: Fed rate cut expectations and USD weakening. BTC historically rallies 40-60% in the 6 months following first rate cut.',
     thesis: 'The Fed has signaled 2-3 rate cuts in 2026. Gold is already at ATH. BTC tends to lag gold by 4-8 weeks in rate-cut cycles, then outperform 3-5x. On-chain data shows exchange outflows at 2-year highs — supply shock imminent.',
     asset: 'BTC', direction: 'long', confidence: 88, goatedScore: 91, timeframe: '2-8 weeks', risk: 'medium',
-    assetClass: 'CRYPTO + MACRO', entry: '$95,000-$97,500', exit: '$115,000-$125,000', stopLoss: '$89,000',
+    assetClass: 'CRYPTO + MACRO', category: 'Crypto', entry: '$95,000-$97,500', exit: '$115,000-$125,000', stopLoss: '$89,000',
+    profitTarget: '+18-28%', stopLossPercent: '-8.5%',
+    convictionScore: 9, convictionReasoning: 'Macro tailwinds (rate cuts), on-chain supply shock, gold correlation historically precedes BTC breakout. Multiple confirming signals across timeframes.',
+    timeToPlay: 'This Week',
     sparklineData: Array.from({length: 30}, (_, i) => 92000 + Math.sin(i/4)*3000 + i*180),
   },
   {
@@ -570,7 +573,10 @@ const PREMIUM_ALPHA_PLAYS = [
     description: 'Solana DeFi TVL broke $12B with 40% MoM growth. When SOL rallies 10%+, ecosystem tokens (JUP, RAY, ORCA) follow with 1.5-3x beta within 48-72h.',
     thesis: 'SOL is the strongest L1 this cycle with real usage metrics (500M+ monthly txns). Jupiter processed $80B+ in cumulative volume. The ecosystem trade is the highest Sharpe ratio play in crypto right now. Firedancer upgrade catalyst approaching.',
     asset: 'SOL + JUP + RAY', direction: 'long', confidence: 82, goatedScore: 85, timeframe: '24-72h', risk: 'medium',
-    assetClass: 'CRYPTO', entry: 'SOL $190-$200', exit: 'SOL $240-$260', stopLoss: 'SOL $175',
+    assetClass: 'CRYPTO', category: 'Crypto', entry: 'SOL $190-$200', exit: 'SOL $240-$260', stopLoss: 'SOL $175',
+    profitTarget: '+20-30%', stopLossPercent: '-12.5%',
+    convictionScore: 8, convictionReasoning: 'Strong DeFi TVL growth, Firedancer catalyst, ecosystem beta historically 1.5-3x. Volume confirms institutional interest.',
+    timeToPlay: 'Urgent',
     sparklineData: Array.from({length: 30}, (_, i) => 170 + Math.sin(i/5)*15 + i*1.2),
   },
   {
@@ -578,7 +584,10 @@ const PREMIUM_ALPHA_PLAYS = [
     description: 'Kalshi prices June rate cut at 62% while GOATED prices it at 68%. 6% spread opportunity on a high-conviction macro event with CME FedWatch confirming 70%+ probability.',
     thesis: 'The market is mispricing the dovish Fed pivot. CPI trending down for 4 consecutive months, unemployment ticking up. CME FedWatch at 72% for June cut. Buy YES on GOATED at $0.68 (better than Kalshi $0.62). Risk/reward: 1.47x if YES wins, lose $0.68 if NO.',
     asset: 'Fed Rate Cut YES', direction: 'long', confidence: 74, goatedScore: 78, timeframe: 'Jun 2026', risk: 'low',
-    assetClass: 'PREDICTION MKT', entry: '$0.68 (YES)', exit: '$1.00 at resolution', stopLoss: 'N/A (binary)',
+    assetClass: 'PREDICTION MKT', category: 'Macro', entry: '$0.68 (YES)', exit: '$1.00 at resolution', stopLoss: 'N/A (binary)',
+    profitTarget: '+47%', stopLossPercent: '-68% (binary)',
+    convictionScore: 7, convictionReasoning: 'CME FedWatch at 72% confirms mispricing. CPI trend supports. Spread arb between platforms provides edge.',
+    timeToPlay: 'This Month',
     sparklineData: Array.from({length: 30}, (_, i) => 0.55 + Math.sin(i/6)*0.05 + i*0.004),
   },
   {
@@ -586,7 +595,10 @@ const PREMIUM_ALPHA_PLAYS = [
     description: 'NVIDIA beat earnings estimates by 12% with data center revenue up 120% YoY. Historical pattern: NVDA rallies 8-15% in the 10 trading days post-earnings beat.',
     thesis: 'AI capex cycle is accelerating, not decelerating. Hyperscalers (MSFT, GOOG, AMZN) all increased GPU spend guidance. NVDA forward P/E at 32x is reasonable vs 60%+ growth. Blackwell ramp is just beginning. Options flow shows massive call buying at $180-$200 strikes.',
     asset: 'NVDA', direction: 'long', confidence: 79, goatedScore: 82, timeframe: '1-2 weeks', risk: 'medium',
-    assetClass: 'STOCKS', entry: '$168-$175', exit: '$195-$210', stopLoss: '$158',
+    assetClass: 'STOCKS', category: 'Stocks', entry: '$168-$175', exit: '$195-$210', stopLoss: '$158',
+    profitTarget: '+16-20%', stopLossPercent: '-9.4%',
+    convictionScore: 8, convictionReasoning: 'Earnings beat + raised guidance is the strongest catalyst. Options flow confirms smart money positioning.',
+    timeToPlay: 'Urgent',
     sparklineData: Array.from({length: 30}, (_, i) => 155 + Math.sin(i/4)*8 + i*0.8),
   },
   {
@@ -594,7 +606,10 @@ const PREMIUM_ALPHA_PLAYS = [
     description: 'ETH/BTC ratio at 0.039 — lowest since 2021. Historically, this ratio mean-reverts to 0.05-0.06 during alt seasons. ETH staking yield + L2 growth provide fundamental floor.',
     thesis: 'ETH ETF staking approval catalyst expected Q2 2026. If approved, ETH yield becomes accessible to TradFi, potentially adding $5-10B in new demand. ETH/BTC ratio below 0.04 has been a generational buy signal in every previous cycle. Pectra upgrade shipping Q2.',
     asset: 'ETH (vs BTC)', direction: 'long', confidence: 71, goatedScore: 76, timeframe: '4-12 weeks', risk: 'medium',
-    assetClass: 'CRYPTO', entry: 'ETH $3,700-$3,850', exit: 'ETH $5,000-$5,500', stopLoss: 'ETH $3,400',
+    assetClass: 'CRYPTO', category: 'Crypto', entry: 'ETH $3,700-$3,850', exit: 'ETH $5,000-$5,500', stopLoss: 'ETH $3,400',
+    profitTarget: '+30-43%', stopLossPercent: '-11.7%',
+    convictionScore: 7, convictionReasoning: 'Historical mean reversion pattern is strong. ETF staking catalyst provides clear timeline. Generational low on ratio.',
+    timeToPlay: 'This Week',
     sparklineData: Array.from({length: 30}, (_, i) => 3400 + Math.sin(i/5)*200 + i*15),
   },
   {
@@ -602,7 +617,10 @@ const PREMIUM_ALPHA_PLAYS = [
     description: 'Democrats polling at 48% for Senate control but prediction markets only price it at 46%. Historical polling accuracy suggests 52-55% true probability — 6-9% edge available.',
     thesis: 'Midterm election cycles with incumbent party losing presidency (not applicable here but same voter dynamics) show higher turnout for opposition. Key swing states (PA, GA, AZ) trending blue in recent special elections. Buy YES at $0.46, true value likely $0.52+.',
     asset: 'DEM Senate YES', direction: 'long', confidence: 65, goatedScore: 68, timeframe: 'Nov 2026', risk: 'high',
-    assetClass: 'PREDICTION MKT', entry: '$0.46 (YES)', exit: '$1.00 at resolution', stopLoss: 'N/A (binary)',
+    assetClass: 'PREDICTION MKT', category: 'Macro', entry: '$0.46 (YES)', exit: '$1.00 at resolution', stopLoss: 'N/A (binary)',
+    profitTarget: '+117%', stopLossPercent: '-46% (binary)',
+    convictionScore: 6, convictionReasoning: 'Polling-prediction market divergence is notable but election outcomes are inherently uncertain. Edge is modest.',
+    timeToPlay: 'This Month',
     sparklineData: Array.from({length: 30}, (_, i) => 0.42 + Math.sin(i/7)*0.03 + i*0.001),
   },
   {
@@ -1240,6 +1258,9 @@ export default function TrendsPage() {
   const [researchQuery, setResearchQuery] = useState('');
   const [researchLoading, setResearchLoading] = useState(false);
   const [researchReport, setResearchReport] = useState(null);
+  // AI Market Brief state
+  const [marketBrief, setMarketBrief] = useState(null);
+  const [marketBriefLoading, setMarketBriefLoading] = useState(false);
   // Markets tab state
   const [marketData, setMarketData] = useState(null);
   const [marketLoading, setMarketLoading] = useState(false);
@@ -2827,83 +2848,70 @@ export default function TrendsPage() {
               type="text"
               value={researchQuery}
               onChange={e => setResearchQuery(e.target.value)}
-              onKeyDown={e => {
+              onKeyDown={async e => {
                 if (e.key === 'Enter' && researchQuery.trim()) {
                   setResearchLoading(true);
                   setResearchReport(null);
-                  setTimeout(() => {
+                  try {
+                    const res = await fetch('/api/chat', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        messages: [{ role: 'user', content: `Research and analyze: ${researchQuery}\n\nProvide a structured deep research report. Format your response EXACTLY as JSON:\n{"title":"...","summary":"2-3 sentence overview","findings":["finding 1","finding 2","finding 3","finding 4","finding 5"],"sentiment":75,"sentimentLabel":"Bullish","risk":"risk assessment paragraph","plays":["play 1","play 2","play 3"]}` }],
+                        currentPage: 'trends',
+                        responseMode: 'analysis',
+                      }),
+                    });
+                    const data = await res.json();
+                    if (!data.fallback && data.content) {
+                      try {
+                        const jsonMatch = data.content.match(/\{[\s\S]*\}/);
+                        if (jsonMatch) {
+                          const parsed = JSON.parse(jsonMatch[0]);
+                          setResearchReport({
+                            title: parsed.title || `Deep Analysis: ${researchQuery}`,
+                            summary: parsed.summary || 'Analysis complete.',
+                            findings: Array.isArray(parsed.findings) ? parsed.findings.slice(0, 7) : ['Analysis complete.'],
+                            sentiment: typeof parsed.sentiment === 'number' ? parsed.sentiment : 55,
+                            sentimentLabel: parsed.sentimentLabel || 'Neutral',
+                            risk: parsed.risk || 'Risk assessment unavailable.',
+                            plays: Array.isArray(parsed.plays) ? parsed.plays.slice(0, 5) : ['No specific plays identified.'],
+                          });
+                        } else {
+                          setResearchReport({
+                            title: `Deep Analysis: ${researchQuery}`,
+                            summary: data.content.slice(0, 500),
+                            findings: data.content.split('\n').filter(l => l.trim().startsWith('-') || l.trim().match(/^\d/)).slice(0, 5).map(l => l.replace(/^[-\d.)\s]+/, '').trim()).filter(Boolean).concat(['See full analysis above.']).slice(0, 5),
+                            sentiment: 55, sentimentLabel: 'Neutral',
+                            risk: 'See full analysis above.',
+                            plays: ['Review analysis and identify entry points', 'Monitor for catalyst events', 'Set risk parameters before taking positions'],
+                          });
+                        }
+                      } catch {
+                        setResearchReport({
+                          title: `Deep Analysis: ${researchQuery}`,
+                          summary: data.content.slice(0, 500),
+                          findings: ['AI-generated analysis available in summary.'],
+                          sentiment: 55, sentimentLabel: 'Neutral',
+                          risk: 'Consult full analysis.',
+                          plays: ['Review the full analysis for recommendations'],
+                        });
+                      }
+                    } else { throw new Error('fallback'); }
+                  } catch {
+                    // Fallback to static on API failure
                     const q = researchQuery.toLowerCase();
-                    const reports = {
-                      btc: {
-                        title: `BTC Deep Analysis: ${researchQuery}`,
-                        summary: 'Bitcoin is showing strong institutional accumulation patterns with on-chain metrics signaling a potential breakout above key resistance levels. The current market structure resembles pre-rally conditions seen in previous cycles, with decreasing exchange reserves and rising long-term holder supply.',
-                        findings: [
-                          'Exchange reserves at 2-year lows — accumulation phase confirmed by on-chain data',
-                          'RSI divergence on weekly timeframe suggests momentum building for upside move',
-                          'Institutional inflows via ETFs averaging $340M/week, highest since Q1 2024',
-                          'Hash rate at all-time highs indicating miner confidence in future price appreciation',
-                          'Options market skew favoring calls at 1.3x ratio — smart money positioning bullish',
-                        ],
-                        sentiment: 78,
-                        sentimentLabel: 'Bullish',
-                        risk: 'Moderate. Key downside risk is macro liquidity tightening if Fed reverses rate cut trajectory. Support at $58K must hold for bullish thesis.',
-                        plays: ['Long BTC spot with stop at $58K support', 'BTC call spreads targeting $85K-$95K range (60-90 DTE)', 'Accumulate on dips below $62K with DCA strategy'],
-                      },
-                      ai: {
-                        title: `AI Sector Deep Analysis: ${researchQuery}`,
-                        summary: 'The AI sector continues to show explosive growth with compute demand outpacing supply. Key players are seeing revenue acceleration while new entrants are disrupting traditional software verticals. The sector is transitioning from hype to fundamental value creation.',
-                        findings: [
-                          'NVIDIA data center revenue up 154% YoY — GPU demand still outstripping supply',
-                          'AI infrastructure spending by hyperscalers expected to reach $200B+ in 2026',
-                          'Open-source models closing the gap with proprietary solutions — commoditization risk emerging',
-                          'Enterprise AI adoption rate jumped from 35% to 67% in 12 months',
-                          'AI agent frameworks gaining traction — next wave of value creation in autonomous systems',
-                        ],
-                        sentiment: 82,
-                        sentimentLabel: 'Very Bullish',
-                        risk: 'Elevated valuations create vulnerability to earnings misses. Regulatory headwinds in EU and potential compute export restrictions add uncertainty.',
-                        plays: ['Overweight AI infrastructure plays (NVDA, AVGO, MRVL)', 'AI software picks-and-shovels approach (PLTR, SNOW, MDB)', 'Short overvalued AI wrappers with no moat'],
-                      },
-                      election: {
-                        title: `Election Impact Analysis: ${researchQuery}`,
-                        summary: 'Political markets are showing increased volatility as election dynamics shift. Prediction markets are pricing in significant policy divergence between candidates, with crypto and tech sectors most exposed to regulatory outcomes.',
-                        findings: [
-                          'Prediction market volumes surging 300%+ compared to previous election cycles',
-                          'Crypto-friendly policy stance creating 15-20% premium in digital asset markets',
-                          'Defense and energy sectors showing strong correlation with polling data shifts',
-                          'Tax policy uncertainty creating hedging demand in equity options markets',
-                          'Immigration policy odds moving markets in agriculture and construction sectors',
-                        ],
-                        sentiment: 52,
-                        sentimentLabel: 'Neutral',
-                        risk: 'High uncertainty period. Policy whiplash risk is elevated. Markets historically see 10-15% volatility expansion in election months.',
-                        plays: ['Straddle strategies on SPY for election week volatility', 'Long crypto as hedge against regulatory clarity trade', 'Rotate into defensive sectors if polling volatility increases'],
-                      },
-                    };
-                    let report = null;
-                    if (q.includes('btc') || q.includes('bitcoin')) report = reports.btc;
-                    else if (q.includes('ai') || q.includes('artificial intelligence') || q.includes('nvidia') || q.includes('tech')) report = reports.ai;
-                    else if (q.includes('election') || q.includes('trump') || q.includes('politics') || q.includes('vote')) report = reports.election;
-                    else {
-                      report = {
-                        title: `Deep Analysis: ${researchQuery}`,
-                        summary: `GOATED AI has analyzed "${researchQuery}" across multiple data sources including on-chain metrics, social sentiment, technical indicators, and macro conditions. The current environment shows mixed signals with selective opportunities emerging for informed participants.`,
-                        findings: [
-                          `Market sentiment around "${researchQuery}" is trending moderately positive across social channels`,
-                          'Technical indicators show consolidation pattern — breakout direction pending catalyst',
-                          'Volume profile suggests accumulation by sophisticated participants at current levels',
-                          'Correlation with broader market risk appetite remains elevated at 0.72',
-                          'Smart money flow indicators are neutral-to-positive on 7-day timeframe',
-                        ],
-                        sentiment: 58,
-                        sentimentLabel: 'Slightly Bullish',
-                        risk: 'Moderate. Position sizing should reflect uncertainty. Key risk factors include macro headwinds and sector-specific regulatory developments.',
-                        plays: ['Scale into positions with 3-5 entry tranches over 2 weeks', 'Set tight risk management with 5-8% stop losses', 'Monitor for catalyst events before increasing exposure'],
-                      };
+                    let report;
+                    if (q.includes('btc') || q.includes('bitcoin')) {
+                      report = { title: `BTC Deep Analysis: ${researchQuery}`, summary: 'Bitcoin showing institutional accumulation with on-chain metrics signaling potential breakout. Market structure resembles pre-rally conditions with decreasing exchange reserves.', findings: ['Exchange reserves at multi-year lows — accumulation confirmed', 'RSI divergence on weekly — momentum building', 'Institutional ETF inflows averaging $340M/week', 'Hash rate at ATH — miner confidence high', 'Options skew favoring calls 1.3x ratio'], sentiment: 78, sentimentLabel: 'Bullish', risk: 'Moderate. Macro liquidity tightening is key downside risk.', plays: ['Long BTC spot with defined stop', 'Call spreads targeting higher range', 'DCA on dips'] };
+                    } else if (q.includes('ai') || q.includes('tech') || q.includes('nvidia')) {
+                      report = { title: `AI Sector Analysis: ${researchQuery}`, summary: 'AI sector shows explosive growth with compute demand outpacing supply. Transitioning from hype to fundamental value creation.', findings: ['Data center revenue up 154% YoY', 'Hyperscaler AI spend targeting $200B+ in 2026', 'Enterprise AI adoption 35% to 67% in 12 months', 'Open-source creating commoditization risk', 'AI agents driving next value wave'], sentiment: 82, sentimentLabel: 'Very Bullish', risk: 'Elevated valuations vulnerable to earnings misses. EU regulatory headwinds.', plays: ['Overweight AI infrastructure', 'Picks-and-shovels in AI software', 'Short overvalued AI wrappers'] };
+                    } else {
+                      report = { title: `Deep Analysis: ${researchQuery}`, summary: `Analysis of "${researchQuery}" across on-chain, sentiment, technicals & macro. Mixed signals with selective opportunities.`, findings: [`Sentiment around "${researchQuery}" trending moderately positive`, 'Consolidation pattern — breakout pending catalyst', 'Volume suggests accumulation at current levels', 'Correlation with risk appetite elevated at 0.72', 'Smart money flow neutral-to-positive 7-day'], sentiment: 58, sentimentLabel: 'Slightly Bullish', risk: 'Moderate. Position sizing should reflect uncertainty.', plays: ['Scale in with 3-5 tranches over 2 weeks', 'Tight risk management 5-8% stops', 'Monitor for catalyst events'] };
                     }
                     setResearchReport(report);
-                    setResearchLoading(false);
-                  }, 2000);
+                  }
+                  setResearchLoading(false);
                 }
               }}
               placeholder="Enter topic for deep analysis... (e.g., 'BTC breakout potential', 'AI sector momentum')"
@@ -3023,21 +3031,90 @@ export default function TrendsPage() {
             </motion.div>
           )}
 
-          {/* Empty state */}
+          {/* Empty state + AI Market Brief */}
           {!researchLoading && !researchReport && (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-4">
-                <Brain size={28} className="text-slate-600" />
-              </div>
-              <h3 className="text-sm font-bold text-slate-400 mb-1">Enter a topic to research</h3>
-              <p className="text-xs text-slate-600 max-w-sm">GOATED AI will analyze sentiment, technicals, on-chain data, and macro conditions to generate a comprehensive research report.</p>
-              <div className="flex flex-wrap gap-2 mt-4 justify-center">
-                {['BTC breakout potential', 'AI sector momentum', 'Election market impact', 'SOL ecosystem growth'].map(suggestion => (
-                  <button key={suggestion} onClick={() => setResearchQuery(suggestion)}
-                    className="px-3 py-1.5 rounded-lg text-xs text-slate-500 bg-white/[0.03] border border-white/[0.06] hover:text-white hover:border-brand/20 transition-all">
-                    {suggestion}
+            <div className="space-y-6">
+              {/* AI Market Brief */}
+              <div className="bg-gradient-to-r from-brand/5 via-cyan-500/5 to-purple-500/5 border border-brand/15 rounded-xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Newspaper size={16} className="text-brand" />
+                    <span className="text-sm font-bold text-white">AI Market Brief</span>
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand/15 text-brand font-bold uppercase tracking-wider">Daily</span>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setMarketBriefLoading(true);
+                      try {
+                        const res = await fetch('/api/chat', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            messages: [{ role: 'user', content: 'Generate a concise daily market brief covering: 1) Macro conditions (rates, inflation, employment sentiment), 2) Crypto market structure (BTC dominance, major moves, sentiment), 3) Top 3 sectors to watch today with momentum direction, 4) Key risks on the radar. Keep each section to 1-2 sentences. Be specific with numbers and percentages.' }],
+                            currentPage: 'trends',
+                            responseMode: 'analysis',
+                          }),
+                        });
+                        const data = await res.json();
+                        if (!data.fallback && data.content) {
+                          setMarketBrief(data.content);
+                        } else {
+                          setMarketBrief('**Macro:** Risk-on environment with rate cuts priced in. Institutional flows rotating into growth.\n\n**Crypto:** BTC holding above key support with ETF inflows steady. Altcoin rotation beginning.\n\n**Sectors to Watch:** AI/ML (+42% momentum), Revenue Intelligence (+38%), Creator Economy B2B (+35%)\n\n**Risks:** Inflation re-acceleration, geopolitical escalation, regulatory surprises in crypto/AI.');
+                        }
+                      } catch {
+                        setMarketBrief('**Macro:** Risk-on environment with rate cuts priced in. Institutional flows rotating into growth.\n\n**Crypto:** BTC holding above key support with ETF inflows steady. Altcoin rotation beginning.\n\n**Sectors to Watch:** AI/ML (+42% momentum), Revenue Intelligence (+38%), Creator Economy B2B (+35%)\n\n**Risks:** Inflation re-acceleration, geopolitical escalation, regulatory surprises in crypto/AI.');
+                      }
+                      setMarketBriefLoading(false);
+                    }}
+                    disabled={marketBriefLoading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-brand/10 text-brand border border-brand/20 hover:bg-brand/20 hover:border-brand/40 transition-all disabled:opacity-50"
+                  >
+                    {marketBriefLoading ? (
+                      <>
+                        <div className="w-3 h-3 rounded-full border border-brand/30 border-t-brand animate-spin" />
+                        Generating...
+                      </>
+                    ) : marketBrief ? (
+                      <>
+                        <RefreshCw size={11} />
+                        Refresh
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={11} />
+                        Generate Brief
+                      </>
+                    )}
                   </button>
-                ))}
+                </div>
+                {marketBrief ? (
+                  <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+                    {marketBrief.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+                      part.startsWith('**') && part.endsWith('**')
+                        ? <strong key={i} className="text-white font-semibold">{part.slice(2, -2)}</strong>
+                        : <span key={i}>{part}</span>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">Click "Generate Brief" to get an AI-powered daily market summary with macro conditions, crypto sentiment, and sector momentum.</p>
+                )}
+              </div>
+
+              {/* Search prompt area */}
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-4">
+                  <Brain size={28} className="text-slate-600" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-400 mb-1">Enter a topic to research</h3>
+                <p className="text-xs text-slate-600 max-w-sm">GOATED AI will analyze sentiment, technicals, on-chain data, and macro conditions to generate a comprehensive research report.</p>
+                <div className="flex flex-wrap gap-2 mt-4 justify-center">
+                  {['BTC breakout potential', 'AI sector momentum', 'Election market impact', 'SOL ecosystem growth', 'Solana DeFi outlook', 'SaaS valuations 2026'].map(suggestion => (
+                    <button key={suggestion} onClick={() => setResearchQuery(suggestion)}
+                      className="px-3 py-1.5 rounded-lg text-xs text-slate-500 bg-white/[0.03] border border-white/[0.06] hover:text-white hover:border-brand/20 transition-all">
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}

@@ -1143,56 +1143,66 @@ export default function LeadDetail() {
           CONTACT INTEL + OUTREACH ACTIONS
       ═══════════════════════════════════════════════════════════════════════ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-4">
-        {/* Contact Intel Section */}
-        <div className="rounded-xl border border-cyan-500/15 bg-cyan-500/[0.02] p-4 sm:p-5 mb-4">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
-              <UserSearch size={16} className="text-cyan-400" />
+        {/* Contact Intel Section — PROMINENT */}
+        <div className="rounded-2xl border-2 border-cyan-500/25 bg-gradient-to-br from-cyan-500/[0.04] to-blue-500/[0.02] p-5 sm:p-6 mb-4 shadow-lg shadow-cyan-500/5">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+              <UserSearch size={20} className="text-cyan-400" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-cyan-400">Contact Intel</h3>
-              <span className="text-[9px] text-slate-500 uppercase tracking-wider">Verified & enriched contact data</span>
+              <h3 className="text-base font-bold text-cyan-400">Contact Intel</h3>
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider">Verified & enriched contact data</span>
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-[10px] px-2.5 py-1 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/25 font-bold uppercase tracking-wider">Enriched</span>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {/* LinkedIn Profile */}
-            <a href={`https://www.linkedin.com/in/${(lead.name || '').split(' ')[0]?.toLowerCase()}-${(lead.name || '').split(' ').slice(1).join('-')?.toLowerCase()}-${Math.abs([...(lead.name || '')].reduce((h, c) => (h << 5) - h + c.charCodeAt(0), 0)).toString(16).slice(0, 8)}`}
-              target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/[0.06] border border-blue-500/15 hover:bg-blue-500/10 transition-colors group">
-              <div className="w-9 h-9 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-blue-400"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-              </div>
-              <div className="min-w-0">
-                <div className="text-[10px] text-blue-400 uppercase tracking-wider font-semibold">LinkedIn Profile</div>
-                <div className="text-sm text-white truncate group-hover:text-blue-300 transition-colors">{lead.name}</div>
-              </div>
-              <ExternalLink size={12} className="text-blue-400/50 ml-auto shrink-0" />
-            </a>
-            {/* Phone - click to call */}
+
+          {/* Primary Contact Cards — Large & Prominent */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            {/* Phone - PRIMARY CTA */}
             <a href={lead.phone ? `tel:${(lead.phone || '').replace(/[^+\d]/g, '')}` : '#'}
               onClick={(e) => { if (!lead.phone) e.preventDefault(); }}
-              className={`flex items-center gap-3 p-3 rounded-lg border transition-colors group ${lead.phone ? 'bg-emerald-500/[0.06] border-emerald-500/15 hover:bg-emerald-500/10' : 'bg-white/[0.01] border-white/[0.04] opacity-50'}`}>
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${lead.phone ? 'bg-emerald-500/15' : 'bg-white/[0.04]'}`}>
-                <PhoneCall size={16} className={lead.phone ? 'text-emerald-400' : 'text-slate-600'} />
+              className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all group ${lead.phone ? 'bg-emerald-500/[0.08] border-emerald-500/25 hover:bg-emerald-500/15 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/10' : 'bg-white/[0.01] border-white/[0.04] opacity-50'}`}>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${lead.phone ? 'bg-emerald-500/20' : 'bg-white/[0.04]'}`}>
+                <PhoneCall size={22} className={lead.phone ? 'text-emerald-400' : 'text-slate-600'} />
               </div>
-              <div className="min-w-0">
-                <div className={`text-[10px] uppercase tracking-wider font-semibold ${lead.phone ? 'text-emerald-400' : 'text-slate-500'}`}>Click to Call</div>
-                <div className="text-sm text-white truncate">{lead.phone || 'No number'}</div>
+              <div className="min-w-0 flex-1">
+                <div className={`text-[10px] uppercase tracking-wider font-bold mb-1 ${lead.phone ? 'text-emerald-400' : 'text-slate-500'}`}>Phone</div>
+                <div className="text-lg font-mono font-bold text-white truncate">{lead.phone || 'No number'}</div>
               </div>
               {lead.phone && <CopyBtn text={lead.phone} />}
             </a>
-            {/* Email - mailto */}
+            {/* Email */}
             <a href={`mailto:${lead.email}`}
-              className="flex items-center gap-3 p-3 rounded-lg bg-purple-500/[0.06] border border-purple-500/15 hover:bg-purple-500/10 transition-colors group">
-              <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center shrink-0">
-                <Mail size={16} className="text-purple-400" />
+              className="flex items-center gap-4 p-4 rounded-xl bg-purple-500/[0.08] border-2 border-purple-500/25 hover:bg-purple-500/15 hover:border-purple-500/40 hover:shadow-lg hover:shadow-purple-500/10 transition-all group">
+              <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center shrink-0">
+                <Mail size={22} className="text-purple-400" />
               </div>
-              <div className="min-w-0">
-                <div className="text-[10px] text-purple-400 uppercase tracking-wider font-semibold">Email</div>
-                <div className="text-sm text-white truncate group-hover:text-purple-300 transition-colors">{lead.email}</div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] text-purple-400 uppercase tracking-wider font-bold mb-1">Email</div>
+                <div className="text-base font-medium text-white truncate group-hover:text-purple-300 transition-colors">{lead.email}</div>
               </div>
               <CopyBtn text={lead.email} />
             </a>
+            {/* LinkedIn */}
+            <a href={lead.linkedin_url || `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(lead.name + ' ' + lead.company)}`}
+              target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-4 p-4 rounded-xl bg-blue-500/[0.08] border-2 border-blue-500/25 hover:bg-blue-500/15 hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10 transition-all group">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0">
+                <Linkedin size={22} className="text-blue-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] text-blue-400 uppercase tracking-wider font-bold mb-1">LinkedIn</div>
+                <div className="text-base font-medium text-white truncate group-hover:text-blue-300 transition-colors">{lead.name}</div>
+                {lead.linkedin_company_url && <div className="text-[10px] text-blue-400/60 truncate">{lead.linkedin_company_url}</div>}
+              </div>
+              <ExternalLink size={14} className="text-blue-400/50 shrink-0" />
+            </a>
+          </div>
+
+          {/* Secondary Contact Info */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {/* Company Website */}
             <a href={lead.website?.startsWith('http') ? lead.website : `https://${lead.website}`}
               target="_blank" rel="noopener noreferrer"
@@ -1206,17 +1216,17 @@ export default function LeadDetail() {
               </div>
               <ExternalLink size={12} className="text-brand/50 ml-auto shrink-0" />
             </a>
-            {/* Estimated Address */}
+            {/* Location */}
             <div className="flex items-center gap-3 p-3 rounded-lg bg-orange-500/[0.06] border border-orange-500/15">
               <div className="w-9 h-9 rounded-lg bg-orange-500/15 flex items-center justify-center shrink-0">
                 <MapPin size={16} className="text-orange-400" />
               </div>
               <div className="min-w-0">
-                <div className="text-[10px] text-orange-400 uppercase tracking-wider font-semibold">Estimated Address</div>
-                <div className="text-sm text-white truncate">{lead.location ? `${lead.location} Metro Area` : 'Location unknown'}</div>
+                <div className="text-[10px] text-orange-400 uppercase tracking-wider font-semibold">Location</div>
+                <div className="text-sm text-white truncate">{lead.location || 'Location unknown'}</div>
               </div>
             </div>
-            {/* People Search / Whitepages */}
+            {/* People Search */}
             <div className="flex items-center gap-2 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
               <a href={`https://www.truepeoplesearch.com/results?name=${encodeURIComponent(lead.name)}&citystatezip=${encodeURIComponent(lead.location || '')}`}
                 target="_blank" rel="noopener noreferrer"
@@ -1286,6 +1296,82 @@ export default function LeadDetail() {
             <span className="text-xs font-semibold text-yellow-400">SMS Template</span>
             <span className="text-[10px] text-slate-500">Copy text message</span>
           </button>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          OUTREACH SEQUENCE BUILDER
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-4">
+        <div className="rounded-xl border border-purple-500/20 bg-purple-500/[0.02] p-4 sm:p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center">
+              <Send size={16} className="text-purple-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-purple-400">Outreach Sequence</h3>
+              <span className="text-[10px] text-slate-500">Multi-step automated cadence for {lead.name}</span>
+            </div>
+          </div>
+          <div className="relative">
+            {/* Vertical connector line */}
+            <div className="absolute left-[19px] top-8 bottom-4 w-0.5 bg-purple-500/15" />
+            <div className="space-y-4">
+              {[
+                { day: 1, channel: 'LinkedIn', action: 'Send Connection Request', icon: Linkedin, color: 'blue',
+                  detail: `"Hi ${(lead.name || '').split(' ')[0]}, I came across ${lead.company} and was impressed by your work in ${lead.industry}. Would love to connect and exchange ideas."` },
+                { day: 3, channel: 'Cold Email', action: 'Personalized Email', icon: Mail, color: 'purple',
+                  detail: `Subject: Quick idea for ${lead.company}\n\nHi ${(lead.name || '').split(' ')[0]}, I work with ${lead.industry} companies facing ${safePainPoints[0]?.toLowerCase() || 'growth challenges'}. Worth a 15-min chat?` },
+                { day: 5, channel: 'Follow-up Email', action: 'Value-Add Follow-up', icon: Mail, color: 'cyan',
+                  detail: `Hi ${(lead.name || '').split(' ')[0]}, sharing a case study of how we helped a similar ${lead.industry} company generate ${fmt(Math.round(dv * 0.15))} in 90 days. Thought it might be relevant.` },
+                { day: 7, channel: 'Phone Call', action: 'Direct Call', icon: PhoneCall, color: 'emerald',
+                  detail: `"${(lead.name || '').split(' ')[0]}, I sent a couple messages about how we're helping ${lead.industry} companies. Did you get a chance to look? I only need 2 minutes."` },
+                { day: 10, channel: 'LinkedIn DM', action: 'LinkedIn Follow-up', icon: MessageSquare, color: 'blue',
+                  detail: `"Hey ${(lead.name || '').split(' ')[0]}, following up on my connection request. I have some specific insights on ${safePainPoints[0]?.toLowerCase() || 'growth'} for ${lead.company}. Open to a quick chat?"` },
+              ].map((step, i) => {
+                const StepIcon = step.icon;
+                return (
+                  <div key={i} className="flex items-start gap-3 relative">
+                    <div className={`w-10 h-10 rounded-full bg-${step.color}-500/15 border-2 border-${step.color}-500/30 flex items-center justify-center shrink-0 z-10 relative`}>
+                      <StepIcon size={16} className={`text-${step.color}-400`} />
+                    </div>
+                    <div className="flex-1 pb-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-xs font-bold text-${step.color}-400`}>Day {step.day}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.03] border border-white/[0.05] text-slate-400">{step.channel}</span>
+                        <span className="text-xs text-white font-medium">{step.action}</span>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-black/30 border border-white/[0.04] text-xs text-slate-300 whitespace-pre-line leading-relaxed">
+                        {step.detail}
+                      </div>
+                      <button onClick={() => { navigator.clipboard.writeText(step.detail); }}
+                        className={`mt-1.5 flex items-center gap-1 text-[10px] font-medium text-${step.color}-400/70 hover:text-${step.color}-400 transition-colors`}>
+                        <Copy size={10} /> Copy template
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SIMILAR LEADS
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-4">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 sm:p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-brand/15 flex items-center justify-center">
+              <Users size={16} className="text-brand" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">Similar Leads</h3>
+              <span className="text-[10px] text-slate-500">Same industry, region, or deal range as {lead.name}</span>
+            </div>
+          </div>
+          <SimilarLeadsSection lead={lead} />
         </div>
       </div>
 

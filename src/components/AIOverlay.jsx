@@ -5,7 +5,8 @@ import {
   ChevronRight,
   BarChart3, Wallet, Zap, Target, ArrowRight,
   MessageSquare, Sparkles, LayoutDashboard, ExternalLink, Phone, UserSearch,
-  Trophy, Flame, DollarSign, Clock, Activity, Shield, ClipboardList, FileText
+  Trophy, Flame, DollarSign, Clock, Activity, Shield, ClipboardList, FileText,
+  Brain, Newspaper, BookOpen, Crosshair
 } from 'lucide-react';
 import { useStore, fmt } from '../hooks/useStore';
 import { GoatIcon } from './GoatLogo';
@@ -204,6 +205,22 @@ const DEGEN_PROMPTS = {
     { label: 'Maximize my earnings', icon: Lightbulb },
   ],
 };
+
+// ─── QUICK INSIGHT BUTTONS ─────────────────────────────────────────────
+const QUICK_INSIGHTS = [
+  { label: 'Daily Brief', prompt: 'Give me a daily brief: top 3 pipeline priorities, market conditions affecting my deals, and the single most important action I should take today. Keep it tight.', icon: Newspaper },
+  { label: 'Market Pulse', prompt: 'Research the current market pulse: macro conditions, sector momentum, crypto sentiment, and how it all impacts B2B sales right now. Deep research mode.', icon: TrendingUp },
+  { label: 'Pipeline Review', prompt: 'Analyze my full pipeline: deals at risk, biggest opportunities, conversion bottlenecks, and revenue forecast for next 30 days. Be specific with names and numbers.', icon: ClipboardList },
+  { label: 'Close Playbook', prompt: 'Build me a closing playbook for today: which leads to call first, what to say, objection handling for each, and commission impact. Make it actionable.', icon: Crosshair },
+];
+
+// ─── DEGEN ALPHA INSIGHT BUTTONS ─────────────────────────────────────────
+const DEGEN_INSIGHTS = [
+  { label: 'Best Alpha Plays', prompt: 'Research the best alpha plays right now — crypto, prediction markets, and B2B deals. What has the highest asymmetric upside? Deep research mode.', icon: Zap },
+  { label: 'Whale Movements', prompt: 'Analyze whale movements and smart money flow: what are institutions buying, what sectors are seeing unusual volume, and where is the smart money positioning? Deep dive.', icon: Globe },
+  { label: 'Sentiment Shifts', prompt: 'Research sentiment shifts across markets: what narratives are gaining momentum, what is losing steam, and what contrarian plays have the best risk/reward? Analyze everything.', icon: Brain },
+  { label: 'Degen Playbook', prompt: 'Build me a full degen playbook: highest conviction trades, prediction market edges, and pipeline deals I can speed-close today. Go aggressive. NFA.', icon: Flame },
+];
 
 // ─── CONTEXTUAL QUICK ACTION BUTTONS (below chat input) ──────────────
 const QUICK_ACTIONS = {
@@ -762,6 +779,99 @@ const PROACTIVE_SUGGESTIONS = {
   ],
 };
 
+// ─── CONTEXT SUMMARY CARD ─────────────────────────────────────────────
+function ContextSummaryCard({ currentPage, leads, degenMode, onAction }) {
+  const summaries = useMemo(() => {
+    if (!leads || leads.length === 0) return null;
+    const topCloseable = leads
+      .filter(l => l.status !== 'won' && l.status !== 'lost')
+      .sort((a, b) => b.conversionProbability - a.conversionProbability)
+      .slice(0, 5);
+    const negotiating = leads.filter(l => l.status === 'negotiation');
+    const rising = leads.filter(l => l.momentum === 'rising');
+    const totalPipeline = leads.reduce((s, l) => s + l.dealValue, 0);
+
+    switch (currentPage) {
+      case 'leads':
+        return {
+          title: 'Top 5 Closeable Leads',
+          icon: Target,
+          color: 'brand',
+          items: topCloseable.map(l => `${l.name} (${l.conversionProbability}%) — ${fmt(l.dealValue)}`),
+          action: { label: 'Get closing playbook', prompt: 'Build me a closing playbook for my top 5 closeable leads right now. Include specific scripts and commission impact.' },
+        };
+      case 'trends':
+        return {
+          title: 'Market Summary',
+          icon: TrendingUp,
+          color: 'cyan',
+          items: [
+            `${rising.length} leads with rising momentum`,
+            `${leads.filter(l => l.industry === 'AI/ML').length} AI/ML leads (hottest sector)`,
+            `${leads.filter(l => l.industry === 'SaaS').length} SaaS leads (steady growth)`,
+            `Pipeline exposure: ${fmt(totalPipeline)}`,
+          ],
+          action: { label: 'Deep market research', prompt: 'Research current market conditions and how they impact my pipeline. Analyze sector momentum, macro trends, and give me actionable plays.' },
+        };
+      case 'dashboard':
+        return {
+          title: 'Pipeline Health',
+          icon: BarChart3,
+          color: 'purple',
+          items: [
+            `${negotiating.length} deals in negotiation`,
+            `${topCloseable.filter(l => l.conversionProbability >= 70).length} high-probability closes`,
+            `Total pipeline: ${fmt(totalPipeline)}`,
+            `Commission potential: ${fmt(Math.round(totalPipeline * 0.10))}`,
+          ],
+          action: { label: 'Optimize pipeline', prompt: 'Analyze my pipeline health: bottlenecks, at-risk deals, and specific actions to improve conversion rate. Be specific with names.' },
+        };
+      default:
+        return null;
+    }
+  }, [currentPage, leads]);
+
+  if (!summaries) return null;
+
+  const colorMap = {
+    brand: { bg: 'rgba(16,185,129,0.06)', border: 'rgba(16,185,129,0.15)', text: '#10b981' },
+    cyan: { bg: 'rgba(6,182,212,0.06)', border: 'rgba(6,182,212,0.15)', text: '#06b6d4' },
+    purple: { bg: 'rgba(168,85,247,0.06)', border: 'rgba(168,85,247,0.15)', text: '#a855f7' },
+  };
+  const colors = colorMap[summaries.color] || colorMap.brand;
+
+  return (
+    <div className="mx-2 mt-1 rounded-xl p-2.5"
+      style={{ background: colors.bg, border: `1px solid ${colors.border}` }}>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <summaries.icon size={11} style={{ color: colors.text }} />
+        <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: colors.text }}>
+          {summaries.title}
+        </span>
+      </div>
+      <div className="space-y-0.5">
+        {summaries.items.map((item, i) => (
+          <div key={i} className="text-[10px] text-slate-400 flex items-start gap-1.5">
+            <span className="text-slate-600 mt-0.5">-</span>
+            <span>{item}</span>
+          </div>
+        ))}
+      </div>
+      {summaries.action && (
+        <button
+          onClick={() => onAction(summaries.action.prompt)}
+          className="mt-2 w-full flex items-center justify-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-medium transition-all"
+          style={{ background: colors.border, color: colors.text }}
+        >
+          <Sparkles size={9} />
+          {summaries.action.label}
+          <ArrowRight size={9} />
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── MAIN COMPONENT ────────────────────────────────────────────────────
 export default function AIOverlay() {
   const { aiOpen, setAiOpen, leads: rawLeads, getLeads, page: currentPage, setPage, selectedLead, setSelectedLead, setDetailOpen, setPreviousPage, degenMode } = useStore();
@@ -962,6 +1072,7 @@ export default function AIOverlay() {
     setMessages(newMessages);
     setInput('');
     setTyping(true);
+    setThinkingLabel(getThinkingLabel(msg));
 
     // Build context about pipeline for the AI
     const leadCtx = selectedLead ? `\n\nCurrently viewing lead: ${selectedLead.name} at ${selectedLead.company} (${selectedLead.industry}), Score: ${selectedLead.score}/100, Deal: $${(selectedLead.dealValue||0).toLocaleString()}, Status: ${selectedLead.status}, Priority: ${selectedLead.priority}, Phone: ${selectedLead.phone||'N/A'}, Email: ${selectedLead.email||'N/A'}, Website: ${selectedLead.website||'N/A'}, Location: ${selectedLead.location||'N/A'}, Pain Points: ${(selectedLead.painPoints||[]).join(', ')}, Buying Signals: ${(selectedLead.buyingSignals||[]).join(', ')}, Best Method: ${selectedLead.bestMethod||'email'}` : '';
@@ -994,7 +1105,7 @@ export default function AIOverlay() {
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: apiMessages, degenMode, leadData: slimLeads }),
+          body: JSON.stringify({ messages: apiMessages, degenMode, leadData: slimLeads, currentPage }),
         });
 
         const data = await res.json();
@@ -1076,6 +1187,7 @@ export default function AIOverlay() {
             })),
             degenMode,
             leadData: slimLeadsQA,
+            currentPage,
           }),
         })
           .then(r => r.json())
@@ -1276,6 +1388,55 @@ export default function AIOverlay() {
           </div>
         )}
 
+        {/* ── CONTEXT SUMMARY CARD ──────────────────────────────────── */}
+        {messages.length <= 1 && !coachMode && (
+          <ContextSummaryCard
+            currentPage={currentPage}
+            leads={leads}
+            degenMode={degenMode}
+            onAction={handleQuickAction}
+          />
+        )}
+
+        {/* ── QUICK INSIGHT BUTTONS ───────────────────────────────────── */}
+        {messages.length <= 1 && (
+          <div className="mx-2 mt-1">
+            <div className="flex items-center gap-1.5 mb-1 px-0.5">
+              <Brain size={9} className={degenMode ? 'text-orange-400' : 'text-brand'} />
+              <span className={`text-[9px] font-bold tracking-wider uppercase ${degenMode ? 'text-orange-400' : 'text-slate-500'}`}>
+                {degenMode ? 'Alpha Intel' : 'Quick Insights'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+              {(degenMode ? DEGEN_INSIGHTS : QUICK_INSIGHTS).map(qi => (
+                <button
+                  key={qi.label}
+                  onClick={() => handleQuickAction(qi.prompt)}
+                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-all text-left"
+                  style={{
+                    background: degenMode ? 'rgba(249,115,22,0.06)' : 'rgba(16,185,129,0.04)',
+                    border: degenMode ? '1px solid rgba(249,115,22,0.12)' : '1px solid rgba(16,185,129,0.08)',
+                    color: '#94a3b8',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = degenMode ? 'rgba(249,115,22,0.15)' : 'rgba(16,185,129,0.12)';
+                    e.currentTarget.style.borderColor = degenMode ? 'rgba(249,115,22,0.3)' : 'rgba(16,185,129,0.25)';
+                    e.currentTarget.style.color = degenMode ? '#f97316' : '#10b981';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = degenMode ? 'rgba(249,115,22,0.06)' : 'rgba(16,185,129,0.04)';
+                    e.currentTarget.style.borderColor = degenMode ? 'rgba(249,115,22,0.12)' : 'rgba(16,185,129,0.08)';
+                    e.currentTarget.style.color = '#94a3b8';
+                  }}
+                >
+                  <qi.icon size={10} className={`shrink-0 ${degenMode ? 'text-orange-500' : 'text-brand'}`} />
+                  {qi.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── LEAD CONTEXT BANNER ────────────────────────────────────── */}
         {selectedLead && (
           <div className="mx-2 mt-1 p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
@@ -1403,7 +1564,7 @@ export default function AIOverlay() {
                           />
                         ))}
                       </div>
-                      <span className="text-[10px] text-slate-500 ml-1">Searching leads...</span>
+                      <span className="text-[10px] text-slate-500 ml-1">{thinkingLabel}</span>
                     </div>
                   </div>
                 </div>
