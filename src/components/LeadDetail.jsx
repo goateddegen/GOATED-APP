@@ -1723,7 +1723,7 @@ export default function LeadDetail() {
                   {lead.website && (
                     <div className="absolute left-0 top-full mt-1 z-50 hidden group-hover:block w-[320px] rounded-xl border border-white/10 bg-[#0d0f12] shadow-2xl overflow-hidden">
                       <div className="p-2 border-b border-white/5 flex items-center gap-2">
-                        <img src={`https://www.google.com/s2/favicons?domain=${lead.website}&sz=16`} alt="" className="w-4 h-4 rounded" />
+                        <img src={`https://www.google.com/s2/favicons?domain=${lead.website}&sz=16`} alt="" className="w-4 h-4 rounded" loading="lazy" />
                         <span className="text-xs text-slate-400 truncate">{lead.website}</span>
                         <a href={lead.website?.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noopener noreferrer"
                           className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-brand/15 text-brand hover:bg-brand/25 transition-colors">Visit</a>

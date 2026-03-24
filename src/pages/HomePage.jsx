@@ -46,8 +46,8 @@ function useMouseParallax() {
       });
     };
     const handleLeave = () => setTransform({ rotateX: 0, rotateY: 0, mouseX: 0, mouseY: 0 });
-    el.addEventListener('mousemove', handleMove);
-    el.addEventListener('mouseleave', handleLeave);
+    el.addEventListener('mousemove', handleMove, { passive: true });
+    el.addEventListener('mouseleave', handleLeave, { passive: true });
     return () => {
       el.removeEventListener('mousemove', handleMove);
       el.removeEventListener('mouseleave', handleLeave);
@@ -73,8 +73,8 @@ function FloatingParticles() {
     canvas.width = w;
     canvas.height = h;
 
-    // Initialize particles
-    const count = 40;
+    // Initialize particles (reduced from 40 for perf — connection lines are O(n²))
+    const count = 20;
     particlesRef.current = Array.from({ length: count }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
@@ -89,7 +89,7 @@ function FloatingParticles() {
       const rect = canvas.getBoundingClientRect();
       mouseRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     };
-    canvas.addEventListener('mousemove', handleMouse);
+    canvas.addEventListener('mousemove', handleMouse, { passive: true });
 
     const animate = () => {
       ctx.clearRect(0, 0, w, h);
@@ -160,7 +160,7 @@ function FloatingParticles() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-auto" style={{ zIndex: 0 }} />;
+  return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-auto" style={{ zIndex: 0, willChange: 'transform' }} />;
 }
 
 // ── Sandboxed AI Demo Chat for Homepage ──────────────────────────────────────
@@ -387,7 +387,7 @@ export default function HomePage() {
     { icon: TrendingUp, title: 'Trend Pulse', desc: 'Real-time global market intelligence with 3D visualization. See what\'s pumping before the herd. Alpha on tap.', page: 'trends', color: '#06b6d4', stats: 'Real-time' },
     { icon: Phone, title: 'Direct Outreach', desc: 'VoIP calling, SMS blasts, voicemail drops. Skip the inbox bullshit — go direct to decision makers and close faster.', page: 'leads', color: '#f59e0b', stats: 'Multi-channel' },
     { icon: Bot, title: 'GOATED AI Engine', desc: 'Custom AI with RSI, MACD, Bollinger Bands, regime detection, and predictive scoring. Not a ChatGPT wrapper — a proprietary intelligence engine built for alpha.', color: '#a855f7', action: () => setAiOpen(true), stats: 'Custom AI' },
-    { icon: Globe, title: 'Prediction Markets', desc: '25+ live prediction markets across crypto, politics, tech & macro. Spread analysis vs Kalshi & Polymarket. See the future, bet on it, profit.', page: 'market', color: '#ef4444', stats: 'Live odds' },
+    { icon: Globe, title: 'Prediction Markets', desc: '25+ live prediction markets across crypto, politics, tech & macro. Spread analysis vs Kalshi & Polymarket. See the future, bet on it, profit.', page: 'trends', color: '#ef4444', stats: 'Live odds' },
     { icon: Globe, title: 'Sentiment Fusion', desc: 'Multi-source sentiment engine: Fear/Greed Index, news NLP, market momentum, social signals. All fused into one composite score. Absolute alpha.', page: 'trends', color: '#ec4899', stats: 'Multi-source' },
     { icon: Wallet, title: 'Solana Wallet', desc: 'Native Phantom integration. USDC settlements, on-chain commission tracking, instant payouts. Your bags, your keys, your money.', page: 'wallet', color: '#f97316', stats: 'Solana-first' },
     { icon: BarChart3, title: 'Command Center', desc: 'Full pipeline analytics, autonomous AI agents, real-time KPIs. One dashboard to rule them all. Total fucking control.', page: 'dashboard', color: '#8b5cf6', stats: 'Full control' },

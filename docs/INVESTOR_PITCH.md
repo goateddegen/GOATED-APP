@@ -1,8 +1,8 @@
-# GOATED Solutions -- Revenue Intelligence OS
+# GOATED Solutions -- B2B Sales Intelligence + Degen Alpha Platform
 
 **Investor Pitch Deck**
 
-**Date:** March 2026 | **Version:** 5.0 | **Stage:** Pre-Seed
+**Date:** March 2026 | **Version:** 5.1 | **Stage:** Pre-Seed
 
 ---
 
@@ -34,30 +34,30 @@ Sales teams are drowning in tool sprawl. The average revenue team uses **5-8 dis
 
 ## 2. THE SOLUTION
 
-**GOATED is an AI-native revenue intelligence platform that replaces your entire sales stack -- for free.**
+**GOATED is a B2B Sales Intelligence + Degen Alpha Platform -- $0 platform fee, revenue on results.**
 
-Users pay nothing to access the full platform. GOATED earns revenue through a **10% commission on closed deals only.** When our users make money, we make money. Incentives are perfectly aligned.
+Users pay nothing to access the full platform. GOATED earns revenue through multiple aligned streams: **10-15% commission on closed B2B deals, 2-5% betting spreads on prediction markets/casino, and 1-2% on crypto transactions.** When our users make money, we make money. Incentives are perfectly aligned.
 
 ### Core Capabilities
 
 | Capability | Description |
 |------------|-------------|
-| **500K+ AI-Scored Leads** | Enriched B2B contacts with firmographic, technographic, and behavioral data. AI scoring prioritizes leads most likely to convert. |
-| **GOATED Guarantee Closing System** | AI-analyzed 6-step closing guide for every lead: Research, Outreach, Discovery, Value Demo, Negotiation, Close. 90%+ guaranteed close rate for leads scored 85+ when the full playbook is followed. AI coaching at every step with real-time objection handling. If the playbook is followed and the deal does not close, GOATED analyzes the failure and optimizes the next approach. No other platform guarantees close rates. |
-| **VoIP / SMS / Voicemail Outreach** | Built-in calling, texting, and voicemail drop. No need for Outreach, Salesloft, or separate dialers. |
-| **TrendPulse Market Intelligence** | Real-time cross-platform sentiment analysis pulling from Twitter/X, Reddit, news, and on-chain data. Bloomberg-grade market signals for everyone. |
-| **Prediction Markets** | AI-powered spread analysis on market events. Built on real-time data from Polymarket, CoinGecko, and Alternative.me. |
-| **Phantom / Solana Wallet Integration** | Native crypto payments, USDC settlements, and on-chain commission tracking via smart contracts. |
-| **GOATED AI Co-Pilot** | Powered by Anthropic's Claude. Embedded in every feature -- lead research, email drafting, call coaching, market analysis, deal strategy. Not a sidebar widget. A true co-pilot. |
+| **AI-Powered Lead Intelligence** | 500K+ scored leads with firmographic, technographic, and behavioral data via Apollo.io integration. AI scoring prioritizes leads most likely to convert. |
+| **TrendPulse Alpha Intel** | Deep research, sentiment analysis, and live market data. Real-time cross-platform intelligence pulling from Twitter/X, Reddit, news, CoinGecko, Kalshi, and Polymarket. |
+| **DEGEN Mode (Shift+D)** | Casino games, alpha plays, closer leaderboards, and betting. A toggleable experience layer that transforms the platform into a high-energy trading/closing environment. |
+| **LaunchPad** | Prediction markets and project incubator. AI-powered spread analysis on market events with integrated betting and project launching capabilities. |
+| **AI Sales Coach** | Objection handling, MEDDPICC framework integration, and close playbooks. Real-time coaching at every stage of the deal cycle. |
+| **Voice Briefings** | Web Speech API-powered lead summaries. Audio briefings on any lead or market trend for on-the-go intelligence. |
+| **GOATED AI Co-Pilot** | Powered by Anthropic's Claude AI. Embedded in every feature -- lead research, email drafting, call coaching, market analysis, deal strategy. Not a sidebar widget. A true co-pilot. |
 
 ### What Makes This Different
 
-Traditional platforms sell you software. GOATED sells you outcomes. The zero-subscription model means:
+Traditional platforms sell you software. GOATED sells you outcomes. The $0 platform fee model means:
 
 - **Zero barrier to entry.** Any founder, any sales rep, any team size.
-- **Aligned incentives.** We only win when users close deals.
+- **Aligned incentives.** We only win when users close deals or engage with markets.
 - **Viral growth.** "I closed a $50K deal using a free tool" is the most powerful referral message possible.
-- **Guaranteed close rates.** The GOATED Guarantee Closing System is the ONLY feature in the market that guarantees 90%+ close rates on high-scoring leads when the AI playbook is followed. No CRM, no leadgen platform, no sales tool has ever offered this.
+- **Multi-stream monetization.** Commission on B2B deals (10-15%), betting spreads (2-5%), crypto transaction fees (1-2%), and LaunchPad listings ($499-$2,499/mo).
 
 ### Ideal Customer Profiles (ICP)
 
@@ -98,67 +98,75 @@ Conservative capture of 2.5% of SAM through product-led growth, targeting crypto
 
 ## 4. REVENUE MODEL
 
-### Primary: 10% Commission on Closed Deals
+### Revenue Streams
 
-The core business model is simple. Users find leads, run outreach, close deals, and GOATED takes 10% of the deal value.
+GOATED operates on a $0 platform fee model with multiple aligned revenue streams:
 
-- **Average deal size (SMB):** $10,000 - $50,000
-- **Average commission per deal:** $1,000 - $5,000
-- **Target: 100 active closers x 2 deals/month x $2,500 avg commission = $500K/month**
+| Stream | Rate | Description |
+|--------|------|-------------|
+| **B2B Deal Commission** | 10-15% | Commission on deals closed through the platform |
+| **Betting Spreads** | 2-5% | Spreads on prediction markets and casino games |
+| **Crypto Transaction Fees** | 1-2% | Fees on crypto transactions processed through the platform |
+| **LaunchPad Featured Listings** | $499-$2,499/mo | Featured project listings and incubator access |
+| **Partner Program** | Revenue share | Tiered partner program with revenue sharing |
 
-### Secondary Revenue Streams
+### Partner Program
 
-| Stream | Pricing | Target Revenue |
-|--------|---------|----------------|
-| Enterprise Custom Plans | $5,000 - $25,000/month | $100K - $250K MRR |
-| Affiliate Program | 30% lifetime commission on referral deal closes | $25K - $75K MRR |
-| Data / API Licensing | $2,000 - $10,000/month per client | $20K - $50K MRR |
-| Premium Features | Unlimited VoIP, advanced analytics, priority AI | $50K - $100K MRR |
+The GOATED Partner Program provides tiered access for businesses and creators:
 
-### Affiliate Program
+| Tier | Price | Features |
+|------|-------|----------|
+| **Free Listing** | $0/mo | Basic project listing, community access |
+| **Featured** | $499/mo | Featured placement, priority support, analytics dashboard |
+| **Premium** | $2,499/mo | Premium placement, project incubator, dedicated account manager |
+| **Enterprise** | Custom | White-label, API access, custom integrations |
 
-The GOATED Affiliate Program pays **30% lifetime commission** on all deal closes from referred users. Inspired by Magic Eden Launchpad and creator marketplace affiliate models. Features include:
-- In-app application form (account-gated, one submission per user)
-- Progress tracker in affiliate dashboard
-- Goal: Partners 10000x potential sales for all creators and closers on the platform
-- Payouts via Stripe (fiat) or USDC on Solana
+Additional partner features:
+- Project incubator for launching new products
+- Creator economy integration via Whop
+- Revenue share on referred transactions
 
 ### Revenue Projections
 
 | Timeline | MRR Target | Key Driver |
 |----------|-----------|------------|
-| Month 1 | $25,000 | 250 active closers at avg $100/mo commission |
-| Month 3 | $100,000 | 1,000 closers + enterprise pilots |
-| Month 6 | $250,000 | 5,000 closers + affiliate network kicking in |
-| Year 1 | $500K - $1M | Full flywheel: closers + enterprise + affiliates + data licensing |
+| Month 1 | $25,000 | 250 active closers at avg $100/mo commission + early betting volume |
+| Month 3 | $100,000 | 1,000 closers + prediction market traction + LaunchPad launches |
+| Month 6 | $250,000 | 5,000 closers + partner program scaling + casino/betting volume |
+| Year 1 | $500K - $1M | Full flywheel: closers + betting + partners + LaunchPad + crypto fees |
 
 ---
 
 ## 5. TRACTION
 
-### Current State (March 2026 -- v4.0 Live)
+### Current State (March 2026 -- v5.1 Live)
 
 - Full-stack platform deployed on Vercel with serverless API architecture
 - Real-time data integrations operational:
   - **CoinGecko** -- live cryptocurrency pricing and market data
-  - **Alternative.me** -- Fear and Greed Index for sentiment
-  - **CryptoCompare** -- social stats and trading signals
+  - **Kalshi** -- regulated prediction market data and odds
   - **Polymarket** -- prediction market event data
-- 3D interactive globe visualization for global market sentiment
-- AI-powered lead scoring engine with 500K+ enriched contacts
-- GOATED AI co-pilot integrated (powered by Claude / Anthropic)
-- VoIP/SMS outreach architecture built and ready for carrier integration
-- Phantom wallet connection for Solana-native payments
+  - **Apollo.io** -- B2B lead intelligence and enrichment
+  - **Alternative.me** -- Fear and Greed Index for sentiment
+- AI-Powered Lead Intelligence with 500K+ scored leads
+- TrendPulse Alpha Intel with deep research and sentiment analysis
+- DEGEN Mode (Shift+D) with casino games, alpha plays, and closer leaderboards
+- LaunchPad for prediction markets and project incubation
+- AI Sales Coach with MEDDPICC framework and objection handling
+- Voice Briefings via Web Speech API for lead summaries
+- GOATED AI co-pilot integrated (powered by Claude AI / Anthropic)
+- Partner program with Whop integration for creator economy
+- Supabase for auth and real-time data
 
 ### Technical Architecture
 
-- **Frontend:** React + Vite + TailwindCSS (production-optimized SPA)
-- **Backend:** Vercel serverless functions (Node.js) + Vercel Edge Functions for latency reduction
-- **AI:** Anthropic Claude API (real-time co-pilot)
-- **Data:** Multi-source real-time aggregation pipeline
-- **Payments:** Stripe (fiat) + Solana/Phantom (crypto)
+- **Frontend:** React 18 + Vite + Tailwind CSS + Zustand + Three.js
+- **Backend:** Vercel Serverless + Edge Caching
+- **AI:** Claude AI (Anthropic) for all LLM features
+- **Data APIs:** CoinGecko, Kalshi, Polymarket, Apollo.io
+- **Auth + Real-time:** Supabase
+- **Creator Economy:** Whop integration
 - **Observability:** Vercel Analytics + Speed Insights for performance monitoring
-- **Infrastructure:** Vercel KV for rate limiting, Vercel Blob for file storage, Vercel Cron for scheduled data refreshes
 
 ---
 
@@ -176,28 +184,28 @@ Every sales intelligence company charges $100-$500/seat/month. This prices out m
 
 Salesforce added Einstein after 20 years. HubSpot added AI after 15 years. GOATED was built with AI at the core from day one. Every feature -- lead scoring, outreach, market analysis, deal coaching -- is powered by AI natively. This is not a chatbot in a sidebar. It is the operating system.
 
-### 4. Cross-Platform Sentiment Engine
+### 4. TrendPulse Alpha Intel
 
-No competitor aggregates real-time sentiment from Twitter/X, Reddit, on-chain data, news feeds, and prediction markets into a single intelligence layer. TrendPulse gives GOATED users market context that Apollo, Salesforce, and Outreach simply do not have.
+No competitor aggregates real-time sentiment from Twitter/X, Reddit, on-chain data, news feeds, and prediction markets (Kalshi, Polymarket) into a single intelligence layer. TrendPulse gives GOATED users deep research, sentiment analysis, and live market data that Apollo, Salesforce, and Outreach simply do not have.
 
-### 5. Solana-Native Payments Infrastructure
+### 5. DEGEN Mode (Shift+D)
 
-Instant USDC settlements. On-chain commission tracking via smart contracts. Trustless escrow for deal commissions. This is not just a crypto feature -- it is a fundamentally better payment rail for commission-based revenue.
+A toggleable experience layer that no enterprise tool dares to build. Casino games, alpha plays, closer leaderboards, and betting -- all integrated into the sales intelligence platform. This creates viral moments, screenshot-worthy content, and a brand identity that is impossible for competitors to replicate.
 
-### 6. Embedded AI Co-Pilot in Every Feature
+### 6. Embedded AI Co-Pilot + Sales Coach
 
-GOATED AI is not a separate product. It is woven into lead research, email composition, call preparation, market analysis, and deal strategy. Users interact with AI naturally as part of their workflow, not as a bolt-on tool.
+GOATED AI is not a separate product. It is woven into lead research, email composition, call preparation, market analysis, and deal strategy. The AI Sales Coach provides MEDDPICC framework guidance, objection handling, and close playbooks. Voice Briefings via Web Speech API deliver audio summaries of any lead or trend on demand.
 
 ### Head-to-Head Competitive Positioning
 
 | Competitor | Their Price | What They Offer | GOATED Advantage |
 |------------|------------|-----------------|------------------|
-| **Apollo** | $79/mo | Leads + basic email sequences | Free + AI agent + VoIP + prediction markets + guaranteed close rate |
-| **ZoomInfo** | $250/mo | Contact database + intent data | Better AI, free, and adds market intel layer |
-| **Gong** | $150/seat | Call recording + conversation intelligence | Includes call coaching + everything else for $0 |
-| **Kalshi/Polymarket** | Free (trading fees) | Prediction market trading | Adds B2B intelligence layer on top of prediction markets |
+| **Apollo** | $79/mo | Leads + basic email sequences | $0 platform fee + AI Sales Coach + prediction markets + DEGEN Mode |
+| **ZoomInfo** | $250/mo | Contact database + intent data | Better AI, free, TrendPulse alpha intel layer |
+| **Gong** | $150/seat | Call recording + conversation intelligence | Includes AI Sales Coach with MEDDPICC + everything else for $0 |
+| **Kalshi/Polymarket** | Free (trading fees) | Prediction market trading | Adds B2B intelligence + LaunchPad incubator + casino games |
 
-**Key differentiator: GOATED is the ONLY platform that GUARANTEES close rates with an AI-guided playbook.**
+**Key differentiator: GOATED is the ONLY platform that combines B2B sales intelligence with degen alpha, prediction markets, and casino -- all at $0 platform fee.**
 
 ---
 

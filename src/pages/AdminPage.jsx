@@ -1578,7 +1578,7 @@ export default function AdminPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: 'View Leads', icon: Users, color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', action: () => setPage('leads') },
-            { label: 'Market Intel', icon: BarChart3, color: 'bg-blue-500/15 text-blue-400 border-blue-500/30', action: () => setPage('market') },
+            { label: 'Market Intel', icon: BarChart3, color: 'bg-blue-500/15 text-blue-400 border-blue-500/30', action: () => setPage('trends') },
             { label: 'AI Strategy', icon: Bot, color: 'bg-purple-500/15 text-purple-400 border-purple-500/30', action: () => setAiOpen(true) },
             { label: 'Dashboard', icon: PieChart, color: 'bg-orange-500/15 text-orange-400 border-orange-500/30', action: () => setPage('dashboard') },
           ].map(qa => (

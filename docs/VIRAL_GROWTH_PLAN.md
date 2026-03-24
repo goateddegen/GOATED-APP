@@ -1,14 +1,20 @@
 # GOATED — Viral Growth & DEGEN MODE Strategy
 
-**How to make this the Jordan Belfort / Wolf of Wall Street of online startups**
+**B2B Sales Intelligence + Degen Alpha Platform — Viral Growth Playbook**
+
+**Version:** 5.1 | **Date:** March 2026
 
 ---
 
 ## THE DEGEN MODE PHILOSOPHY
 
-DEGEN MODE isn't just a feature — it's a BRAND IDENTITY. It's what separates GOATED from every boring-ass enterprise tool on the market.
+DEGEN MODE (activated via **Shift+D**) isn't just a feature — it's a BRAND IDENTITY. It's what separates GOATED from every boring-ass enterprise tool on the market. It includes casino games, alpha plays, closer leaderboards, and betting — all integrated into the platform.
 
 **Core Principle:** Give power users a competitive edge wrapped in entertainment. Make it so fun that people screenshot it, share it, and flex with it.
+
+**Platform:** B2B Sales Intelligence + Degen Alpha Platform | $0 platform fee, 10-15% commission on closed deals, 2-5% betting spreads, 1-2% crypto transaction fees
+
+**Tech Stack:** React 18 + Vite + Tailwind CSS + Zustand + Three.js | Vercel Serverless + Edge Caching | Claude AI (Anthropic) | CoinGecko, Kalshi, Polymarket, Apollo.io | Supabase | Whop
 
 **Target Audience:**
 - Crypto degens who live on Twitter/X
@@ -21,12 +27,14 @@ DEGEN MODE isn't just a feature — it's a BRAND IDENTITY. It's what separates G
 
 ## DEGEN MODE FEATURE ROADMAP
 
-### Phase 1: Visual & Vibe (SHIPPED - v4.0)
-- [x] Toggle switch in sidebar with fire icon
+### Phase 1: Visual & Vibe (SHIPPED - v5.1)
+- [x] **Shift+D** keyboard shortcut to toggle DEGEN Mode
+- [x] Casino games integration
+- [x] Alpha plays and trade setups
+- [x] Closer leaderboards
+- [x] Betting on prediction markets
 - [x] Orange/fire theme replaces green neon
-- [x] Degen-specific ticker data (DEGEN Score: 420/100, Leverage: 100x, etc.)
-- [x] Custom cursor with orange glow
-- [x] "WOLF MODE ACTIVATED" version tag
+- [x] Degen-specific ticker data
 - [x] Persistent state (localStorage)
 
 ### Phase 2: Sound & Animation (Next Sprint)

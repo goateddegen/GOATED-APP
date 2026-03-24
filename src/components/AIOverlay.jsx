@@ -61,10 +61,10 @@ const FEATURE_LINKS = {
   trend:      { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
   trendpulse: { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
   sentiment:  { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
-  market:     { page: 'market',    label: 'Markets',    icon: Globe },
-  markets:    { page: 'market',    label: 'Markets',    icon: Globe },
-  prediction: { page: 'market',    label: 'Markets',    icon: Globe },
-  crypto:     { page: 'market',    label: 'Markets',    icon: Globe },
+  market:     { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
+  markets:    { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
+  prediction: { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
+  crypto:     { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
   wallet:     { page: 'wallet',    label: 'Wallet',     icon: Wallet },
   solana:     { page: 'wallet',    label: 'Wallet',     icon: Wallet },
   dashboard:  { page: 'dashboard', label: 'Dashboard',  icon: BarChart3 },
@@ -1006,7 +1006,7 @@ export default function AIOverlay() {
     if (currentPage === 'leads') return 'Analyzing lead data...';
     if (currentPage === 'trends') return 'Scanning market signals...';
     if (currentPage === 'dashboard') return 'Optimizing pipeline...';
-    if (currentPage === 'market') return 'Processing market data...';
+    if (currentPage === 'market') return 'Scanning market signals...';
     if (currentPage === 'wallet') return 'Crunching revenue numbers...';
     return 'Thinking...';
   }, [currentPage]);

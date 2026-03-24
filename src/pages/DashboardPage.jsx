@@ -15,12 +15,12 @@ import { useStore, fmt } from '../hooks/useStore';
 const REFRESH_INTERVAL = 15_000;
 
 // ---------------------------------------------------------------------------
-// Real-time ms clock hook — updates every 100ms for live feel
+// Real-time clock hook — updates every 1000ms (was 100ms — no visual benefit below 1s)
 // ---------------------------------------------------------------------------
 function useRealtimeClock() {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    const iv = setInterval(() => setNow(Date.now()), 100);
+    const iv = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(iv);
   }, []);
   return now;

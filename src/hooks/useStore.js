@@ -315,16 +315,17 @@ const areaCodeLen = usAreaCodes.length;
 // Calculated recommendation scores
 // ---------------------------------------------------------------------------
 function calcConversionProb(score, priority, status, dealValue, employees) {
-  let p = score * 0.4;
-  if (priority === 'critical') p += 20;
-  else if (priority === 'high') p += 12;
-  else if (priority === 'medium') p += 5;
-  const sw = { won: 95, negotiation: 30, proposal: 22, qualified: 15, contacted: 8, new: 3, nurturing: 5, 're-engaged': 10, 'on-hold': -5, unresponsive: -10, lost: -20 };
+  // Base: 20-85% range with natural distribution
+  let p = 20 + score * 0.35; // 20-55 base from score
+  if (priority === 'critical') p += 15;
+  else if (priority === 'high') p += 10;
+  else if (priority === 'medium') p += 4;
+  const sw = { won: 30, negotiation: 20, proposal: 15, qualified: 10, contacted: 5, new: 0, nurturing: 3, 're-engaged': 7, 'on-hold': -3, unresponsive: -5, lost: -8 };
   p += sw[status] || 0;
-  if (employees >= 50 && employees <= 200) p += 8;
-  else if (employees > 200) p += 4;
+  if (employees >= 50 && employees <= 200) p += 5;
+  else if (employees > 200) p += 3;
   if (dealValue > 80000) p -= 3;
-  return Math.max(1, Math.min(99, Math.round(p)));
+  return Math.max(20, Math.min(85, Math.round(p)));
 }
 
 function calcBestContact(priority, score, dealValue, industry) {
@@ -408,7 +409,16 @@ function generateLeads(count = DEFAULT_LEAD_COUNT) {
     const status = statuses[(rand() * statLen) | 0];
     const score = (rand() * 100) | 0;
     const engagementScore = (rand() * 100) | 0;
-    const dealValue = ((rand() * 41500) | 0) + 8500;
+    // Deal value distribution: most $8.5K-$25K, fewer $25K-$50K, rare $50K+
+    // Use combined random samples for a right-skewed natural distribution
+    const dvRoll = rand();
+    const dealValue = dvRoll < 0.65
+      ? ((rand() * 16500) | 0) + 8500          // 65% chance: $8,500 - $25,000
+      : dvRoll < 0.88
+        ? ((rand() * 25000) | 0) + 25000       // 23% chance: $25,000 - $50,000
+        : dvRoll < 0.96
+          ? ((rand() * 25000) | 0) + 50000     // 8% chance:  $50,000 - $75,000
+          : ((rand() * 75000) | 0) + 75000;    // 4% chance:  $75,000 - $150,000 (enterprise)
     const employees = ((rand() * 495) | 0) + 5;
     const revenue = ((rand() * 19900000) | 0) + 100000;
 

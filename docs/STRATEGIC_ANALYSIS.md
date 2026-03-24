@@ -1,19 +1,21 @@
 # GOATED — STRATEGIC ANALYSIS & $100K MRR ROADMAP
 
 **Date:** March 2026
-**Version:** 5.0 — FINAL CONSOLIDATED VISION
+**Version:** 5.1 — FINAL CONSOLIDATED VISION
 **Status:** Investor-Ready | Internal Strategy
 
 ---
 
 ## VISION
 
-GOATED = **Palantir for Crypto/Predictive Trading + Apollo for B2B Sales** — built better, in one platform, taking 10% of everything. **The ONLY platform that GUARANTEES close rates with an AI-guided playbook.**
+GOATED = **B2B Sales Intelligence + Degen Alpha Platform** — built better, in one platform, with $0 platform fee and revenue on results.
+
+**Tech Stack:** React 18 + Vite + Tailwind CSS + Zustand + Three.js | Vercel Serverless + Edge Caching | Claude AI (Anthropic) | CoinGecko, Kalshi, Polymarket, Apollo.io APIs | Supabase for auth + real-time data | Whop integration for creator economy
 
 Three revenue verticals. One ecosystem. One brand.
-1. **Predictive Intelligence** — TrendPulse, prediction markets, social sentiment, betting spreads (real-time, global, no dummy data)
-2. **B2B Revenue Engine** — AI-powered lead discovery, VoIP/SMS outreach, deal closing with 10% commission, powered by the GOATED Guarantee Closing System
-3. **Web3 Finance Layer** — Solana-first wallet, GOAT token, on-chain settlement for bets and deals
+1. **Predictive Intelligence** — TrendPulse Alpha Intel (deep research, sentiment analysis, live market data), prediction markets, casino, betting spreads (2-5%)
+2. **B2B Revenue Engine** — AI-powered lead intelligence (500K+ scored leads, Apollo.io), AI Sales Coach (MEDDPICC, objection handling, close playbooks), Voice Briefings, 10-15% commission on closed deals
+3. **Degen Alpha Layer** — DEGEN Mode (Shift+D) with casino games, alpha plays, closer leaderboards, LaunchPad (prediction markets + project incubator), partner program via Whop
 
 ---
 

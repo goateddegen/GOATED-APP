@@ -2,27 +2,39 @@
 
 **Comprehensive Monetization Architecture**
 
-**Date:** March 2026 | **Version:** 1.0
+**Date:** March 2026 | **Version:** 5.1
 
 ---
 
 ## EXECUTIVE SUMMARY
 
-GOATED's monetization strategy is built on a core principle: **users pay nothing until they succeed.** The platform is free to use. Revenue is generated through five distinct streams, with commission on closed deals as the primary engine. This document details each revenue stream, the payment infrastructure required, commission tracking mechanisms, and the financial projections underpinning the model.
+GOATED's monetization strategy is built on a core principle: **$0 platform fee, revenue on results.** The platform is free to use. Revenue is generated through multiple aligned streams:
+
+- **10-15% commission** on closed B2B deals
+- **2-5% betting spreads** on prediction markets and casino games
+- **1-2% fees** on crypto transactions
+- **$499-$2,499/mo** for LaunchPad featured listings
+- **Revenue share** through the Partner Program (Free, Featured $499/mo, Premium $2,499/mo, Enterprise custom)
+
+This document details each revenue stream, the payment infrastructure required, commission tracking mechanisms, and the financial projections underpinning the model.
+
+### Platform Overview
+
+GOATED Solutions is a B2B Sales Intelligence + Degen Alpha Platform built on: React 18 + Vite + Tailwind CSS + Zustand + Three.js, Vercel Serverless + Edge Caching, Claude AI (Anthropic), CoinGecko/Kalshi/Polymarket/Apollo.io APIs, Supabase for auth + real-time data, and Whop integration for creator economy.
 
 ---
 
-## REVENUE STREAM 1: Deal Commission (10%)
+## REVENUE STREAM 1: Deal Commission (10-15%)
 
-**Primary revenue engine. Expected to represent 50-60% of total revenue at scale.**
+**Primary revenue engine. Expected to represent 40-50% of total revenue at scale.**
 
 ### How It Works
 
-1. User discovers leads through GOATED's AI-scored database
-2. User runs outreach campaigns (VoIP calls, SMS, email sequences) through the platform
+1. User discovers leads through GOATED's AI-Powered Lead Intelligence (500K+ scored leads, Apollo.io integration)
+2. User leverages AI Sales Coach (MEDDPICC framework, objection handling, close playbooks) and Voice Briefings
 3. User moves lead through pipeline stages: Contacted -> Qualified -> Proposal -> Negotiation -> Won
 4. When deal status moves to "Won," the user reports the deal value
-5. GOATED charges a 10% commission on the reported deal value
+5. GOATED charges a 10-15% commission on the reported deal value
 6. Payment is collected via Stripe (fiat) or Solana smart contract (crypto)
 
 ### Commission Structure
