@@ -2391,6 +2391,20 @@ export default function LeadsPage({ onSelect }) {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, []);
 
+  // Keyboard shortcuts for leads page actions
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const key = e.key;
+      if (key === 'n' || key === 'N') { /* Add Lead - no-op placeholder, button has no handler yet */ }
+      if (key === '1') { e.preventDefault(); setViewMode('table'); }
+      if (key === '2') { e.preventDefault(); setViewMode('map'); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   // Lazily initialize leads outside render to avoid setState-during-render
   useEffect(() => {
     if (!allLeads) getLeads();
@@ -2683,6 +2697,10 @@ export default function LeadsPage({ onSelect }) {
     if (liveMode) fetchLiveLeads();
   }, [liveMode, fetchLiveLeads]);
 
+  // Deal size tier filter (must be declared before useMemo that uses it)
+  const [dealSizeTier, setDealSizeTier] = useState('all'); // 'all' | 'quick' | 'mid' | 'enterprise'
+  const [filterRegion, setFilterRegion] = useState('all');
+  const [smartQueueEnabled, setSmartQueueEnabled] = useState(false);
   // ---------------------------------------------------------------------------
   // Apply AI Filters to local data + geographic grouping + deal prioritization + user profiling
   // ---------------------------------------------------------------------------
@@ -2857,12 +2875,36 @@ export default function LeadsPage({ onSelect }) {
     showToast('AI filters cleared');
   }, [setSearch, setFilterPriority, setFilterStatus, setLeadsPage, showToast]);
 
-  const startIndex = 0;
-  const allOnPageSelected = leads.length > 0 && leads.every(l => selectedIds.has(l.id));
+  // Pagination computed values
+  const currentPage = liveMode ? (livePage - 1) : leadsPage;
+  const totalPages = liveMode ? liveTotalPages : Math.max(1, Math.ceil(totalFiltered / leadsPerPage));
+  const startIndex = currentPage * leadsPerPage;
 
+  const handlePageChange = useCallback((p) => {
+    if (p < 0 || p >= totalPages) return;
+    if (liveMode) {
+      setLivePage(p + 1);
+    } else {
+      setLeadsPage(p);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [liveMode, totalPages, setLivePage, setLeadsPage]);
+
+  const getPageNumbers = useCallback(() => {
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(0, currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible);
+    if (end - start < maxVisible) start = Math.max(0, end - maxVisible);
+    if (start > 0) { pages.push(0); if (start > 1) pages.push('...'); }
+    for (let i = start; i < end; i++) pages.push(i);
+    if (end < totalPages) { if (end < totalPages - 1) pages.push('...'); pages.push(totalPages - 1); }
+    return pages;
+  }, [currentPage, totalPages]);
+
+  const allOnPageSelected = leads.length > 0 && leads.every(l => selectedIds.has(l.id));
   const sortableColumns = [
     { key: 'name', label: 'Lead' }, { key: 'company', label: 'Company' }, { key: 'score', label: 'Score' },
-    { key: 'dealValue', label: 'Value' }, { key: 'priority', label: 'Priority' }, { key: 'status', label: 'Status' },
     { key: 'last_activity', label: 'Activity' }, { key: 'momentum', label: 'Momentum' },
   ];
 
@@ -2875,14 +2917,11 @@ export default function LeadsPage({ onSelect }) {
   // DEGEN intel panel state - closed by default
   const [degenIntelOpen, setDegenIntelOpen] = useState(false);
 
-  // Deal size tier filter
-  const [dealSizeTier, setDealSizeTier] = useState('all'); // 'all' | 'quick' | 'mid' | 'enterprise'
+  // Deal size tier filter (declared above useMemo)
 
   // Smart Queue toggle
-  const [smartQueueEnabled, setSmartQueueEnabled] = useState(false);
 
   // Region filter
-  const [filterRegion, setFilterRegion] = useState('all');
 
   // SMS / LinkedIn outreach quick action state
   const [smsLeadId, setSmsLeadId] = useState(null);
@@ -3008,14 +3047,9 @@ export default function LeadsPage({ onSelect }) {
         <div className="flex items-center gap-2 flex-wrap">
           {/* Table / Map toggle */}
           <div className="flex items-center rounded-lg border border-white/[0.05] overflow-hidden">
-            <button onClick={() => setViewMode('table')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${viewMode === 'table' ? 'bg-brand/15 text-brand' : 'bg-surface-2 text-slate-400 hover:text-white'}`}>
-              <Table2 size={14} /> <span className="hidden sm:inline">Table</span>
-            </button>
-            <button onClick={() => setViewMode('map')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${viewMode === 'map' ? 'bg-brand/15 text-brand' : 'bg-surface-2 text-slate-400 hover:text-white'}`}>
-              <Map size={14} /> <span className="hidden sm:inline">Map</span>
-            </button>
+            <div className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-brand/15 text-brand">
+              <Table2 size={14} /> <span className="hidden sm:inline">Leads</span>
+            </div>
           </div>
           {/* Upcoming schedule badge */}
           {upcomingScheduleCount > 0 && (
@@ -3034,8 +3068,9 @@ export default function LeadsPage({ onSelect }) {
             <Brain size={14} />
             <span className="hidden sm:inline">AI Chat</span>
           </button>
-          <button className="flex items-center gap-2 px-3 py-2 rounded-lg bg-brand text-black font-medium text-sm">
-            <Plus size={16} /><span className="hidden sm:inline">Add Lead</span>
+          <button onClick={() => { useStore.getState().setAiOpen(true); }} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-brand text-black font-medium text-sm">
+            <Plus size={16} /><span className="hidden sm:inline">Find Leads</span>
+            <kbd className="text-[10px] font-mono bg-black/15 rounded px-1 py-0.5 leading-none hidden sm:inline">N</kbd>
           </button>
         </div>
       </div>
@@ -3254,17 +3289,9 @@ export default function LeadsPage({ onSelect }) {
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-3 border border-white/[0.03] text-xs font-medium text-slate-400 hover:text-white hover:border-white/[0.05] transition-colors disabled:opacity-40">
           <Download size={13} /> Export CSV
         </button>
-        <button onClick={() => showToast('CRM sync started — 5,000 leads queued')}
+        <button onClick={() => { if (selectedIds.size === 0) { showToast('Select leads to export first'); return; } handleExportSelected(); }}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-3 border border-white/[0.03] text-xs font-medium text-slate-400 hover:text-white hover:border-white/[0.05] transition-colors">
-          <RefreshCw size={13} /> Sync CRM
-        </button>
-        <button onClick={() => { if (selectedIds.size === 0) { showToast('Select leads first'); return; } showToast(`AI enrichment for ${selectedIds.size} leads`); }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-3 border border-white/[0.03] text-xs font-medium text-slate-400 hover:text-white hover:border-white/[0.05] transition-colors">
-          <Sparkles size={13} /> AI Enrich
-        </button>
-        <button onClick={() => { if (selectedIds.size === 0) { showToast('Select leads first'); return; } showToast(`Email campaign for ${selectedIds.size} leads`); }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-3 border border-white/[0.03] text-xs font-medium text-slate-400 hover:text-white hover:border-white/[0.05] transition-colors">
-          <Send size={13} /> Bulk Email
+          <Send size={13} /> Export Selected
         </button>
 
         <div className="flex-1" />
@@ -3305,15 +3332,8 @@ export default function LeadsPage({ onSelect }) {
         <ScheduleModal lead={scheduleLead} onClose={() => setScheduleLead(null)} onSchedule={handleScheduleConfirm} showToast={showToast} />
       )}
 
-      {/* Map View */}
-      {viewMode === 'map' && (
-        <div className="mb-4">
-          <LeadMapView leads={leads} allLeads={activeLeads} onSelect={handleSelectLead} showToast={showToast} />
-        </div>
-      )}
-
       {/* Table */}
-      <div className={`bg-surface-3 rounded-xl border border-white/[0.03] overflow-hidden ${viewMode === 'map' ? 'hidden' : ''}`}>
+      <div className="bg-surface-3 rounded-xl border border-white/[0.03] overflow-hidden">
         {liveLoading && <div className="h-1 bg-surface-2 overflow-hidden"><div className="h-full bg-brand animate-pulse w-full" /></div>}
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -3327,13 +3347,9 @@ export default function LeadsPage({ onSelect }) {
                 <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider w-10">#</th>
                 {sortableColumns.map(col => <SortHeader key={col.key} field={col.key} label={col.label} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />)}
                 <th className="px-3 py-3 text-left text-xs text-cyan-400 font-medium uppercase tracking-wider">Close %</th>
-                <th className="px-3 py-3 text-left text-xs text-red-400 font-medium uppercase tracking-wider">Deficit</th>
-                <th className="px-3 py-3 text-left text-xs text-emerald-400 font-medium uppercase tracking-wider">Opportunity</th>
-                {degenMode && <th className="px-3 py-3 text-left text-xs text-orange-400 font-bold uppercase tracking-wider">Whale Score</th>}
-                {degenMode && <th className="px-3 py-3 text-left text-xs text-orange-400 font-bold uppercase tracking-wider">Bag Size</th>}
                 <th className="px-3 py-3 text-left text-xs text-amber-400 font-medium uppercase tracking-wider">Timeline</th>
-                <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider">Source</th>
-                <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider">Region</th>
+                <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider hidden lg:table-cell">Location</th>
+                {degenMode && <th className="px-3 py-3 text-left text-xs text-orange-400 font-bold uppercase tracking-wider">Whale</th>}
                 <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -3346,7 +3362,7 @@ export default function LeadsPage({ onSelect }) {
                 const isAlphaPriority = degenMode && l.score > 85;
                 const leadDeficits = getLeadDeficits(l, startIndex + i);
                 const isContactExpanded = expandedContactRows.has(l.id);
-                const tableCols = degenMode ? 21 : 19;
+                const tableCols = degenMode ? 14 : 13;
                 return (
                   <React.Fragment key={l.id}>
                   <tr onClick={() => handleSelectLead(l)}
@@ -3407,48 +3423,6 @@ export default function LeadsPage({ onSelect }) {
 
                     <td className="px-3 py-2.5"><MomentumIndicator momentum={l.momentum} /></td>
 
-                    {/* Deficit Score */}
-                    <td className="px-3 py-2.5">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${deficitBadgeColor(leadDeficits.deficitScore)}`}>
-                        {leadDeficits.deficitScore >= 75 ? <AlertTriangle size={9} /> : leadDeficits.deficitScore >= 50 ? <AlertCircle size={9} /> : <CheckCircle size={9} />}
-                        {leadDeficits.deficitScore}
-                      </span>
-                    </td>
-
-                    {/* Lost Revenue */}
-                    <td className="px-3 py-2.5">
-                      <span className="font-mono text-xs font-bold text-red-400/80">-{fmt(leadDeficits.totalMonthlyLoss)}</span>
-                      <div className="text-[9px] text-slate-600">/month</div>
-                    </td>
-
-                    {/* Opportunity Value */}
-                    <td className="px-3 py-2.5">
-                      <span className="font-mono text-xs font-bold text-emerald-400/80">{fmt(leadDeficits.opportunityValue)}</span>
-                    </td>
-
-                    {/* Whale Score — degen mode only */}
-                    {degenMode && (
-                      <td className="px-3 py-2.5">
-                        <div className="flex items-center gap-1.5">
-                          <div className={`w-10 h-1.5 rounded-full overflow-hidden ${whaleScore >= 100 ? 'bg-orange-500/20' : 'bg-surface-2'}`}>
-                            <div className={`h-full rounded-full ${whaleScore >= 150 ? 'bg-gradient-to-r from-red-500 to-orange-400' : whaleScore >= 80 ? 'bg-orange-500' : 'bg-yellow-600'}`} style={{ width: Math.min(whaleScore, 200) / 2 + '%' }} />
-                          </div>
-                          <span className={`font-bold text-xs font-mono ${whaleScore >= 150 ? 'text-red-400' : whaleScore >= 80 ? 'text-orange-400' : 'text-yellow-600'}`}>{whaleScore}</span>
-                          {whaleScore >= 150 && <Flame size={10} className="text-red-400" />}
-                        </div>
-                      </td>
-                    )}
-
-                    {/* Bag Size (potential earnings) — degen mode only */}
-                    {degenMode && (
-                      <td className="px-3 py-2.5">
-                        <div className="flex items-center gap-1">
-                          <Wallet size={11} className="text-orange-400/60" />
-                          <span className={`font-mono text-sm font-bold ${bagSize >= 100000 ? 'text-orange-400' : bagSize >= 50000 ? 'text-yellow-400' : 'text-slate-400'}`}>{fmt(Math.round(bagSize))}</span>
-                        </div>
-                      </td>
-                    )}
-
                     {/* Closing Timeline */}
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1">
@@ -3457,43 +3431,20 @@ export default function LeadsPage({ onSelect }) {
                       </div>
                     </td>
 
-                    <td className="px-3 py-2.5">{l.lead_source && <DataSourceBadge source={l.lead_source} />}</td>
-
-                    <td className="px-3 py-2.5">
+                    {/* Location — hidden on smaller screens */}
+                    <td className="px-3 py-2.5 hidden lg:table-cell">
                       <div className="flex items-center gap-0.5 text-[11px] text-slate-500">
                         <MapPin size={11} /> {l.location || '--'}
                       </div>
                     </td>
 
-                    {/* Last Called */}
-                    <td className="px-3 py-2.5">
-                      {callRecords[l.id] ? (
-                        <div className="text-[11px]">
-                          <div className={`flex items-center gap-1 ${callRecords[l.id].outcome === 'connected' ? 'text-emerald-400' : callRecords[l.id].outcome === 'voicemail' ? 'text-amber-400' : 'text-slate-500'}`}>
-                            {callRecords[l.id].outcome === 'connected' ? <CheckCircle size={10} /> : callRecords[l.id].outcome === 'voicemail' ? <PhoneForwarded size={10} /> : callRecords[l.id].outcome === 'busy' ? <PhoneOff size={10} /> : <PhoneMissed size={10} />}
-                            <span className="capitalize">{callRecords[l.id].outcome}</span>
-                          </div>
-                          <div className="text-[9px] text-slate-600">{relativeTime(callRecords[l.id].timestamp)}</div>
-                        </div>
-                      ) : (
-                        <span className="text-[10px] text-slate-600">--</span>
-                      )}
-                    </td>
-
-                    {/* Next Follow-up */}
-                    <td className="px-3 py-2.5">
-                      {scheduleRecords[l.id] ? (
-                        <div className="text-[11px]">
-                          <div className="flex items-center gap-1 text-blue-400">
-                            <Calendar size={10} />
-                            <span>{new Date(scheduleRecords[l.id].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                          </div>
-                          <div className="text-[9px] text-slate-600">{new Date(scheduleRecords[l.id].date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>
-                        </div>
-                      ) : (
-                        <span className="text-[10px] text-slate-600">--</span>
-                      )}
-                    </td>
+                    {/* Whale Score — degen mode only */}
+                    {degenMode && (
+                      <td className="px-3 py-2.5">
+                        <span className={`font-bold text-xs font-mono ${whaleScore >= 150 ? 'text-red-400' : whaleScore >= 80 ? 'text-orange-400' : 'text-yellow-600'}`}>{whaleScore}</span>
+                        {whaleScore >= 150 && <Flame size={10} className="text-red-400 inline ml-0.5" />}
+                      </td>
+                    )}
 
                     {/* Actions: Call, Schedule, Intel, Email */}
                     <td className="px-3 py-2.5">
@@ -3510,20 +3461,9 @@ export default function LeadsPage({ onSelect }) {
                         </button>
                         <button onClick={e => { e.stopPropagation(); setExpandedContactRows(prev => { const next = new Set(prev); if (next.has(l.id)) next.delete(l.id); else next.add(l.id); return next; }); }}
                           className={`p-1.5 rounded-lg transition-colors ${isContactExpanded ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-500 hover:text-brand hover:bg-brand/10'}`}
-                          title="Contact Intel">
+                          title="Contact Intel & Templates">
                           <Crosshair size={13} />
                         </button>
-                        <button onClick={e => { e.stopPropagation(); const firstName = l.name.split(' ')[0]; const sms = `Hi ${firstName}, this is [Your Name] from GOATED. I have insights on how ${l.company} could capture more revenue in ${l.industry}. Worth a quick chat? Reply YES for details.`; navigator.clipboard.writeText(sms).then(() => showToast('SMS template copied')); }}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                          title="Copy SMS Template">
-                          <MessageSquare size={13} />
-                        </button>
-                        <button onClick={e => { e.stopPropagation(); const firstName = l.name.split(' ')[0]; const msg = `Hi ${firstName}, I came across ${l.company} and was impressed by your work in ${l.industry}. I help similar companies unlock hidden revenue through digital optimization. Would love to connect.`; navigator.clipboard.writeText(msg).then(() => showToast('LinkedIn message copied')); }}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
-                          title="Copy LinkedIn Message">
-                          <Linkedin size={13} />
-                        </button>
-                        <button onClick={e => e.stopPropagation()} className={`p-1.5 rounded-lg text-slate-500 ${degenMode ? 'hover:text-orange-400 hover:bg-orange-500/10' : 'hover:text-brand hover:bg-brand/10'} transition-colors`}><Mail size={13} /></button>
                       </div>
                     </td>
                   </tr>
@@ -3532,7 +3472,7 @@ export default function LeadsPage({ onSelect }) {
                 );
               })}
               {leads.length === 0 && !liveLoading && (
-                <tr><td colSpan={degenMode ? 21 : 19} className="px-4 py-12 text-center text-slate-500 text-sm">
+                <tr><td colSpan={degenMode ? 14 : 13} className="px-4 py-12 text-center text-slate-500 text-sm">
                   {aiFilters ? 'No leads match your AI query. Try a different prompt or clear filters.' : 'No leads match your filters.'}
                 </td></tr>
               )}

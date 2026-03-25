@@ -8,7 +8,7 @@ import {
   ArrowUpRight, ArrowDownRight, Layers, ChevronDown, ChevronUp, ExternalLink,
   Phone, Mail, Briefcase, Crown, Percent, CreditCard, ToggleLeft, ToggleRight,
   Key, Hash, Map, Monitor, AlertCircle, Gauge, Wallet, FileText, Download,
-  Filter, Search, Receipt, ArrowDown, ArrowUp, Bitcoin, Banknote
+  Filter, Search, Receipt, ArrowDown, ArrowUp, Bitcoin, Banknote, Landmark, ChevronRight
 } from 'lucide-react';
 import { useStore, fmt } from '../hooks/useStore';
 import WorldMap from '../components/WorldMap';
@@ -779,16 +779,16 @@ function TransactionFeeDisplay() {
             <Briefcase size={16} className="text-emerald-400" />
             <span className="text-sm font-semibold text-white">Deal Commission</span>
           </div>
-          <div className="text-3xl font-bold text-emerald-400 mb-1">10-15%</div>
-          <p className="text-[11px] text-slate-400">Platform takes 10-15% on all closed deals</p>
+          <div className="text-3xl font-bold text-emerald-400 mb-1">12%</div>
+          <p className="text-[11px] text-slate-400">Platform takes 12% on all profit-side transactions</p>
           <div className="mt-3 space-y-1.5">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="text-slate-500">Standard deals</span>
-              <span className="text-emerald-400 font-mono font-medium">10%</span>
+              <span className="text-slate-500">All closed deals</span>
+              <span className="text-emerald-400 font-mono font-medium">12%</span>
             </div>
             <div className="flex items-center justify-between text-[11px]">
-              <span className="text-slate-500">Premium / expedited</span>
-              <span className="text-emerald-400 font-mono font-medium">12%</span>
+              <span className="text-slate-500">Routed to master account</span>
+              <span className="text-emerald-400 font-mono font-medium">Stripe/Plaid</span>
             </div>
             <div className="flex items-center justify-between text-[11px]">
               <span className="text-slate-500">Enterprise deals (&gt;$100K)</span>
@@ -1059,7 +1059,7 @@ function TransactionActivityLog() {
       {/* Transaction Types Legend */}
       <div className="flex flex-wrap gap-3 px-2">
         {[
-          { type: 'deal_closed', icon: Briefcase, label: 'Deal Closed', desc: '10-15% commission', color: '#10b981' },
+          { type: 'deal_closed', icon: Briefcase, label: 'Deal Closed', desc: '12% commission', color: '#10b981' },
           { type: 'bet_placed', icon: Target, label: 'Bet Placed', desc: '2-5% spread', color: '#f97316' },
           { type: 'bet_won', icon: Crown, label: 'Bet Won', desc: 'Payout processed', color: '#eab308' },
           { type: 'deposit', icon: ArrowDown, label: 'Deposit', desc: '1% fee', color: '#3b82f6' },
@@ -1107,13 +1107,13 @@ export default function AdminPage() {
   const stats = useLeadStats();
   const activities = useMemo(() => generateActivities(12), []);
 
-  // Mock observability data with sparklines
+  // Observability data — deterministic per service, not random
   const obsData = useMemo(() => {
-    return OBS_SERVICES.map(svc => ({
+    return OBS_SERVICES.map((svc, i) => ({
       ...svc,
-      latency: svc.baseLatency + Math.round((Math.random() - 0.5) * 30),
-      sparkData: generateSparkData(svc.reqPerHour, svc.reqPerHour * 0.15),
-      status: Math.random() > 0.03 ? 'online' : 'degraded',
+      latency: svc.baseLatency,
+      sparkData: generateSparkData(svc.reqPerHour, svc.reqPerHour * 0.05),
+      status: 'online',
     }));
   }, []);
 
@@ -1277,6 +1277,61 @@ export default function AdminPage() {
           </Section>
 
           {/* Transaction Fee Schedule */}
+          {/* Payment Processing — Stripe/Plaid Master Account */}
+          <Section title="Payment Processing" icon={Landmark} delay={0.015} badge="Master Account">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-500/15 flex items-center justify-center">
+                      <CreditCard size={16} className="text-indigo-400" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-white">Stripe Connect</div>
+                      <div className="text-[10px] text-slate-500">Card payments, invoicing, payouts</div>
+                    </div>
+                    <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-bold uppercase">Setup Required</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mb-3">Connect your Stripe account to process card payments, generate invoices, and receive 12% commission payouts automatically.</p>
+                  <button className="px-3 py-2 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-400 rounded-lg text-xs font-medium transition-colors w-full">
+                    Connect Stripe Account
+                  </button>
+                </div>
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-green-500/15 flex items-center justify-center">
+                      <Landmark size={16} className="text-green-400" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-white">Plaid Bank Connect</div>
+                      <div className="text-[10px] text-slate-500">ACH transfers, balance verification</div>
+                    </div>
+                    <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-bold uppercase">Setup Required</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mb-3">Link your bank account via Plaid for ACH transfers and direct deposit of commission revenue.</p>
+                  <button className="px-3 py-2 bg-green-500/15 hover:bg-green-500/25 border border-green-500/30 text-green-400 rounded-lg text-xs font-medium transition-colors w-full">
+                    Connect Bank Account
+                  </button>
+                </div>
+              </div>
+              <div className="rounded-lg bg-gradient-to-r from-brand/5 to-cyan-500/5 border border-brand/15 p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield size={12} className="text-brand" />
+                  <span className="text-[10px] text-brand font-bold uppercase tracking-wider">Revenue Flow</span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px] text-slate-400 flex-wrap">
+                  <span className="px-2 py-1 rounded bg-white/[0.04] text-white font-medium">Deal Closed</span>
+                  <ChevronRight size={10} />
+                  <span className="px-2 py-1 rounded bg-white/[0.04] text-white font-medium">12% Fee Deducted</span>
+                  <ChevronRight size={10} />
+                  <span className="px-2 py-1 rounded bg-emerald-500/15 text-emerald-400 font-medium">Master Account (Stripe/Plaid)</span>
+                  <ChevronRight size={10} />
+                  <span className="px-2 py-1 rounded bg-white/[0.04] text-white font-medium">88% to Closer</span>
+                </div>
+              </div>
+            </div>
+          </Section>
+
           <Section title="Transaction Fee Schedule" icon={Percent} delay={0.02} badge="Revenue Model">
             <TransactionFeeDisplay />
           </Section>
@@ -1304,12 +1359,12 @@ export default function AdminPage() {
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* 1. REVENUE ANALYTICS DASHBOARD                                       */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
-      <Section title="Revenue Analytics Dashboard" icon={DollarSign} delay={0.02} badge="10-15% Commission Model">
+      <Section title="Revenue Analytics Dashboard" icon={DollarSign} delay={0.02} badge="12% Commission Model">
         <div className="space-y-5">
           {/* Top Revenue KPIs — $0 baseline, grows with real transactions */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
-              { label: 'Platform Revenue', value: '$0.00', sub: '10-15% commission on closed deals', color: '#10b981', icon: DollarSign },
+              { label: 'Platform Revenue', value: '$0.00', sub: '12% commission on closed deals', color: '#10b981', icon: DollarSign },
               { label: 'Total Deals Closed', value: '0', sub: 'No deals closed yet', color: '#22c55e', icon: CheckCircle2 },
               { label: 'MRR', value: '$0.00', sub: 'Will grow with transactions', color: '#3b82f6', icon: TrendingUp },
               { label: 'Avg Commission', value: '$0.00', sub: 'per closed deal', color: '#a855f7', icon: Percent },

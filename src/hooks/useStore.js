@@ -121,7 +121,7 @@ const industries = [
 
 const priorities = ['critical', 'high', 'medium', 'low'];
 const statuses = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost', 'nurturing', 're-engaged', 'on-hold', 'unresponsive'];
-const leadSources = ['LinkedIn', 'Cold Email', 'Website', 'Referral', 'Paid Ad', 'Webinar', 'Conference', 'Partner', 'Inbound Form', 'Content Download', 'Social Media', 'Directory Listing', 'SEO', 'Product Hunt', 'G2 Review', 'Podcast'];
+const leadSources = ['Apollo', 'LinkedIn', 'Cold Email', 'Website', 'Referral', 'Paid Ad', 'Webinar', 'Conference', 'Partner', 'Inbound Form', 'Content Download', 'Social Media', 'Directory Listing', 'SEO', 'Product Hunt', 'G2 Review', 'Podcast', 'ZoomInfo', 'Clearbit'];
 const dealStages = ['Discovery', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost', 'Onboarding', 'Churned', 'Upsell'];
 const tagOptions = ['hot-lead', 'enterprise', 'saas', 'ecommerce', 'founder', 'decision-maker', 'champion', 'blocker', 'fast-close', 'high-value', 'needs-nurture', 'competitor-user', 'expansion', 'at-risk', 'referral-source', 'pilot-candidate', 'budget-holder', 'technical-buyer', 'influencer', 'cold-outreach', 'product-led', 'demo-booked', 'contract-sent', 'multi-thread', 'executive-sponsor', 'security-conscious', 'price-sensitive', 'growth-stage', 'series-a', 'series-b'];
 
@@ -518,7 +518,9 @@ function enrichLead(lead) {
   if (lead._enriched) return lead;
 
   const rand = xoshiro128ss(lead.id * 7919); // Deterministic per-lead
-  const firstName = lead.name.split(' ')[0];
+  const nameParts = lead.name.split(' ');
+  const firstName = nameParts[0];
+  const ln = (nameParts.slice(1).join(' ') || 'user').toLowerCase();
   const company = lead.company;
   const industry = lead.industry;
 

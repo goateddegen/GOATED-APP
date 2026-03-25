@@ -13,18 +13,19 @@ import AccountModal from './components/AccountModal';
 import Onboarding from './components/Onboarding';
 import { onAuthStateChange, trackPerformance, trackPageView } from './lib/supabase';
 
-const HomePage = lazy(() => import('./pages/HomePage'));
-const DashboardPage = lazy(() => import('./pages/DashboardPage'));
-const LeadsPage = lazy(() => import('./pages/LeadsPage'));
-const TrendsPage = lazy(() => import('./pages/TrendsPage'));
+// Lazy-loaded pages wrapped in React.memo to reduce CSR overhead on re-renders
+const HomePage = React.memo(lazy(() => import('./pages/HomePage')));
+const DashboardPage = React.memo(lazy(() => import('./pages/DashboardPage')));
+const LeadsPage = React.memo(lazy(() => import('./pages/LeadsPage')));
+const TrendsPage = React.memo(lazy(() => import('./pages/TrendsPage')));
 // MarketPage merged into TrendsPage — kept for reference
 // const MarketPage = lazy(() => import('./pages/MarketPage'));
-const WalletPage = lazy(() => import('./pages/WalletPage'));
-const AdminPage = lazy(() => import('./pages/AdminPage'));
-const BuilderPage = lazy(() => import('./pages/BuilderPage'));
-const WhopPage = lazy(() => import('./pages/WhopPage'));
-const LaunchPadPage = lazy(() => import('./pages/LaunchPadPage'));
-const CasinoPage = lazy(() => import('./pages/CasinoPage'));
+const WalletPage = React.memo(lazy(() => import('./pages/WalletPage')));
+const AdminPage = React.memo(lazy(() => import('./pages/AdminPage')));
+const BuilderPage = React.memo(lazy(() => import('./pages/BuilderPage')));
+const WhopPage = React.memo(lazy(() => import('./pages/WhopPage')));
+const LaunchPadPage = React.memo(lazy(() => import('./pages/LaunchPadPage')));
+const CasinoPage = React.memo(lazy(() => import('./pages/CasinoPage')));
 // CommsPage and FinderPage removed — outreach built into leads side
 
 // Loading fallback — NO black background, NO framer-motion delays
@@ -263,6 +264,18 @@ export default function App() {
   const [degenToast, setDegenToast] = useState(null);
   const degenToastTimer = useRef(null);
   const isMobile = useIsMobile();
+  const [showKeyHint, setShowKeyHint] = useState(true);
+
+  // Scroll to top on page change — safety net for Suspense/lazy loads
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [page]);
+
+  // Auto-hide keyboard shortcut hint after 10 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => setShowKeyHint(false), 10000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Restore persisted user session on mount + Supabase auth listener
   useEffect(() => {
@@ -312,13 +325,26 @@ export default function App() {
   }, [page]);
 
   // Debounced page navigation — prevents choppy rapid-fire page switching
+  // Also scrolls to top so pages never open mid-scroll
   const lastNavRef = useRef(0);
+  const lastNavKeyRef = useRef('');
   const navTo = useCallback((target) => {
     const now = Date.now();
     if (now - lastNavRef.current < 150) return; // 150ms debounce
     lastNavRef.current = now;
     setDetailOpen(false);
     setPage(target);
+    // Immediate scroll — no smooth animation, just snap to top
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    // Re-scroll after React render in case lazy content shifts position
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      const main = document.getElementById('main-content');
+      if (main) {
+        const focusable = main.querySelector('button, a, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusable) focusable.focus({ preventScroll: true });
+      }
+    });
   }, [setDetailOpen, setPage]);
 
   useEffect(() => {
@@ -385,9 +411,13 @@ export default function App() {
       if (hasModifier) return;
 
       // Navigation map — single lookup
+      // Debounce same-key rapid presses (200ms) to reduce CSR overhead on low-memory devices
       const navMap = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', u: 'whop', r: 'launchpad', p: 'casino' };
       const navTarget = navMap[key];
       if (navTarget) {
+        const now = Date.now();
+        if (key === lastNavKeyRef.current && now - lastNavRef.current < 200) return;
+        lastNavKeyRef.current = key;
         e.preventDefault();
         navTo(navTarget);
         return;
@@ -473,6 +503,23 @@ export default function App() {
           {degenToast}
         </div>
       )}
+      {/* Keyboard shortcut hint — fades out after 10s */}
+      {showKeyHint && (
+        <div
+          className="fixed bottom-4 left-4 z-30 text-[11px] text-slate-500 font-mono bg-black/60 backdrop-blur border border-white/[0.05] rounded-lg px-3 py-1.5 pointer-events-none"
+          style={{ animation: 'fadeInOut 10s ease-in-out forwards' }}
+        >
+          Press <kbd className="text-slate-400 bg-white/[0.06] border border-white/[0.08] rounded px-1 py-0.5">?</kbd> for shortcuts
+        </div>
+      )}
+      <style>{`
+        @keyframes fadeInOut {
+          0% { opacity: 0; }
+          5% { opacity: 1; }
+          80% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+      `}</style>
       <Analytics />
       <SpeedInsights />
     </div>

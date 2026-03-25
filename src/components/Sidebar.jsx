@@ -34,7 +34,7 @@ export default function Sidebar() {
   const navContent = (expanded) => (
     <>
       {/* Logo with neon effect — clickable to homepage */}
-      <button onClick={() => { setPage('home'); setMobileMenu(false); }} aria-label="Go to homepage" className="w-full p-4 border-b border-white/[0.03] flex items-center gap-3 relative overflow-hidden group hover:bg-white/[0.02] transition-colors">
+      <button onClick={() => { setPage('home'); setMobileMenu(false); window.scrollTo(0, 0); }} aria-label="Go to homepage" className="w-full p-4 border-b border-white/[0.03] flex items-center gap-3 relative overflow-hidden group hover:bg-white/[0.02] transition-colors">
         {/* Ambient glow behind logo */}
         <div className="absolute inset-0 bg-gradient-to-r from-brand/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" aria-hidden="true" />
         <div className="relative text-brand flex-shrink-0" aria-hidden="true">
@@ -59,7 +59,7 @@ export default function Sidebar() {
         {nav.map(n => (
           <button
             key={n.id}
-            onClick={() => { useStore.getState().setDetailOpen(false); setPage(n.id); setMobileMenu(false); }}
+            onClick={() => { useStore.getState().setDetailOpen(false); setPage(n.id); setMobileMenu(false); window.scrollTo(0, 0); }}
             aria-label={`Navigate to ${n.label}`}
             aria-current={page === n.id ? 'page' : undefined}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 transition-colors duration-200 relative group ${
@@ -75,7 +75,7 @@ export default function Sidebar() {
               <>
                 <span className="flex-1 text-left text-sm">{n.label}</span>
                 {n.badge && <span className="text-[10px] bg-brand/15 text-brand px-2 py-0.5 rounded-full font-medium" aria-label={`${n.label} ${n.badge}`}>{n.badge}</span>}
-                <span className="text-[10px] text-slate-600 font-mono" aria-hidden="true">{n.key}</span>
+                <kbd className="text-[10px] text-slate-600 font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-0.5 leading-none" aria-hidden="true">{n.key}</kbd>
               </>
             )}
           </button>
@@ -90,19 +90,19 @@ export default function Sidebar() {
             <>
               <span className="flex-1 text-left text-sm">GOATED AI</span>
               <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" aria-label="AI is active" />
-              <span className="text-[10px] text-slate-600 font-mono" aria-hidden="true">G</span>
+              <kbd className="text-[10px] text-slate-600 font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-0.5 leading-none" aria-hidden="true">G</kbd>
             </>
           )}
         </button>
         <button onClick={() => { setSearchOpen(true); setMobileMenu(false); }} aria-label="Open search (Cmd+K)"
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-white/[0.02] hover:text-slate-200 transition-colors">
           <Search size={20} className="flex-shrink-0" aria-hidden="true" />
-          {expanded && <><span className="flex-1 text-left text-sm">Search</span><span className="text-[10px] text-slate-600 font-mono" aria-hidden="true">{'\u2318'}K</span></>}
+          {expanded && <><span className="flex-1 text-left text-sm">Search</span><kbd className="text-[10px] text-slate-600 font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-0.5 leading-none" aria-hidden="true">{'\u2318'}K</kbd></>}
         </button>
         <button onClick={() => { setKeybindsOpen(true); setMobileMenu(false); }} aria-label="View keyboard shortcuts"
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-white/[0.02] hover:text-slate-200 transition-colors">
           <Keyboard size={20} className="flex-shrink-0" aria-hidden="true" />
-          {expanded && <><span className="flex-1 text-left text-sm">Shortcuts</span><span className="text-[10px] text-slate-600 font-mono" aria-hidden="true">?</span></>}
+          {expanded && <><span className="flex-1 text-left text-sm">Shortcuts</span><kbd className="text-[10px] text-slate-600 font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-0.5 leading-none" aria-hidden="true">?</kbd></>}
         </button>
       </nav>
 
@@ -120,7 +120,7 @@ export default function Sidebar() {
           {expanded && (
             <>
               <span className="flex-1 text-left text-sm truncate">{isLoggedIn && user ? user.name : 'Account'}</span>
-              <span className="text-[10px] text-slate-600 font-mono" aria-hidden="true">A</span>
+              <kbd className="text-[10px] text-slate-600 font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-0.5 leading-none" aria-hidden="true">A</kbd>
             </>
           )}
         </button>

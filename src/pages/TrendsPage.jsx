@@ -478,6 +478,7 @@ function GoatedScoreBadge({ score }) {
 // ─── Alpha Card ─────────────────────────────────────────────────────────────
 
 function AlphaCard({ play }) {
+  const [copied, setCopied] = useState(false);
   const dClr = play.direction === 'long' ? 'text-emerald-400' : play.direction === 'reduce' ? 'text-amber-400' : 'text-red-400';
   const dBg = play.direction === 'long' ? 'bg-emerald-500/10' : play.direction === 'reduce' ? 'bg-amber-500/10' : 'bg-red-500/10';
   const rClr = play.risk === 'high' ? 'text-red-400' : play.risk === 'medium' ? 'text-amber-400' : 'text-emerald-400';
@@ -560,10 +561,10 @@ function AlphaCard({ play }) {
         </div>
         <div className="flex items-center gap-2 pt-1.5">
           <button
-            onClick={(e) => { e.stopPropagation(); const text = `${play.direction === 'long' ? 'BUY' : 'SHORT'} ${play.asset}${play.entry ? ` @ ${play.entry}` : ''}${play.stopLoss ? ` | SL: ${play.stopLoss}` : ''}${play.exit ? ` | TP: ${play.exit}` : ''} | ${play.timeframe} | Risk: ${play.risk || 'medium'}`; navigator.clipboard.writeText(text).catch(() => {}); }}
+            onClick={(e) => { e.stopPropagation(); const text = `${play.direction === 'long' ? 'BUY' : 'SHORT'} ${play.asset}${play.entry ? ` @ ${play.entry}` : ''}${play.stopLoss ? ` | SL: ${play.stopLoss}` : ''}${play.exit ? ` | TP: ${play.exit}` : ''} | ${play.timeframe} | Risk: ${play.risk || 'medium'}`; navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }).catch(() => {}); }}
             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-brand/10 text-brand font-bold text-[11px] border border-brand/20 hover:bg-brand/20 hover:border-brand/40 transition-all cursor-pointer"
           >
-            <Copy size={11} />Copy Trade Setup
+            <Copy size={11} />{copied ? 'Copied!' : 'Copy Trade Setup'}
           </button>
           <span className="text-[10px] text-slate-500">{goatedScore}/100 Score</span>
           {play.timeToPlay && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${play.timeToPlay === 'Urgent' || play.timeToPlay === 'NOW' ? 'bg-red-500/15 text-red-400 border border-red-500/30' : 'bg-brand/10 text-brand border border-brand/20'}`}>{play.timeToPlay}</span>}
@@ -650,11 +651,117 @@ const PREMIUM_ALPHA_PLAYS = [
     assetClass: 'STOCKS', entry: 'AVGO $185-$195, MRVL $85-$90', exit: 'AVGO $240+, MRVL $120+', stopLoss: 'AVGO $170, MRVL $78',
     sparklineData: Array.from({length: 30}, (_, i) => 180 + Math.sin(i/6)*10 + i*0.5),
   },
+  // --- Solana Ecosystem ---
+  {
+    type: 'accumulation', title: 'JUP Token Accumulation — Solana DEX Monopoly',
+    description: 'Jupiter processes 65%+ of Solana DEX volume. JUP staking at 40% of supply with fee-sharing live. Revenue-generating DeFi protocol trading below peers.',
+    thesis: 'Jupiter is becoming the Uniswap of Solana but with better tokenomics (fee share, buyback, burn). $80B+ cumulative volume. JUP/SOL ratio at cycle lows. As SOL ecosystem grows, JUP captures proportional value. Limit order and perps products expanding TAM.',
+    asset: 'JUP', direction: 'long', confidence: 77, goatedScore: 80, timeframe: '2-6 weeks', risk: 'medium',
+    assetClass: 'CRYPTO', category: 'Crypto', entry: '$1.10-$1.25', exit: '$2.00-$2.50', stopLoss: '$0.90',
+    profitTarget: '+60-100%', stopLossPercent: '-20%',
+    convictionScore: 8, convictionReasoning: 'Revenue-generating protocol, fee-sharing live, dominant market share. Solana ecosystem growth is a direct tailwind.',
+    timeToPlay: 'This Week',
+    sparklineData: Array.from({length: 30}, (_, i) => 1.0 + Math.sin(i/5)*0.12 + i*0.015),
+  },
+  {
+    type: 'momentum', title: 'Memecoin Rotation Strategy — SOL Memes',
+    description: 'Solana memecoin sector rotates in waves: WIF, BONK, then newer launches. Current cycle favors established memes with CEX listings and high liquidity.',
+    thesis: 'Memecoin supercycle thesis intact. Social volume 8x avg across SOL memes. Retail inflows accelerating via pump.fun and Raydium. The play is established memes (WIF, BONK) as safer beta, not new launches. CEX listing catalysts provide price floors.',
+    asset: 'WIF + BONK', direction: 'long', confidence: 62, goatedScore: 65, timeframe: '1-2 weeks', risk: 'high',
+    assetClass: 'CRYPTO', category: 'Crypto', entry: 'WIF $2.80-$3.20, BONK $0.000028', exit: 'WIF $5.00+, BONK $0.000050+', stopLoss: 'WIF $2.20, BONK $0.000020',
+    profitTarget: '+55-80%', stopLossPercent: '-25%',
+    convictionScore: 6, convictionReasoning: 'Social volume surge, retail FOMO beginning. Established memes with CEX listings are the safer play within the meme sector.',
+    timeToPlay: 'Urgent',
+    sparklineData: Array.from({length: 30}, (_, i) => 2.5 + Math.sin(i/3)*0.5 + i*0.04),
+  },
+  // --- Macro Plays ---
+  {
+    type: 'macro-hedge', title: 'Oil/Gold Correlation Trade — Stagflation Hedge',
+    description: 'Oil below $70 while gold at ATH signals divergence. Historically, oil catches up within 4-8 weeks when gold leads. USO calls + GLD position for stagflation scenario.',
+    thesis: 'Gold at ATH reflects inflation fears. Oil lagging due to demand concerns but OPEC cuts tightening supply. If stagflation materializes (rising prices + slow growth), both rally. Oil/gold ratio at 10-year low = mean reversion setup. Energy stocks (XLE) provide equity beta.',
+    asset: 'USO + GLD + XLE', direction: 'long', confidence: 68, goatedScore: 72, timeframe: '4-8 weeks', risk: 'medium',
+    assetClass: 'CRYPTO + MACRO', category: 'Macro', entry: 'USO $68, GLD $235, XLE $88', exit: 'USO $78+, GLD $255+, XLE $100+', stopLoss: 'USO $63, GLD $225, XLE $82',
+    profitTarget: '+12-18%', stopLossPercent: '-7%',
+    convictionScore: 7, convictionReasoning: 'Oil/gold ratio at extreme. OPEC supply cuts tightening. Stagflation hedge provides portfolio protection.',
+    timeToPlay: 'This Month',
+    sparklineData: Array.from({length: 30}, (_, i) => 66 + Math.sin(i/5)*3 + i*0.2),
+  },
+  // --- Arbitrage ---
+  {
+    type: 'arbitrage', title: 'CEX-DEX Spread Capture — ETH Basis Trade',
+    description: 'ETH futures premium on Binance/OKX running 8-12% annualized vs DEX spot. Market-neutral basis trade captures the spread without directional risk.',
+    thesis: 'Funding rates elevated across CEXs (0.03-0.05% per 8h = 40-65% APY). Buy spot ETH on DEX, short perp on CEX to capture funding. Delta-neutral strategy. Works in any market regime. Risk is exchange counterparty + funding rate compression.',
+    asset: 'ETH (basis)', direction: 'long', confidence: 83, goatedScore: 86, timeframe: '1-4 weeks (rolling)', risk: 'low',
+    assetClass: 'CRYPTO', category: 'Crypto', entry: 'Market (spot+short)', exit: 'When funding < 0.01%', stopLoss: 'N/A (delta-neutral)',
+    profitTarget: '+8-12% annualized', stopLossPercent: '-2% (exchange risk)',
+    convictionScore: 8, convictionReasoning: 'Funding rates at cycle highs. Delta-neutral = low risk. Proven strategy in bull markets. Institutional-grade yield.',
+    timeToPlay: 'This Week',
+    sparklineData: Array.from({length: 30}, (_, i) => 100 + i*0.4 + Math.sin(i/8)*1.5),
+  },
+  {
+    type: 'arbitrage', title: 'Funding Rate Harvest — Multi-Asset',
+    description: 'Perpetual funding rates across BTC, SOL, and ETH averaging 0.04% per 8 hours (55% APY). Systematic harvesting with hedged spot positions.',
+    thesis: 'Bull market = longs pay shorts. By holding spot and shorting perps, you collect funding payments every 8 hours. BTC funding rate 0.035%, SOL 0.05%, ETH 0.04%. Diversify across assets to reduce single-asset funding compression risk. Auto-compound for max yield.',
+    asset: 'BTC + ETH + SOL', direction: 'long', confidence: 80, goatedScore: 84, timeframe: '2-8 weeks (rolling)', risk: 'low',
+    assetClass: 'CRYPTO', category: 'Crypto', entry: 'Market (hedged)', exit: 'When avg funding < 0.015%', stopLoss: 'N/A (hedged)',
+    profitTarget: '+10-18% annualized', stopLossPercent: '-1.5% (execution slippage)',
+    convictionScore: 9, convictionReasoning: 'Highest Sharpe ratio play in crypto. Funding rates at multi-month highs across all majors. Institutional adoption of this strategy validates edge.',
+    timeToPlay: 'This Week',
+    sparklineData: Array.from({length: 30}, (_, i) => 100 + i*0.35 + Math.sin(i/6)*0.8),
+  },
+  // --- Emerging: AI Tokens ---
+  {
+    type: 'narrative', title: 'AI Token Basket — RENDER + FET + TAO',
+    description: 'AI narrative entering second wave. RENDER powering GPU compute, FET building autonomous agents, TAO decentralizing machine learning. Combined market cap still 10x below potential.',
+    thesis: 'AI x Crypto convergence is the strongest narrative of the cycle. RENDER has real revenue from GPU compute ($2M+/month). FET autonomous agents being adopted by enterprises. TAO subnet model creating decentralized AI marketplace. NVDA earnings beats = 24-48h delayed pump for AI tokens.',
+    asset: 'RENDER + FET + TAO', direction: 'long', confidence: 75, goatedScore: 79, timeframe: '2-8 weeks', risk: 'medium',
+    assetClass: 'CRYPTO', category: 'Crypto', entry: 'RENDER $9.50, FET $2.80, TAO $520', exit: 'RENDER $16+, FET $5+, TAO $900+', stopLoss: 'RENDER $7.50, FET $2.20, TAO $400',
+    profitTarget: '+60-80%', stopLossPercent: '-20%',
+    convictionScore: 7, convictionReasoning: 'Strongest crypto narrative with real fundamentals. NVDA earnings catalyst. Institutional interest growing. Multiple confirming signals.',
+    timeToPlay: 'This Week',
+    sparklineData: Array.from({length: 30}, (_, i) => 9 + Math.sin(i/4)*1.2 + i*0.12),
+  },
+  // --- Emerging: RWA Tokenization ---
+  {
+    type: 'narrative', title: 'RWA Tokenization Wave — ONDO + MAPLE',
+    description: 'Real-world asset tokenization TVL hit $8B+. BlackRock BUIDL fund at $500M+. ONDO and MAPLE leading the on-chain credit and treasury market.',
+    thesis: 'TradFi is tokenizing treasuries, credit, and real estate on-chain. ONDO tokenized treasury product hit $400M TVL. MAPLE rebuilt after v2 crisis with institutional-grade credit. RWA narrative has regulatory tailwinds (SEC Commissioner pro-tokenization). This is a multi-year mega-trend just beginning.',
+    asset: 'ONDO + MAPLE', direction: 'long', confidence: 72, goatedScore: 76, timeframe: '4-12 weeks', risk: 'medium',
+    assetClass: 'CRYPTO', category: 'Crypto', entry: 'ONDO $1.40-$1.60, MPL $22-$25', exit: 'ONDO $3.00+, MPL $45+', stopLoss: 'ONDO $1.10, MPL $18',
+    profitTarget: '+80-100%', stopLossPercent: '-22%',
+    convictionScore: 7, convictionReasoning: 'Institutional adoption confirmed (BlackRock, Franklin Templeton). Regulatory tailwinds. Multi-year secular trend. Early innings.',
+    timeToPlay: 'This Month',
+    sparklineData: Array.from({length: 30}, (_, i) => 1.3 + Math.sin(i/6)*0.15 + i*0.02),
+  },
+  // --- Emerging: Restaking ---
+  {
+    type: 'emerging', title: 'Restaking Meta — EIGEN Accumulation',
+    description: 'EigenLayer restaking TVL at $15B+. EIGEN token undervalued relative to TVL secured. Restaking narrative expanding to Solana and Cosmos ecosystems.',
+    thesis: 'EigenLayer created a new primitive: shared security. $15B TVL but EIGEN FDV only $8B = cheap vs value secured. AVS (Actively Validated Services) launching in Q2 create real demand for restaked ETH. EIGEN staking yield + AVS rewards could reach 8-12% APY. First-mover advantage in restaking is a moat.',
+    asset: 'EIGEN', direction: 'long', confidence: 70, goatedScore: 74, timeframe: '4-8 weeks', risk: 'medium',
+    assetClass: 'CRYPTO', category: 'Crypto', entry: '$4.50-$5.20', exit: '$9.00-$12.00', stopLoss: '$3.50',
+    profitTarget: '+75-130%', stopLossPercent: '-27%',
+    convictionScore: 7, convictionReasoning: 'TVL/FDV ratio attractive. AVS launch catalyst in Q2. First-mover in new primitive. Institutional validators adopting.',
+    timeToPlay: 'This Month',
+    sparklineData: Array.from({length: 30}, (_, i) => 4.2 + Math.sin(i/5)*0.5 + i*0.05),
+  },
+  // --- Arbitrage: Basis Trade ---
+  {
+    type: 'arbitrage', title: 'BTC Futures Basis Trade — CME vs Spot',
+    description: 'CME Bitcoin futures trading at 12-15% annualized premium to spot. Institutional-grade basis trade with regulated counterparty.',
+    thesis: 'CME BTC futures premium reflects institutional demand for leveraged long exposure. Buy spot BTC (or BTC ETF), short CME futures to capture the basis. Annualized yield of 12-15% with minimal directional risk. Trade rolls quarterly. Superior to T-bill yields with similar risk profile.',
+    asset: 'BTC (CME basis)', direction: 'long', confidence: 85, goatedScore: 88, timeframe: '3 months (quarterly roll)', risk: 'low',
+    assetClass: 'CRYPTO + MACRO', category: 'Macro', entry: 'Spot + short CME front-month', exit: 'Futures expiry (quarterly)', stopLoss: 'N/A (hedged)',
+    profitTarget: '+12-15% annualized', stopLossPercent: '-1% (roll cost)',
+    convictionScore: 9, convictionReasoning: 'Institutional-grade, regulated counterparty. Proven strategy. Yield exceeds risk-free rate by 8%+. Minimal execution risk.',
+    timeToPlay: 'This Week',
+    sparklineData: Array.from({length: 30}, (_, i) => 100 + i*0.45 + Math.sin(i/10)*0.5),
+  },
 ];
 
 // ─── Sentiment Donut Chart ──────────────────────────────────────────────────
 
-function SentimentDonut({ bullish, bearish, neutral, size = 80 }) {
+const SentimentDonut = React.memo(function SentimentDonut({ bullish, bearish, neutral, size = 80 }) {
   const total = bullish + bearish + neutral || 1;
   const r = size / 2 - 6;
   const circ = 2 * Math.PI * r;
@@ -682,7 +789,7 @@ function SentimentDonut({ bullish, bearish, neutral, size = 80 }) {
       </div>
     </div>
   );
-}
+});
 
 // ─── Sentiment Strength Bar ─────────────────────────────────────────────────
 
@@ -1182,7 +1289,7 @@ function CorrelationBadge({ data }) {
 // ---------------------------------------------------------------------------
 // AlphaSignalRow (Markets)
 // ---------------------------------------------------------------------------
-function MktAlphaSignalRow({ signal, index, expanded, onToggle, degenMode }) {
+const MktAlphaSignalRow = React.memo(function MktAlphaSignalRow({ signal, index, expanded, onToggle, degenMode }) {
   const Icon = mktSignalTypeIcons[signal.type] || Zap;
   const severityClass = mktSignalSeverityColors[signal.severity] || mktSignalSeverityColors.low;
   const coinColor = ASSET_COLORS[signal.coin] || '#888';
@@ -1252,7 +1359,7 @@ function MktAlphaSignalRow({ signal, index, expanded, onToggle, degenMode }) {
       </AnimatePresence>
     </motion.div>
   );
-}
+});
 
 // ============================================================================
 // MAIN COMPONENT
@@ -1334,10 +1441,25 @@ export default function TrendsPage() {
   ];
   const aiPredictions = rawAiPredictions.length > 0 ? rawAiPredictions : FALLBACK_PREDICTIONS;
 
-  // UTC clock for globe overlay
+  // Keyboard shortcuts: number keys 1-6 switch tabs
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const num = parseInt(e.key, 10);
+      if (num >= 1 && num <= TABS.length) {
+        e.preventDefault();
+        setActiveTab(TABS[num - 1].id);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // UTC clock for globe overlay — skip ticks when tab is hidden
   useEffect(() => {
     if (activeTab !== 'globe') return;
-    const iv = setInterval(() => setGlobeUtcTime(new Date().toISOString().slice(11, 19)), 1000);
+    const iv = setInterval(() => { if (!document.hidden) setGlobeUtcTime(new Date().toISOString().slice(11, 19)); }, 1000);
     return () => clearInterval(iv);
   }, [activeTab]);
 
@@ -1564,7 +1686,7 @@ export default function TrendsPage() {
 
   useEffect(() => {
     fetchData();
-    if (autoRefresh) ivRef.current = setInterval(fetchData, REFRESH_INTERVAL);
+    if (autoRefresh) ivRef.current = setInterval(() => { if (!document.hidden) fetchData(); }, REFRESH_INTERVAL);
     return () => clearInterval(ivRef.current);
   }, [autoRefresh]);
 
@@ -1616,16 +1738,17 @@ export default function TrendsPage() {
       fetchMarketData();
     }
     if (activeTab === 'markets') {
-      mktIntervalRef.current = setInterval(fetchMarketData, 15_000);
+      mktIntervalRef.current = setInterval(() => { if (!document.hidden) fetchMarketData(); }, 15_000);
       return () => clearInterval(mktIntervalRef.current);
     }
     return () => { if (mktIntervalRef.current) clearInterval(mktIntervalRef.current); };
   }, [activeTab, fetchMarketData, marketData]);
 
-  // Price tick simulation for markets tab
+  // Price tick simulation for markets tab — consolidated single interval
   useEffect(() => {
     if (activeTab !== 'markets') { if (mktTickRef.current) clearInterval(mktTickRef.current); return; }
     mktTickRef.current = setInterval(() => {
+      if (document.hidden) return; // Skip ticks when tab is hidden
       const flashMap = {};
       setMarketData(prev => {
         if (!prev?.prices) return prev;
@@ -1773,12 +1896,13 @@ export default function TrendsPage() {
 
       {/* ─── Tabs ─── */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-thin">
-        {TABS.map(t => (
+        {TABS.map((t, idx) => (
           <button key={t.id} onClick={() => setActiveTab(t.id)}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
               activeTab === t.id ? 'bg-brand/10 text-brand border border-brand/20' : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.03] border border-transparent'
             }`}>
             <t.icon size={14} />{t.label}
+            <kbd className="text-[9px] font-mono text-slate-600 bg-white/[0.04] border border-white/[0.06] rounded px-1 py-0.5 leading-none hidden sm:inline">{idx + 1}</kbd>
           </button>
         ))}
       </div>

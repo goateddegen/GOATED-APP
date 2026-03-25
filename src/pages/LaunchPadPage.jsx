@@ -8,13 +8,14 @@ import {
   Plus, Briefcase, Milestone, ArrowRight, Eye, Hash, X, Share2, MessageCircle,
   Medal, Award, ThumbsUp, Filter, ChevronDown, Send, GitBranch, Cpu,
   Code2, Coins, Wifi, Database, Lock, Megaphone, BadgeCheck,
-  CircleDollarSign, Gem, ShieldCheck, Banknote, BarChart2
+  CircleDollarSign, Gem, ShieldCheck, Banknote, BarChart2, HeartHandshake
 } from 'lucide-react';
+const Vote = ThumbsUp;
 import { useStore } from '../hooks/useStore';
 import { useGoatedAI } from '../hooks/useGoatedAI';
 
 // ============================================================================
-// LAUNCHPAD - Prediction Tracker, Accuracy Leaderboard & Startup Incubator
+// LAUNCHPAD - GenZ Startup Launch Platform
 // ============================================================================
 
 // Seeded RNG for deterministic mock data
@@ -27,22 +28,21 @@ function seedRng(s) {
 }
 
 const TABS = [
-  { id: 'dealflow', label: 'Deal Flow', icon: Briefcase },
-  { id: 'privatedeals', label: 'Private Deals', icon: Lock },
+  { id: 'discover', label: 'Discover', icon: Globe },
   { id: 'incubator', label: 'Incubator', icon: Rocket },
-  { id: 'adflow', label: 'Ad Flow', icon: Megaphone },
-  { id: 'events', label: 'Predictions', icon: Zap },
-  { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+  { id: 'dealflow', label: 'Deal Flow', icon: Briefcase },
+  { id: 'partners', label: 'Partners', icon: HeartHandshake },
+  { id: 'rankings', label: 'Rankings', icon: Trophy },
 ];
 
-const EVENT_CATEGORIES = ['All', 'Crypto', 'Politics', 'Tech', 'Business', 'Sports', 'Culture'];
+const PROJECT_CATEGORIES = ['All', 'SaaS', 'Creator Tools', 'DeFi', 'AI', 'E-commerce', 'Content', 'Services', 'Web3'];
+
+const DISCOVER_CATEGORIES = ['All', 'SaaS', 'Creator Tools', 'DeFi', 'AI', 'E-commerce', 'Content', 'Services', 'Web3'];
 
 const CATEGORY_COLORS = {
-  Crypto: '#f59e0b', Politics: '#3b82f6', Tech: '#a855f7',
-  Business: '#10b981', Sports: '#ef4444', Culture: '#ec4899',
+  SaaS: '#3b82f6', 'Creator Tools': '#ec4899', DeFi: '#f59e0b', AI: '#a855f7',
+  'E-commerce': '#10b981', Content: '#06b6d4', Services: '#ef4444', Web3: '#84cc16',
 };
-
-const PROJECT_CATEGORIES = ['All', 'DeFi', 'AI', 'SaaS', 'Web3', 'FinTech', 'Infrastructure', 'Social'];
 
 const PROJECT_STAGES = {
   idea: { label: 'Idea', color: '#94a3b8', step: 0 },
@@ -987,7 +987,7 @@ function SubmitProjectModal({ onClose, degenMode }) {
 }
 
 // Deal Flow project card
-function DealFlowCard({ deal, degenMode }) {
+function DealFlowCard({ deal, degenMode, onConnect }) {
   const accentColor = degenMode ? '#f97316' : '#00ff88';
   const stageColors = {
     'Pre-Seed': '#94a3b8', 'Seed': '#a855f7', 'Series A': '#3b82f6', 'Series B': '#10b981', 'Growth': '#f59e0b',
@@ -1062,6 +1062,7 @@ function DealFlowCard({ deal, degenMode }) {
       </div>
 
       <button
+        onClick={() => onConnect && onConnect(deal.name)}
         className="w-full py-2 rounded-lg text-xs font-bold transition-all text-black hover:brightness-110 flex items-center justify-center gap-1.5"
         style={{ background: accentColor }}
       >
@@ -1073,7 +1074,7 @@ function DealFlowCard({ deal, degenMode }) {
 }
 
 // Private deal card (DEGEN only)
-function PrivateDealCard({ deal, degenMode, locked }) {
+function PrivateDealCard({ deal, degenMode, locked, onAccessDeal }) {
   const accentColor = '#f97316';
   const typeColors = {
     'Token Launch': '#f59e0b', 'Private Round': '#a855f7', 'Equity': '#3b82f6', 'NFT Drop': '#ec4899',
@@ -1156,6 +1157,7 @@ function PrivateDealCard({ deal, degenMode, locked }) {
       </div>
 
       <button
+        onClick={() => onAccessDeal && onAccessDeal(deal.name)}
         className="w-full py-2 rounded-lg text-xs font-bold transition-all text-black hover:brightness-110 flex items-center justify-center gap-1.5 bg-orange-500"
       >
         <ShieldCheck size={12} />
@@ -1166,7 +1168,7 @@ function PrivateDealCard({ deal, degenMode, locked }) {
 }
 
 // Ad Flow card
-function AdFlowCard({ ad, degenMode }) {
+function AdFlowCard({ ad, degenMode, onLearnMore }) {
   const accentColor = degenMode ? '#f97316' : '#00ff88';
   const catColors = {
     DeFi: '#f59e0b', AI: '#a855f7', SaaS: '#3b82f6', Web3: '#10b981',
@@ -1219,6 +1221,7 @@ function AdFlowCard({ ad, degenMode }) {
       </div>
 
       <button
+        onClick={() => onLearnMore && onLearnMore(ad.name)}
         className="w-full py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 border hover:brightness-110"
         style={{ background: accentColor + '12', color: accentColor, borderColor: accentColor + '25' }}
       >
@@ -1338,6 +1341,18 @@ export default function LaunchPadPage() {
   const [totalTrackingNow, setTotalTrackingNow] = useState(0);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [projectVotes, setProjectVotes] = useState({});
+
+  // Toast notification
+  const [toastMsg, setToastMsg] = useState('');
+  const [toastVisible, setToastVisible] = useState(false);
+  const showToast = useCallback((msg) => { setToastMsg(msg); setToastVisible(true); }, []);
+
+  useEffect(() => {
+    if (toastVisible) {
+      const t = setTimeout(() => setToastVisible(false), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [toastVisible]);
 
   useEffect(() => {
     setTotalTrackingNow(events.reduce((s, e) => s + e.trackingNow, 0));
@@ -1461,7 +1476,7 @@ export default function LaunchPadPage() {
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <h2 className="text-lg font-black flex items-center gap-2">
-                  <Handshake size={20} style={{ color: accentColor }} />
+                  <HeartHandshake size={20} style={{ color: accentColor }} />
                   Deal Flow
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">Featured projects seeking partnerships and investment</p>
@@ -1510,7 +1525,7 @@ export default function LaunchPadPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredDeals.map(deal => (
-              <DealFlowCard key={deal.id} deal={deal} degenMode={degenMode} />
+              <DealFlowCard key={deal.id} deal={deal} degenMode={degenMode} onConnect={(name) => showToast(`Connection request sent to ${name} — they'll be in touch.`)} />
             ))}
           </div>
 
@@ -1570,7 +1585,7 @@ export default function LaunchPadPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {privateDeals.map(deal => (
-              <PrivateDealCard key={deal.id} deal={deal} degenMode={degenMode} locked={!degenMode} />
+              <PrivateDealCard key={deal.id} deal={deal} degenMode={degenMode} locked={!degenMode} onAccessDeal={(name) => showToast(`Requesting access to ${name} — verification in progress.`)} />
             ))}
           </div>
         </div>
@@ -1625,7 +1640,7 @@ export default function LaunchPadPage() {
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {adFlowProjects.filter(a => a.type === 'featured').map(ad => (
-                  <AdFlowCard key={ad.id} ad={ad} degenMode={degenMode} />
+                  <AdFlowCard key={ad.id} ad={ad} degenMode={degenMode} onLearnMore={(name) => showToast(`${name} details coming soon — project page under construction.`)} />
                 ))}
               </div>
             </div>
@@ -1638,7 +1653,7 @@ export default function LaunchPadPage() {
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {adFlowProjects.filter(a => a.type !== 'featured').map(ad => (
-                <AdFlowCard key={ad.id} ad={ad} degenMode={degenMode} />
+                <AdFlowCard key={ad.id} ad={ad} degenMode={degenMode} onLearnMore={(name) => showToast(`${name} details coming soon — project page under construction.`)} />
               ))}
             </div>
           </div>
@@ -1910,7 +1925,7 @@ export default function LaunchPadPage() {
                 project={project}
                 degenMode={degenMode}
                 onUpvote={handleUpvote}
-                onView={() => {}}
+                onView={(id) => { const p = projects.find(x => x.id === id); showToast(`${p?.name || 'Project'} details page coming soon.`); }}
                 onVote={handleVote}
                 hasVoted={!!projectVotes[project.id]}
               />
@@ -1965,6 +1980,20 @@ export default function LaunchPadPage() {
             onClose={() => setShowSubmitModal(false)}
             degenMode={degenMode}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Toast notification */}
+      <AnimatePresence>
+        {toastVisible && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-2.5 rounded-xl bg-surface-3 border border-white/10 shadow-2xl text-sm text-white font-medium"
+          >
+            {toastMsg}
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

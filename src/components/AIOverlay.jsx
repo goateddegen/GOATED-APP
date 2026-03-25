@@ -7,7 +7,8 @@ import {
   BarChart3, Wallet, Zap, Target, ArrowRight,
   MessageSquare, Sparkles, LayoutDashboard, ExternalLink, Phone, UserSearch,
   Trophy, Flame, DollarSign, Clock, Activity, Shield, ClipboardList, FileText,
-  Brain, Newspaper, BookOpen, Crosshair
+  Brain, Newspaper, BookOpen, Crosshair,
+  Bell, Copy, Eye, AlertTriangle
 } from 'lucide-react';
 import { useStore, fmt } from '../hooks/useStore';
 import { GoatIcon } from './GoatLogo';
@@ -51,6 +52,305 @@ function useStreamingText(text, isLatest) {
 
   return { displayed, isStreaming };
 }
+
+// ─── SIGNAL CATEGORIES ──────────────────────────────────────────────
+const SIGNAL_CATEGORIES = {
+  LEAD:    { icon: Users,        color: '#a855f7', bg: 'rgba(168,85,247,0.1)', border: 'rgba(168,85,247,0.2)', label: 'LEAD' },
+  MARKET:  { icon: TrendingUp,   color: '#06b6d4', bg: 'rgba(6,182,212,0.1)',  border: 'rgba(6,182,212,0.2)',  label: 'MARKET' },
+  ALPHA:   { icon: Zap,          color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.2)', label: 'ALPHA' },
+  CLOSING: { icon: Check,        color: '#10b981', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)', label: 'CLOSING' },
+  SYSTEM:  { icon: AlertTriangle,color: '#64748b', bg: 'rgba(100,116,139,0.1)',border: 'rgba(100,116,139,0.2)',label: 'SYSTEM' },
+};
+
+// ─── SIGNAL ENGINE HOOK ─────────────────────────────────────────────
+// Generates contextual signals every 15-30 seconds from lead + market data
+function useSignalEngine(leads, currentPage) {
+  const [signals, setSignals] = useState([]);
+  const signalIdRef = useRef(0);
+  const timerRef = useRef(null);
+
+  // Signal generator templates
+  const generateSignal = useCallback(() => {
+    if (!leads || leads.length === 0) return null;
+
+    const negotiating = leads.filter(l => l.status === 'negotiation');
+    const qualified = leads.filter(l => l.status === 'qualified');
+    const hotLeads = leads.filter(l => l.conversionProbability >= 75);
+    const risingLeads = leads.filter(l => l.momentum === 'rising');
+    const commissionRate = 0.12;
+
+    // Weighted random: more relevant signals based on current page
+    const pool = [];
+
+    // Lead signals
+    if (negotiating.length > 0) {
+      const lead = negotiating[Math.floor(Math.random() * negotiating.length)];
+      pool.push({
+        category: 'LEAD',
+        title: `${lead.name} in negotiation`,
+        description: `${lead.company} — ${fmt(lead.dealValue)} deal moved to negotiation. ${lead.decisionTimeline || '2 weeks'} timeline.`,
+        action: { label: 'View Lead', type: 'viewLead', leadId: lead.id, lead },
+      });
+    }
+    if (hotLeads.length > 0) {
+      const lead = hotLeads[Math.floor(Math.random() * hotLeads.length)];
+      const days = 1 + Math.floor(Math.random() * 5);
+      pool.push({
+        category: 'LEAD',
+        title: `High-prob lead needs contact`,
+        description: `${lead.name} (${lead.conversionProbability}% close prob) hasn't been contacted in ${days} days.`,
+        action: { label: 'View Lead', type: 'viewLead', leadId: lead.id, lead },
+      });
+    }
+    if (qualified.length > 0) {
+      const lead = qualified[Math.floor(Math.random() * qualified.length)];
+      pool.push({
+        category: 'LEAD',
+        title: `Qualified lead ready for demo`,
+        description: `${lead.name} at ${lead.company} — score ${lead.score}/100. Ready for proposal.`,
+        action: { label: 'View Lead', type: 'viewLead', leadId: lead.id, lead },
+      });
+    }
+
+    // Market signals
+    const cryptos = [
+      { name: 'BTC', price: '97,420', change: (2 + Math.random() * 4).toFixed(1), level: '100K' },
+      { name: 'SOL', price: '198.50', change: (1 + Math.random() * 6).toFixed(1), level: '200' },
+      { name: 'ETH', price: '3,840', change: (1 + Math.random() * 5).toFixed(1), level: '4,000' },
+    ];
+    const crypto = cryptos[Math.floor(Math.random() * cryptos.length)];
+    const direction = Math.random() > 0.4 ? 'up' : 'down';
+    pool.push({
+      category: 'MARKET',
+      title: `${crypto.name} ${direction} ${crypto.change}%`,
+      description: `${direction === 'up' ? 'Momentum shift detected' : 'Pullback in progress'} — ${crypto.name} ${direction === 'up' ? 'approaching' : 'retreating from'} $${crypto.level} resistance.`,
+      action: { label: 'See Analysis', type: 'navigate', page: 'trends' },
+    });
+    pool.push({
+      category: 'MARKET',
+      title: `Sector rotation signal`,
+      description: `${['AI/ML', 'SaaS', 'Fintech', 'Healthcare', 'E-Commerce'][Math.floor(Math.random() * 5)]} sector showing ${Math.random() > 0.5 ? 'bullish' : 'bearish'} divergence on 4H timeframe.`,
+      action: { label: 'See Analysis', type: 'navigate', page: 'trends' },
+    });
+
+    // Alpha signals
+    const alphaPlays = [
+      { title: 'Long ETH/BTC ratio divergence', desc: 'ETH/BTC ratio at 6-month low with bullish divergence on RSI. Mean reversion play.' },
+      { title: 'SOL DeFi TVL breakout', desc: 'SOL DeFi TVL up 18% this week. Leading indicator for price action.' },
+      { title: 'Prediction market edge found', desc: 'Kalshi BTC >$100K by June priced at 42% — GOATED AI estimates 68%. +26% alpha.' },
+      { title: 'Macro divergence play', desc: 'DXY weakening while crypto holds. Historical correlation suggests 15% upside in 2 weeks.' },
+      { title: 'Smart money accumulation', desc: 'Whale wallets adding BTC for 5th consecutive day. On-chain signal bullish.' },
+    ];
+    const alpha = alphaPlays[Math.floor(Math.random() * alphaPlays.length)];
+    pool.push({
+      category: 'ALPHA',
+      title: alpha.title,
+      description: alpha.desc,
+      action: { label: 'Copy Trade', type: 'copy', text: `ALPHA PLAY: ${alpha.title}\n${alpha.desc}` },
+    });
+
+    // Closing signals
+    if (negotiating.length > 0) {
+      const totalValue = negotiating.reduce((s, l) => s + l.dealValue, 0);
+      const commission = Math.round(totalValue * commissionRate);
+      pool.push({
+        category: 'CLOSING',
+        title: `${negotiating.length} leads ready to close`,
+        description: `Combined pipeline: ${fmt(totalValue)} — your commission: $${commission.toLocaleString()}. Start closing today.`,
+        action: { label: 'Start Closing', type: 'openCoach' },
+      });
+    }
+    if (risingLeads.length > 0) {
+      const top = risingLeads.sort((a, b) => b.dealValue - a.dealValue)[0];
+      pool.push({
+        category: 'CLOSING',
+        title: `Deal momentum rising`,
+        description: `${top.name} at ${top.company} showing positive signals — ${fmt(top.dealValue)} deal worth $${Math.round(top.dealValue * commissionRate).toLocaleString()} commission.`,
+        action: { label: 'Start Closing', type: 'openCoach' },
+      });
+    }
+
+    // System signal (rare)
+    if (Math.random() < 0.15) {
+      const systemMsgs = [
+        { title: 'Pipeline health check', description: `${leads.filter(l => l.status !== 'won' && l.status !== 'lost').length} active leads in pipeline. ${hotLeads.length} high-probability.` },
+        { title: 'Weekly target update', description: `You need ${Math.max(0, 3 - Math.floor(Math.random() * 2))} more closes this week to hit target.` },
+        { title: 'AI model updated', description: 'GOATED AI predictions recalibrated with latest market data. Accuracy: 78%.' },
+      ];
+      const sys = systemMsgs[Math.floor(Math.random() * systemMsgs.length)];
+      pool.push({
+        category: 'SYSTEM',
+        title: sys.title,
+        description: sys.description,
+        action: { label: 'Dismiss', type: 'dismiss' },
+      });
+    }
+
+    // Weight selection toward current page context
+    let weights = pool.map(() => 1);
+    pool.forEach((sig, i) => {
+      if (currentPage === 'leads' && (sig.category === 'LEAD' || sig.category === 'CLOSING')) weights[i] = 3;
+      if (currentPage === 'trends' && (sig.category === 'MARKET' || sig.category === 'ALPHA')) weights[i] = 3;
+      if (currentPage === 'dashboard' && sig.category === 'CLOSING') weights[i] = 2;
+    });
+    const totalWeight = weights.reduce((s, w) => s + w, 0);
+    let r = Math.random() * totalWeight;
+    for (let i = 0; i < pool.length; i++) {
+      r -= weights[i];
+      if (r <= 0) return pool[i];
+    }
+    return pool[pool.length - 1];
+  }, [leads, currentPage]);
+
+  useEffect(() => {
+    const schedule = () => {
+      const delay = 15000 + Math.random() * 15000; // 15-30 seconds
+      timerRef.current = setTimeout(() => {
+        // Skip signal generation when tab is hidden to save resources
+        if (!document.hidden) {
+          const signal = generateSignal();
+          if (signal) {
+            signalIdRef.current += 1;
+            const newSignal = {
+              ...signal,
+              id: signalIdRef.current,
+              timestamp: Date.now(),
+              read: false,
+            };
+            setSignals(prev => [newSignal, ...prev].slice(0, 20)); // Keep last 20
+          }
+        }
+        schedule();
+      }, delay);
+    };
+
+    // Generate initial signal quickly
+    const initTimer = setTimeout(() => {
+      const signal = generateSignal();
+      if (signal) {
+        signalIdRef.current += 1;
+        setSignals([{
+          ...signal,
+          id: signalIdRef.current,
+          timestamp: Date.now(),
+          read: false,
+        }]);
+      }
+      schedule();
+    }, 3000);
+
+    return () => {
+      clearTimeout(timerRef.current);
+      clearTimeout(initTimer);
+    };
+  }, [generateSignal]);
+
+  const markAllRead = useCallback(() => {
+    setSignals(prev => prev.map(s => ({ ...s, read: true })));
+  }, []);
+
+  const dismissSignal = useCallback((id) => {
+    setSignals(prev => prev.filter(s => s.id !== id));
+  }, []);
+
+  const unreadCount = useMemo(() => signals.filter(s => !s.read).length, [signals]);
+
+  return { signals, unreadCount, markAllRead, dismissSignal };
+}
+
+// ─── NOTIFICATION FEED COMPONENT ────────────────────────────────────
+// Memoized to prevent re-renders of the entire AIOverlay when signals update
+const NotificationFeed = React.memo(function NotificationFeed({ signals, onAction, onDismiss, degenMode }) {
+  const formatTime = (ts) => {
+    const diff = Math.floor((Date.now() - ts) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  };
+
+  const latest = signals.slice(0, 5);
+
+  if (latest.length === 0) {
+    return (
+      <div className="px-4 py-6 text-center">
+        <Bell size={20} className="mx-auto mb-2 text-slate-600" />
+        <div className="text-[11px] text-slate-500">No signals yet</div>
+        <div className="text-[10px] text-slate-600 mt-1">Signals will appear as they're detected</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="divide-y divide-white/[0.04]">
+      {latest.map((signal) => {
+        const cat = SIGNAL_CATEGORIES[signal.category] || SIGNAL_CATEGORIES.SYSTEM;
+        const Icon = cat.icon;
+        return (
+          <div key={signal.id} className="px-3 py-2.5 hover:bg-white/[0.02] transition-colors">
+            <div className="flex items-start gap-2.5">
+              {/* Icon */}
+              <div className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center mt-0.5"
+                style={{ background: cat.bg, border: `1px solid ${cat.border}` }}>
+                <Icon size={13} style={{ color: cat.color }} />
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[8px] font-bold tracking-wider uppercase px-1.5 py-0.5 rounded"
+                    style={{ background: cat.bg, color: cat.color, border: `1px solid ${cat.border}` }}>
+                    {cat.label}
+                  </span>
+                  <span className="text-[9px] text-slate-600">{formatTime(signal.timestamp)}</span>
+                  {!signal.read && (
+                    <div className="w-1.5 h-1.5 rounded-full ml-auto shrink-0"
+                      style={{ background: degenMode ? '#f97316' : '#10b981' }} />
+                  )}
+                </div>
+                <div className="text-[11px] font-semibold text-slate-200 leading-tight mb-0.5 truncate">
+                  {signal.title}
+                </div>
+                <div className="text-[10px] text-slate-500 leading-snug line-clamp-2">
+                  {signal.description}
+                </div>
+
+                {/* Action button */}
+                {signal.action && signal.action.type !== 'dismiss' && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onAction(signal); }}
+                    className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-semibold transition-all hover:brightness-125"
+                    style={{
+                      background: cat.bg,
+                      color: cat.color,
+                      border: `1px solid ${cat.border}`,
+                    }}
+                  >
+                    {signal.category === 'ALPHA' && <Copy size={8} />}
+                    {signal.category === 'LEAD' && <Eye size={8} />}
+                    {signal.category === 'MARKET' && <TrendingUp size={8} />}
+                    {signal.category === 'CLOSING' && <Target size={8} />}
+                    {signal.action.label}
+                    <ArrowRight size={8} />
+                  </button>
+                )}
+                {signal.action && signal.action.type === 'dismiss' && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDismiss(signal.id); }}
+                    className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-medium text-slate-500 bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.06] transition-all"
+                  >
+                    <X size={8} />
+                    Dismiss
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+});
 
 // ─── FEATURE LINK MAP ─────────────────────────────────────────────────
 // Maps keywords found in AI responses to navigable pages
@@ -232,6 +532,40 @@ const DEGEN_INSIGHTS = [
   { label: 'Degen Playbook', prompt: 'Build me a full degen playbook: highest conviction trades, prediction market edges, and pipeline deals I can speed-close today. Go aggressive. NFA.', icon: Flame },
 ];
 
+// ─── DEGEN QUICK ACTION BUTTONS (below chat input) ──────────────────
+const DEGEN_QUICK_ACTIONS = {
+  leads: [
+    { label: 'Best Alpha RN', prompt: 'What are the highest-conviction leads I should ape into RIGHT NOW? Show me the best risk-reward ratios in my pipeline. LFG.', icon: Zap },
+    { label: 'Who to Ape Into', prompt: 'Which leads have whale-level potential? Show me the biggest bags I can close today. Send it.', icon: Target },
+    { label: 'Whale Alert', prompt: 'Whale alert mode: show me the largest deal values in my pipeline with momentum signals. Who is about to close?', icon: Globe },
+    { label: 'Degen Playbook', prompt: 'Build me a full degen closing playbook: speed-close strategies, aggressive scripts, and commission moonshots. NFA.', icon: Flame },
+    { label: 'Send It Analysis', prompt: 'Send it analysis: which deals should I go all-in on today? Give me conviction scores and exact next moves. WAGMI.', icon: Sparkles },
+  ],
+  trends: [
+    { label: 'Best Alpha RN', prompt: 'What is the absolute best alpha play right now across all markets? High conviction only. Send it.', icon: Zap },
+    { label: 'Whale Movements', prompt: 'Track whale movements: what are institutions and smart money doing right now? Where is volume spiking?', icon: Globe },
+    { label: 'Degen Market Scan', prompt: 'Full degen market scan: momentum trades, pump signals, sector rotation, and asymmetric bets. Go aggressive.', icon: Flame },
+    { label: 'Send It Analysis', prompt: 'Send it analysis on current market conditions: what has the best risk-reward ratio right now? NFA.', icon: Sparkles },
+  ],
+  market: [
+    { label: 'Best Alpha RN', prompt: 'Best alpha right now across prediction markets, crypto, and B2B. Highest conviction plays only.', icon: Zap },
+    { label: 'Whale Alert', prompt: 'Whale alert: show me unusual volume, smart money flow, and institutional positioning across all markets.', icon: Globe },
+    { label: 'Degen Playbook', prompt: 'Build me a full degen playbook: prediction market edges, asymmetric bets, and speed-close pipeline plays.', icon: Flame },
+    { label: 'Send It Analysis', prompt: 'Send it analysis: where should I deploy capital right now for maximum asymmetric upside? Go aggressive. NFA.', icon: Sparkles },
+  ],
+  dashboard: [
+    { label: 'Best Alpha RN', prompt: 'What are my highest-alpha pipeline plays right now? Show me where the money is. LFG.', icon: Zap },
+    { label: 'Who to Ape Into', prompt: 'Which deals should I ape into today? Rank by close probability x deal size. Send it.', icon: Target },
+    { label: 'Degen Playbook', prompt: 'Degen pipeline playbook: aggressive close strategies for every deal in negotiation. No paper hands allowed.', icon: Flame },
+    { label: 'Send It Analysis', prompt: 'Full send it analysis on my pipeline: what is mooning, what is dumping, and where do I double down?', icon: Sparkles },
+  ],
+  launchpad: [
+    { label: 'Best Alpha RN', prompt: 'Best alpha on LaunchPad right now: which events and predictions have the fattest edge?', icon: Zap },
+    { label: 'Degen Bets', prompt: 'Show me the highest-conviction degen bets on LaunchPad. I want asymmetric upside. NFA.', icon: Flame },
+    { label: 'Send It Analysis', prompt: 'Send it analysis on live events: probability edges, expected value, and where to deploy. Go aggressive.', icon: Sparkles },
+  ],
+};
+
 // ─── CONTEXTUAL QUICK ACTION BUTTONS (below chat input) ──────────────
 const QUICK_ACTIONS = {
   leads: [
@@ -264,12 +598,12 @@ const QUICK_ACTIONS = {
 };
 
 // ─── TEMPLATE FALLBACK RESPONSES ───────────────────────────────────────
-function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats } = {}) {
+function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats, degenMode } = {}) {
   const lower = msg.toLowerCase();
   const stats = revenueStats || {};
   const wonLeadsAll = leads.filter(l => l.status === 'won');
   const totalWonValue = wonLeadsAll.reduce((s, l) => s + l.dealValue, 0);
-  const commissionRate = 0.10;
+  const commissionRate = 0.12;
   const currentMRR = Math.round((totalWonValue * commissionRate) / 12);
   const mrrGoal = 25000;
   const distanceToGoal = Math.max(0, mrrGoal - currentMRR);
@@ -315,6 +649,24 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
     return `**TrendPulse Money Plays**\n\nBased on current signals, here are your top plays:\n\n---\n\n**1. BTC Prediction Play** (Kalshi)\n- BTC above $100K by June → YES at $0.42 (58% implied)\n- GOATED AI confidence: 72% → **+30% alpha edge**\n- Bet $100 → Win $238 if YES | Risk: $100\n- [Place Bet on Kalshi →]\n\n**2. SOL Momentum Trade**\n- SOL showing rising momentum (+6.3% 24h)\n- Entry: $198 | Target: $220 | Stop: $185\n- Risk/Reward: 1:1.7\n- [Copy Trade Setup →]\n\n**3. B2B Revenue Play**\n- Your pipeline has **${lostRevenue}** in lost revenue leads\n- Close just 3 of your top 10 → **$${top3Commission.toLocaleString()} in commission**\n- [Call Top Lead Now →]\n\n---\n\n**Strategy: Split your time 70/30**\n- 70% → B2B closing (guaranteed commission)\n- 30% → Prediction markets (alpha plays)\n- Target: **$25K MRR** from closing + **$5K/mo** from trading\n\n**Your Edge:**\n- Total pipeline commission: **$${pipelineCommission.toLocaleString()}**\n- Current MRR: **$${currentMRR.toLocaleString()}**\n- ${negotiatingLeads.length} deals in negotiation ready to close\n\nGo to **Markets** for live prediction data, or **Leads** to start closing.`;
   }
 
+  // Navigation intent detection
+  if ((lower.includes('go to') || lower.includes('open') || lower.includes('show me') || lower.includes('take me to') || lower.includes('switch to')) && !lower.includes('lead')) {
+    const navMap = {
+      'dashboard': 'dashboard', 'dash': 'dashboard',
+      'trend': 'trends', 'trendpulse': 'trends', 'market': 'trends', 'alpha': 'trends',
+      'casino': 'casino', 'game': 'casino', 'roulette': 'casino', 'bet': 'casino',
+      'launch': 'launchpad', 'launchpad': 'launchpad', 'incubator': 'launchpad',
+      'wallet': 'wallet', 'earnings': 'wallet', 'commission': 'wallet',
+      'admin': 'admin', 'settings': 'admin',
+      'home': 'home',
+    };
+    for (const [keyword, page] of Object.entries(navMap)) {
+      if (lower.includes(keyword)) {
+        return `Navigating to **${page.charAt(0).toUpperCase() + page.slice(1)}**...\n\n[NAVIGATE:${page}]`;
+      }
+    }
+  }
+
   // Location-specific lead search (fallback)
   const FALLBACK_LOCATIONS = [
     'San Francisco', 'New York', 'Austin', 'Seattle', 'Boston', 'Chicago', 'Denver', 'Miami', 'LA', 'London',
@@ -353,7 +705,7 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
     if (locationLeads.length > 5) {
       res += `\n...and **${locationLeads.length - 5} more** in ${searchLocation}.\n\n`;
     }
-    res += `---\n\nGo to **Leads** to see all results. Want outreach scripts for any of these?`;
+    res += `---\n\nGo to **Leads** to see all results. Want outreach scripts for any of these?\n\n[NAVIGATE:leads]`;
     return res;
   }
 
@@ -382,7 +734,7 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
       res += `   **${fmt(l.dealValue)}** | ${l.location} | ${l.industry} | Score: ${l.score}/100\n\n`;
     });
     if (bigDeals.length > 5) res += `...and **${bigDeals.length - 5} more** above $${(minVal/1000)}K.\n\n`;
-    res += `---\n\nGo to **Leads** for full results.`;
+    res += `---\n\nGo to **Leads** for full results.\n\n[NAVIGATE:leads]`;
     return res;
   }
 
@@ -412,7 +764,7 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
       res += `   Score: **${l.score}**/100 | ${l.location} | **${fmt(l.dealValue)}** | ${l.status}\n\n`;
     });
     if (indLeads.length > 5) res += `...and **${indLeads.length - 5} more** ${searchIndustry} leads.\n\n`;
-    res += `---\n\nGo to **Leads** to see all. Want outreach for any of these?`;
+    res += `---\n\nGo to **Leads** to see all. Want outreach for any of these?\n\n[NAVIGATE:leads]`;
     return res;
   }
 
@@ -432,7 +784,7 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
     };
     let res = `**Lead Walkthrough — Top 5 Highest-Probability Leads${under20k.length > 0 ? ' Under $20K' : ''}**\n\nHere are your top 5 highest-probability leads${under20k.length > 0 ? ' under $20K' : ''} — sorted by close probability for speed-to-close:\n\n---\n\n`;
     topWalkthrough.forEach((l, i) => {
-      const commission = Math.round(l.dealValue * 0.10);
+      const commission = Math.round(l.dealValue * 0.12);
       const whyCloseable = l.conversionProbability >= 70 ? 'High engagement + strong buying signals' :
         l.conversionProbability >= 50 ? 'Active interest + pain point alignment' :
         l.momentum === 'rising' ? 'Rising momentum indicates growing urgency' :
@@ -443,7 +795,7 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
       res += `   Next Action: ${nextActions[l.status] || 'Follow up immediately'}\n`;
       res += `   Why closeable: ${whyCloseable}\n\n`;
     });
-    res += `---\n\n**Total pipeline shown:** ${fmt(totalValue)} | **Combined commission:** $${Math.round(totalValue * 0.10).toLocaleString()}\n\n`;
+    res += `---\n\n**Total pipeline shown:** ${fmt(totalValue)} | **Combined commission:** $${Math.round(totalValue * 0.12).toLocaleString()}\n\n`;
     res += `**Speed-to-close tactics for sub-$20K deals:**\n- Same-day follow-up on every interaction\n- Simplified one-page proposals (no committee needed)\n- Create urgency: limited-time pricing or pilot window\n- Go direct to decision maker — skip gatekeepers\n\nWant outreach scripts for any of these? Or go to **Leads** for full pipeline.`;
     return res;
   }
@@ -512,6 +864,13 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
   if (lower.includes('competitor') || lower.includes('compet') || lower.includes('intel')) {
     const topCompanies = [...new Set(leads.map(l => l.competitorUsing).join(', ').split(', '))].slice(0, 8);
     return `**Competitive Intelligence Report**\n\n---\n\n**Top Competitor Mentions Across Your Pipeline:**\n${topCompanies.map((c, i) => `${i + 1}. **${c}** - mentioned by ${leads.filter(l => l.competitorUsing.includes(c)).length} leads`).join('\n')}\n\n**Key Observations:**\n- Most leads are evaluating **2-3 competitors** simultaneously\n- ${leads.filter(l => l.techStack.includes('Salesforce')).length} leads currently use Salesforce (prime displacement opportunity)\n- ${leads.filter(l => l.techStack === 'None - manual process').length} leads have no CRM (greenfield opportunity)\n\n**Displacement Strategy:**\n1. Target leads with manual processes first (lowest switching cost)\n2. Focus on Salesforce users experiencing pain points\n3. Offer migration packages for HubSpot users\n\n---\n\nGo to **Market** for full competitive landscape, or **Dashboard** for displacement scripts.\n\nWant me to build a specific battle card against any competitor?`;
+  }
+
+  // DEGEN mode catch-all
+  if (degenMode) {
+    const degenPrefixes = ['LFG.', 'WAGMI.', 'No cap.', 'Ape in.', 'Send it.'];
+    const prefix = degenPrefixes[Math.floor(Math.random() * degenPrefixes.length)];
+    return `**${prefix}** Ask me something specific:\n\n- "Find me whale leads to close"\n- "Best alpha play RIGHT NOW"\n- "Coach me on closing [lead name]"\n- "Show me $50K+ deals"\n- "Degen market scan"\n\nI'm your AI closing weapon. Use me. 🔥`;
   }
 
   // Default / catch-all response
@@ -795,6 +1154,34 @@ const PROACTIVE_SUGGESTIONS = {
   ],
 };
 
+const DEGEN_PROACTIVE_SUGGESTIONS = {
+  leads: [
+    '3 leads about to close — $45K bag incoming. Don\'t fumble this. LFG',
+    'Whale alert: 2 deals in negotiation are mooning. Ape in NOW',
+    'Your top lead just went parabolic — send it before someone else does',
+  ],
+  trends: [
+    'BTC breaking resistance — alpha play detected. Send it',
+    'AI/ML sector pumping +42% — massive bag potential. WAGMI',
+    '2 prediction market edges with fat risk-reward. NFA but ape-worthy',
+  ],
+  dashboard: [
+    '3 deals need your attention — don\'t be paper hands on these bags',
+    'Revenue pumping — keep the momentum, king. LFG',
+    '2 more closes to hit weekly target — diamond hands mode activated',
+  ],
+  casino: [
+    'Giga-brain EV play just dropped — send it',
+    'You\'re up +12% this session — absolute degen alpha',
+    'Odds shifting on 3 markets — whale money moving in',
+  ],
+  launchpad: [
+    'New market opened with thin spreads — early ape advantage',
+    '2 incubator projects hit milestones — 100x potential. NFA',
+    'Prediction accuracy at 78% — you\'re printing. WAGMI',
+  ],
+};
+
 // ─── CONTEXT SUMMARY CARD ─────────────────────────────────────────────
 function ContextSummaryCard({ currentPage, leads, degenMode, onAction }) {
   const summaries = useMemo(() => {
@@ -838,7 +1225,7 @@ function ContextSummaryCard({ currentPage, leads, degenMode, onAction }) {
             `${negotiating.length} deals in negotiation`,
             `${topCloseable.filter(l => l.conversionProbability >= 70).length} high-probability closes`,
             `Total pipeline: ${fmt(totalPipeline)}`,
-            `Commission potential: ${fmt(Math.round(totalPipeline * 0.10))}`,
+            `Commission potential: ${fmt(Math.round(totalPipeline * 0.12))}`,
           ],
           action: { label: 'Optimize pipeline', prompt: 'Analyze my pipeline health: bottlenecks, at-risk deals, and specific actions to improve conversion rate. Be specific with names.' },
         };
@@ -955,6 +1342,63 @@ export default function AIOverlay() {
   const useAI = aiFailCount < 3;
   const [coachMode, setCoachMode] = useState(false);
 
+  // ─── Signal Engine + Notification hover state ─────────────────────
+  const { signals, unreadCount: signalUnread, markAllRead, dismissSignal } = useSignalEngine(leads, currentPage);
+  const [orbHovered, setOrbHovered] = useState(false);
+  const orbHoverTimerRef = useRef(null);
+  const feedRef = useRef(null);
+
+  // Hover handlers with small delay to prevent flicker
+  const handleOrbMouseEnter = useCallback(() => {
+    clearTimeout(orbHoverTimerRef.current);
+    setOrbHovered(true);
+    markAllRead();
+  }, [markAllRead]);
+
+  const handleOrbMouseLeave = useCallback(() => {
+    orbHoverTimerRef.current = setTimeout(() => setOrbHovered(false), 200);
+  }, []);
+
+  const handleFeedMouseEnter = useCallback(() => {
+    clearTimeout(orbHoverTimerRef.current);
+    setOrbHovered(true);
+  }, []);
+
+  const handleFeedMouseLeave = useCallback(() => {
+    orbHoverTimerRef.current = setTimeout(() => setOrbHovered(false), 200);
+  }, []);
+
+  // Signal action handler
+  const handleSignalAction = useCallback((signal) => {
+    const action = signal.action;
+    if (!action) return;
+    switch (action.type) {
+      case 'viewLead':
+        if (action.lead) {
+          setSelectedLead(action.lead);
+          setDetailOpen(true);
+          setPage('leads');
+          setPreviousPage(currentPage);
+        }
+        break;
+      case 'navigate':
+        setPage(action.page);
+        break;
+      case 'copy':
+        if (navigator.clipboard && action.text) {
+          navigator.clipboard.writeText(action.text);
+        }
+        break;
+      case 'openCoach':
+        setCoachMode(true);
+        setAiOpen(true);
+        break;
+      default:
+        break;
+    }
+    setOrbHovered(false);
+  }, [currentPage, setPage, setSelectedLead, setDetailOpen, setPreviousPage, setAiOpen]);
+
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -999,7 +1443,8 @@ export default function AIOverlay() {
       const delay = 30000; // Exactly 30 seconds between proactive tips
       proactiveTimerRef.current = setTimeout(() => {
         if (!useStore.getState().aiOpen) {
-          const pageSuggestions = PROACTIVE_SUGGESTIONS[currentPage] || PROACTIVE_SUGGESTIONS.dashboard;
+          const suggestionsSource = useStore.getState().degenMode ? DEGEN_PROACTIVE_SUGGESTIONS : PROACTIVE_SUGGESTIONS;
+          const pageSuggestions = suggestionsSource[currentPage] || suggestionsSource.dashboard;
           const tip = pageSuggestions[Math.floor(Math.random() * pageSuggestions.length)];
           setProactiveTip(tip);
           proactiveDismissRef.current = setTimeout(() => setProactiveTip(null), 5000);
@@ -1079,7 +1524,7 @@ export default function AIOverlay() {
   const revenueStats = useMemo(() => {
     const wonDeals = leads.filter(l => l.status === 'won');
     const wonValue = wonDeals.reduce((s, l) => s + l.dealValue, 0);
-    const commissionRate = 0.10;
+    const commissionRate = 0.12;
     const currentMRR = Math.round((wonValue * commissionRate) / 12);
     const mrrGoal = 25000;
     const negotiating = leads.filter(l => l.status === 'negotiation');
@@ -1124,7 +1569,9 @@ export default function AIOverlay() {
 
   // Quick action buttons based on current page, coach mode, and selected lead
   const quickActions = useMemo(() => {
-    const base = QUICK_ACTIONS[currentPage] || [];
+    const base = degenMode
+      ? (DEGEN_QUICK_ACTIONS[currentPage] || DEGEN_QUICK_ACTIONS.leads || [])
+      : (QUICK_ACTIONS[currentPage] || []);
     if (coachMode && currentPage === 'leads') {
       return [
         { label: 'Call Script', prompt: selectedLead ? `Write a word-for-word cold call script for ${selectedLead.name} at ${selectedLead.company}. Include opener, hook, value prop, and close.` : 'Write a cold call script for my top lead. Include opener, hook, value prop, and close.', icon: Phone },
@@ -1144,7 +1591,7 @@ export default function AIOverlay() {
       return [outreachAction, ...filtered].slice(0, 6);
     }
     return base;
-  }, [currentPage, coachMode, selectedLead]);
+  }, [currentPage, coachMode, degenMode, selectedLead]);
 
   // Suggested prompts based on current page, coach mode, degen mode, and selected lead
   const suggestedPrompts = useMemo(() => {
@@ -1217,7 +1664,17 @@ export default function AIOverlay() {
         });
         const data = await res.json();
         if (!data.fallback && data.content) {
-          setMessages(p => [...p, { role: 'assistant', content: data.content }]);
+          // Auto-navigate if response contains [NAVIGATE:page]
+          const navMatch = data.content.match(/\[NAVIGATE:(\w+)\]/);
+          if (navMatch) {
+            const navPage = navMatch[1];
+            if (['leads', 'trends', 'dashboard', 'casino', 'launchpad', 'wallet', 'admin'].includes(navPage)) {
+              setPage(navPage);
+              window.scrollTo(0, 0);
+            }
+          }
+          const cleanContent = data.content.replace(/\[NAVIGATE:\w+\]/g, '').trim();
+          setMessages(p => [...p, { role: 'assistant', content: cleanContent }]);
           setAiFailCount(0);
           setTyping(false);
           return;
@@ -1228,11 +1685,28 @@ export default function AIOverlay() {
       }
     }
 
-    setTimeout(() => {
-      const res = getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats });
-      setMessages(p => [...p, { role: 'assistant', content: res }]);
-      setTyping(false);
-    }, 600 + Math.random() * 400);
+    // Instant template response — no artificial delay
+    const res = getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats, degenMode });
+
+    // Smart auto-navigate based on user intent
+    const lower = msg.toLowerCase();
+    const PAGE_INTENTS = {
+      leads: /\b(lead|prospect|pipeline|find.*(?:in|at|from)|show.*(?:lead|company|deal)|search.*(?:lead|company)|close|outreach)\b/,
+      trends: /\b(trend|market|crypto|btc|eth|sol|sentiment|chart|price|trading|alpha)\b/,
+      dashboard: /\b(dashboard|stats|analytics|kpi|overview|performance)\b/,
+      wallet: /\b(wallet|balance|commission|earning|payment|payout|invoic)\b/,
+      launchpad: /\b(launch|incubat|startup|event|program)\b/,
+    };
+    for (const [page, regex] of Object.entries(PAGE_INTENTS)) {
+      if (regex.test(lower) && currentPage !== page) {
+        setPage(page);
+        window.scrollTo(0, 0);
+        break;
+      }
+    }
+
+    setMessages(p => [...p, { role: 'assistant', content: res }]);
+    setTyping(false);
   }, [input, typing, messages, leads, useAI, degenMode, coachMode, selectedLead, revenueStats, aiOpen]);
 
   // Coach Mode: proactive suggestions when viewing a lead
@@ -1240,7 +1714,7 @@ export default function AIOverlay() {
   useEffect(() => {
     if (coachMode && selectedLead && selectedLead.id !== prevSelectedRef.current) {
       prevSelectedRef.current = selectedLead.id;
-      const commission = Math.round(selectedLead.dealValue * 0.10);
+      const commission = Math.round(selectedLead.dealValue * 0.12);
       const daysInStage = 1 + Math.floor(Math.random() * 5);
       let proactiveMsg = '';
       if (selectedLead.status === 'negotiation') {
@@ -1299,7 +1773,13 @@ export default function AIOverlay() {
           .then(r => r.json())
           .then(data => {
             if (!data.fallback && data.content) {
-              setMessages(p => [...p, { role: 'assistant', content: data.content }]);
+              const navM = data.content.match(/\[NAVIGATE:(\w+)\]/);
+              if (navM && ['leads','trends','dashboard','casino','launchpad','wallet','admin'].includes(navM[1])) {
+                setPage(navM[1]);
+                window.scrollTo(0, 0);
+              }
+              const clean = data.content.replace(/\[NAVIGATE:\w+\]/g, '').trim();
+              setMessages(p => [...p, { role: 'assistant', content: clean }]);
               setAiFailCount(0);
               setTyping(false);
               return;
@@ -1308,18 +1788,14 @@ export default function AIOverlay() {
             throw new Error('fallback');
           })
           .catch(() => {
-            setTimeout(() => {
-              const res = getTemplateResponse(label, leads, { coachMode, selectedLead, revenueStats });
-              setMessages(p => [...p, { role: 'assistant', content: res }]);
-              setTyping(false);
-            }, 600 + Math.random() * 400);
+            const res = getTemplateResponse(label, leads, { coachMode, selectedLead, revenueStats, degenMode });
+            setMessages(p => [...p, { role: 'assistant', content: res }]);
+            setTyping(false);
           });
       } else {
-        setTimeout(() => {
-          const res = getTemplateResponse(label, leads, { coachMode, selectedLead, revenueStats });
-          setMessages(p => [...p, { role: 'assistant', content: res }]);
-          setTyping(false);
-        }, 600 + Math.random() * 400);
+        const res = getTemplateResponse(label, leads, { coachMode, selectedLead, revenueStats, degenMode });
+        setMessages(p => [...p, { role: 'assistant', content: res }]);
+        setTyping(false);
       }
       setInput('');
     }, 10);
@@ -1535,26 +2011,79 @@ export default function AIOverlay() {
               )}
             </AnimatePresence>
 
-            {/* Orb badge — dynamic: show unread count OR contextual badge */}
-            {(unreadCount > 0 || orbBadgeText) && (
+            {/* Orb badge — dynamic: show signal unread count, chat unread, OR contextual badge */}
+            {(unreadCount > 0 || signalUnread > 0 || orbBadgeText) && (
               <div className="absolute -top-1 -left-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold text-white z-10"
                 style={{
-                  background: unreadCount > 0
+                  background: (unreadCount > 0 || signalUnread > 0)
                     ? 'linear-gradient(135deg, #ef4444, #dc2626)'
                     : (degenMode ? 'linear-gradient(135deg, #f97316, #ef4444)' : 'linear-gradient(135deg, #10b981, #06b6d4)'),
                   boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                  minWidth: unreadCount > 0 ? '16px' : undefined,
+                  minWidth: (unreadCount > 0 || signalUnread > 0) ? '16px' : undefined,
                   textAlign: 'center',
                 }}
               >
-                {unreadCount > 0 ? unreadCount : orbBadgeText}
+                {unreadCount > 0 ? unreadCount : signalUnread > 0 ? signalUnread : orbBadgeText}
               </div>
             )}
+
+            {/* Notification Feed — appears on hover over orb */}
+            <AnimatePresence>
+              {orbHovered && !aiOpen && (
+                <motion.div
+                  ref={feedRef}
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  onMouseEnter={handleFeedMouseEnter}
+                  onMouseLeave={handleFeedMouseLeave}
+                  className="w-[300px] max-h-[400px] rounded-2xl overflow-hidden"
+                  style={{
+                    background: 'rgba(3, 7, 15, 0.97)',
+                    backdropFilter: 'blur(20px)',
+                    border: `1px solid ${degenMode ? 'rgba(249,115,22,0.2)' : 'rgba(16,185,129,0.15)'}`,
+                    boxShadow: '0 16px 48px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4)',
+                  }}
+                >
+                  {/* Feed Header */}
+                  <div className="px-3 py-2.5 flex items-center justify-between"
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div className="flex items-center gap-2">
+                      <Bell size={12} className={degenMode ? 'text-orange-400' : 'text-brand'} />
+                      <span className="text-[11px] font-bold text-slate-200">Signals</span>
+                      {signalUnread > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[8px] font-bold"
+                          style={{
+                            background: degenMode ? 'rgba(249,115,22,0.15)' : 'rgba(16,185,129,0.15)',
+                            color: degenMode ? '#f97316' : '#10b981',
+                          }}>
+                          {signalUnread} new
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[9px] text-slate-600 uppercase tracking-wider font-medium">Live</span>
+                  </div>
+
+                  {/* Feed Content — scrollable */}
+                  <div className="overflow-y-auto" style={{ maxHeight: '352px' }}>
+                    <NotificationFeed
+                      signals={signals}
+                      onAction={handleSignalAction}
+                      onDismiss={dismissSignal}
+                      degenMode={degenMode}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* The orb button — with fire animation in DEGEN mode */}
             <button
               onClick={() => setAiOpen(true)}
-              className="w-12 h-12 rounded-full flex items-center justify-center relative transition-transform hover:scale-110 active:scale-95"
+              onMouseEnter={handleOrbMouseEnter}
+              onMouseLeave={handleOrbMouseLeave}
+              className="group w-12 h-12 rounded-full flex items-center justify-center relative transition-transform hover:scale-110 active:scale-95"
               style={{
                 background: degenMode
                   ? 'linear-gradient(135deg, #f97316, #ef4444)'
@@ -1590,6 +2119,7 @@ export default function AIOverlay() {
                 </>
               )}
               {degenMode ? <Flame size={22} className="text-white relative z-10" /> : <Sparkles size={22} className="text-white" />}
+              <kbd className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-mono text-slate-400 bg-black/80 border border-white/10 rounded px-1.5 py-0.5 leading-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">G</kbd>
             </button>
           </motion.div>
         )}
@@ -1702,10 +2232,11 @@ export default function AIOverlay() {
                     </button>
                     <button
                       onClick={() => setAiOpen(false)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/[0.05] transition-all"
+                      className="flex items-center gap-1 p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/[0.05] transition-all"
                       title="Minimize (G or Escape)"
                     >
                       <ChevronDown size={15} />
+                      <kbd className="text-[8px] font-mono text-slate-600 bg-white/[0.04] border border-white/[0.06] rounded px-1 py-0.5 leading-none">Esc</kbd>
                     </button>
                   </div>
                 </div>

@@ -148,7 +148,7 @@ export async function recordTransaction(tx) {
   }]);
 }
 
-export async function recordCommission(dealId, amount, rate = 0.10) {
+export async function recordCommission(dealId, amount, rate = 0.12) {
   if (!supabase) return { error: { message: 'Supabase not configured' } };
   return supabase.from('commissions').insert([{
     deal_id: dealId,

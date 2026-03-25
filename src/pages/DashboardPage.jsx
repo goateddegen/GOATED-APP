@@ -20,7 +20,7 @@ const REFRESH_INTERVAL = 15_000;
 function useRealtimeClock() {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    const iv = setInterval(() => setNow(Date.now()), 1000);
+    const iv = setInterval(() => { if (!document.hidden) setNow(Date.now()); }, 1000);
     return () => clearInterval(iv);
   }, []);
   return now;
@@ -57,32 +57,31 @@ function useAnimatedCounter(target, duration = 1200) {
 }
 
 // ---------------------------------------------------------------------------
-// Real-time throughput simulator — simulates leads/events per second
+// Platform stats — real counts from the lead store, no simulated numbers
 // ---------------------------------------------------------------------------
-function useThroughputSimulator() {
+function usePlatformStats() {
   const [stats, setStats] = useState({
-    leadsProcessed: 0,
-    eventsPerSec: 0,
-    apiLatency: 0,
-    uptime: 99.97,
-    activeConnections: 0,
-    dataPointsPerSec: 0,
+    totalLeads: 0,
+    activeDeals: 0,
+    hotLeads: 0,
+    sessionStart: Date.now(),
   });
 
   useEffect(() => {
-    let total = 0;
-    const iv = setInterval(() => {
-      const burst = Math.floor(Math.random() * 800 + 200); // 200-1000 per tick
-      total += burst;
-      setStats({
-        leadsProcessed: total,
-        eventsPerSec: Math.floor(Math.random() * 4000 + 8000), // 8K-12K events/sec
-        apiLatency: Math.floor(Math.random() * 8 + 2), // 2-10ms
-        uptime: +(99.95 + Math.random() * 0.049).toFixed(3),
-        activeConnections: Math.floor(Math.random() * 200 + 1800), // 1800-2000
-        dataPointsPerSec: Math.floor(Math.random() * 50000 + 80000), // 80K-130K
-      });
-    }, 1000);
+    const compute = () => {
+      const state = useStore.getState();
+      const leads = state.getLeads();
+      const hot = leads.filter(l => l.conversionProbability >= 70).length;
+      const active = leads.filter(l => ['qualified', 'proposal', 'negotiation'].includes(l.status)).length;
+      setStats(prev => ({
+        ...prev,
+        totalLeads: leads.length,
+        activeDeals: active,
+        hotLeads: hot,
+      }));
+    };
+    compute();
+    const iv = setInterval(() => { if (!document.hidden) compute(); }, 30_000);
     return () => clearInterval(iv);
   }, []);
 
@@ -327,9 +326,10 @@ const FUNNEL_STAGES = [
 // ---------------------------------------------------------------------------
 function RealtimeMetricsBar() {
   const now = useRealtimeClock();
-  const throughput = useThroughputSimulator();
+  const platform = usePlatformStats();
   const utc = new Date(now).toISOString();
-  const timeStr = utc.slice(11, 23); // HH:MM:SS.mmm
+  const timeStr = utc.slice(11, 23);
+  const uptimeMinutes = Math.floor((Date.now() - platform.sessionStart) / 60000);
 
   return (
     <motion.div
@@ -338,7 +338,6 @@ function RealtimeMetricsBar() {
       animate={{ opacity: 1, y: 0 }}
     >
       <div className="flex items-center justify-between flex-wrap gap-y-2">
-        {/* Live clock */}
         <div className="flex items-center gap-2">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -347,32 +346,31 @@ function RealtimeMetricsBar() {
           <span className="text-[11px] font-mono text-emerald-400 font-bold tracking-wider">{timeStr} UTC</span>
         </div>
 
-        {/* Throughput metrics */}
         <div className="flex items-center gap-4 text-[10px]">
           <div className="flex items-center gap-1.5">
-            <Activity size={10} className="text-cyan-400" />
-            <span className="text-slate-500">Events/s</span>
-            <span className="font-mono font-bold text-cyan-400">{throughput.eventsPerSec.toLocaleString()}</span>
+            <Users size={10} className="text-cyan-400" />
+            <span className="text-slate-500">Leads</span>
+            <span className="font-mono font-bold text-cyan-400">{platform.totalLeads.toLocaleString()}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Zap size={10} className="text-brand" />
-            <span className="text-slate-500">Data pts/s</span>
-            <span className="font-mono font-bold text-brand">{throughput.dataPointsPerSec.toLocaleString()}</span>
+            <Target size={10} className="text-brand" />
+            <span className="text-slate-500">Active Deals</span>
+            <span className="font-mono font-bold text-brand">{platform.activeDeals.toLocaleString()}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <BarChart3 size={10} className="text-purple-400" />
-            <span className="text-slate-500">Latency</span>
-            <span className="font-mono font-bold text-purple-400">{throughput.apiLatency}ms</span>
+            <Flame size={10} className="text-orange-400" />
+            <span className="text-slate-500">Hot Leads</span>
+            <span className="font-mono font-bold text-orange-400">{platform.hotLeads.toLocaleString()}</span>
           </div>
           <div className="hidden sm:flex items-center gap-1.5">
-            <Globe size={10} className="text-amber-400" />
-            <span className="text-slate-500">Connections</span>
-            <span className="font-mono font-bold text-amber-400">{throughput.activeConnections.toLocaleString()}</span>
+            <Activity size={10} className="text-purple-400" />
+            <span className="text-slate-500">Session</span>
+            <span className="font-mono font-bold text-purple-400">{uptimeMinutes}m</span>
           </div>
           <div className="hidden md:flex items-center gap-1.5">
             <ShieldCheck size={10} className="text-emerald-400" />
-            <span className="text-slate-500">Uptime</span>
-            <span className="font-mono font-bold text-emerald-400">{throughput.uptime}%</span>
+            <span className="text-slate-500">Status</span>
+            <span className="font-mono font-bold text-emerald-400">LIVE</span>
           </div>
         </div>
       </div>
@@ -396,6 +394,18 @@ function DashboardContent({ onSelect }) {
   const degenMode = useStore(s => s.degenMode);
   const setAiOpen = useStore(s => s.setAiOpen);
   const setPage = useStore(s => s.setPage);
+
+  // Toast notification
+  const [toastMsg, setToastMsg] = useState('');
+  const [toastVisible, setToastVisible] = useState(false);
+  const showToast = useCallback((msg) => { setToastMsg(msg); setToastVisible(true); }, []);
+
+  useEffect(() => {
+    if (toastVisible) {
+      const t = setTimeout(() => setToastVisible(false), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [toastVisible]);
 
   // Degen alpha data
   const degenAlphaData = useMemo(() => {
@@ -529,7 +539,7 @@ function DashboardContent({ onSelect }) {
 
   useEffect(() => {
     fetchData();
-    intervalRef.current = setInterval(fetchData, REFRESH_INTERVAL);
+    intervalRef.current = setInterval(() => { if (!document.hidden) fetchData(); }, REFRESH_INTERVAL);
     return () => clearInterval(intervalRef.current);
   }, [fetchData]);
 
@@ -704,7 +714,7 @@ function DashboardContent({ onSelect }) {
       {/* ================================================================= */}
       {/* WEB TRAFFIC + SCALE ANALYTICS                                     */}
       {/* ================================================================= */}
-      <WebTrafficAnalytics totalLeads={revenueIntel?.totalLeads || 0} />
+      <PlatformOverview totalLeads={revenueIntel?.totalLeads || 0} />
 
       {/* ================================================================= */}
       {/* QUICK ACTIONS BAR                                                 */}
@@ -726,6 +736,7 @@ function DashboardContent({ onSelect }) {
           <Mail size={15} /> Send Outreach
         </button>
         <button
+          onClick={() => showToast('Report generation coming soon — use AI Strategy for insights.')}
           className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 text-sm font-medium hover:bg-purple-500/20 transition-colors"
         >
           <FileText size={15} /> Generate Report
@@ -1121,31 +1132,8 @@ function DashboardContent({ onSelect }) {
 // ---------------------------------------------------------------------------
 // WEB TRAFFIC + SCALE ANALYTICS
 // ---------------------------------------------------------------------------
-function WebTrafficAnalytics({ totalLeads }) {
-  const throughput = useThroughputSimulator();
-  const [trafficData, setTrafficData] = useState(() => {
-    // Generate 24h traffic data
-    const data = [];
-    for (let i = 0; i < 24; i++) {
-      const hour = (new Date().getHours() - 23 + i + 24) % 24;
-      const base = hour >= 9 && hour <= 17 ? 8000 : hour >= 6 && hour <= 21 ? 4500 : 1500;
-      data.push({ hour: `${hour}:00`, visitors: base + Math.floor(Math.random() * 2000), pageViews: base * 3 + Math.floor(Math.random() * 5000) });
-    }
-    return data;
-  });
-
-  // Simulate real-time traffic updates
-  const [liveVisitors, setLiveVisitors] = useState(3847);
-  useEffect(() => {
-    const iv = setInterval(() => {
-      setLiveVisitors(prev => Math.max(2000, Math.min(12000, prev + Math.floor(Math.random() * 200 - 90))));
-    }, 2000);
-    return () => clearInterval(iv);
-  }, []);
-
-  const maxVisitors = Math.max(...trafficData.map(d => d.visitors));
-  const totalVisitors24h = trafficData.reduce((s, d) => s + d.visitors, 0);
-  const totalPageViews24h = trafficData.reduce((s, d) => s + d.pageViews, 0);
+function PlatformOverview({ totalLeads }) {
+  const platform = usePlatformStats();
 
   return (
     <motion.div
@@ -1157,77 +1145,32 @@ function WebTrafficAnalytics({ totalLeads }) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Activity size={16} className="text-cyan-400" />
-          <h2 className="font-bold text-white text-sm">Platform Analytics</h2>
-          <span className="text-[10px] text-cyan-400 bg-cyan-500/15 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">REAL-TIME</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-          {liveVisitors.toLocaleString()} active now
+          <h2 className="font-bold text-white text-sm">Lead Database</h2>
         </div>
       </div>
 
-      {/* Key metrics row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         {[
-          { label: 'Active Users', value: liveVisitors.toLocaleString(), color: '#06b6d4', live: true },
-          { label: '24h Visitors', value: formatCompactNumber(totalVisitors24h), color: '#3b82f6' },
-          { label: '24h Page Views', value: formatCompactNumber(totalPageViews24h), color: '#a855f7' },
-          { label: 'Leads in DB', value: totalLeads.toLocaleString(), color: '#10b981' },
-          { label: 'Throughput', value: `${formatCompactNumber(throughput.dataPointsPerSec)}/s`, color: '#f59e0b' },
-          { label: 'Avg Latency', value: `${throughput.apiLatency}ms`, color: '#22c55e' },
+          { label: 'Total Leads', value: totalLeads.toLocaleString(), color: '#10b981' },
+          { label: 'Active Deals', value: platform.activeDeals.toLocaleString(), color: '#06b6d4' },
+          { label: 'Hot Leads (70%+)', value: platform.hotLeads.toLocaleString(), color: '#f59e0b' },
+          { label: 'Revenue', value: '$0.00', color: '#a855f7', sub: 'Pre-revenue' },
         ].map((m, i) => (
           <div key={i} className="rounded-lg bg-black/20 border border-white/[0.04] p-2.5">
             <div className="flex items-center gap-1.5 mb-1">
-              {m.live && <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: m.color }} />}
               <span className="text-[9px] uppercase tracking-wider text-slate-500">{m.label}</span>
             </div>
             <div className="text-lg font-bold font-mono" style={{ color: m.color }}>{m.value}</div>
+            {m.sub && <div className="text-[9px] text-slate-600">{m.sub}</div>}
           </div>
         ))}
       </div>
 
-      {/* Traffic chart (bar chart) */}
-      <div className="mb-3">
-        <div className="text-[9px] uppercase tracking-wider text-slate-500 mb-2">24H TRAFFIC DISTRIBUTION</div>
-        <div className="flex items-end gap-0.5 h-16">
-          {trafficData.map((d, i) => {
-            const heightPct = (d.visitors / maxVisitors) * 100;
-            const isNow = i === trafficData.length - 1;
-            return (
-              <div
-                key={i}
-                className="flex-1 rounded-t transition-all group relative"
-                style={{
-                  height: `${heightPct}%`,
-                  background: isNow ? '#06b6d4' : d.visitors > maxVisitors * 0.7 ? 'rgba(6,182,212,0.4)' : 'rgba(6,182,212,0.15)',
-                }}
-              >
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 rounded bg-black/90 border border-white/10 text-[8px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                  {d.hour}: {d.visitors.toLocaleString()} visitors
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="flex justify-between text-[8px] text-slate-600 mt-1">
-          <span>{trafficData[0]?.hour}</span>
-          <span>{trafficData[12]?.hour}</span>
-          <span>Now</span>
-        </div>
-      </div>
-
-      {/* Scale capability banner */}
-      <div className="rounded-lg bg-gradient-to-r from-cyan-500/5 to-brand/5 border border-cyan-500/15 p-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <Zap size={12} className="text-cyan-400" />
-            <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Scale Capacity</span>
-          </div>
-          <div className="flex items-center gap-4 text-[10px]">
-            <span className="text-slate-400">Max throughput: <span className="text-white font-bold font-mono">100K+ data points/sec</span></span>
-            <span className="text-slate-400">Lead processing: <span className="text-white font-bold font-mono">500K+ concurrent</span></span>
-            <span className="text-slate-400">API: <span className="text-emerald-400 font-bold font-mono">&lt;10ms p99</span></span>
-          </div>
+      <div className="rounded-lg bg-gradient-to-r from-brand/5 to-cyan-500/5 border border-brand/15 p-3">
+        <div className="flex items-center gap-2">
+          <Zap size={12} className="text-brand" />
+          <span className="text-[10px] text-brand font-bold uppercase tracking-wider">Platform</span>
+          <span className="text-[10px] text-slate-400 ml-2">GOATED enrichment engine processes 500K+ leads with AI scoring, intent signals, and conversion prediction</span>
         </div>
       </div>
     </motion.div>
@@ -1321,6 +1264,20 @@ function CryptoMarketTable({ coins }) {
                 );
               })}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Toast notification */}
+      <AnimatePresence>
+        {toastVisible && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-2.5 rounded-xl bg-surface-3 border border-white/10 shadow-2xl text-sm text-white font-medium"
+          >
+            {toastMsg}
           </motion.div>
         )}
       </AnimatePresence>

@@ -579,7 +579,7 @@ export default function CasinoPage() {
 
   useEffect(() => {
     fetchPrices();
-    const interval = setInterval(fetchPrices, 30000);
+    const interval = setInterval(() => { if (!document.hidden) fetchPrices(); }, 30000);
     return () => clearInterval(interval);
   }, [fetchPrices]);
 
@@ -641,9 +641,10 @@ export default function CasinoPage() {
     });
   }, [markets]);
 
-  // Generate simulated recent wins ticker
+  // Generate simulated recent wins ticker — skip when tab hidden
   useEffect(() => {
     const interval = setInterval(() => {
+      if (document.hidden) return;
       const name = recentWinNames[Math.floor(Math.random() * recentWinNames.length)];
       const game = recentWinGames[Math.floor(Math.random() * recentWinGames.length)];
       const amount = [50, 100, 150, 250, 500, 1000][Math.floor(Math.random() * 6)];

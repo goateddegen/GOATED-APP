@@ -92,6 +92,11 @@ function FloatingParticles() {
     canvas.addEventListener('mousemove', handleMouse, { passive: true });
 
     const animate = () => {
+      // Pause animation when tab is not visible
+      if (document.hidden) {
+        animRef.current = requestAnimationFrame(animate);
+        return;
+      }
       ctx.clearRect(0, 0, w, h);
       const mx = mouseRef.current.x;
       const my = mouseRef.current.y;
@@ -395,10 +400,10 @@ export default function HomePage() {
   ];
 
   const stats = [
-    { value: '500', suffix: 'K+', label: 'Leads Ready to Close', icon: Users },
-    { value: '0', suffix: '%', label: 'Platform Fee', icon: Wallet },
-    { value: '10', suffix: '%', label: 'Commission Only', icon: TrendingUp },
-    { value: '94', suffix: '%', label: 'Avg Close Rate', icon: Target },
+    { value: '250', suffix: 'K+', label: 'Leads Scored', icon: Users },
+    { value: 'LIVE', suffix: '', label: 'Real-Time Alpha Plays', icon: Activity },
+    { value: 'AI', suffix: '', label: 'AI-Powered Closing', icon: Bot },
+    { prefix: '$', value: '0', suffix: '', label: 'Platform Fee', icon: Shield },
   ];
 
   const outreachMethods = [
@@ -417,7 +422,7 @@ export default function HomePage() {
     { name: 'Gong', price: '$100+/seat', leads: false, ai: true, voip: false, predictions: false, wallet: false, sentiment: false, outreach: false, coaching: true },
     { name: 'Kalshi', price: 'Per-trade fees', leads: false, ai: false, voip: false, predictions: true, wallet: false, sentiment: false, outreach: false, coaching: false },
     { name: 'Polymarket', price: 'Per-trade fees', leads: false, ai: false, voip: false, predictions: true, wallet: false, sentiment: false, outreach: false, coaching: false },
-    { name: 'GOATED', price: '$0 + 10%', leads: true, ai: true, voip: true, predictions: true, wallet: true, sentiment: true, outreach: true, coaching: true, isUs: true },
+    { name: 'GOATED', price: '$0 + 12%', leads: true, ai: true, voip: true, predictions: true, wallet: true, sentiment: true, outreach: true, coaching: true, isUs: true },
   ];
 
   const pricingTiers = [
@@ -459,7 +464,7 @@ export default function HomePage() {
             <div className="flex flex-wrap items-center gap-3 mb-6">
               <motion.div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand/10 border border-brand/20 text-brand text-sm" whileHover={{ scale: 1.05 }}>
                 <Zap size={16} />
-                <span className="font-medium">v4.0 — Revenue Intelligence OS</span>
+                <span className="font-medium">B2B Sales Intelligence + Degen Alpha</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
               </motion.div>
               <motion.div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs" whileHover={{ scale: 1.05 }}>
@@ -470,18 +475,17 @@ export default function HomePage() {
 
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.05] mb-6 tracking-tight">
               <span className="bg-gradient-to-r from-brand via-emerald-300 to-cyan-400 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text' }}>
-                CLOSE DEALS
+                THE DEGEN OS
               </span>
               <br />
-              <span className="text-white">NOT FUCKING</span>{' '}
               <span className="relative">
-                <span className="text-white">TABS</span>
+                <span className="text-white">FOR CLOSERS</span>
                 <motion.span className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-brand to-cyan-400 rounded-full" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.8, duration: 0.6 }} />
               </span>
             </h1>
 
             <p className="text-lg sm:text-xl text-slate-400 max-w-lg mb-4 leading-relaxed">
-              Your pipeline is hemorrhaging money and you're paying $14K/yr for the privilege. Fuck that. <span className="text-brand font-semibold">500K+ leads</span> scored, ranked, and begging to be closed. AI that prints revenue while you sleep — this isn't a CRM, it's a goddamn money machine.
+              B2B Sales Intelligence x Degen Alpha. One platform to close deals, discover plays, and print money. <span className="text-brand font-semibold">250K+ leads scored</span>, real-time market signals, and an AI engine that never sleeps — this isn't a CRM, it's the operating system for closers and degens.
             </p>
             <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500 mb-8">
               <span className="flex items-center gap-1.5"><Shield size={14} className="text-brand" />$0 platform fee</span>
@@ -493,10 +497,10 @@ export default function HomePage() {
 
             <div className="flex flex-wrap gap-4 mb-10">
               <GlowButton onClick={() => setPage('leads')} color="brand">
-                <Rocket size={22} />LFG -- Start Printing Money<ArrowRight size={18} />
+                <Target size={22} />Start Closing<ArrowRight size={18} />
               </GlowButton>
-              <GlowButton onClick={() => setAiOpen(true)} variant="secondary">
-                <Bot size={22} className="text-brand" />Talk to GOATED AI
+              <GlowButton onClick={() => setPage('trends')} variant="secondary">
+                <Eye size={22} className="text-brand" />See Alpha Plays
               </GlowButton>
             </div>
 
@@ -770,18 +774,18 @@ export default function HomePage() {
           <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {features.map((f, i) => (
               <motion.button key={i} onClick={() => f.action ? f.action() : f.page && setPage(f.page)}
-                className="bg-black/40 backdrop-blur-sm rounded-xl p-5 text-left border border-white/[0.03] group relative overflow-hidden hover:border-white/[0.08] transition-all duration-300 hover:-translate-y-1"
+                className="bg-black/40 backdrop-blur-sm rounded-xl p-5 text-left border border-white/[0.03] group relative overflow-hidden hover:border-white/[0.08] transition-all duration-300 hover:-translate-y-1 min-h-[200px] flex flex-col"
                 onMouseEnter={() => setHoveredFeature(i)} onMouseLeave={() => setHoveredFeature(null)}
                 whileTap={{ scale: 0.98 }}>
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(circle at 50% 0%, ${f.color}10 0%, transparent 70%)` }} />
-                <div className="relative">
+                <div className="relative flex flex-col flex-1">
                   <div className="flex items-start justify-between mb-3">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg" style={{ background: `${f.color}15`, color: f.color, boxShadow: hoveredFeature === i ? `0 0 20px ${f.color}30` : 'none' }}><f.icon size={20} /></div>
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg flex-shrink-0" style={{ background: `${f.color}15`, color: f.color, boxShadow: hoveredFeature === i ? `0 0 20px ${f.color}30` : 'none' }}><f.icon size={20} /></div>
                     <span className="text-[10px] font-mono text-slate-600 uppercase tracking-wider">{f.stats}</span>
                   </div>
                   <h3 className="font-bold text-white mb-1.5 group-hover:text-brand transition-colors">{f.title}</h3>
-                  <p className="text-sm text-slate-400 leading-relaxed mb-3">{f.desc}</p>
-                  <div className="flex items-center gap-1 text-xs text-slate-500 group-hover:text-brand transition-colors"><span>Explore</span><ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" /></div>
+                  <p className="text-sm text-slate-400 leading-relaxed mb-3 flex-1">{f.desc}</p>
+                  <div className="flex items-center gap-1 text-xs text-slate-500 group-hover:text-brand transition-colors mt-auto"><span>Explore</span><ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" /></div>
                 </div>
               </motion.button>
             ))}
@@ -1053,31 +1057,35 @@ export default function HomePage() {
           </motion.div>
 
           {/* Revenue Streams Grid */}
-          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-6xl mx-auto mb-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto mb-10">
             {[
-              { icon: DollarSign, title: '$0 Platform Fee', value: '$0', desc: 'Full access to every tool, every feature, every lead. Zero upfront cost. No monthly charges ever.', color: '#10b981', label: 'Always free' },
-              { icon: Target, title: 'Deal Commission', value: '10-15%', desc: 'Commission on closed deals only. We eat when you eat. Scales with deal size for fairness.', color: '#f59e0b', label: 'On closed deals' },
-              { icon: TrendingUp, title: 'Betting Spreads', value: '2-5%', desc: 'Spread on prediction market bets. Competitive with Kalshi and Polymarket. Better odds, more markets.', color: '#a855f7', label: 'On market bets' },
-              { icon: Wallet, title: 'Crypto Transactions', value: '1-2%', desc: 'Small fee on crypto transactions and settlements. Lower than any exchange. Instant Solana payouts.', color: '#06b6d4', label: 'On transactions' },
+              { icon: DollarSign, title: '$0 Platform Fee', value: '$0', desc: 'Full access to every tool, every feature, every lead. Zero upfront cost.', color: '#10b981', label: 'Always free' },
+              { icon: Target, title: 'Deal Commission', value: '10-15%', desc: 'Commission on closed deals only. We eat when you eat.', color: '#f59e0b', label: 'On closed deals' },
+              { icon: TrendingUp, title: 'Betting Spreads', value: '2-5%', desc: 'Spread on prediction market bets. Better odds, more markets.', color: '#a855f7', label: 'On market bets' },
+              { icon: Wallet, title: 'Crypto Transactions', value: '1-2%', desc: 'Small fee on crypto transactions. Lower than any exchange.', color: '#06b6d4', label: 'On transactions' },
             ].map((item, i) => (
               <motion.div
                 key={i}
-                className="bg-black/40 backdrop-blur rounded-2xl p-6 border border-white/[0.05] hover:border-brand/20 transition-all duration-300 hover:-translate-y-1 text-center"
+                className="bg-black/40 backdrop-blur rounded-2xl p-6 border border-white/[0.05] hover:border-brand/20 transition-all duration-300 hover:-translate-y-1 text-center flex flex-col justify-between min-h-[220px]"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
               >
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ background: `${item.color}15`, color: item.color }}>
-                  <item.icon size={24} />
+                <div>
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ background: `${item.color}15`, color: item.color }}>
+                    <item.icon size={24} />
+                  </div>
+                  <div className="text-3xl font-black mb-1" style={{ color: item.color }}>{item.value}</div>
+                  <div className="text-xs text-slate-500 uppercase tracking-wider mb-3">{item.label}</div>
                 </div>
-                <div className="text-3xl font-black mb-1" style={{ color: item.color }}>{item.value}</div>
-                <div className="text-xs text-slate-500 uppercase tracking-wider mb-3">{item.label}</div>
-                <h3 className="font-bold text-white text-sm mb-2">{item.title}</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">{item.desc}</p>
+                <div>
+                  <h3 className="font-bold text-white text-sm mb-2">{item.title}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">{item.desc}</p>
+                </div>
               </motion.div>
             ))}
-          </StaggeredCards>
+          </div>
 
           {/* Competitor comparison callout */}
           <motion.div className="max-w-4xl mx-auto mb-10 p-5 rounded-xl border border-red-500/20 bg-red-500/5 text-center" initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
