@@ -1125,6 +1125,20 @@ function DashboardContent({ onSelect }) {
           Revenue data from GOATED lead engine. Market data via CoinGecko. Fear & Greed via Alternative.me. Refreshes every 30s.
         </p>
       </div>
+
+      {/* Toast */}
+      <AnimatePresence>
+        {toastVisible && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-2.5 rounded-xl bg-surface-3 border border-white/10 shadow-2xl text-sm text-white font-medium"
+          >
+            {toastMsg}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1268,19 +1282,6 @@ function CryptoMarketTable({ coins }) {
         )}
       </AnimatePresence>
 
-      {/* Toast notification */}
-      <AnimatePresence>
-        {toastVisible && (
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 30 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-2.5 rounded-xl bg-surface-3 border border-white/10 shadow-2xl text-sm text-white font-medium"
-          >
-            {toastMsg}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 }

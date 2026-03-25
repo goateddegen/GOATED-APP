@@ -1371,7 +1371,30 @@ export default function LeadDetail() {
               <span className="text-[10px] text-slate-500">Same industry, region, or deal range as {lead.name}</span>
             </div>
           </div>
-          <SimilarLeadsSection lead={lead} />
+          {(() => {
+            const allLeads = useStore.getState().leads || [];
+            const similar = allLeads
+              .filter(l => l.id !== lead.id && (l.industry === lead.industry || l.location === lead.location))
+              .slice(0, 4);
+            if (!similar.length) return <div className="text-xs text-slate-500">No similar leads found</div>;
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {similar.map(s => (
+                  <button key={s.id} onClick={() => { window.dispatchEvent(new CustomEvent('navigate-lead', { detail: s.id })); }}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-black/30 border border-white/[0.04] hover:border-brand/30 transition-colors text-left">
+                    <div className="w-8 h-8 rounded-full bg-brand/15 flex items-center justify-center text-xs font-bold text-brand">
+                      {s.name?.[0] || '?'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-medium text-white truncate">{s.name}</div>
+                      <div className="text-[10px] text-slate-500 truncate">{s.company} · {s.industry}</div>
+                    </div>
+                    <div className="text-[10px] font-bold text-brand">{s.score}</div>
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
