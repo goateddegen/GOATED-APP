@@ -389,7 +389,7 @@ CRITICAL RULES:
 - Reference leads using [LEAD_CARD:id] format so they render as clickable cards.
 - Bold page names (**Leads**, **Dashboard**, **Trends**, **Casino**, **Wallet**) to create nav links.
 - Be specific: names, scores, dollar amounts, locations. No filler.
-- Keep responses under 60 words unless deep research mode or detailed analysis is explicitly requested. Brevity = respect. Never repeat back what the user asked.
+- Keep responses concise but complete — cover what the user asked without padding. Use bullets and formatting for readability. Never repeat back what the user asked.
 - For lead queries: return ONLY a numbered list of leads with [LEAD_CARD:id], deal value, close %, and one-line action. NO paragraphs. Always append [NAVIGATE:leads] to auto-route.
 - For navigation requests: ALWAYS include "[NAVIGATE:pagename]" tag so the app auto-redirects. Example: "[NAVIGATE:leads]", "[NAVIGATE:trends]", "[NAVIGATE:casino]". Be proactive — if a user mentions leads, trends, wallet, etc., route them.
 - For actionable plays: lead with the action (BUY/SELL/HOLD), then 1 line of reasoning, then entry/exit.
@@ -521,8 +521,8 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
     }
 
     const maxTokens = (mode === 'play_execute' || mode === 'play_generate' || isDeepResearch) ? 2048
-      : (isOutreachIntent || isClosingIntent) ? 1024
-      : 512;
+      : (isOutreachIntent || isClosingIntent) ? 1536
+      : 800;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',

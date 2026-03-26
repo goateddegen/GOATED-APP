@@ -34,8 +34,8 @@ function useStreamingText(text, isLatest) {
     setDisplayed('');
     setIsStreaming(true);
 
-    // Reveal in chunks of 3-5 words for speed
-    const chunkSize = 4;
+    // Reveal in large chunks for speed — no more sluggish drip
+    const chunkSize = 12;
     const interval = setInterval(() => {
       currentIndex += chunkSize;
       if (currentIndex >= words.length) {
@@ -45,7 +45,7 @@ function useStreamingText(text, isLatest) {
       } else {
         setDisplayed(words.slice(0, currentIndex).join(''));
       }
-    }, 25); // 25ms per chunk = fast but visible streaming
+    }, 15); // 15ms per chunk = near-instant but still animated
 
     return () => clearInterval(interval);
   }, [text, isLatest]);
@@ -1651,7 +1651,7 @@ export default function AIOverlay() {
               ? `${m.content}\n\n[${pipelineContext}]`
               : m.content
           }));
-        const slimLeads = leads.slice(0, 2500).map(l => ({
+        const slimLeads = leads.slice(0, 200).map(l => ({
           id: l.id, name: l.name, company: l.company, industry: l.industry,
           location: l.location, score: l.score, dealValue: l.dealValue,
           status: l.status, priority: l.priority, conversionProbability: l.conversionProbability,
@@ -1748,7 +1748,7 @@ export default function AIOverlay() {
           `${l.name} at ${l.company} (score: ${l.score}, value: ${fmt(l.dealValue)}, priority: ${l.priority}, status: ${l.status})`
         ).join('; ')}${leadCtx}${revenueCtx}${coachCtx}`;
 
-        const slimLeadsQA = leads.slice(0, 2500).map(l => ({
+        const slimLeadsQA = leads.slice(0, 200).map(l => ({
           id: l.id, name: l.name, company: l.company, industry: l.industry,
           location: l.location, score: l.score, dealValue: l.dealValue,
           status: l.status, priority: l.priority, conversionProbability: l.conversionProbability,
@@ -1825,7 +1825,7 @@ export default function AIOverlay() {
       const newX = dragStartRef.current.elX + dx;
       const newY = dragStartRef.current.elY + dy;
       // Clamp to viewport
-      const maxX = window.innerWidth - 350;
+      const maxX = window.innerWidth - 420;
       const maxY = window.innerHeight - 100;
       setDragPos({
         x: Math.max(0, Math.min(newX, maxX)),
@@ -2149,14 +2149,14 @@ export default function AIOverlay() {
               className={
                 isMobile
                   ? 'fixed inset-2 z-50 flex flex-col rounded-2xl overflow-hidden'
-                  : 'z-50 w-[350px] flex flex-col rounded-2xl overflow-hidden'
+                  : 'z-50 w-[420px] flex flex-col rounded-2xl overflow-hidden'
               }
               style={{
                 ...(isMobile ? {} : dragPos
                   ? { position: 'fixed', left: dragPos.x, top: dragPos.y }
                   : { position: 'fixed', bottom: 24, right: 24 }
                 ),
-                maxHeight: isMobile ? undefined : '500px',
+                maxHeight: isMobile ? undefined : 'min(85vh, 720px)',
                 background: 'rgba(3, 7, 15, 0.97)',
                 backdropFilter: 'blur(24px) saturate(1.6)',
                 border: `1px solid ${degenMode ? 'rgba(249,115,22,0.15)' : 'rgba(16,185,129,0.12)'}`,

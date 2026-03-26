@@ -237,6 +237,69 @@ export function trackPerformance() {
   return observer;
 }
 
+// ---------------------------------------------------------------------------
+// Cloud Persistence — sync user data to Supabase when logged in
+// Falls back to localStorage when offline or Supabase not configured
+// ---------------------------------------------------------------------------
+const SYNC_KEYS = [
+  'goated_degen', 'goated_onboarded', 'goated_goat_balance',
+  'goated_transactions', 'goated_invoices', 'goated_wallet',
+  'goated_casino_bets', 'goated_casino_resolved', 'goated_casino_bet_history',
+  'goated_daily_bonus', 'goated_streaks',
+];
+
+export async function syncUserDataToCloud(userId) {
+  if (!supabase || !userId) return;
+  try {
+    const settings = {};
+    for (const key of SYNC_KEYS) {
+      const val = localStorage.getItem(key);
+      if (val !== null) settings[key] = val;
+    }
+    await supabase.from('user_settings').upsert({
+      user_id: userId,
+      settings: settings,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+  } catch (err) {
+    console.warn('[GOATED] Cloud sync failed:', err.message);
+  }
+}
+
+export async function loadUserDataFromCloud(userId) {
+  if (!supabase || !userId) return false;
+  try {
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('settings')
+      .eq('user_id', userId)
+      .single();
+    if (error || !data?.settings) return false;
+    // Restore to localStorage
+    for (const [key, val] of Object.entries(data.settings)) {
+      if (val !== null && val !== undefined) {
+        localStorage.setItem(key, val);
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Auto-sync on interval (every 60s when logged in)
+let syncInterval = null;
+export function startAutoSync(userId) {
+  stopAutoSync();
+  if (!userId) return;
+  // Initial sync
+  syncUserDataToCloud(userId);
+  syncInterval = setInterval(() => syncUserDataToCloud(userId), 60000);
+}
+export function stopAutoSync() {
+  if (syncInterval) { clearInterval(syncInterval); syncInterval = null; }
+}
+
 export function getHealthStatus() {
   return {
     supabaseConnected: !!supabase,

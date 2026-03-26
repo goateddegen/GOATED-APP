@@ -108,7 +108,7 @@ body {
 
 .glass {
   background: rgba(0, 0, 0, 0.96);
-  backdrop-filter: blur(20px) saturate(1.5);
+  backdrop-filter: blur(12px) saturate(1.2);
   border: 1px solid rgba(0,255,136,0.06);
   contain: layout style;
 }
@@ -158,9 +158,10 @@ body {
   background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.015'/%3E%3C/svg%3E");
   pointer-events: none;
   z-index: 9990;
-  opacity: 0.4;
+  opacity: 0.25;
   contain: strict;
   will-change: auto;
+  filter: none;
 }
 
 /* Hardware acceleration for elements that animate via CSS */

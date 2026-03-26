@@ -11,7 +11,7 @@ import LeadDetail from './components/LeadDetail';
 import AIOverlay from './components/AIOverlay';
 import AccountModal from './components/AccountModal';
 import Onboarding from './components/Onboarding';
-import { onAuthStateChange, trackPerformance, trackPageView } from './lib/supabase';
+import { onAuthStateChange, trackPerformance, trackPageView, startAutoSync, stopAutoSync, loadUserDataFromCloud } from './lib/supabase';
 
 // Lazy-loaded pages wrapped in React.memo to reduce CSR overhead on re-renders
 const HomePage = React.memo(lazy(() => import('./pages/HomePage')));
@@ -22,8 +22,7 @@ const TrendsPage = React.memo(lazy(() => import('./pages/TrendsPage')));
 // const MarketPage = lazy(() => import('./pages/MarketPage'));
 const WalletPage = React.memo(lazy(() => import('./pages/WalletPage')));
 const AdminPage = React.memo(lazy(() => import('./pages/AdminPage')));
-const BuilderPage = React.memo(lazy(() => import('./pages/BuilderPage')));
-const WhopPage = React.memo(lazy(() => import('./pages/WhopPage')));
+// BuilderPage and WhopPage removed — don't help users close deals
 const LaunchPadPage = React.memo(lazy(() => import('./pages/LaunchPadPage')));
 const CasinoPage = React.memo(lazy(() => import('./pages/CasinoPage')));
 // CommsPage and FinderPage removed — outreach built into leads side
@@ -303,10 +302,13 @@ export default function App() {
         setUser(u);
         setIsLoggedIn(true);
         localStorage.setItem('goated_current_user', JSON.stringify(u));
+        // Cloud sync: load settings then start auto-sync
+        loadUserDataFromCloud(session.user.id).then(() => startAutoSync(session.user.id));
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsLoggedIn(false);
         localStorage.removeItem('goated_current_user');
+        stopAutoSync();
       }
     });
 
@@ -316,6 +318,7 @@ export default function App() {
     return () => {
       data?.subscription?.unsubscribe();
       perfObserver?.disconnect();
+      stopAutoSync();
     };
   }, []);
 
@@ -446,8 +449,7 @@ export default function App() {
       case 'market': return <TrendsPage />; // legacy route — C key now maps to trends
       case 'wallet': return <WalletPage />;
       case 'admin': return <AdminPage />;
-      case 'builder': return <BuilderPage />;
-      case 'whop': return <WhopPage />;
+      // builder and whop removed — don't help users close deals
       case 'launchpad': return <LaunchPadPage />;
       case 'casino': return <CasinoPage />;
       // comms and finder removed
