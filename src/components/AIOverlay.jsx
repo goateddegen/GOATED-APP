@@ -2198,7 +2198,7 @@ export default function AIOverlay() {
                     </div>
                     <div>
                       <div className="font-bold text-xs flex items-center gap-1.5">
-                        <span className="glitter-text">GOATED AI</span>
+                        <span className={degenMode ? 'text-orange-400 font-black' : 'text-brand font-black'}>GOATED AI</span>
                         {useAI && (
                           <span className="text-[8px] px-1 py-0.5 rounded-full font-semibold tracking-wider"
                             style={{

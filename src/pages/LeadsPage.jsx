@@ -103,7 +103,7 @@ function getCloseStrategy(lead, prob) {
 }
 
 function getOutreachTemplates(lead) {
-  const firstName = lead.name.split(' ')[0];
+  const firstName = (lead.name || 'Unknown').split(' ')[0];
   return {
     email: { subject: `Quick question about ${lead.company}'s growth`, body: `Hi ${firstName},\n\nI noticed ${lead.company} is doing great things in ${lead.industry}. I help similar companies increase revenue by 20-40% through optimized digital presence.\n\nWould you be open to a quick 15-min call this week?\n\nBest,\n[Your Name]` },
     linkedin: `Hi ${firstName}, I came across ${lead.company} and was impressed by your work in ${lead.industry}. I help companies like yours unlock hidden revenue. Would love to connect.`,
@@ -114,10 +114,9 @@ function getOutreachTemplates(lead) {
 
 function getContactIntel(lead, index) {
   const seed = (index + 1) * 4219;
-  const phone = `(${seededRange(seed, 200, 999)}) ${seededRange(seed + 1, 100, 999)}-${seededRange(seed + 2, 1000, 9999)}`;
   const lastActiveDays = seededRange(seed + 6, 0, 90);
   const lastActive = lastActiveDays === 0 ? 'Active now' : lastActiveDays < 7 ? `${lastActiveDays}d ago` : lastActiveDays < 30 ? `${Math.floor(lastActiveDays / 7)}w ago` : `${Math.floor(lastActiveDays / 30)}mo ago`;
-  return { phone, lastActive, lastActiveDays };
+  return { phone: lead.phone || null, lastActive, lastActiveDays };
 }
 
 function relativeTime(dateStr) {
@@ -374,9 +373,9 @@ function CloseCoachRow({ lead, index, colSpan, onCallClick, showToast }) {
                 <span className="text-xs font-bold text-white uppercase tracking-wider">Quick Outreach</span>
               </div>
               <div className="space-y-2 mb-3">
-                <button onClick={() => onCallClick(lead, intel.phone)}
+                <button onClick={() => intel.phone ? onCallClick(lead, intel.phone) : showToast('Connect Apollo.io API key to enrich contact data')}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors text-left">
-                  <Phone size={13} /> Call {intel.phone}
+                  <Phone size={13} /> {intel.phone || 'Enrich to unlock phone'}
                 </button>
                 <button onClick={() => setActiveOutreach(activeOutreach === 'email' ? null : 'email')}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs font-medium text-purple-400 hover:bg-purple-500/20 transition-colors text-left">
@@ -871,8 +870,8 @@ export default function LeadsPage({ onSelect }) {
                       {/* Actions */}
                       <td className="px-3 py-2.5">
                         <div className="flex gap-0.5">
-                          <button onClick={e => { e.stopPropagation(); const intel = getContactIntel(l, i); handleCallClick(l, intel.phone); }}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors" title="Call">
+                          <button onClick={e => { e.stopPropagation(); const intel = getContactIntel(l, i); intel.phone ? handleCallClick(l, intel.phone) : showToast('Connect Apollo.io to unlock contact data'); }}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors" title={l.phone ? 'Call' : 'Enrich to unlock'}>
                             <Phone size={13} />
                           </button>
                           <button onClick={e => { e.stopPropagation(); setScheduleLead(l); }}

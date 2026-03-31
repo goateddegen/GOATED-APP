@@ -1,18 +1,17 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  TrendingUp, ArrowUpRight, BarChart3, Activity, RefreshCw, Zap, Target, Globe,
-  DollarSign, Layers, Flame, Lock, LogIn, ChevronRight, Eye,
+  TrendingUp, ArrowUpRight, BarChart3, Activity, RefreshCw, Zap, Target,
+  DollarSign, Layers, Flame, Lock, LogIn, Eye,
   Phone, Mail, FileText, Brain, AlertTriangle, CheckCircle, Users, Award,
   ArrowRight, Briefcase, ShieldCheck,
 } from 'lucide-react';
 import { useStore, fmt } from '../hooks/useStore';
 
 // ============================================================================
-// DASHBOARD -- Revenue Intelligence + Crypto Market Intelligence
+// DASHBOARD -- Pipeline Health & Revenue Intelligence
 // ============================================================================
 
-const REFRESH_INTERVAL = 15_000;
 
 // ---------------------------------------------------------------------------
 // Real-time clock hook — updates every 1000ms (was 100ms — no visual benefit below 1s)
@@ -103,13 +102,6 @@ function seededRandom(seed) {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function formatPrice(n) {
-  if (n == null || isNaN(n)) return '$0.00';
-  if (n >= 1000) return `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-  if (n >= 1) return `$${n.toFixed(2)}`;
-  return `$${n.toFixed(6)}`;
-}
-
 function formatLargeNumber(n) {
   if (n == null || isNaN(n)) return '$0';
   if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
@@ -117,15 +109,6 @@ function formatLargeNumber(n) {
   if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
   if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
   return `$${n.toFixed(0)}`;
-}
-
-function formatCompactNumber(n) {
-  if (n == null || isNaN(n)) return '0';
-  if (n >= 1e12) return `${(n / 1e12).toFixed(2)}T`;
-  if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
-  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `${(n / 1e3).toFixed(0)}K`;
-  return `${n}`;
 }
 
 function timeAgo(isoString) {
@@ -136,35 +119,6 @@ function timeAgo(isoString) {
   if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
   if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
   return `${Math.floor(sec / 86400)}d ago`;
-}
-
-// ---------------------------------------------------------------------------
-// Coin symbol colors
-// ---------------------------------------------------------------------------
-const COIN_COLORS = {
-  BTC: '#f7931a', ETH: '#627eea', SOL: '#00ffa3', BNB: '#f3ba2f',
-  XRP: '#00aae4', ADA: '#0033ad', DOGE: '#c2a633', DOT: '#e6007a',
-  AVAX: '#e84142', LINK: '#2a5ada', MATIC: '#8247e5', UNI: '#ff007a',
-  SHIB: '#ffa409', LTC: '#bfbbbb', TRX: '#eb0a29', NEAR: '#00c1de',
-  BCH: '#8dc351', APT: '#09c3d3', ATOM: '#2e3148', FIL: '#0090ff',
-};
-
-// ---------------------------------------------------------------------------
-// MiniSparkline -- SVG sparkline
-// ---------------------------------------------------------------------------
-function MiniSparkline({ data, color = '#10b981', width = 80, height = 28 }) {
-  if (!data || data.length < 2) return null;
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-  const points = data
-    .map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * height}`)
-    .join(' ');
-  return (
-    <svg width={width} height={height} className="shrink-0">
-      <polyline fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={points} />
-    </svg>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -196,38 +150,6 @@ function CircularGauge({ value, size = 80, strokeWidth = 6, color = '#00ff88', l
 }
 
 // ---------------------------------------------------------------------------
-// Revenue Sparkline (generates a simple upward trend)
-// ---------------------------------------------------------------------------
-function RevenueSparkline({ seed = 42, width = 120, height = 32 }) {
-  const rand = seededRandom(seed);
-  const points = [];
-  let val = 40;
-  for (let i = 0; i < 12; i++) {
-    val = Math.max(10, Math.min(90, val + (rand() * 20 - 7)));
-    points.push(val);
-  }
-  const min = Math.min(...points);
-  const max = Math.max(...points);
-  const range = max - min || 1;
-  const pathPoints = points
-    .map((v, i) => `${(i / (points.length - 1)) * width},${height - ((v - min) / range) * (height - 4) - 2}`)
-    .join(' ');
-  const lastY = height - ((points[points.length - 1] - min) / range) * (height - 4) - 2;
-  return (
-    <svg width={width} height={height} className="shrink-0">
-      <defs>
-        <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#00ff88" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="#00ff88" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polyline fill="none" stroke="#00ff88" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={pathPoints} />
-      <circle cx={width} cy={lastY} r="3" fill="#00ff88" />
-    </svg>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // AccessDenied
 // ---------------------------------------------------------------------------
 function AccessDenied({ onLogin }) {
@@ -250,24 +172,6 @@ function AccessDenied({ onLogin }) {
 }
 
 // ---------------------------------------------------------------------------
-// Fear & Greed helpers
-// ---------------------------------------------------------------------------
-function fngLabel(value) {
-  if (value <= 25) return 'Extreme Fear';
-  if (value <= 45) return 'Fear';
-  if (value <= 55) return 'Neutral';
-  if (value <= 75) return 'Greed';
-  return 'Extreme Greed';
-}
-function fngColor(value) {
-  if (value <= 25) return '#ef4444';
-  if (value <= 45) return '#f97316';
-  if (value <= 55) return '#eab308';
-  if (value <= 75) return '#22c55e';
-  return '#10b981';
-}
-
-// ---------------------------------------------------------------------------
 // Generate deterministic B2B activity feed from leads
 // ---------------------------------------------------------------------------
 function generateActivityFeed(leads, dateSeed) {
@@ -276,16 +180,16 @@ function generateActivityFeed(leads, dateSeed) {
   if (!leads || leads.length === 0) return items;
 
   const actionTemplates = [
-    (l) => ({ icon: ArrowUpRight, color: '#10b981', text: `${l.name.split(' ')[0]} ${l.name.split(' ')[1]?.[0] || ''}. moved to ${l.status === 'negotiation' ? 'Negotiation' : l.status === 'proposal' ? 'Proposal' : 'Qualified'} -- ${fmt(l.dealValue)} deal`, detail: `${l.company} | ${l.industry}` }),
-    (l) => ({ icon: Users, color: '#3b82f6', text: `New lead from ${l.lead_source} -- ${l.company}`, detail: `${l.name} (${l.title}) | Score: ${l.score}` }),
-    (l) => ({ icon: CheckCircle, color: '#00ff88', text: `Deal closed! ${fmt(l.dealValue)} -- ${l.company}`, detail: `${l.name} | ${l.industry} | ${l.employees} employees` }),
-    (l) => ({ icon: Phone, color: '#a855f7', text: `Call completed with ${l.name.split(' ')[0]} at ${l.company}`, detail: `${l.title} | Next step: ${l.status === 'contacted' ? 'Schedule demo' : 'Send proposal'}` }),
-    (l) => ({ icon: Mail, color: '#06b6d4', text: `Outreach sent to ${l.name} -- ${l.company}`, detail: `Via ${l.lead_source} | Deal size: ${fmt(l.dealValue)}` }),
-    (l) => ({ icon: TrendingUp, color: '#f97316', text: `${l.company} engagement surging -- momentum ${l.momentum}`, detail: `Score jumped to ${l.score} | ${fmt(l.dealValue)} pipeline` }),
-    (l) => ({ icon: AlertTriangle, color: '#ef4444', text: `${l.company} going cold -- last contact ${l.last_contact}`, detail: `${fmt(l.dealValue)} at risk | Priority: ${l.priority}` }),
-    (l) => ({ icon: Award, color: '#eab308', text: `${l.name.split(' ')[0]} referred a new lead from ${l.industry}`, detail: `Referral from ${l.company} | High intent signal` }),
-    (l) => ({ icon: Briefcase, color: '#8b5cf6', text: `${l.company} requested custom proposal -- ${fmt(l.dealValue)}`, detail: `${l.name} (${l.title}) | ${l.employees} employees` }),
-    (l) => ({ icon: Target, color: '#22c55e', text: `Demo booked: ${l.name} at ${l.company}`, detail: `${l.title} | Budget: ${fmt(l.dealValue)} | ${l.location}` }),
+    (l) => ({ icon: ArrowUpRight, color: '#10b981', text: `${(l.name||'Lead').split(' ')[0]} ${(l.name||'').split(' ')[1]?.[0] || ''}. moved to ${l.status === 'negotiation' ? 'Negotiation' : l.status === 'proposal' ? 'Proposal' : 'Qualified'} -- ${fmt(l.dealValue)} deal`, detail: `${l.company} | ${l.industry}` }),
+    (l) => ({ icon: Users, color: '#3b82f6', text: `New lead from ${l.lead_source || 'inbound'} -- ${l.company}`, detail: `${l.name} (${l.title}) | Score: ${l.score}` }),
+    (l) => ({ icon: CheckCircle, color: '#00ff88', text: `Deal closed! ${fmt(l.dealValue)} -- ${l.company}`, detail: `${l.name} | ${l.industry} | ${l.employees || '?'} employees` }),
+    (l) => ({ icon: Phone, color: '#a855f7', text: `Call completed with ${(l.name||'Lead').split(' ')[0]} at ${l.company}`, detail: `${l.title} | Next step: ${l.status === 'contacted' ? 'Schedule demo' : 'Send proposal'}` }),
+    (l) => ({ icon: Mail, color: '#06b6d4', text: `Outreach sent to ${l.name} -- ${l.company}`, detail: `Via ${l.lead_source || 'outbound'} | Deal size: ${fmt(l.dealValue)}` }),
+    (l) => ({ icon: TrendingUp, color: '#f97316', text: `${l.company} engagement surging -- momentum ${l.momentum || 'rising'}`, detail: `Score jumped to ${l.score} | ${fmt(l.dealValue)} pipeline` }),
+    (l) => ({ icon: AlertTriangle, color: '#ef4444', text: `${l.company} going cold -- last contact ${l.last_contact || 'unknown'}`, detail: `${fmt(l.dealValue)} at risk | Priority: ${l.priority || 'medium'}` }),
+    (l) => ({ icon: Award, color: '#eab308', text: `${(l.name||'Lead').split(' ')[0]} referred a new lead from ${l.industry}`, detail: `Referral from ${l.company} | High intent signal` }),
+    (l) => ({ icon: Briefcase, color: '#8b5cf6', text: `${l.company} requested custom proposal -- ${fmt(l.dealValue)}`, detail: `${l.name} (${l.title}) | ${l.employees || '?'} employees` }),
+    (l) => ({ icon: Target, color: '#22c55e', text: `Demo booked: ${l.name} at ${l.company}`, detail: `${l.title} | Budget: ${fmt(l.dealValue)} | ${l.location || 'TBD'}` }),
   ];
 
   // Pick 15 random leads and assign random actions
@@ -417,31 +321,50 @@ function DashboardContent({ onSelect }) {
   const leads = useMemo(() => useStore.getState().getLeads(), []);
   const analytics = useMemo(() => useStore.getState().getPipelineAnalytics(), []);
 
-  // ── Revenue Intelligence computed from leads ──
+  // ── Revenue Intelligence computed from real store data ──
   const revenueIntel = useMemo(() => {
     if (!leads || !analytics) return null;
 
-    // All revenue figures are REAL zeros — they will grow as actual transactions happen
-    const totalPipeline = 0;
-    const wonLeads = [];
-    const lostLeads = [];
-    const unresponsiveLeads = [];
-    const atRiskLeads = [];
-    const revenueAtRisk = 0;
-    const wonValue = 0;
-    const lostValue = 0;
-    const avgDealSize = 0;
-    const closeRate = 0;
+    const totalPipeline = analytics.totalPipelineValue || 0;
+    const closeRate = analytics.winRate || 0;
+    const avgDealSize = analytics.avgDealValue || 0;
+    const hotLeads = analytics.hotLeads || 0;
+    const totalLeads = analytics.total || 0;
+    const wonCount = analytics.wonCount || 0;
+    const lostCount = analytics.lostCount || 0;
 
-    // MRR: $0 until real transactions flow
-    const mrr = 0;
+    // Compute won/lost values from actual leads
+    let wonValue = 0;
+    let lostValue = 0;
+    let atRiskValue = 0;
+    let atRiskCount = 0;
+    for (let i = 0; i < leads.length; i++) {
+      const l = leads[i];
+      if (l.status === 'won') wonValue += l.dealValue;
+      if (l.status === 'lost') lostValue += l.dealValue;
+      // At-risk: leads that went cold or have low momentum
+      if (l.momentum === 'declining' || l.status === 'lost') {
+        atRiskValue += l.dealValue;
+        atRiskCount++;
+      }
+    }
 
-    // Time to close approximation by stage
-    const avgTimeToClose = '--';
+    // Active pipeline value (excluding won/lost)
+    const activePipeline = totalPipeline - wonValue - lostValue;
 
-    // Funnel data with $0 values — will populate as real deals enter pipeline
+    // MRR estimate: won deals spread monthly (simplified)
+    const mrr = wonCount > 0 ? Math.round(wonValue / 12) : 0;
+
+    // Avg time to close placeholder based on pipeline depth
+    const avgTimeToClose = wonCount > 0 ? '~45 days' : '--';
+
+    // Funnel data from real analytics conversionFunnel
+    const funnel = analytics.conversionFunnel || {};
     const funnelData = FUNNEL_STAGES.map(stage => {
-      return { ...stage, count: 0, value: 0 };
+      const count = funnel[stage.key] || 0;
+      // Estimate value per stage: count * avgDealValue
+      const value = count * avgDealSize;
+      return { ...stage, count, value };
     });
 
     // Conversion rates between stages
@@ -452,12 +375,12 @@ function DashboardContent({ onSelect }) {
       return { ...stage, conversionRate: parseFloat(rate) };
     });
 
-    // Top industries — empty until real data
-    const topIndustries = [];
+    // Top industries from analytics
+    const topIndustries = analytics.topIndustries || [];
 
     return {
-      totalPipeline,
-      revenueAtRisk,
+      totalPipeline: activePipeline,
+      revenueAtRisk: atRiskValue,
       wonValue,
       lostValue,
       mrr,
@@ -465,10 +388,10 @@ function DashboardContent({ onSelect }) {
       avgDealSize,
       avgTimeToClose,
       funnelData: funnelWithConversion,
-      lostCount: 0,
-      atRiskCount: 0,
-      totalLeads: 0,
-      hotLeads: 0,
+      lostCount,
+      atRiskCount,
+      totalLeads,
+      hotLeads,
       topIndustries,
     };
   }, [leads, analytics]);
@@ -480,73 +403,8 @@ function DashboardContent({ onSelect }) {
     return generateActivityFeed(leads, dateSeed);
   }, [leads]);
 
-  // ── Crypto Market State ──
-  const [coins, setCoins] = useState([]);
-  const [globalData, setGlobalData] = useState(null);
-  const [fngData, setFngData] = useState(null);
-  const [trendingData, setTrendingData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
-  const intervalRef = useRef(null);
-
-  // ── Fetch crypto data ──
-  const fetchData = useCallback(async () => {
-    try {
-      const [coinsRes, globalRes, fngRes, trendingRes] = await Promise.allSettled([
-        fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=true&price_change_percentage=1h%2C24h%2C7d'),
-        fetch('https://api.coingecko.com/api/v3/global'),
-        fetch('https://api.alternative.me/fng/?limit=10'),
-        fetch('https://api.coingecko.com/api/v3/search/trending'),
-      ]);
-
-      if (coinsRes.status === 'fulfilled' && coinsRes.value.ok) {
-        const raw = await coinsRes.value.json();
-        if (Array.isArray(raw) && raw.length > 0) {
-          setCoins(raw.map(c => ({
-            id: c.id, name: c.name, symbol: (c.symbol || '').toUpperCase(), image: c.image,
-            price: c.current_price, change1h: c.price_change_percentage_1h_in_currency || 0,
-            change24h: c.price_change_percentage_24h || 0, change7d: c.price_change_percentage_7d_in_currency || 0,
-            volume24h: c.total_volume, marketCap: c.market_cap, rank: c.market_cap_rank,
-            sparkline: c.sparkline_in_7d?.price || [],
-          })));
-        }
-      }
-      if (globalRes.status === 'fulfilled' && globalRes.value.ok) {
-        const raw = await globalRes.value.json();
-        setGlobalData(raw.data || null);
-      }
-      if (fngRes.status === 'fulfilled' && fngRes.value.ok) {
-        const raw = await fngRes.value.json();
-        if (raw.data && raw.data.length > 0) {
-          const current = parseInt(raw.data[0].value, 10);
-          setFngData({ current, history: raw.data });
-        }
-      }
-      if (trendingRes.status === 'fulfilled' && trendingRes.value.ok) {
-        const raw = await trendingRes.value.json();
-        setTrendingData(raw.coins || []);
-      }
-
-      setLastUpdated(new Date());
-      setError(null);
-    } catch (err) {
-      setError('Some data temporarily unavailable');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-    intervalRef.current = setInterval(() => { if (!document.hidden) fetchData(); }, REFRESH_INTERVAL);
-    return () => clearInterval(intervalRef.current);
-  }, [fetchData]);
-
-  const fngValue = fngData?.current ?? null;
-
   // ── Loading state ──
-  if (loading && coins.length === 0 && !revenueIntel) {
+  if (!revenueIntel) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -574,41 +432,14 @@ function DashboardContent({ onSelect }) {
             <p className="text-sm text-slate-500">Pipeline analytics, market signals & deal intelligence</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          {lastUpdated && (
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Live -- refreshes every 15s
-            </div>
-          )}
-          {error && <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-1 rounded-lg">{error}</span>}
-          <button
-            onClick={() => { setLoading(true); fetchData(); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-3 border border-white/5 text-xs text-slate-400 hover:text-white transition-colors"
-          >
-            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
-          </button>
+        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          Live from store
         </div>
       </div>
 
       {/* ================================================================= */}
-      {/* PRE-REVENUE BANNER                                                */}
-      {/* ================================================================= */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-        className="rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 p-3 flex items-center gap-3"
-      >
-        <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center flex-shrink-0">
-          <DollarSign size={16} className="text-amber-400" />
-        </div>
-        <div>
-          <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Pre-Revenue</span>
-          <p className="text-[11px] text-slate-500">All revenue, pipeline, and MRR figures are $0.00. Values update automatically when real transactions flow.</p>
-        </div>
-      </motion.div>
-
-      {/* ================================================================= */}
-      {/* REAL-TIME SYSTEM METRICS BAR (system performance, not revenue)    */}
+      {/* REAL-TIME SYSTEM METRICS BAR                                      */}
       {/* ================================================================= */}
       <div className="text-[9px] uppercase tracking-wider text-slate-600 mb-1">System Performance Metrics</div>
       <RealtimeMetricsBar />
@@ -635,9 +466,9 @@ function DashboardContent({ onSelect }) {
           </div>
           <div className="flex items-center gap-2">
             <div className="text-right">
-              <div className="text-xs text-slate-500">Platform Revenue</div>
-              <div className="text-sm font-bold text-brand">$0.00</div>
-              <div className="text-[9px] text-slate-600">Will grow with real transactions</div>
+              <div className="text-xs text-slate-500">Won Revenue</div>
+              <div className="text-sm font-bold text-brand">{revenueIntel ? formatLargeNumber(revenueIntel.wonValue) : '$0'}</div>
+              <div className="text-[9px] text-slate-600">{revenueIntel ? `${revenueIntel.closeRate}% close rate` : '--'}</div>
             </div>
           </div>
         </div>
@@ -678,9 +509,9 @@ function DashboardContent({ onSelect }) {
               <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-emerald-500/15 text-emerald-400">
                 <TrendingUp size={18} />
               </div>
-              <span className="text-[10px] text-slate-600">No data yet</span>
+              <span className="text-[10px] text-slate-600">{revenueIntel.mrr > 0 ? 'Estimated' : 'No wins yet'}</span>
             </div>
-            <div className="text-2xl font-bold text-white">$0.00</div>
+            <div className="text-2xl font-bold text-white">{formatLargeNumber(revenueIntel.mrr)}</div>
             <div className="text-sm text-slate-500">Monthly Recurring</div>
           </motion.div>
 
@@ -957,103 +788,62 @@ function DashboardContent({ onSelect }) {
       })()}
 
       {/* ================================================================= */}
-      {/* MARKET INTELLIGENCE + ACTIVITY FEED (2 columns)                   */}
+      {/* TOP INDUSTRIES + ACTIVITY FEED (2 columns)                        */}
       {/* ================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Market Intelligence Widget */}
+        {/* Top Industries from Pipeline */}
         <motion.div
           className="rounded-xl border border-white/5 bg-surface-3 overflow-hidden"
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
         >
           <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
             <h2 className="font-bold text-sm flex items-center gap-2">
-              <Globe size={16} className="text-cyan-400" /> Market Intelligence
+              <BarChart3 size={16} className="text-cyan-400" /> Pipeline by Industry
             </h2>
-            <span className="text-[10px] text-slate-500">Live data</span>
+            <span className="text-[10px] text-slate-500">{revenueIntel.topIndustries.length} sectors</span>
           </div>
 
-          {/* Top 5 Crypto Prices */}
           <div className="p-4 space-y-2">
-            <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-2">Top Crypto Assets</div>
-            {coins.slice(0, 5).map((coin) => {
-              const change = coin.change24h ?? 0;
-              const sparkColor = change >= 0 ? '#10b981' : '#ef4444';
-              return (
-                <div key={coin.id} className="flex items-center gap-3 py-1.5">
-                  {coin.image ? (
-                    <img src={coin.image} alt={coin.symbol} className="w-5 h-5 rounded-full" loading="lazy" />
-                  ) : (
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold"
-                      style={{ backgroundColor: `${COIN_COLORS[coin.symbol] || '#888'}20`, color: COIN_COLORS[coin.symbol] || '#888' }}>
-                      {coin.symbol?.slice(0, 2)}
+            {revenueIntel.topIndustries.length > 0 ? (
+              revenueIntel.topIndustries.slice(0, 10).map(([industry, count], idx) => {
+                const maxCount = revenueIntel.topIndustries[0]?.[1] || 1;
+                const pct = Math.max(8, (count / maxCount) * 100);
+                const colors = ['#3b82f6', '#8b5cf6', '#06b6d4', '#f97316', '#eab308', '#00ff88', '#ef4444', '#a855f7', '#10b981', '#f59e0b'];
+                const color = colors[idx % colors.length];
+                return (
+                  <div key={industry}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-white">{industry}</span>
+                      <span className="text-xs font-mono text-slate-400">{count.toLocaleString()} leads</span>
                     </div>
-                  )}
-                  <span className="text-xs font-bold text-white w-10">{coin.symbol}</span>
-                  <span className="text-xs font-mono text-slate-300 flex-1">{formatPrice(coin.price)}</span>
-                  <MiniSparkline data={coin.sparkline} color={sparkColor} width={48} height={18} />
-                  <span className={`text-xs font-medium w-14 text-right ${change >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {change >= 0 ? '+' : ''}{change.toFixed(1)}%
-                  </span>
-                </div>
-              );
-            })}
+                    <div className="h-5 bg-white/[0.02] rounded-lg overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-lg"
+                        style={{ backgroundColor: `${color}30`, borderLeft: `3px solid ${color}` }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.6, delay: 0.05 * idx, ease: 'easeOut' }}
+                      />
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-8 text-sm text-slate-500">No industry data yet</div>
+            )}
           </div>
 
-          {/* Fear & Greed Gauge */}
-          {fngValue != null && (
-            <div className="px-4 pb-3 border-t border-white/5 pt-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Fear & Greed Index</span>
-                <span className="text-xs font-bold" style={{ color: fngColor(fngValue) }}>{fngValue} -- {fngLabel(fngValue)}</span>
-              </div>
-              <div className="h-2 bg-white/[0.03] rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{ backgroundColor: fngColor(fngValue) }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${fngValue}%` }}
-                  transition={{ duration: 1, ease: 'easeOut' }}
-                />
-              </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-[9px] text-red-400">Extreme Fear</span>
-                <span className="text-[9px] text-emerald-400">Extreme Greed</span>
-              </div>
-            </div>
-          )}
-
-          {/* Trending / Prediction Market Events */}
-          {trendingData && trendingData.length > 0 && (
-            <div className="px-4 pb-3 border-t border-white/5 pt-3">
-              <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-2">Trending Now</div>
-              <div className="flex flex-wrap gap-1.5">
-                {trendingData.slice(0, 5).map((t, idx) => {
-                  const coin = t.item || t;
-                  return (
-                    <span key={idx} className="text-[10px] px-2 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 font-medium">
-                      #{idx + 1} {coin.name || coin.id}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Alpha of the Day */}
+          {/* Pipeline insight */}
           <div className="px-4 pb-4 border-t border-white/5 pt-3">
             <div className="rounded-lg bg-gradient-to-r from-brand/10 to-cyan-500/5 border border-brand/20 p-3">
               <div className="flex items-center gap-2 mb-1">
                 <Zap size={12} className="text-brand" />
-                <span className="text-[10px] text-brand font-bold uppercase tracking-wider">Alpha of the Day</span>
+                <span className="text-[10px] text-brand font-bold uppercase tracking-wider">Pipeline Insight</span>
               </div>
               <p className="text-xs text-slate-300">
-                {coins.length > 0 && coins[0].change24h > 2
-                  ? `${coins[0].name} showing strong momentum at +${coins[0].change24h.toFixed(1)}%. Volume surge confirms institutional interest.`
-                  : fngValue && fngValue < 30
-                    ? 'Fear levels elevated -- historically the best time to build positions. Smart money accumulating.'
-                    : revenueIntel
-                      ? `${revenueIntel.hotLeads.toLocaleString()} hot leads in pipeline with ${revenueIntel.closeRate}% close rate. Focus on high-intent signals.`
-                      : 'Market consolidating. Watch for breakout signals in top-5 assets.'}
+                {revenueIntel.hotLeads > 0
+                  ? `${revenueIntel.hotLeads.toLocaleString()} hot leads in pipeline with ${revenueIntel.closeRate}% close rate. Focus on high-intent signals.`
+                  : 'Build your pipeline by adding leads. Use AI Strategy for recommendations.'}
               </p>
             </div>
           </div>
@@ -1112,17 +902,12 @@ function DashboardContent({ onSelect }) {
       </div>
 
       {/* ================================================================= */}
-      {/* FULL CRYPTO TABLE (Collapsible)                                   */}
-      {/* ================================================================= */}
-      <CryptoMarketTable coins={coins} />
-
-      {/* ================================================================= */}
       {/* FOOTER                                                            */}
       {/* ================================================================= */}
       <div className="flex items-center justify-center gap-2 pt-2">
         <Eye size={12} className="text-slate-600" />
         <p className="text-[10px] text-slate-600">
-          Revenue data from GOATED lead engine. Market data via CoinGecko. Fear & Greed via Alternative.me. Refreshes every 30s.
+          Pipeline data from GOATED lead engine. All metrics computed from store data.
         </p>
       </div>
 
@@ -1191,97 +976,3 @@ function PlatformOverview({ totalLeads }) {
   );
 }
 
-// ============================================================================
-// CRYPTO MARKET TABLE (Collapsible)
-// ============================================================================
-function CryptoMarketTable({ coins }) {
-  const [expanded, setExpanded] = useState(false);
-
-  if (!coins || coins.length === 0) return null;
-
-  return (
-    <motion.div
-      className="rounded-xl border border-white/5 bg-surface-3 overflow-hidden"
-      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-    >
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-3 border-b border-white/5 hover:bg-white/[0.02] transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <Flame size={16} className="text-brand" />
-          <h2 className="font-bold text-white text-sm">Top Coins by Market Cap</h2>
-          <span className="text-xs text-slate-500">{coins.length} tracked</span>
-        </div>
-        <motion.div animate={{ rotate: expanded ? 90 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronRight size={16} className="text-slate-500" />
-        </motion.div>
-      </button>
-
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="divide-y divide-white/5">
-              <div className="grid grid-cols-12 gap-2 px-4 py-2 text-xs text-slate-500 font-medium">
-                <div className="col-span-1 text-center">#</div>
-                <div className="col-span-3">Asset</div>
-                <div className="col-span-2 text-right">Price</div>
-                <div className="col-span-1 text-right hidden sm:block">1h</div>
-                <div className="col-span-1 text-right">24h</div>
-                <div className="col-span-1 text-right hidden md:block">7d</div>
-                <div className="col-span-2 text-right hidden lg:block">Market Cap</div>
-                <div className="col-span-1 text-right">7d Chart</div>
-              </div>
-              {coins.slice(0, 20).map((coin, i) => {
-                const change = coin.change24h ?? 0;
-                const changeColor = change > 0 ? 'text-emerald-400' : change < 0 ? 'text-red-400' : 'text-slate-400';
-                const c1h = coin.change1h ?? 0;
-                const c7d = coin.change7d ?? 0;
-                const sparkColor = c7d >= 0 ? '#10b981' : '#ef4444';
-                return (
-                  <div key={coin.id} className="grid grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-white/[0.02] transition-colors">
-                    <div className="col-span-1 text-center text-xs text-slate-600 font-medium">{coin.rank || i + 1}</div>
-                    <div className="col-span-3 flex items-center gap-2">
-                      {coin.image ? (
-                        <img src={coin.image} alt={coin.symbol} className="w-6 h-6 rounded-full" loading="lazy" />
-                      ) : (
-                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold"
-                          style={{ backgroundColor: `${COIN_COLORS[coin.symbol] || '#888'}20`, color: COIN_COLORS[coin.symbol] || '#888' }}>
-                          {coin.symbol?.slice(0, 2)}
-                        </div>
-                      )}
-                      <div>
-                        <span className="text-sm font-bold text-white">{coin.symbol}</span>
-                        <p className="text-[10px] text-slate-500 leading-none truncate max-w-[80px]">{coin.name}</p>
-                      </div>
-                    </div>
-                    <div className="col-span-2 text-right text-sm font-medium text-white font-mono">{formatPrice(coin.price)}</div>
-                    <div className={`col-span-1 text-right text-xs font-medium hidden sm:block ${c1h > 0 ? 'text-emerald-400' : c1h < 0 ? 'text-red-400' : 'text-slate-400'}`}>
-                      {c1h > 0 ? '+' : ''}{c1h.toFixed(1)}%
-                    </div>
-                    <div className={`col-span-1 text-right text-xs font-medium ${changeColor}`}>
-                      {change > 0 ? '+' : ''}{change.toFixed(1)}%
-                    </div>
-                    <div className={`col-span-1 text-right text-xs font-medium hidden md:block ${c7d > 0 ? 'text-emerald-400' : c7d < 0 ? 'text-red-400' : 'text-slate-400'}`}>
-                      {c7d > 0 ? '+' : ''}{c7d.toFixed(1)}%
-                    </div>
-                    <div className="col-span-2 text-right text-xs text-slate-400 hidden lg:block">{formatLargeNumber(coin.marketCap)}</div>
-                    <div className="col-span-1 flex justify-end">
-                      <MiniSparkline data={coin.sparkline} color={sparkColor} width={64} height={22} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-    </motion.div>
-  );
-}

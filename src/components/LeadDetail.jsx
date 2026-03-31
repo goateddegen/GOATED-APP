@@ -295,7 +295,7 @@ function VoiceBrief({ lead, el, dv, safeConversion, safePainPoints }) {
 // =============================================================================
 // CLOSE GUIDE TAB — Enhanced linear closing experience
 // =============================================================================
-function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfidence, safeCallScript, safePackages, safeObjections, safeOutreach, safePainPoints, setTab }) {
+function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfidence, safeCallScript, safePackages, safeObjections, safeOutreach, safePainPoints, safeConversion, setTab }) {
   const [expandedStep, setExpandedStep] = useState(null);
   const [fastTrackMode, setFastTrackMode] = useState(false);
   const [stepChecks, setStepChecks] = useState({});
@@ -306,6 +306,8 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
   const totalXP = completedSteps * xpPerStep;
   const currentStep = closeSteps.find(s => s.status === 'current') || closeSteps[0];
   const currentStepIdx = currentStep ? currentStep.step - 1 : 0;
+  const recommendedPkg = safePackages.find(p => p.recommended) || safePackages[1];
+  const roiMultiple = recommendedPkg ? ((dv / (recommendedPkg.price * 12)) || 0).toFixed(1) : 0;
 
   // "What to Say Right Now" scripts per step
   const stepScripts = [
@@ -1372,15 +1374,26 @@ export default function LeadDetail() {
             </div>
           </div>
           {(() => {
-            const allLeads = useStore.getState().leads || [];
+            let allLeads = [];
+            try { allLeads = useStore.getState().leads || []; } catch { allLeads = []; }
+            if (!Array.isArray(allLeads) || allLeads.length === 0) {
+              return <div className="text-xs text-slate-500 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">No leads data available to find similar leads.</div>;
+            }
             const similar = allLeads
-              .filter(l => l.id !== lead.id && (l.industry === lead.industry || l.location === lead.location))
+              .filter(l => l && l.id !== lead.id && (l.industry === lead.industry || l.location === lead.location))
               .slice(0, 4);
-            if (!similar.length) return <div className="text-xs text-slate-500">No similar leads found</div>;
+            if (!similar.length) return <div className="text-xs text-slate-500 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">No similar leads found in the same industry or location.</div>;
             return (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {similar.map(s => (
-                  <button key={s.id} onClick={() => { window.dispatchEvent(new CustomEvent('navigate-lead', { detail: s.id })); }}
+                  <button key={s.id} onClick={() => {
+                    // Navigate to the similar lead
+                    window.dispatchEvent(new CustomEvent('navigate-lead', { detail: s.id }));
+                    // Also directly update the store to open this lead
+                    const store = useStore.getState();
+                    if (store.setSelectedLead) store.setSelectedLead(s);
+                    if (store.setDetailOpen) store.setDetailOpen(true);
+                  }}
                     className="flex items-center gap-3 p-3 rounded-lg bg-black/30 border border-white/[0.04] hover:border-brand/30 transition-colors text-left">
                     <div className="w-8 h-8 rounded-full bg-brand/15 flex items-center justify-center text-xs font-bold text-brand">
                       {s.name?.[0] || '?'}
@@ -1428,10 +1441,35 @@ export default function LeadDetail() {
           <CloseGuideTab lead={lead} el={el} dv={dv} closeSteps={closeSteps} completedSteps={completedSteps}
             closeConfidence={closeConfidence} safeCallScript={safeCallScript} safePackages={safePackages}
             safeObjections={safeObjections} safeOutreach={safeOutreach} safePainPoints={safePainPoints}
-            setTab={setTab} />
+            safeConversion={safeConversion} setTab={setTab} />
         )}
 
         {/* ─── DEGEN ALPHA INTEL TAB ──────────────────────────────────────────── */}
+        {tab === 'alpha' && !degenMode && (
+          <div className="p-6 rounded-xl border border-orange-500/20 bg-orange-500/[0.03] text-center">
+            <Flame size={32} className="text-orange-400/40 mx-auto mb-3" />
+            <p className="text-sm text-slate-400">Alpha Intel requires DEGEN MODE to be enabled.</p>
+            <p className="text-xs text-slate-500 mt-1">Toggle DEGEN MODE from the sidebar to access alpha intelligence data.</p>
+          </div>
+        )}
+        {tab === 'alpha' && degenMode && !alphaIntel && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-500/15 flex items-center justify-center">
+                <Flame size={20} className="text-orange-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold">Alpha Intel</h2>
+                <p className="text-xs text-slate-500">DEGEN MODE intelligence for {lead.name}</p>
+              </div>
+            </div>
+            <div className="p-6 rounded-xl border border-orange-500/20 bg-orange-500/[0.03] text-center">
+              <Radar size={32} className="text-orange-400/40 mx-auto mb-3" />
+              <p className="text-sm text-slate-400">No Alpha Intel data available for this lead.</p>
+              <p className="text-xs text-slate-500 mt-1">Alpha Intel requires lead enrichment data that is not yet available for {lead.name}. Try refreshing or check back later.</p>
+            </div>
+          </div>
+        )}
         {tab === 'alpha' && degenMode && alphaIntel && (
           <div className="space-y-6">
             {/* Alpha Header */}
@@ -1879,7 +1917,7 @@ export default function LeadDetail() {
                   <Zap size={16} className="text-brand" /> Buying Signals
                 </h3>
                 <div className="space-y-2.5">
-                  {safeBuyingSignals.map((s, i) => {
+                  {safeBuyingSignals.length > 0 ? safeBuyingSignals.map((s, i) => {
                     const str = signalStrength(i);
                     return (
                       <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
@@ -1891,7 +1929,13 @@ export default function LeadDetail() {
                         </div>
                       </div>
                     );
-                  })}
+                  }) : (
+                    <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.04] text-center">
+                      <Zap size={20} className="text-slate-600 mx-auto mb-2" />
+                      <p className="text-sm text-slate-500">No buying signals detected yet.</p>
+                      <p className="text-xs text-slate-600 mt-1">Signals will appear as the lead engages with your outreach and shows purchase intent.</p>
+                    </div>
+                  )}
                 </div>
               </GlassCard>
             </div>
@@ -2711,11 +2755,15 @@ export default function LeadDetail() {
                 <Zap size={16} className="text-brand" /> Active Buying Signals
               </h3>
               <div className="flex flex-wrap gap-2">
-                {safeBuyingSignals.map((s, i) => (
+                {safeBuyingSignals.length > 0 ? safeBuyingSignals.map((s, i) => (
                   <span key={i} className="px-3 py-1.5 rounded-full text-xs font-medium bg-brand/10 text-brand border border-brand/20 flex items-center gap-1.5">
                     <Zap size={10} /> {s}
                   </span>
-                ))}
+                )) : (
+                  <div className="text-xs text-slate-500 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04] w-full">
+                    No active buying signals detected for this lead yet. Buying signals are identified as the lead engages with outreach and content.
+                  </div>
+                )}
               </div>
             </GlassCard>
           </div>

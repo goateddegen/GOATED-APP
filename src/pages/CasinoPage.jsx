@@ -116,14 +116,7 @@ const initialMarkets = [
 
 const categories = ['All', 'Crypto', 'AI', 'M&A', 'IPO', 'Regulation', 'Startups', 'Work'];
 
-const games = [
-  { name: 'Price Prediction', desc: 'Predict crypto price movements', icon: TrendingUp, color: '#00ff88', players: 1234, reward: '500 GOAT', status: 'live', type: 'prediction' },
-  { name: 'Market Roulette', desc: 'Spin the wheel of market sectors', icon: Dice5, color: '#f59e0b', players: 856, reward: '250 GOAT', status: 'live', type: 'spin' },
-  { name: 'Portfolio Duel', desc: '1v1 portfolio performance battle', icon: Users, color: '#8b5cf6', players: 432, reward: '1,000 GOAT', status: 'live', type: 'duel' },
-  { name: 'AI Oracle', desc: 'Test your AI knowledge', icon: Sparkles, color: '#06b6d4', players: 2100, reward: '200 GOAT', status: 'live', type: 'trivia' },
-  { name: 'Trend Futures', desc: 'Bet on upcoming market trends', icon: BarChart3, color: '#ec4899', players: 678, reward: '750 GOAT', status: 'coming_soon', type: 'futures' },
-  { name: 'Startup Survivor', desc: 'Pick which startups survive', icon: Flame, color: '#ef4444', players: 345, reward: '2,000 GOAT', status: 'coming_soon', type: 'bracket' },
-];
+// Live games removed — prediction markets are the core feature
 
 const leaderboardUsers = [
   { rank: 1, name: '0xAlpha.eth', avatar: 'A', trades: 342, pnl: 47500, winRate: 73, streak: '12W' },
@@ -136,20 +129,6 @@ const leaderboardUsers = [
   { rank: 8, name: 'VCVibes', avatar: 'V', trades: 187, pnl: 12300, winRate: 59, streak: '2W' },
   { rank: 9, name: 'StartupSage', avatar: 'S', trades: 145, pnl: 9800, winRate: 58, streak: '3W' },
   { rank: 10, name: 'EthEnthusiast', avatar: 'E', trades: 432, pnl: 7400, winRate: 56, streak: '1W' },
-  { rank: 11, name: 'BlockBet', avatar: 'B', trades: 276, pnl: 5200, winRate: 55, streak: '2W' },
-  { rank: 12, name: 'IPOInsider', avatar: 'I', trades: 165, pnl: 3100, winRate: 53, streak: '1W' },
-  { rank: 13, name: 'RegRider', avatar: 'R', trades: 298, pnl: 1800, winRate: 52, streak: '2L' },
-  { rank: 14, name: 'MergeMaster', avatar: 'M', trades: 210, pnl: 400, winRate: 51, streak: '1L' },
-  { rank: 15, name: 'TokenTurtle', avatar: 'T', trades: 189, pnl: -1200, winRate: 49, streak: '3L' },
-  { rank: 16, name: 'PredictPro', avatar: 'P', trades: 256, pnl: -3500, winRate: 47, streak: '2L' },
-  { rank: 17, name: 'BetaBear', avatar: 'B', trades: 178, pnl: -5800, winRate: 45, streak: '4L' },
-  { rank: 18, name: 'FOMOTrader', avatar: 'F', trades: 432, pnl: -8200, winRate: 43, streak: '5L' },
-  { rank: 19, name: 'DiamondHands', avatar: 'D', trades: 312, pnl: -11500, winRate: 41, streak: '3L' },
-  { rank: 20, name: 'PaperTrader', avatar: 'P', trades: 198, pnl: -14800, winRate: 39, streak: '6L' },
-  { rank: 21, name: 'RektRicky', avatar: 'R', trades: 567, pnl: -18200, winRate: 37, streak: '8L' },
-  { rank: 22, name: 'HopiumHal', avatar: 'H', trades: 234, pnl: -22100, winRate: 35, streak: '4L' },
-  { rank: 23, name: 'YOLOYolanda', avatar: 'Y', trades: 145, pnl: -26500, winRate: 33, streak: '7L' },
-  { rank: 24, name: 'BagHolder42', avatar: 'B', trades: 389, pnl: -31000, winRate: 31, streak: '10L' },
 ];
 
 // Trending topics from TrendPulse (simulated sync)
@@ -157,16 +136,16 @@ const trendPulseTopics = ['Bitcoin', 'ETH', 'OpenAI', 'GPT-5', 'Stripe IPO', 'SE
 
 // Recent wins ticker data (simulated other players)
 const recentWinNames = ['0xAlpha.eth', 'CryptoWhale', 'DeFi_Dan', 'MarketMaven', 'SolSurfer', 'TechTrader', 'AIBettor', 'VCVibes', 'BlockBet', 'TokenTurtle', 'MoonShot99', 'DiamondHands', 'BullRunner', 'DegenKing'];
-const recentWinGames = ['Price Prediction', 'Market Roulette', 'Portfolio Duel', 'AI Oracle', 'Prediction Market'];
+const recentWinGames = ['Prediction Market'];
 
 // Daily challenges templates
 const dailyChallengesPool = [
-  { id: 'pp3', title: 'Win 3 Price Predictions', desc: 'Correctly predict price direction 3 times', reward: 150, icon: TrendingUp, target: 3, type: 'prediction_wins' },
-  { id: 'ao8', title: 'Score 8+ on AI Oracle', desc: 'Get at least 8 correct answers in AI Oracle', reward: 200, icon: Sparkles, target: 8, type: 'oracle_score' },
-  { id: 'mr1', title: 'Beat the House in Roulette', desc: 'Win at least 1 Market Roulette spin', reward: 100, icon: Dice5, target: 1, type: 'roulette_wins' },
-  { id: 'pd2', title: 'Win 2 Portfolio Duels', desc: 'Beat the AI in 2 portfolio battles', reward: 250, icon: Users, target: 2, type: 'duel_wins' },
   { id: 'bet5', title: 'Place 5 Prediction Bets', desc: 'Place bets on 5 different prediction markets', reward: 100, icon: Target, target: 5, type: 'market_bets' },
-  { id: 'streak3', title: 'Get a 3-Win Streak', desc: 'Win 3 games in a row across any game mode', reward: 300, icon: Flame, target: 3, type: 'win_streak' },
+  { id: 'bet3crypto', title: 'Bet on 3 Crypto Markets', desc: 'Place bets on 3 crypto prediction markets', reward: 150, icon: TrendingUp, target: 3, type: 'crypto_bets' },
+  { id: 'bet2ai', title: 'Bet on 2 AI Markets', desc: 'Place bets on AI-related prediction markets', reward: 125, icon: Sparkles, target: 2, type: 'ai_bets' },
+  { id: 'hotbet', title: 'Bet on a Hot Market', desc: 'Place a bet on a trending HOT market', reward: 100, icon: Flame, target: 1, type: 'hot_bet' },
+  { id: 'bigbet', title: 'Place a 250+ GOAT Bet', desc: 'Go big or go home - place a 250+ GOAT bet', reward: 200, icon: Target, target: 1, type: 'big_bet' },
+  { id: 'diversify', title: 'Bet on 3 Categories', desc: 'Place bets across 3 different market categories', reward: 175, icon: BarChart3, target: 3, type: 'diverse_bets' },
 ];
 
 // Difficulty levels for AI Oracle
@@ -191,9 +170,9 @@ const newsItems = [
 const tokenUnlocks = [
   { threshold: 5000, label: 'DEGEN Badge', desc: 'Flex your degen status on leaderboard' },
   { threshold: 10000, label: 'Priority Markets', desc: 'Early access to new prediction markets' },
-  { threshold: 25000, label: 'VIP Roulette', desc: 'Unlock 10x payout sector on Market Roulette' },
-  { threshold: 50000, label: 'Oracle Master', desc: 'Unlock Legendary difficulty in AI Oracle' },
-  { threshold: 100000, label: 'Whale Status', desc: 'Custom leaderboard flair + early game access' },
+  { threshold: 25000, label: 'Insider Access', desc: 'Exclusive high-value prediction markets' },
+  { threshold: 50000, label: 'Market Maker', desc: 'Create custom prediction markets' },
+  { threshold: 100000, label: 'Whale Status', desc: 'Custom leaderboard flair + reduced commission' },
 ];
 
 // Mini sparkline component
@@ -423,6 +402,9 @@ export default function CasinoPage() {
 
   // Show login prompt
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
+  // Wallet required prompt
+  const [showWalletRequired, setShowWalletRequired] = useState(false);
 
   // Persist balance changes
   useEffect(() => { saveGoatBalance(balance); }, [balance]);
@@ -660,10 +642,23 @@ export default function CasinoPage() {
   const priceList = cryptoPrices ? Object.values(cryptoPrices) : [];
 
   // ---------------------------------------------------------------------------
+  // Wallet requirement check
+  // ---------------------------------------------------------------------------
+  const requireWallet = useCallback(() => {
+    const w = loadWallet();
+    if (!w) {
+      setShowWalletRequired(true);
+      return true; // blocked
+    }
+    return false;
+  }, []);
+
+  // ---------------------------------------------------------------------------
   // Bet placement functions
   // ---------------------------------------------------------------------------
   const openBetPanel = (marketId, side) => {
     if (requireLogin()) return;
+    if (requireWallet()) return;
     setActiveBetMarket(marketId);
     setActiveBetSide(side);
     setBetAmount(50);
@@ -1230,7 +1225,6 @@ export default function CasinoPage() {
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
         {[
           { id: 'markets', label: 'Prediction Markets', icon: BarChart3 },
-          { id: 'games', label: 'Live Games', icon: Dice5 },
           { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
           { id: 'portfolio', label: `Portfolio (${bets.length})`, icon: Target },
           { id: 'history', label: 'Bet History', icon: History },
@@ -1472,811 +1466,30 @@ export default function CasinoPage() {
         </>
       )}
 
-      {/* ================================================================= */}
-      {/* GAMES TAB                                                         */}
-      {/* ================================================================= */}
-      {tab === 'games' && (
-        <div>
-          <>
-            {/* ---- GAME SELECTION GRID ---- */}
-            {!activeGame && (
-              <>
-                {/* Daily Challenges */}
-                <div className="bg-surface-3 rounded-xl border border-white/[0.03] p-4 mb-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Target size={16} className="text-yellow-400" />
-                    <span className="font-bold text-sm">Daily Challenges</span>
-                    <span className="text-xs text-slate-500 ml-auto">Resets daily</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {dailyChallenges.map((c) => (
-                      <div key={c.id} className={`bg-surface-2 rounded-lg p-3 border ${c.completed ? 'border-brand/30' : 'border-white/[0.03]'}`}>
-                        <div className="flex items-center gap-2 mb-2">
-                          <c.icon size={14} className={c.completed ? 'text-brand' : 'text-slate-400'} />
-                          <span className="text-xs font-bold">{c.title}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-500 mb-2">{c.desc}</div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 bg-surface-1 rounded-full h-1.5 mr-2 overflow-hidden">
-                            <div className={`h-full rounded-full ${c.completed ? 'bg-brand' : 'bg-yellow-500'}`}
-                              style={{ width: `${Math.min(100, (c.progress / c.target) * 100)}%` }} />
-                          </div>
-                          <span className="text-[10px] text-yellow-400 font-bold">{c.reward} GOAT</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {games.map((g, i) => (
-                    <motion.div key={i} className="bg-surface-3 rounded-xl border border-white/[0.03] overflow-hidden card-hover relative"
-                      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                      {g.status === 'coming_soon' && (
-                        <div className="absolute inset-0 bg-surface-0/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
-                          <span className="px-4 py-2 rounded-full bg-surface-2 border border-white/[0.05] text-slate-400 text-sm font-bold uppercase tracking-wider">Coming Soon</span>
-                        </div>
-                      )}
-                      <div className="p-5">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: `${g.color}15`, color: g.color }}>
-                            <g.icon size={24} />
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-lg">{g.name}</h3>
-                            <p className="text-sm text-slate-500">{g.desc}</p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                          <div className="bg-surface-2 rounded-lg p-3">
-                            <div className="text-xs text-slate-500">Players</div>
-                            <div className="font-bold">{g.players.toLocaleString()}</div>
-                          </div>
-                          <div className="bg-surface-2 rounded-lg p-3">
-                            <div className="text-xs text-slate-500">Prize Pool</div>
-                            <div className="font-bold" style={{ color: g.color }}>{g.reward}</div>
-                          </div>
-                        </div>
-
-                        {g.type === 'prediction' && btcPrice && (
-                          <div className="bg-surface-1 rounded-lg p-2.5 mb-3 flex items-center justify-between">
-                            <span className="text-xs text-slate-500">Live Market Data</span>
-                            <div className="flex items-center gap-3 text-xs">
-                              <span className="font-mono">BTC {btcPrice.priceFormatted}</span>
-                              <span className="font-mono">ETH {ethPrice?.priceFormatted}</span>
-                            </div>
-                          </div>
-                        )}
-                        {g.type === 'spin' && solPrice && (
-                          <div className="bg-surface-1 rounded-lg p-2.5 mb-3 flex items-center justify-between">
-                            <span className="text-xs text-slate-500">SOL Price Feed</span>
-                            <div className={`flex items-center gap-1 text-xs font-medium ${solPrice.direction === 'up' ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {solPrice.direction === 'up' ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
-                              {solPrice.priceFormatted} ({solPrice.change24hFormatted})
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Streak multiplier badge */}
-                        {streakMultiplier > 1 && g.status === 'live' && (
-                          <div className="bg-orange-500/10 rounded-lg p-2 mb-3 text-center">
-                            <span className="text-xs text-orange-400 font-bold"><Flame size={10} className="inline mr-1" />{streakMultiplier}x Streak Multiplier Active</span>
-                          </div>
-                        )}
-
-                        <button className="w-full py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 hover:brightness-125"
-                          style={{ background: `${g.color}15`, color: g.color }}
-                          disabled={g.status === 'coming_soon'}
-                          onClick={() => { if (g.status === 'live') { resetGameStates(); setActiveGame(g.type); } }}>
-                          {g.status === 'live' ? <><Zap size={14} />Play Now</> : 'Coming Soon'}
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* ======================================================================= */}
-            {/* PRICE PREDICTION GAME                                                   */}
-            {/* ======================================================================= */}
-            {activeGame === 'prediction' && (
-              <motion.div key="game-prediction" className="max-w-lg mx-auto"
-                initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <button onClick={exitGame} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-4 transition-colors">
-                  <ChevronRight size={14} className="rotate-180" /> Back to Games
-                </button>
-                <div className="bg-surface-3 rounded-xl border border-brand/20 p-6">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-brand"><TrendingUp size={24} /></div>
-                    <div>
-                      <h2 className="text-xl font-bold">Price Prediction</h2>
-                      <p className="text-sm text-slate-500">Predict if the price goes UP or DOWN in 30 seconds</p>
-                    </div>
-                    {streakMultiplier > 1 && (
-                      <div className="ml-auto px-2 py-1 rounded bg-orange-500/15 text-orange-400 text-xs font-bold">
-                        <Flame size={10} className="inline mr-1" />{streakMultiplier}x
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Coin selector */}
-                  {!ppDirection && (
-                    <>
-                      <div className="mb-4">
-                        <label className="text-xs text-slate-500 mb-2 block">Select Asset</label>
-                        <div className="flex gap-2">
-                          {['BTC', 'ETH', 'SOL'].map(c => (
-                            <button key={c} onClick={() => setPpCoin(c)}
-                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ppCoin === c ? 'bg-brand/20 text-brand border border-brand/30' : 'bg-surface-2 text-slate-400 border border-white/[0.03] hover:text-white'}`}>
-                              {c} {cryptoPrices?.[c]?.priceFormatted || ''}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Bet amount */}
-                      <div className="mb-4">
-                        <label className="text-xs text-slate-500 mb-2 block">Bet Amount (GOAT)</label>
-                        <div className="flex gap-2 mb-2">
-                          {[25, 50, 100, 250].map(v => (
-                            <button key={v} onClick={() => setGameBet(v)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${gameBet === v ? 'bg-brand/20 text-brand' : 'bg-surface-2 text-slate-400 hover:text-white'}`}>
-                              {v}
-                            </button>
-                          ))}
-                        </div>
-                        <input type="number" value={gameBet} onChange={e => setGameBet(Math.max(1, parseInt(e.target.value) || 0))}
-                          className="w-full bg-surface-1 border border-white/[0.05] rounded-lg px-3 py-2 text-sm font-mono" />
-                      </div>
-
-                      <div className="bg-surface-1 rounded-lg p-3 mb-4 text-xs text-slate-400">
-                        <p>Payout scales with price movement. The further it moves in your direction, the bigger the multiplier (1.5x - 5x+).</p>
-                        {streakMultiplier > 1 && <p className="text-orange-400 mt-1">Win streak bonus: {streakMultiplier}x applied to payout!</p>}
-                      </div>
-
-                      {/* Direction buttons */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <button onClick={() => startPricePrediction('up')} disabled={gameBet > balance}
-                          className="py-4 rounded-lg font-bold text-sm bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 transition-colors flex items-center justify-center gap-2 disabled:opacity-40">
-                          <ArrowUp size={20} /> PRICE UP
-                        </button>
-                        <button onClick={() => startPricePrediction('down')} disabled={gameBet > balance}
-                          className="py-4 rounded-lg font-bold text-sm bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25 transition-colors flex items-center justify-center gap-2 disabled:opacity-40">
-                          <ArrowDown size={20} /> PRICE DOWN
-                        </button>
-                      </div>
-                      {gameBet > balance && <p className="text-red-400 text-xs mt-2 text-center">Insufficient GOAT balance</p>}
-                    </>
-                  )}
-
-                  {/* Live countdown with chart */}
-                  {ppDirection && ppCountdown !== null && !ppResult && (
-                    <div className="text-center py-4">
-                      {/* Prominent countdown */}
-                      <div className="flex items-center justify-center gap-4 mb-4">
-                        <div className={`text-7xl font-black font-mono ${ppCountdown <= 5 ? 'text-red-400' : ppCountdown <= 10 ? 'text-yellow-400' : 'text-brand'}`}>
-                          <motion.span key={ppCountdown} initial={{ scale: 1.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.3 }}>
-                            {ppCountdown}
-                          </motion.span>
-                        </div>
-                        <div className="text-left">
-                          <p className="text-sm text-slate-400">Your bet: <span className={ppDirection === 'up' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>{ppDirection.toUpperCase()}</span></p>
-                          <p className="text-xs text-slate-500">{ppCoin} | {gameBet} GOAT</p>
-                          {ppLivePrice && (
-                            <p className={`text-sm font-mono font-bold ${ppLivePrice > ppStartPrice ? 'text-emerald-400' : ppLivePrice < ppStartPrice ? 'text-red-400' : 'text-slate-300'}`}>
-                              ${ppLivePrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Animated chart */}
-                      <div className="bg-surface-1 rounded-lg p-2 mb-3">
-                        <PriceChart
-                          data={ppChartData}
-                          color={ppLivePrice >= ppStartPrice ? '#00ff88' : '#ef4444'}
-                          height={100}
-                        />
-                      </div>
-
-                      {/* Price change indicator */}
-                      {ppLivePrice && ppStartPrice && (
-                        <div className={`text-sm font-bold ${ppLivePrice >= ppStartPrice ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {((ppLivePrice - ppStartPrice) / ppStartPrice * 100).toFixed(4)}% {ppLivePrice >= ppStartPrice ? 'UP' : 'DOWN'}
-                        </div>
-                      )}
-
-                      {/* Progress bar */}
-                      <div className="mt-3 w-full bg-surface-1 rounded-full h-2.5 overflow-hidden">
-                        <motion.div
-                          className={`h-full ${ppCountdown <= 5 ? 'bg-red-500' : ppCountdown <= 10 ? 'bg-yellow-500' : 'bg-brand'}`}
-                          initial={{ width: '100%' }}
-                          animate={{ width: `${(ppCountdown / 30) * 100}%` }}
-                          transition={{ duration: 0.5 }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Result */}
-                  {ppResult && (
-                    <motion.div className="text-center py-6" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
-                      <motion.div
-                        className={`text-5xl mb-3 ${ppResult.won ? 'text-emerald-400' : 'text-red-400'}`}
-                        animate={ppResult.won ? { scale: [1, 1.2, 1], rotate: [0, 5, -5, 0] } : { scale: [1, 0.9, 1] }}
-                        transition={{ duration: 0.5 }}
-                      >
-                        {ppResult.won ? <Trophy className="inline" size={48} /> : <X className="inline" size={48} />}
-                      </motion.div>
-                      <h3 className={`text-2xl font-black mb-2 ${ppResult.won ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {ppResult.won ? 'YOU WON!' : 'YOU LOST'}
-                      </h3>
-                      <p className="text-slate-400 text-sm mb-1">{ppCoin} went <span className={ppResult.direction === 'up' ? 'text-emerald-400' : 'text-red-400'}>{ppResult.direction.toUpperCase()} ({ppResult.change}%)</span></p>
-                      <p className="text-slate-500 text-xs">${ppResult.startPrice.toLocaleString()} {'→'} ${ppResult.endPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
-                      {ppResult.won && (
-                        <>
-                          <p className="text-brand font-bold mt-2 text-lg">+{ppResult.payout} GOAT</p>
-                          <p className="text-xs text-slate-500">Move multiplier: {ppResult.moveMultiplier}x {streakMultiplier > 1 ? `| Streak: ${streakMultiplier}x` : ''}</p>
-                        </>
-                      )}
-
-                      {/* Double or nothing */}
-                      {doubleOrNothing && (
-                        <motion.div
-                          className="mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4"
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                        >
-                          <p className="text-yellow-400 font-bold mb-2">Double or Nothing?</p>
-                          <p className="text-sm text-slate-400 mb-3">Risk your {doubleOrNothing.amount} GOAT winnings for a 50/50 chance at {doubleOrNothing.amount * 2} GOAT</p>
-                          <div className="flex gap-2">
-                            <button onClick={() => handleDoubleOrNothing(false)} className="flex-1 py-2 rounded-lg bg-surface-2 text-slate-300 text-sm font-medium border border-white/[0.05]">Keep Winnings</button>
-                            <motion.button
-                              onClick={() => handleDoubleOrNothing(true)}
-                              className="flex-1 py-2 rounded-lg bg-yellow-500/20 text-yellow-400 text-sm font-bold border border-yellow-500/30"
-                              animate={{ scale: [1, 1.03, 1] }}
-                              transition={{ duration: 1, repeat: Infinity }}
-                            >
-                              DOUBLE IT
-                            </motion.button>
-                          </div>
-                        </motion.div>
-                      )}
-
-                      {!doubleOrNothing && (
-                        <button onClick={() => { setPpDirection(null); setPpCountdown(null); setPpResult(null); setPpStartPrice(null); setPpLivePrice(null); setPpChartData([]); }}
-                          className="mt-4 px-6 py-2 rounded-lg bg-brand/15 text-brand font-medium text-sm hover:bg-brand/25 transition-colors">
-                          Play Again
-                        </button>
-                      )}
-                    </motion.div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-
-            {/* ======================================================================= */}
-            {/* MARKET ROULETTE GAME                                                    */}
-            {/* ======================================================================= */}
-            {activeGame === 'spin' && (
-              <motion.div key="game-roulette" className="max-w-lg mx-auto"
-                initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <button onClick={exitGame} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-4 transition-colors">
-                  <ChevronRight size={14} className="rotate-180" /> Back to Games
-                </button>
-                <div className={`bg-surface-3 rounded-xl border p-6 transition-all duration-300 ${mrCelebrating ? 'border-yellow-500/60 shadow-lg shadow-yellow-500/20' : 'border-yellow-500/20'}`}>
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500"><Dice5 size={24} /></div>
-                    <div>
-                      <h2 className="text-xl font-bold">Market Roulette</h2>
-                      <p className="text-sm text-slate-500">Pick a sector, spin the wheel. Match = 6x payout!</p>
-                    </div>
-                    {streakMultiplier > 1 && (
-                      <div className="ml-auto px-2 py-1 rounded bg-orange-500/15 text-orange-400 text-xs font-bold">
-                        <Flame size={10} className="inline mr-1" />{streakMultiplier}x
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Celebration overlay */}
-                  {mrCelebrating && (
-                    <motion.div
-                      className="absolute inset-0 pointer-events-none z-20 flex items-center justify-center"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                    >
-                      {[...Array(12)].map((_, i) => (
-                        <motion.div
-                          key={i}
-                          className="absolute w-2 h-2 rounded-full"
-                          style={{ background: mrColors[i % 8] }}
-                          initial={{ x: 0, y: 0, opacity: 1 }}
-                          animate={{
-                            x: Math.cos(i * 30 * Math.PI / 180) * 150,
-                            y: Math.sin(i * 30 * Math.PI / 180) * 150,
-                            opacity: 0,
-                            scale: [1, 2, 0],
-                          }}
-                          transition={{ duration: 1.5, ease: 'easeOut' }}
-                        />
-                      ))}
-                    </motion.div>
-                  )}
-
-                  {/* Wheel */}
-                  <div className="flex justify-center mb-6 relative">
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-0 h-0 border-l-[10px] border-r-[10px] border-t-[16px] border-l-transparent border-r-transparent border-t-white z-10" />
-                    {/* Outer glow ring when spinning */}
-                    {mrSpinning && (
-                      <motion.div
-                        className="absolute inset-0 m-auto w-60 h-60 rounded-full"
-                        style={{ boxShadow: '0 0 40px rgba(245,158,11,0.3), 0 0 80px rgba(245,158,11,0.1)' }}
-                        animate={{ opacity: [0.5, 1, 0.5] }}
-                        transition={{ duration: 0.5, repeat: Infinity }}
-                      />
-                    )}
-                    <motion.div
-                      className="w-56 h-56 rounded-full border-4 border-white/10 relative overflow-hidden"
-                      style={{ background: 'conic-gradient(#3b82f6 0deg 45deg, #10b981 45deg 90deg, #ec4899 90deg 135deg, #f59e0b 135deg 180deg, #8b5cf6 180deg 225deg, #06b6d4 225deg 270deg, #ef4444 270deg 315deg, #84cc16 315deg 360deg)' }}
-                      animate={{ rotate: mrRotation }}
-                      transition={{ duration: mrSpinning ? 5 : 0, ease: [0.17, 0.67, 0.12, 0.99] }}>
-                      {mrSectors.map((s, i) => (
-                        <div key={s} className="absolute text-[9px] font-bold text-white drop-shadow-lg"
-                          style={{
-                            top: '50%', left: '50%',
-                            transform: `rotate(${i * 45 + 22.5}deg) translateY(-80px)`,
-                            transformOrigin: '0 0',
-                            whiteSpace: 'nowrap'
-                          }}>
-                          {s}
-                        </div>
-                      ))}
-                    </motion.div>
-                  </div>
-
-                  {!mrResult && (
-                    <>
-                      {/* Sector selection */}
-                      <div className="mb-4">
-                        <label className="text-xs text-slate-500 mb-2 block">Pick Your Sector</label>
-                        <div className="grid grid-cols-4 gap-2">
-                          {mrSectors.map((s, i) => (
-                            <button key={s} onClick={() => !mrSpinning && setMrSector(s)}
-                              className={`px-2 py-2 rounded-lg text-xs font-medium transition-all border ${mrSector === s ? 'border-yellow-500/40 text-white scale-105' : 'border-white/[0.03] text-slate-400 hover:text-white'}`}
-                              style={mrSector === s ? { background: `${mrColors[i]}30`, color: mrColors[i] } : { background: 'rgba(255,255,255,0.03)' }}>
-                              {s}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Bet amount */}
-                      <div className="mb-4">
-                        <label className="text-xs text-slate-500 mb-2 block">Bet Amount (GOAT)</label>
-                        <div className="flex gap-2 mb-2">
-                          {[25, 50, 100, 250].map(v => (
-                            <button key={v} onClick={() => setGameBet(v)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${gameBet === v ? 'bg-yellow-500/20 text-yellow-500' : 'bg-surface-2 text-slate-400 hover:text-white'}`}>
-                              {v}
-                            </button>
-                          ))}
-                        </div>
-                        <input type="number" value={gameBet} onChange={e => setGameBet(Math.max(1, parseInt(e.target.value) || 0))}
-                          className="w-full bg-surface-1 border border-white/[0.05] rounded-lg px-3 py-2 text-sm font-mono" />
-                      </div>
-
-                      <button onClick={spinRoulette} disabled={!mrSector || gameBet > balance || mrSpinning}
-                        className="w-full py-3 rounded-lg font-bold text-sm bg-yellow-500/15 text-yellow-500 border border-yellow-500/20 hover:bg-yellow-500/25 transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
-                        {mrSpinning ? <><RefreshCw size={14} className="animate-spin" /> Spinning...</> : <><Dice5 size={14} /> Spin the Wheel</>}
-                      </button>
-                      {gameBet > balance && <p className="text-red-400 text-xs mt-2 text-center">Insufficient GOAT balance</p>}
-                    </>
-                  )}
-
-                  {/* Result */}
-                  {mrResult && (
-                    <motion.div className="text-center py-4" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
-                      <motion.div
-                        className={`text-5xl mb-3 ${mrResult.won ? 'text-yellow-400' : 'text-red-400'}`}
-                        animate={mrResult.won ? { rotate: [0, 10, -10, 5, -5, 0], scale: [1, 1.3, 1] } : {}}
-                        transition={{ duration: 0.6 }}
-                      >
-                        {mrResult.won ? <Trophy className="inline" size={48} /> : <X className="inline" size={48} />}
-                      </motion.div>
-                      <h3 className={`text-2xl font-black mb-2 ${mrResult.won ? 'text-yellow-400' : 'text-red-400'}`}>
-                        {mrResult.won ? 'JACKPOT!' : 'NO MATCH'}
-                      </h3>
-                      <p className="text-slate-400 text-sm">Wheel landed on: <span className="text-white font-bold">{mrResult.landed}</span></p>
-                      {mrResult.won && <p className="text-yellow-400 font-bold mt-2 text-lg">+{mrResult.payout} GOAT</p>}
-
-                      {/* Double or nothing */}
-                      {doubleOrNothing && (
-                        <motion.div
-                          className="mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4"
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                        >
-                          <p className="text-yellow-400 font-bold mb-2">Double or Nothing?</p>
-                          <p className="text-sm text-slate-400 mb-3">Risk {doubleOrNothing.amount} GOAT for 50/50 at {doubleOrNothing.amount * 2} GOAT</p>
-                          <div className="flex gap-2">
-                            <button onClick={() => handleDoubleOrNothing(false)} className="flex-1 py-2 rounded-lg bg-surface-2 text-slate-300 text-sm font-medium border border-white/[0.05]">Keep</button>
-                            <motion.button onClick={() => handleDoubleOrNothing(true)}
-                              className="flex-1 py-2 rounded-lg bg-yellow-500/20 text-yellow-400 text-sm font-bold border border-yellow-500/30"
-                              animate={{ scale: [1, 1.03, 1] }}
-                              transition={{ duration: 1, repeat: Infinity }}
-                            >DOUBLE IT</motion.button>
-                          </div>
-                        </motion.div>
-                      )}
-
-                      {!doubleOrNothing && (
-                        <button onClick={() => { setMrResult(null); setMrSector(null); }}
-                          className="mt-4 px-6 py-2 rounded-lg bg-yellow-500/15 text-yellow-500 font-medium text-sm hover:bg-yellow-500/25 transition-colors">
-                          Spin Again
-                        </button>
-                      )}
-                    </motion.div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-
-            {/* ======================================================================= */}
-            {/* PORTFOLIO DUEL GAME                                                     */}
-            {/* ======================================================================= */}
-            {activeGame === 'duel' && (
-              <motion.div key="game-duel" className="max-w-2xl mx-auto"
-                initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <button onClick={exitGame} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-4 transition-colors">
-                  <ChevronRight size={14} className="rotate-180" /> Back to Games
-                </button>
-                <div className="bg-surface-3 rounded-xl border border-purple-500/20 p-6">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400"><Users size={24} /></div>
-                    <div>
-                      <h2 className="text-xl font-bold">Portfolio Duel</h2>
-                      <p className="text-sm text-slate-500">Pick 3 assets vs the AI. Best portfolio over 10 rounds wins 2x!</p>
-                    </div>
-                  </div>
-
-                  {!pdRunning && !pdResult && !pdRevealing && (
-                    <>
-                      {/* Asset selection */}
-                      <div className="mb-4">
-                        <label className="text-xs text-slate-500 mb-2 block">Pick 3 Assets ({pdPicks.length}/3)</label>
-                        <div className="grid grid-cols-4 gap-2">
-                          {pdAssets.map(a => (
-                            <button key={a} onClick={() => togglePdPick(a)}
-                              className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all border ${pdPicks.includes(a) ? 'bg-purple-500/20 text-purple-400 border-purple-500/30 scale-105' : 'bg-surface-2 text-slate-400 border-white/[0.03] hover:text-white'}`}>
-                              {a}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Bet amount */}
-                      <div className="mb-4">
-                        <label className="text-xs text-slate-500 mb-2 block">Bet Amount (GOAT)</label>
-                        <div className="flex gap-2 mb-2">
-                          {[25, 50, 100, 250].map(v => (
-                            <button key={v} onClick={() => setGameBet(v)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${gameBet === v ? 'bg-purple-500/20 text-purple-400' : 'bg-surface-2 text-slate-400 hover:text-white'}`}>
-                              {v}
-                            </button>
-                          ))}
-                        </div>
-                        <input type="number" value={gameBet} onChange={e => setGameBet(Math.max(1, parseInt(e.target.value) || 0))}
-                          className="w-full bg-surface-1 border border-white/[0.05] rounded-lg px-3 py-2 text-sm font-mono" />
-                      </div>
-
-                      <button onClick={startPortfolioDuel} disabled={pdPicks.length !== 3 || gameBet > balance}
-                        className="w-full py-3 rounded-lg font-bold text-sm bg-purple-500/15 text-purple-400 border border-purple-500/20 hover:bg-purple-500/25 transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
-                        <Zap size={14} /> Start Duel
-                      </button>
-                      {gameBet > balance && <p className="text-red-400 text-xs mt-2 text-center">Insufficient GOAT balance</p>}
-                    </>
-                  )}
-
-                  {/* Running simulation with live values */}
-                  {(pdRunning || pdRevealing) && !pdResult && (
-                    <div>
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-sm text-slate-400">Round <span className="text-white font-bold">{pdRound}</span>/10</span>
-                        <div className="w-32 bg-surface-1 rounded-full h-2 overflow-hidden">
-                          <motion.div className="h-full bg-purple-500" animate={{ width: `${pdRound * 10}%` }} />
-                        </div>
-                      </div>
-
-                      {/* Live portfolio values */}
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <motion.div
-                          className="bg-surface-2 rounded-lg p-4 border border-purple-500/20"
-                          animate={pdRunning ? { borderColor: ['rgba(139,92,246,0.2)', 'rgba(139,92,246,0.4)', 'rgba(139,92,246,0.2)'] } : {}}
-                          transition={{ duration: 2, repeat: Infinity }}
-                        >
-                          <div className="text-xs text-purple-400 mb-1 font-bold">YOUR PORTFOLIO</div>
-                          <div className="text-xs text-slate-400 mb-2">{pdPicks.join(' + ')}</div>
-                          <motion.div
-                            key={pdPlayerValues.length}
-                            initial={{ scale: 1.1 }}
-                            animate={{ scale: 1 }}
-                            className={`text-3xl font-black font-mono ${(pdPlayerValues[pdPlayerValues.length - 1] || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
-                          >
-                            {(pdPlayerValues[pdPlayerValues.length - 1] || 0) >= 0 ? '+' : ''}{(pdPlayerValues[pdPlayerValues.length - 1] || 0).toFixed(2)}%
-                          </motion.div>
-                          <div className="text-xs text-slate-500 mt-1">
-                            {gameBet} GOAT {'→'} {Math.floor(gameBet * (1 + (pdPlayerValues[pdPlayerValues.length - 1] || 0) / 100))} GOAT
-                          </div>
-                        </motion.div>
-                        <motion.div
-                          className="bg-surface-2 rounded-lg p-4 border border-white/[0.03]"
-                          animate={pdRunning ? { borderColor: ['rgba(255,255,255,0.03)', 'rgba(6,182,212,0.3)', 'rgba(255,255,255,0.03)'] } : {}}
-                          transition={{ duration: 2, repeat: Infinity }}
-                        >
-                          <div className="text-xs text-cyan-400 mb-1 font-bold">AI PORTFOLIO</div>
-                          <div className="text-xs text-slate-400 mb-2">{pdBotPicks.join(' + ')}</div>
-                          <motion.div
-                            key={pdBotValues.length}
-                            initial={{ scale: 1.1 }}
-                            animate={{ scale: 1 }}
-                            className={`text-3xl font-black font-mono ${(pdBotValues[pdBotValues.length - 1] || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
-                          >
-                            {(pdBotValues[pdBotValues.length - 1] || 0) >= 0 ? '+' : ''}{(pdBotValues[pdBotValues.length - 1] || 0).toFixed(2)}%
-                          </motion.div>
-                          <div className="text-xs text-slate-500 mt-1">
-                            {gameBet} GOAT {'→'} {Math.floor(gameBet * (1 + (pdBotValues[pdBotValues.length - 1] || 0) / 100))} GOAT
-                          </div>
-                        </motion.div>
-                      </div>
-
-                      {/* Dramatic reveal */}
-                      {pdRevealing && (
-                        <motion.div
-                          className="text-center py-4"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                        >
-                          <motion.div
-                            className="text-2xl font-black text-yellow-400"
-                            animate={{ opacity: [1, 0.3, 1] }}
-                            transition={{ duration: 0.8, repeat: Infinity }}
-                          >
-                            CALCULATING RESULTS...
-                          </motion.div>
-                        </motion.div>
-                      )}
-
-                      {/* Mini chart */}
-                      <div className="bg-surface-1 rounded-lg p-3 h-24 flex items-end gap-0.5">
-                        {pdPlayerValues.map((v, i) => (
-                          <div key={`p-${i}`} className="flex-1 flex flex-col justify-end items-center gap-0.5">
-                            <motion.div
-                              className="w-full rounded-t"
-                              style={{ background: v >= 0 ? '#8b5cf6' : '#ef4444' }}
-                              initial={{ height: 0 }}
-                              animate={{ height: `${Math.max(2, Math.abs(v) * 3)}px` }}
-                              transition={{ duration: 0.3 }}
-                            />
-                            <motion.div
-                              className="w-full rounded-t"
-                              style={{ background: pdBotValues[i] >= 0 ? '#06b6d4' : '#f59e0b', opacity: 0.5 }}
-                              initial={{ height: 0 }}
-                              animate={{ height: `${Math.max(2, Math.abs(pdBotValues[i] || 0) * 3)}px` }}
-                              transition={{ duration: 0.3 }}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex gap-4 mt-2 text-xs text-slate-500">
-                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500 inline-block" /> You</span>
-                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cyan-500 inline-block opacity-50" /> AI</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Result */}
-                  {pdResult && (
-                    <motion.div className="text-center py-6" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', damping: 15 }}>
-                      <motion.div
-                        className={`text-5xl mb-3 ${pdResult.won ? 'text-purple-400' : pdResult.tie ? 'text-yellow-400' : 'text-red-400'}`}
-                        animate={pdResult.won ? { rotate: [0, 360], scale: [0.5, 1.2, 1] } : {}}
-                        transition={{ duration: 0.8 }}
-                      >
-                        {pdResult.won ? <Trophy className="inline" size={48} /> : pdResult.tie ? <Minus className="inline" size={48} /> : <X className="inline" size={48} />}
-                      </motion.div>
-                      <h3 className={`text-2xl font-black mb-2 ${pdResult.won ? 'text-purple-400' : pdResult.tie ? 'text-yellow-400' : 'text-red-400'}`}>
-                        {pdResult.won ? 'YOU WON!' : pdResult.tie ? 'TIE GAME' : 'AI WINS'}
-                      </h3>
-                      <p className="text-slate-400 text-sm">Your portfolio: <span className={`font-bold ${parseFloat(pdResult.playerFinal) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{pdResult.playerFinal}%</span> vs AI: <span className={`font-bold ${parseFloat(pdResult.botFinal) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{pdResult.botFinal}%</span></p>
-                      {pdResult.payout > 0 && <p className="text-purple-400 font-bold mt-2 text-lg">+{pdResult.payout} GOAT</p>}
-
-                      {/* Double or nothing */}
-                      {doubleOrNothing && (
-                        <motion.div className="mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                          <p className="text-yellow-400 font-bold mb-2">Double or Nothing?</p>
-                          <p className="text-sm text-slate-400 mb-3">Risk {doubleOrNothing.amount} GOAT for 50/50 at {doubleOrNothing.amount * 2} GOAT</p>
-                          <div className="flex gap-2">
-                            <button onClick={() => handleDoubleOrNothing(false)} className="flex-1 py-2 rounded-lg bg-surface-2 text-slate-300 text-sm font-medium border border-white/[0.05]">Keep</button>
-                            <motion.button onClick={() => handleDoubleOrNothing(true)}
-                              className="flex-1 py-2 rounded-lg bg-yellow-500/20 text-yellow-400 text-sm font-bold border border-yellow-500/30"
-                              animate={{ scale: [1, 1.03, 1] }}
-                              transition={{ duration: 1, repeat: Infinity }}
-                            >DOUBLE IT</motion.button>
-                          </div>
-                        </motion.div>
-                      )}
-
-                      {!doubleOrNothing && (
-                        <button onClick={() => { setPdPicks([]); setPdRunning(false); setPdRound(0); setPdPlayerValues([]); setPdBotValues([]); setPdBotPicks([]); setPdResult(null); setPdRevealing(false); }}
-                          className="mt-4 px-6 py-2 rounded-lg bg-purple-500/15 text-purple-400 font-medium text-sm hover:bg-purple-500/25 transition-colors">
-                          Play Again
-                        </button>
-                      )}
-                    </motion.div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-
-            {/* ======================================================================= */}
-            {/* AI ORACLE (TRIVIA) GAME                                                 */}
-            {/* ======================================================================= */}
-            {activeGame === 'trivia' && (
-              <motion.div key="game-trivia" className="max-w-lg mx-auto"
-                initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <button onClick={exitGame} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-4 transition-colors">
-                  <ChevronRight size={14} className="rotate-180" /> Back to Games
-                </button>
-                <div className="bg-surface-3 rounded-xl border border-cyan-500/20 p-6">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400"><Sparkles size={24} /></div>
-                    <div>
-                      <h2 className="text-xl font-bold">AI Oracle</h2>
-                      <p className="text-sm text-slate-500">Test your knowledge. Streak bonuses for consecutive correct answers!</p>
-                    </div>
-                  </div>
-
-                  {/* Difficulty selection */}
-                  {!aoDifficulty && aoQuestions.length === 0 && (
-                    <div>
-                      <label className="text-xs text-slate-500 mb-3 block">Choose Difficulty</label>
-                      <div className="space-y-3">
-                        {AO_DIFFICULTIES.map(d => (
-                          <motion.button
-                            key={d.id}
-                            onClick={() => startAiOracle(d)}
-                            className="w-full p-4 rounded-xl border text-left transition-colors hover:border-opacity-60"
-                            style={{ background: `${d.color}08`, borderColor: `${d.color}30` }}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="font-bold text-lg" style={{ color: d.color }}>{d.label}</span>
-                              <span className="text-xs px-2 py-1 rounded-full" style={{ background: `${d.color}15`, color: d.color }}>{d.multiplier}x rewards</span>
-                            </div>
-                            <p className="text-sm text-slate-400">{d.desc}</p>
-                            <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
-                              <span>Bonus at {d.bonusThreshold}+ correct: {d.bonus} GOAT</span>
-                            </div>
-                          </motion.button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {!aoFinished && aoQuestions.length > 0 && aoDifficulty && (
-                    <>
-                      {/* Progress bar */}
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-slate-400">Question <span className="text-white font-bold">{aoQuestion + 1}</span>/10</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold" style={{ color: aoDifficulty.color }}>{aoDifficulty.label}</span>
-                          <span className="text-sm text-cyan-400 font-bold">{aoScore * aoDifficulty.baseReward} GOAT</span>
-                        </div>
-                      </div>
-                      {/* Full progress bar */}
-                      <div className="w-full bg-surface-1 rounded-full h-3 overflow-hidden mb-2 relative">
-                        <motion.div className="h-full rounded-full" style={{ background: aoDifficulty.color }} animate={{ width: `${(aoQuestion + 1) * 10}%` }} />
-                        {/* Segments */}
-                        {[...Array(10)].map((_, i) => (
-                          <div key={i} className="absolute top-0 h-full w-px bg-surface-3/50" style={{ left: `${(i + 1) * 10}%` }} />
-                        ))}
-                      </div>
-
-                      {/* Streak indicator */}
-                      {aoConsecutiveCorrect >= 2 && (
-                        <motion.div
-                          className="text-center mb-3 py-1 rounded-lg bg-orange-500/10"
-                          animate={{ scale: [1, 1.03, 1] }}
-                          transition={{ duration: 1, repeat: Infinity }}
-                        >
-                          <span className="text-xs text-orange-400 font-bold"><Flame size={10} className="inline mr-1" />{aoConsecutiveCorrect} Correct in a Row! Streak Bonus Active</span>
-                        </motion.div>
-                      )}
-
-                      {/* Question */}
-                      <motion.h3
-                        key={aoQuestion}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="text-lg font-bold mb-4"
-                      >
-                        {aoQuestions[aoQuestion]?.q}
-                      </motion.h3>
-                      <div className="space-y-2">
-                        {aoQuestions[aoQuestion]?.opts.map((opt, i) => {
-                          const isCorrect = aoQuestions[aoQuestion].answer === i;
-                          const isSelected = aoSelected === i;
-                          let btnClass = 'bg-surface-2 border-white/[0.03] text-slate-300 hover:border-cyan-500/30 hover:text-white';
-                          if (aoSelected !== null) {
-                            if (isCorrect) btnClass = 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400';
-                            else if (isSelected && !isCorrect) btnClass = 'bg-red-500/15 border-red-500/40 text-red-400';
-                            else btnClass = 'bg-surface-2 border-white/[0.03] text-slate-500';
-                          }
-                          return (
-                            <motion.button key={i} onClick={() => answerAoQuestion(i)}
-                              className={`w-full text-left px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${btnClass}`}
-                              whileTap={aoSelected === null ? { scale: 0.98 } : {}}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: i * 0.05 }}
-                            >
-                              <span className="text-slate-500 mr-2">{String.fromCharCode(65 + i)}.</span> {opt}
-                              {aoSelected !== null && isCorrect && <Check size={14} className="inline ml-2 text-emerald-400" />}
-                              {aoSelected !== null && isSelected && !isCorrect && <X size={14} className="inline ml-2 text-red-400" />}
-                              {aoSelected !== null && isCorrect && <span className="text-xs text-emerald-400 ml-2">+{aoDifficulty.baseReward} GOAT</span>}
-                            </motion.button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-
-                  {/* Final score */}
-                  {aoFinished && aoDifficulty && (
-                    <motion.div className="text-center py-6" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
-                      <motion.div
-                        className={`text-5xl mb-3 ${aoScore >= aoDifficulty.bonusThreshold ? 'text-cyan-400' : aoScore >= 5 ? 'text-yellow-400' : 'text-red-400'}`}
-                        animate={{ rotate: [0, 360] }}
-                        transition={{ duration: 0.8 }}
-                      >
-                        <Award className="inline" size={48} />
-                      </motion.div>
-                      <h3 className="text-2xl font-black text-white mb-1">{aoScore}/10 Correct</h3>
-                      <p className="text-sm font-medium mb-1" style={{ color: aoDifficulty.color }}>{aoDifficulty.label} Mode</p>
-                      <p className="text-slate-400 text-sm mb-3">
-                        {aoScore >= aoDifficulty.bonusThreshold ? 'Outstanding! Bonus unlocked!' : aoScore >= 5 ? 'Not bad! Keep learning.' : 'Better luck next time!'}
-                      </p>
-                      <div className="bg-surface-2 rounded-lg p-4 inline-block mb-4">
-                        <div className="text-xs text-slate-500 mb-1">Total Earned</div>
-                        <div className="text-2xl font-black text-cyan-400">
-                          {aoScore * aoDifficulty.baseReward + (aoScore >= aoDifficulty.bonusThreshold ? aoDifficulty.bonus : 0)} GOAT
-                        </div>
-                        <div className="text-xs text-slate-500 mt-1 space-y-0.5">
-                          <div>{aoScore} correct x {aoDifficulty.baseReward} = {aoScore * aoDifficulty.baseReward} GOAT</div>
-                          {aoScore >= aoDifficulty.bonusThreshold && <div className="text-yellow-400">Bonus: +{aoDifficulty.bonus} GOAT</div>}
-                        </div>
-                      </div>
-                      <br />
-                      <div className="flex gap-2 justify-center">
-                        <button onClick={() => { setAoDifficulty(null); setAoQuestions([]); setAoFinished(false); }}
-                          className="px-6 py-2 rounded-lg bg-cyan-500/15 text-cyan-400 font-medium text-sm hover:bg-cyan-500/25 transition-colors">
-                          Change Difficulty
-                        </button>
-                        <button onClick={() => startAiOracle(aoDifficulty)}
-                          className="px-6 py-2 rounded-lg bg-surface-2 text-slate-300 font-medium text-sm hover:text-white transition-colors border border-white/[0.05]">
-                          Play Again
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </>
+      {/* Daily Bonus Section (shown on markets tab) */}
+      {tab === 'markets' && dailyBonusAvailable && (
+        <div className="bg-surface-3 rounded-xl border border-yellow-500/20 p-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-yellow-500/15 flex items-center justify-center">
+              <Gift size={24} className="text-yellow-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-lg text-yellow-400">Daily Bonus Available!</h3>
+              <p className="text-sm text-slate-500">Claim your daily GOAT tokens (250-500 GOAT)</p>
+            </div>
+            <motion.button
+              onClick={claimDailyBonus}
+              className="px-5 py-2.5 rounded-xl bg-yellow-500/20 border border-yellow-500/40 text-yellow-400 font-bold text-sm hover:bg-yellow-500/30 transition-colors"
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              Claim Now
+            </motion.button>
+          </div>
         </div>
       )}
+
+      {/* GAMES TAB REMOVED — prediction markets are the core feature */}
 
       {/* ================================================================= */}
       {/* LEADERBOARD TAB                                                   */}
@@ -2301,33 +1514,22 @@ export default function CasinoPage() {
           </motion.div>
 
           <div className="bg-surface-3 rounded-xl border border-white/[0.03] overflow-hidden">
-            <div className="p-4 border-b border-white/[0.03] flex items-center justify-between">
-              <h2 className="font-semibold flex items-center gap-2"><Trophy size={18} className="text-yellow-400" />Top Predictors</h2>
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
-                <span className="text-xs text-emerald-400">Live</span>
-              </div>
+            <div className="p-4 border-b border-white/[0.03]">
+              <h2 className="font-semibold flex items-center gap-2"><Trophy size={18} className="text-yellow-400" />Top 10 Predictors</h2>
             </div>
-            {leaderboardUsers.map((p, i) => (
+            {leaderboardUsers.slice(0, 10).map((p, i) => (
               <motion.div key={i}
-                className="flex items-center gap-4 px-4 py-3.5 border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] transition-colors"
-                initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${i < 3 ? 'bg-yellow-500/15 text-yellow-400' : 'bg-surface-2 text-slate-500'}`}>
+                className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] transition-colors"
+                initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.02 }}>
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 ${i < 3 ? 'bg-yellow-500/15 text-yellow-400' : 'bg-surface-2 text-slate-500'}`}>
                   {i === 0 ? '\u{1F947}' : i === 1 ? '\u{1F948}' : i === 2 ? '\u{1F949}' : p.rank}
                 </div>
-                <div className="w-8 h-8 rounded-full bg-surface-2 flex items-center justify-center text-xs font-bold text-slate-400">{p.avatar}</div>
-                <div className="flex-1">
-                  <div className="font-medium">{p.name}</div>
-                  <div className="text-xs text-slate-500">{p.trades} trades | {p.streak} streak | {p.winRate}% win</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm truncate">{p.name}</div>
+                  <div className="text-xs text-slate-500">{p.winRate}% win rate &middot; {p.streak}</div>
                 </div>
-                <div className="text-right">
-                  <div className={`font-bold ${p.pnl >= 0 ? 'text-brand' : 'text-red-400'}`}>
-                    {p.pnl >= 0 ? '+' : ''}{Math.abs(p.pnl).toLocaleString()} GOAT
-                  </div>
-                  <div className="text-xs text-slate-500">Win: {p.winRate}%</div>
+                <div className={`font-bold text-sm flex-shrink-0 ${p.pnl >= 0 ? 'text-brand' : 'text-red-400'}`}>
+                  {p.pnl >= 0 ? '+' : ''}{Math.abs(p.pnl).toLocaleString()}
                 </div>
               </motion.div>
             ))}
@@ -2531,6 +1733,41 @@ export default function CasinoPage() {
                 Sign In / Sign Up
               </button>
               <button onClick={() => setShowLoginPrompt(false)} className="text-sm text-slate-500 hover:text-white transition-colors">
+                Maybe Later
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Wallet Required Prompt */}
+        {showWalletRequired && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+            onClick={() => setShowWalletRequired(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-surface-2 rounded-2xl border border-white/[0.05] w-full max-w-sm overflow-hidden p-6 text-center"
+              onClick={e => e.stopPropagation()}
+            >
+              <Wallet size={32} className="text-purple-400 mx-auto mb-3" />
+              <h2 className="text-lg font-bold mb-2">Wallet Required</h2>
+              <p className="text-sm text-slate-400 mb-4">Connect your Phantom wallet on the Wallet page to start betting. You need a funded wallet to place bets.</p>
+              <button
+                onClick={() => {
+                  setShowWalletRequired(false);
+                  useStore.getState().setPage('wallet');
+                }}
+                className="w-full py-3 rounded-lg bg-purple-500 text-white font-bold text-sm hover:bg-purple-500/90 transition-colors mb-2"
+              >
+                Go to Wallet Page
+              </button>
+              <button onClick={() => setShowWalletRequired(false)} className="text-sm text-slate-500 hover:text-white transition-colors">
                 Maybe Later
               </button>
             </motion.div>

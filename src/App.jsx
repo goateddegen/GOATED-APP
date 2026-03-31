@@ -265,10 +265,12 @@ export default function App() {
   const isMobile = useIsMobile();
   const [showKeyHint, setShowKeyHint] = useState(true);
 
-  // Scroll to top on page change — safety net for Suspense/lazy loads
+  // Scroll to top on ANY view change — page nav, detail open/close, etc.
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-  }, [page]);
+    window.scrollTo(0, 0);
+    // Also force the main element to scroll top (catches overflow containers)
+    document.getElementById('main-content')?.scrollTo(0, 0);
+  }, [page, detailOpen]);
 
   // Auto-hide keyboard shortcut hint after 10 seconds
   useEffect(() => {

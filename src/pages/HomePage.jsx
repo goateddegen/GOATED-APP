@@ -863,41 +863,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══ GOATED AI FLAGSHIP ═══ */}
-      <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(168,85,247,0.015) 0%, rgba(16,185,129,0.015) 50%, rgba(6,182,212,0.015) 100%)' }} />
-        <div className="max-w-7xl mx-auto relative">
-          <motion.div className="rounded-2xl border border-brand/20 p-6 sm:p-8 lg:p-12 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.02) 0%, rgba(0,0,0,0.98) 50%, rgba(168,85,247,0.06) 100%)' }} initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}>
-            <div className="absolute inset-0 rounded-2xl neon-border" />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-center relative">
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-400 text-xs font-bold uppercase tracking-wider mb-4"><Crown size={14} />Flagship Feature</div>
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-4">
-                  <span className="bg-gradient-to-r from-brand via-purple-400 to-cyan-400 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text' }}>GOATED</span>{' '}AI
-                </h2>
-                <p className="text-lg sm:text-xl text-slate-300 mb-3">Your always-on AI co-pilot that never misses</p>
-                <p className="text-slate-400 mb-6 leading-relaxed">
-                  Context-aware AI overlay that embeds every platform feature — Trend Pulse, Lead Intelligence, Wallet, Dashboard, and Prediction Markets — directly in the chat. Real-time call coaching, deep research, and deal execution. This is the unfair advantage your competition doesn't have. Powered by Claude.
-                </p>
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {['Embedded Features', 'Call Coaching', 'Deep Research', 'Deal Execution', 'Trend Analysis', 'Lead Enrichment', 'Always On'].map(tag => (
-                    <span key={tag} className="px-3 py-1.5 rounded-full text-xs font-medium bg-white/[0.02] border border-white/[0.05] text-slate-300">{tag}</span>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  <GlowButton onClick={() => setAiOpen(true)} color="brand" className="!px-6 !py-3 !text-base">
-                    <Rocket size={18} />Launch AI
-                  </GlowButton>
-                  <motion.button onClick={() => setPage('leads')} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05] text-white font-medium hover:border-brand/20 transition-colors" whileHover={{ scale: 1.05 }}>Start Printing Money <ChevronRight size={16} /></motion.button>
-                </div>
-              </div>
-
-              <HomepageAIDemo onOpenFull={() => setAiOpen(true)} />
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
       {/* ═══ B2B INTELLIGENCE ═══ */}
       <section className="px-6 py-16 sm:py-20">
         <div className="max-w-7xl mx-auto">
@@ -931,52 +896,6 @@ export default function HomePage() {
               <Users size={18} />Explore 500K+ Leads<ArrowRight size={16} />
             </GlowButton>
           </motion.div>
-        </div>
-      </section>
-
-      {/* ═══ PARTNER / INTEGRATION SHOWCASE ═══ */}
-      <section className="px-6 py-14 sm:py-16 border-y border-white/[0.03] bg-surface-1/20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-brand/[0.01] via-transparent to-cyan-500/[0.01]" />
-        <div className="max-w-5xl mx-auto relative">
-          <motion.div className="text-center mb-10" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <span className="text-slate-500 text-sm font-bold uppercase tracking-widest">Powered By & Integrated With</span>
-            <h3 className="text-2xl font-black mt-2 text-white">The Best Stack in the Game</h3>
-          </motion.div>
-
-          <div className="flex flex-wrap justify-center gap-4">
-            {[
-              { name: 'Apollo', color: '#6366f1' },
-              { name: 'Kalshi', color: '#ef4444' },
-              { name: 'Polymarket', color: '#3b82f6' },
-              { name: 'CoinGecko', color: '#8dc63f' },
-              { name: 'Supabase', color: '#3ecf8e' },
-              { name: 'Phantom', color: '#ab9ff2' },
-              { name: 'Solana', color: '#14f195' },
-              { name: 'Claude AI', color: '#d4a574' },
-              { name: 'Vercel', color: '#ffffff' },
-              { name: 'Plaid', color: '#0a85ea' },
-              { name: 'Whop', color: '#7c3aed' },
-            ].map((partner, i) => (
-              <motion.div
-                key={partner.name}
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.05 }}
-              >
-                <PartnerLogo name={partner.name} color={partner.color} />
-              </motion.div>
-            ))}
-          </div>
-
-          <motion.p
-            className="text-center text-sm text-slate-600 mt-6"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-          >
-            11+ integrations powering the most complete revenue intelligence platform ever built
-          </motion.p>
         </div>
       </section>
 
@@ -1122,61 +1041,41 @@ export default function HomePage() {
         <div className="absolute top-20 right-20 w-72 h-72 bg-pink-500/5 rounded-full blur-3xl" />
         <div className="absolute bottom-20 left-20 w-56 h-56 bg-purple-500/5 rounded-full blur-3xl" />
 
-        <div className="max-w-7xl mx-auto relative">
+        <div className="max-w-5xl mx-auto relative">
           <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-400 text-xs font-bold uppercase tracking-wider mb-4">
-              <Rocket size={14} />Launch on GOATED
+              <Rocket size={14} />Partner Incubator
             </div>
             <h2 className="text-3xl lg:text-5xl font-black mb-4">The <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-brand bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text' }}>GOATED Partner Program</span></h2>
             <p className="text-lg text-slate-400 max-w-3xl mx-auto leading-relaxed mb-3">
-              Like Magic Eden for projects, Whop for communities. Launch your project on GOATED and get instant access to <span className="text-pink-400 font-bold">250K+ B2B leads</span>, AI-powered promotion, and a community of closers ready to sell your product.
+              Free to join. Interview to get in. We handpick partners who are serious about closing, then give them everything they need to scale. This isn't a subscription — it's an <span className="text-pink-400 font-bold">incubator for closers</span>.
             </p>
-            <p className="text-sm text-slate-500 max-w-2xl mx-auto">Private deal flow, ad marketing, community amplification. Whether you are a startup, SaaS tool, or crypto project — GOATED is your go-to-market engine.</p>
+            <p className="text-sm text-slate-500 max-w-2xl mx-auto">Apply, interview, get approved. Approved partners earn 15% commission on every closed deal, get priority support, and we actively help you grow.</p>
           </motion.div>
 
-          {/* Partnership Tiers */}
-          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
+          {/* How It Works */}
+          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-12">
             {[
-              { name: 'Free Listing', price: '$0', period: '/forever', desc: 'Get listed in the GOATED marketplace. Basic visibility to our closer network.', features: ['Project listing page', 'Basic lead exposure', 'Community feed mentions', 'Self-serve analytics'], color: '#10b981', border: 'border-brand/20' },
-              { name: 'Featured', price: '$499', period: '/mo', desc: 'Boosted visibility with AI-powered matching to relevant closers.', features: ['Everything in Free', 'Featured placement', 'AI lead matching', 'Priority in search', 'Monthly performance report'], color: '#f59e0b', border: 'border-yellow-500/20', popular: true },
-              { name: 'Premium', price: '$2,499', period: '/mo', desc: 'Full-service promotion with dedicated deal flow and ad campaigns.', features: ['Everything in Featured', 'Dedicated account manager', 'Custom ad campaigns', 'Private deal flow access', 'Community amplification', 'Co-branded outreach'], color: '#a855f7', border: 'border-purple-500/20' },
-              { name: 'Enterprise', price: 'Custom', period: '', desc: 'White-glove partnership for high-volume projects and venture studios.', features: ['Everything in Premium', 'Custom AI model training', 'API access & webhooks', 'White-label options', 'Exec introductions', 'Revenue share model'], color: '#ec4899', border: 'border-pink-500/20' },
-            ].map((tier, i) => (
+              { step: '01', title: 'Apply', desc: 'Fill out a short application telling us about your sales background, niche, and goals. Takes 2 minutes.', color: '#ec4899', icon: Rocket },
+              { step: '02', title: 'Interview', desc: 'Quick call with our team. We want to know you are serious, coachable, and ready to close. No fluff — just vibes and ambition.', color: '#a855f7', icon: Users },
+              { step: '03', title: 'Scale', desc: 'Get approved and unlock 15% commissions, priority leads, co-marketing, and a dedicated success manager who helps you win.', color: '#10b981', icon: TrendingUp },
+            ].map((item, i) => (
               <motion.div
                 key={i}
-                className={`bg-black/50 backdrop-blur rounded-2xl p-6 border ${tier.border} relative hover:-translate-y-1 transition-all duration-300 flex flex-col`}
+                className="bg-black/50 backdrop-blur rounded-2xl p-6 border border-white/[0.05] relative hover:-translate-y-1 transition-all duration-300 flex flex-col"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
               >
-                {tier.popular && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-yellow-500 text-black text-[10px] font-black rounded-full uppercase tracking-wider">Most Popular</div>}
-                <div className="text-center mb-5 pt-1">
-                  <h3 className="font-bold text-sm mb-2 uppercase tracking-wider" style={{ color: tier.color }}>{tier.name}</h3>
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-3xl font-black text-white">{tier.price}</span>
-                    {tier.period && <span className="text-sm text-slate-500">{tier.period}</span>}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `${item.color}15`, color: item.color }}>
+                    <item.icon size={20} />
                   </div>
-                  <p className="text-xs text-slate-500 mt-2 leading-relaxed">{tier.desc}</p>
+                  <span className="text-xs font-mono uppercase tracking-wider" style={{ color: item.color }}>Step {item.step}</span>
                 </div>
-                <div className="space-y-2 mb-5 flex-1">
-                  {tier.features.map((f, j) => (
-                    <div key={j} className="flex items-center gap-2 text-xs text-slate-300">
-                      <CheckCircle2 size={12} style={{ color: tier.color }} className="flex-shrink-0" />{f}
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={() => tier.price === 'Custom' ? setAccountModalOpen(true) : setPage('builder')}
-                  className="w-full py-2.5 rounded-xl font-bold text-xs transition-all duration-300"
-                  style={{
-                    background: tier.popular ? tier.color : 'rgba(255,255,255,0.03)',
-                    color: tier.popular ? '#000' : tier.color,
-                    border: tier.popular ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                  }}
-                >
-                  {tier.price === '$0' ? 'List for Free' : tier.price === 'Custom' ? 'Contact Us' : 'Get Started'}
-                </button>
+                <h3 className="text-xl font-black text-white mb-2">{item.title}</h3>
+                <p className="text-sm text-slate-400 leading-relaxed flex-1">{item.desc}</p>
               </motion.div>
             ))}
           </StaggeredCards>
@@ -1191,16 +1090,18 @@ export default function HomePage() {
           >
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
               <div>
-                <h3 className="text-2xl sm:text-3xl font-black mb-4">Why Projects <span className="text-pink-400">Launch on GOATED</span></h3>
+                <h3 className="text-2xl sm:text-3xl font-black mb-4">What Approved Partners <span className="text-pink-400">Get</span></h3>
                 <p className="text-slate-400 mb-6 leading-relaxed">
-                  Stop burning ad budget on cold audiences. GOATED gives you direct access to a verified network of B2B closers who are actively looking for products to sell. AI matches your project with the right closers for your niche.
+                  This is not a generic affiliate program. We treat partners like founders in our incubator. You get real support, real promotion, and a team that wants you to win as bad as you do.
                 </p>
                 <div className="space-y-4">
                   {[
-                    { icon: Users, text: '250K+ verified B2B leads and active closers in the network' },
-                    { icon: Bot, text: 'AI-powered promotion that matches your project to ideal sellers' },
-                    { icon: Megaphone, text: 'Community amplification across all GOATED channels' },
-                    { icon: BarChart3, text: 'Real-time analytics on impressions, leads generated, and deals closed' },
+                    { icon: DollarSign, text: '15% commission on every closed deal — highest in the game' },
+                    { icon: Users, text: 'Dedicated success manager to help you scale and close bigger' },
+                    { icon: Megaphone, text: 'We promote your wins across GOATED channels and community' },
+                    { icon: Bot, text: 'Priority AI lead matching and first access to new features' },
+                    { icon: BarChart3, text: 'Real-time dashboard with your pipeline, earnings, and performance' },
+                    { icon: Crown, text: 'Partner spotlight features, case studies, and co-marketing' },
                   ].map((item, i) => (
                     <div key={i} className="flex items-center gap-3 text-sm text-slate-300">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-pink-500/10 text-pink-400 flex-shrink-0">
@@ -1212,13 +1113,13 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Success Metrics */}
+              {/* Partner Stats */}
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { value: '142', label: 'Projects Launched', color: '#ec4899', suffix: '+' },
-                  { value: '$4.2', label: 'Total Raised', color: '#a855f7', suffix: 'M' },
-                  { value: '89', label: 'Active Partners', color: '#10b981', suffix: '' },
-                  { value: '20', label: 'Recurring Rev Share', color: '#f59e0b', suffix: '%' },
+                  { value: '15', label: 'Commission Rate', color: '#ec4899', suffix: '%' },
+                  { value: '$0', label: 'Cost to Join', color: '#10b981', suffix: '' },
+                  { value: '89', label: 'Active Partners', color: '#a855f7', suffix: '+' },
+                  { value: '48hr', label: 'Approval Time', color: '#f59e0b', suffix: '' },
                 ].map((stat, i) => (
                   <motion.div
                     key={i}
@@ -1238,19 +1139,14 @@ export default function HomePage() {
             </div>
           </motion.div>
 
-          {/* Referral CTA */}
+          {/* Apply CTA */}
           <motion.div className="text-center" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
             <div className="inline-flex flex-col items-center gap-4 p-6 rounded-2xl border border-pink-500/20 bg-pink-500/5">
-              <p className="text-xl sm:text-2xl font-black text-white">Not a project? <span className="text-pink-400">Earn 20% as a referral partner.</span></p>
-              <p className="text-sm text-slate-400 max-w-lg">Share your link, earn 20% recurring commission on every deal your referrals close. Instant Solana payouts. No cap on earnings. Program launching soon.</p>
-              <div className="flex flex-wrap justify-center gap-4">
-                <GlowButton onClick={() => setPage('builder')} color="pink">
-                  <Rocket size={18} />Launch on GOATED<ArrowRight size={16} />
-                </GlowButton>
-                <GlowButton onClick={() => setPage('leads')} variant="secondary">
-                  Or Start Closing Yourself
-                </GlowButton>
-              </div>
+              <p className="text-xl sm:text-2xl font-black text-white">Ready to go pro? <span className="text-pink-400">Apply to the Partner Program.</span></p>
+              <p className="text-sm text-slate-400 max-w-lg">Free to join. No fees, no subscriptions, no catches. Just an interview to make sure you are built for this. Approved partners earn 15% on every deal with priority support and co-marketing.</p>
+              <GlowButton onClick={() => setAccountModalOpen(true)} color="pink">
+                <Rocket size={18} />Apply to Partner Program<ArrowRight size={16} />
+              </GlowButton>
             </div>
           </motion.div>
         </div>

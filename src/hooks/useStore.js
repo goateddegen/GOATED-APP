@@ -518,7 +518,7 @@ function enrichLead(lead) {
   if (lead._enriched) return lead;
 
   const rand = xoshiro128ss(lead.id * 7919); // Deterministic per-lead
-  const nameParts = lead.name.split(' ');
+  const nameParts = (lead.name || 'Unknown User').split(' ');
   const firstName = nameParts[0];
   const ln = (nameParts.slice(1).join(' ') || 'user').toLowerCase();
   const company = lead.company;

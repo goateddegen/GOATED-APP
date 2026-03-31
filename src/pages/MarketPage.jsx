@@ -905,7 +905,7 @@ export default function MarketPage() {
           const totalVol = gd.total_volume?.usd || prices.reduce((s, c) => s + (c.volume24h || 0), 0);
           const gainCount = prices.filter(c => c.change24h > 0).length;
           const loseCount = prices.filter(c => c.change24h < 0).length;
-          const avgChange = prices.reduce((s, c) => s + c.change24h, 0) / prices.length;
+          const avgChange = prices.length > 0 ? prices.reduce((s, c) => s + c.change24h, 0) / prices.length : 0;
           const sentimentLabel = avgChange > 2 ? 'Strongly Bullish' : avgChange > 0 ? 'Mildly Bullish' : avgChange > -2 ? 'Mildly Bearish' : 'Strongly Bearish';
 
           setMarketData({
@@ -1223,8 +1223,8 @@ export default function MarketPage() {
 
       {/* ═══════ SPREAD COMPARISON: GOATED vs COMPETITORS ═══════ */}
       {(() => {
-        const avgKalshiEdge = (SPREAD_COMPARISONS.reduce((s, c) => s + ((1 - c.goated / c.kalshi) * 100), 0) / SPREAD_COMPARISONS.length).toFixed(1);
-        const avgPolyEdge = (SPREAD_COMPARISONS.reduce((s, c) => s + ((1 - c.goated / c.polymarket) * 100), 0) / SPREAD_COMPARISONS.length).toFixed(1);
+        const avgKalshiEdge = SPREAD_COMPARISONS.length > 0 ? (SPREAD_COMPARISONS.reduce((s, c) => s + ((1 - c.goated / c.kalshi) * 100), 0) / SPREAD_COMPARISONS.length).toFixed(1) : '0.0';
+        const avgPolyEdge = SPREAD_COMPARISONS.length > 0 ? (SPREAD_COMPARISONS.reduce((s, c) => s + ((1 - c.goated / c.polymarket) * 100), 0) / SPREAD_COMPARISONS.length).toFixed(1) : '0.0';
         const avgEdge = ((parseFloat(avgKalshiEdge) + parseFloat(avgPolyEdge)) / 2).toFixed(1);
         return (
           <motion.div

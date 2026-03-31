@@ -248,7 +248,7 @@ export default function AccountModal() {
                       </button>
                       <button className="text-xs py-2 px-3 rounded-lg bg-surface-2 hover:bg-surface-3 text-slate-300 transition-colors text-left">
                         <div className="font-medium">Users</div>
-                        <div className="text-[10px] text-slate-500">{JSON.parse(localStorage.getItem('goated_users') || '[]').length} registered</div>
+                        <div className="text-[10px] text-slate-500">{(() => { try { return JSON.parse(localStorage.getItem('goated_users') || '[]').length; } catch { return 0; } })()} registered</div>
                       </button>
                       <button className="text-xs py-2 px-3 rounded-lg bg-surface-2 hover:bg-surface-3 text-slate-300 transition-colors text-left">
                         <div className="font-medium">API Keys</div>

@@ -3,13 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   TrendingUp, ArrowUp, ArrowDown, BarChart3, Clock, Flame, Radio,
   ChevronRight, RefreshCw, Activity, Zap, Target, AlertTriangle,
-  DollarSign, Globe, Brain, Search, ExternalLink, Newspaper, Sparkles,
+  Globe, Brain, Search, ExternalLink, Newspaper, Sparkles,
   ChevronDown, X, Crosshair, Shield, TrendingDown, Radar, Rocket, MapPin,
   Filter, SlidersHorizontal, Trophy,
   ArrowUpRight, ArrowDownRight, Minus, Signal, LayoutGrid, List,
   PieChart, LineChart, Hash, ShieldCheck, Percent, Coins, Building2,
   Landmark, Fuel, Gem, Scale, Vote, Cpu, Banknote, CircleDollarSign,
-  ChevronUp, Star, Eye, Wifi, Layers, Copy, Download, Play,
+  ChevronUp, Star, Eye, Wifi, Layers, Download, Play,
 } from 'lucide-react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
@@ -17,7 +17,7 @@ import { feature } from 'topojson-client';
 import * as THREE from 'three';
 import { useStore } from '../hooks/useStore';
 import { useGoatedAI } from '../hooks/useGoatedAI';
-import WorldMap from '../components/WorldMap';
+// WorldMap import removed — replaced by 3D globe
 
 // ============================================================================
 // TREND PULSE — Palantir-Level Trading Intelligence Engine
@@ -30,8 +30,6 @@ const TABS = [
   { id: 'globe', label: 'Global Heatmap', icon: Globe },
   { id: 'alpha', label: 'Alpha Plays', icon: Zap },
   { id: 'news', label: 'Live News', icon: Newspaper },
-  { id: 'prices', label: 'Live Prices', icon: DollarSign },
-  { id: 'research', label: 'Deep Research', icon: Search },
 ];
 
 // ─── Formatters ─────────────────────────────────────────────────────────────
@@ -161,7 +159,7 @@ function GeoLines() {
     <group>
       {lineGeometries.map((geo, idx) => (
         <line key={idx} geometry={geo}>
-          <lineBasicMaterial color="#10b981" transparent opacity={0.15} />
+          <lineBasicMaterial color="#34d399" transparent opacity={0.35} />
         </line>
       ))}
       {/* Latitude grid lines */}
@@ -169,14 +167,14 @@ function GeoLines() {
         const pts = [];
         for (let lng = -180; lng <= 180; lng += 4) pts.push(toXYZ(lat, lng, 1.003));
         const geo = new THREE.BufferGeometry().setFromPoints(pts);
-        return <line key={`lat${lat}`} geometry={geo}><lineBasicMaterial color="#10b981" transparent opacity={lat === 0 ? 0.08 : 0.03} /></line>;
+        return <line key={`lat${lat}`} geometry={geo}><lineBasicMaterial color="#10b981" transparent opacity={lat === 0 ? 0.15 : 0.06} /></line>;
       })}
       {/* Longitude grid lines */}
       {[-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150, 180].map(lng => {
         const pts = [];
         for (let lat = -90; lat <= 90; lat += 4) pts.push(toXYZ(lat, lng, 1.003));
         const geo = new THREE.BufferGeometry().setFromPoints(pts);
-        return <line key={`lng${lng}`} geometry={geo}><lineBasicMaterial color="#10b981" transparent opacity={0.03} /></line>;
+        return <line key={`lng${lng}`} geometry={geo}><lineBasicMaterial color="#10b981" transparent opacity={0.06} /></line>;
       })}
     </group>
   );
@@ -395,7 +393,7 @@ function GlobeMesh({ hotspots, selectedHotspot, hoveredHotspot, onSelectHotspot,
   return (
     <group ref={gRef}>
       {/* Planet sphere */}
-      <mesh><sphereGeometry args={[1, 64, 64]} /><meshBasicMaterial color="#050a08" transparent opacity={0.97} /></mesh>
+      <mesh><sphereGeometry args={[1, 64, 64]} /><meshBasicMaterial color="#0a1a12" transparent opacity={0.98} /></mesh>
       {/* Real GeoJSON country borders */}
       <GeoLines />
       {/* Data flow arcs */}
@@ -417,8 +415,8 @@ function GlobeMesh({ hotspots, selectedHotspot, hoveredHotspot, onSelectHotspot,
         );
       })}
       {/* Atmosphere glow */}
-      <mesh><sphereGeometry args={[1.06, 64, 64]} /><meshBasicMaterial color="#10b981" transparent opacity={0.02} side={THREE.BackSide} /></mesh>
-      <mesh><sphereGeometry args={[1.12, 64, 64]} /><meshBasicMaterial color="#10b981" transparent opacity={0.01} side={THREE.BackSide} /></mesh>
+      <mesh><sphereGeometry args={[1.06, 64, 64]} /><meshBasicMaterial color="#34d399" transparent opacity={0.06} side={THREE.BackSide} /></mesh>
+      <mesh><sphereGeometry args={[1.12, 64, 64]} /><meshBasicMaterial color="#10b981" transparent opacity={0.03} side={THREE.BackSide} /></mesh>
     </group>
   );
 }
@@ -478,7 +476,6 @@ function GoatedScoreBadge({ score }) {
 // ─── Alpha Card ─────────────────────────────────────────────────────────────
 
 function AlphaCard({ play }) {
-  const [copied, setCopied] = useState(false);
   const dClr = play.direction === 'long' ? 'text-emerald-400' : play.direction === 'reduce' ? 'text-amber-400' : 'text-red-400';
   const dBg = play.direction === 'long' ? 'bg-emerald-500/10' : play.direction === 'reduce' ? 'bg-amber-500/10' : 'bg-red-500/10';
   const rClr = play.risk === 'high' ? 'text-red-400' : play.risk === 'medium' ? 'text-amber-400' : 'text-emerald-400';
@@ -560,12 +557,6 @@ function AlphaCard({ play }) {
           </div>
         </div>
         <div className="flex items-center gap-2 pt-1.5">
-          <button
-            onClick={(e) => { e.stopPropagation(); const text = `${play.direction === 'long' ? 'BUY' : 'SHORT'} ${play.asset}${play.entry ? ` @ ${play.entry}` : ''}${play.stopLoss ? ` | SL: ${play.stopLoss}` : ''}${play.exit ? ` | TP: ${play.exit}` : ''} | ${play.timeframe} | Risk: ${play.risk || 'medium'}`; navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }).catch(() => {}); }}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-brand/10 text-brand font-bold text-[11px] border border-brand/20 hover:bg-brand/20 hover:border-brand/40 transition-all cursor-pointer"
-          >
-            <Copy size={11} />{copied ? 'Copied!' : 'Copy Trade Setup'}
-          </button>
           <span className="text-[10px] text-slate-500">{goatedScore}/100 Score</span>
           {play.timeToPlay && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${play.timeToPlay === 'Urgent' || play.timeToPlay === 'NOW' ? 'bg-red-500/15 text-red-400 border border-red-500/30' : 'bg-brand/10 text-brand border border-brand/20'}`}>{play.timeToPlay}</span>}
         </div>
@@ -1380,13 +1371,6 @@ export default function TrendsPage() {
   const [scanLineActive, setScanLineActive] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
-  // Deep Research tab state
-  const [researchQuery, setResearchQuery] = useState('');
-  const [researchLoading, setResearchLoading] = useState(false);
-  const [researchReport, setResearchReport] = useState(null);
-  // AI Market Brief state
-  const [marketBrief, setMarketBrief] = useState(null);
-  const [marketBriefLoading, setMarketBriefLoading] = useState(false);
   // Markets tab state
   const [marketData, setMarketData] = useState(null);
   const [marketLoading, setMarketLoading] = useState(false);
@@ -1718,7 +1702,7 @@ export default function TrendsPage() {
           const totalVol = gd.total_volume?.usd || prices.reduce((s, c) => s + (c.volume24h || 0), 0);
           const gainCount = prices.filter(c => c.change24h > 0).length;
           const loseCount = prices.filter(c => c.change24h < 0).length;
-          const avgChange = prices.reduce((s, c) => s + c.change24h, 0) / prices.length;
+          const avgChange = prices.length > 0 ? prices.reduce((s, c) => s + c.change24h, 0) / prices.length : 0;
           const sentimentLabel = avgChange > 2 ? 'Strongly Bullish' : avgChange > 0 ? 'Mildly Bullish' : avgChange > -2 ? 'Mildly Bearish' : 'Strongly Bearish';
           setMarketData({
             prices, marketOverview: { totalMarketCap: totalMC, total24hVolume: totalVol, totalCoinsTracked: prices.length, gainers: gainCount, losers: loseCount, marketSentiment: sentimentLabel },
@@ -1796,12 +1780,6 @@ export default function TrendsPage() {
     if (searchQ) { const q = searchQ.toLowerCase(); n = n.filter(a => a.title?.toLowerCase().includes(q) || a.source?.toLowerCase().includes(q)); }
     return n;
   }, [data?.news, newsFilter, searchQ]);
-
-  const filteredCoins = useMemo(() => {
-    let c = data?.coins || [];
-    if (searchQ) { const q = searchQ.toLowerCase(); c = c.filter(x => x.name?.toLowerCase().includes(q) || x.symbol?.toLowerCase().includes(q)); }
-    return c;
-  }, [data?.coins, searchQ]);
 
   const filteredPredictions = useMemo(() => {
     let preds = data?.predictions || [];
@@ -1907,11 +1885,11 @@ export default function TrendsPage() {
         ))}
       </div>
 
-      {/* Search (news/prices) */}
-      {(activeTab === 'news' || activeTab === 'prices') && (
+      {/* Search (news) */}
+      {activeTab === 'news' && (
         <div className="relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
-          <input type="text" placeholder={activeTab === 'news' ? 'Search news...' : 'Search coins...'} value={searchQ} onChange={e => setSearchQ(e.target.value)}
+          <input type="text" placeholder="Search news..." value={searchQ} onChange={e => setSearchQ(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-white/[0.03] border border-white/[0.06] rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-brand/30" />
           {searchQ && <button onClick={() => setSearchQ('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-400"><X size={14} /></button>}
         </div>
@@ -1949,32 +1927,7 @@ export default function TrendsPage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                  {/* Whale Radar */}
-                  <div className="alpha-panel bg-black/40 rounded-xl p-3.5 border border-orange-500/15">
-                    <div className="flex items-center gap-1.5 mb-2.5">
-                      <Radar size={12} className="text-orange-400" />
-                      <span className="text-[10px] text-orange-400 uppercase tracking-wider font-bold">Whale Radar</span>
-                      <span className="text-[9px] text-slate-600 ml-auto">{degenAlphaData.whales?.length || 0} tracked</span>
-                    </div>
-                    <div className="space-y-1.5">
-                      {(degenAlphaData.whales || []).slice(0, 5).map((w, i) => (
-                        <div key={i} className="flex items-center gap-2 text-[10px]">
-                          <span className="text-orange-400/60 font-mono w-3">#{i + 1}</span>
-                          <span className="text-white font-medium flex-1 truncate">{w.company}</span>
-                          <span className="text-slate-500">{w.score}</span>
-                          <span className="text-orange-300 font-mono">{fmtVol(w.dealValue || w.value || 0)}</span>
-                          <span className={`text-[9px] ${w.momentum === 'rising' ? 'text-emerald-400' : w.momentum === 'declining' ? 'text-red-400' : 'text-slate-500'}`}>
-                            {w.momentum === 'rising' ? '\u25B2' : w.momentum === 'declining' ? '\u25BC' : '\u25C6'}
-                          </span>
-                        </div>
-                      ))}
-                      {(!degenAlphaData.whales || degenAlphaData.whales.length === 0) && (
-                        <div className="text-[10px] text-slate-600 text-center py-2">No whales detected</div>
-                      )}
-                    </div>
-                  </div>
-
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {/* Snipe Queue */}
                   <div className="alpha-panel bg-black/40 rounded-xl p-3.5 border border-orange-500/15">
                     <div className="flex items-center gap-1.5 mb-2.5">
@@ -2049,42 +2002,6 @@ export default function TrendsPage() {
                 </div>
               </div>
             </motion.div>
-          )}
-
-          {/* DEGEN: Whale Wallet Movements */}
-          {degenMode && (
-            <div className="rounded-xl border border-orange-500/20 bg-black/30 overflow-hidden">
-              <div className="px-4 py-3 border-b border-orange-500/15 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Radar size={16} className="text-orange-400" />
-                  <h3 className="text-sm font-black text-orange-400 uppercase tracking-wider">Whale Wallet Movements</h3>
-                  <span className="text-[9px] bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />LIVE</span>
-                </div>
-                <span className="text-[10px] text-slate-600">Top wallets tracked on-chain</span>
-              </div>
-              <div className="p-4 space-y-2 max-h-[280px] overflow-y-auto scrollbar-hide">
-                {[
-                  { wallet: '0x7a16...f3d2', action: 'BUY', asset: 'ETH', amount: '12,500 ETH', usd: '$47.5M', time: '3m ago', impact: 'HIGH', note: 'Moved from Binance to cold wallet' },
-                  { wallet: '0xdead...beef', action: 'SELL', asset: 'BTC', amount: '850 BTC', usd: '$82.4M', time: '8m ago', impact: 'HIGH', note: 'OTC desk transfer detected' },
-                  { wallet: '0x1337...4200', action: 'STAKE', asset: 'SOL', amount: '250,000 SOL', usd: '$50M', time: '12m ago', impact: 'MEDIUM', note: 'Marinade Finance stake — long-term hold signal' },
-                  { wallet: '0xcafe...babe', action: 'BUY', asset: 'LINK', amount: '2.1M LINK', usd: '$33.6M', time: '18m ago', impact: 'MEDIUM', note: 'Accumulated over 3 txns — whale DCA pattern' },
-                  { wallet: '0xb00b...face', action: 'TRANSFER', asset: 'USDT', amount: '100M USDT', usd: '$100M', time: '22m ago', impact: 'HIGH', note: 'Tether Treasury to Kraken — buying pressure incoming' },
-                  { wallet: '0x4206...6969', action: 'BUY', asset: 'PEPE', amount: '500B PEPE', usd: '$6M', time: '31m ago', impact: 'LOW', note: 'Known meme whale — accumulation phase' },
-                  { wallet: '0xfeed...c0de', action: 'UNSTAKE', asset: 'ETH', amount: '8,000 ETH', usd: '$30.4M', time: '45m ago', impact: 'MEDIUM', note: 'Lido unstake — potential sell pressure' },
-                ].map((w, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-surface-2/30 border border-white/5 hover:border-orange-500/20 transition-all">
-                    <span className={`text-[10px] font-black px-2 py-1 rounded ${w.action === 'BUY' || w.action === 'STAKE' ? 'bg-emerald-500/15 text-emerald-400' : w.action === 'SELL' || w.action === 'UNSTAKE' ? 'bg-red-500/15 text-red-400' : 'bg-yellow-500/15 text-yellow-400'}`}>{w.action}</span>
-                    <span className="text-[11px] font-mono text-slate-500 w-24">{w.wallet}</span>
-                    <span className="text-sm font-bold text-orange-300">{w.asset}</span>
-                    <span className="text-[11px] text-white font-mono">{w.amount}</span>
-                    <span className="text-[11px] text-slate-400 font-mono">{w.usd}</span>
-                    <span className="text-[10px] text-slate-600 flex-1 truncate">{w.note}</span>
-                    <span className="text-[10px] text-slate-600">{w.time}</span>
-                    {w.impact === 'HIGH' && <span className="text-[8px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 font-bold">HIGH</span>}
-                  </div>
-                ))}
-              </div>
-            </div>
           )}
 
           {/* Metrics */}
@@ -2601,19 +2518,6 @@ export default function TrendsPage() {
             </div>
           </div>
 
-          {/* 2D Flat World Map — Accurate Geography */}
-          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-xs font-semibold text-slate-300 flex items-center gap-1.5"><MapPin size={12} className="text-brand" />Geographic Activity Heatmap</div>
-              <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500/80" /> High</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500/80" /> Medium</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500/80" /> Low</span>
-              </div>
-            </div>
-            <WorldMap hotspots={data?.geoHotspots || []} className="rounded-lg overflow-hidden" />
-          </div>
-
           {/* Hotspot intelligence cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {enrichedHotspots.sort((a, b) => b.intensity - a.intensity).slice(0, 8).map(h => {
@@ -2887,48 +2791,6 @@ export default function TrendsPage() {
         );
       })()}
 
-      {/* ════════════ PRICES ════════════ */}
-      {activeTab === 'prices' && (
-        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="border-b border-white/5 text-[10px] text-slate-600 uppercase tracking-wider">
-                <th className="text-left py-3 px-4">#</th><th className="text-left py-3 px-4">Asset</th><th className="text-right py-3 px-4">Price</th>
-                <th className="text-right py-3 px-4">1h</th><th className="text-right py-3 px-4">24h</th><th className="text-right py-3 px-4">7d</th>
-                <th className="text-right py-3 px-4">Volume</th><th className="text-right py-3 px-4">Mkt Cap</th><th className="text-right py-3 px-4 w-24">7d</th>
-                {degenMode && <th className="text-center py-3 px-4 text-orange-400 font-bold">Degen Signals</th>}
-              </tr></thead>
-              <tbody>
-                {filteredCoins.map(c => (
-                  <tr key={c.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
-                    <td className="py-3 px-4 text-slate-600 text-xs">{c.rank}</td>
-                    <td className="py-3 px-4"><div className="flex items-center gap-2">{c.image && <img src={c.image} alt="" className="w-5 h-5 rounded-full" loading="lazy" />}<span className="font-medium text-white">{c.name}</span><span className="text-slate-600 text-xs">{c.symbol}</span></div></td>
-                    <td className="py-3 px-4 text-right font-mono text-white">{fmtPrice(c.price)}</td>
-                    <td className={`py-3 px-4 text-right font-mono text-xs ${pctCls(c.change1h)}`}>{c.change1h != null ? `${c.change1h > 0 ? '+' : ''}${c.change1h.toFixed(1)}%` : '—'}</td>
-                    <td className={`py-3 px-4 text-right font-mono text-xs ${pctCls(c.change24h)}`}>{c.change24h != null ? `${c.change24h > 0 ? '+' : ''}${c.change24h.toFixed(1)}%` : '—'}</td>
-                    <td className={`py-3 px-4 text-right font-mono text-xs ${pctCls(c.change7d)}`}>{c.change7d != null ? `${c.change7d > 0 ? '+' : ''}${c.change7d.toFixed(1)}%` : '—'}</td>
-                    <td className="py-3 px-4 text-right text-slate-400 text-xs">{fmtVol(c.volume24h)}</td>
-                    <td className="py-3 px-4 text-right text-slate-400 text-xs">{fmtVol(c.marketCap)}</td>
-                    <td className="py-3 px-4 text-right"><Spark data={c.sparkline7d} w={72} h={20} /></td>
-                    {degenMode && (() => {
-                      const h1 = c.change1h || 0;
-                      const h24 = c.change24h || 0;
-                      const momentum = h1 > 2 && h24 > 5 ? 'STRONG BUY' : h1 > 1 && h24 > 2 ? 'BUY' : h1 < -2 && h24 < -5 ? 'STRONG SELL' : h1 < -1 && h24 < -2 ? 'SELL' : Math.abs(h24) < 1 ? 'CRAB' : 'HOLD';
-                      const mColor = momentum.includes('BUY') ? 'text-emerald-400 bg-emerald-500/15 border-emerald-500/25' : momentum.includes('SELL') ? 'text-red-400 bg-red-500/15 border-red-500/25' : momentum === 'CRAB' ? 'text-slate-400 bg-slate-500/10 border-slate-500/20' : 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
-                      return (
-                        <td className="py-3 px-4 text-center">
-                          <span className={`text-[9px] font-black px-2 py-1 rounded-full border ${mColor}`}>{momentum}</span>
-                        </td>
-                      );
-                    })()}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
       {/* ════════════ MARKETS ════════════ */}
       {activeTab === 'markets' && (
         <div className="space-y-5">
@@ -2982,8 +2844,8 @@ export default function TrendsPage() {
 
           {/* Spread Comparison: GOATED vs Competitors */}
           {(() => {
-            const avgKalshiEdge = (SPREAD_COMPARISONS.reduce((s, c) => s + ((1 - c.goated / c.kalshi) * 100), 0) / SPREAD_COMPARISONS.length).toFixed(1);
-            const avgPolyEdge = (SPREAD_COMPARISONS.reduce((s, c) => s + ((1 - c.goated / c.polymarket) * 100), 0) / SPREAD_COMPARISONS.length).toFixed(1);
+            const avgKalshiEdge = SPREAD_COMPARISONS.length > 0 ? (SPREAD_COMPARISONS.reduce((s, c) => s + ((1 - c.goated / c.kalshi) * 100), 0) / SPREAD_COMPARISONS.length).toFixed(1) : '0.0';
+            const avgPolyEdge = SPREAD_COMPARISONS.length > 0 ? (SPREAD_COMPARISONS.reduce((s, c) => s + ((1 - c.goated / c.polymarket) * 100), 0) / SPREAD_COMPARISONS.length).toFixed(1) : '0.0';
             const avgEdge = ((parseFloat(avgKalshiEdge) + parseFloat(avgPolyEdge)) / 2).toFixed(1);
             return (
               <motion.div className="rounded-xl border border-brand/20 bg-gradient-to-r from-brand/5 via-surface-1/80 to-purple-500/5 overflow-hidden" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
@@ -3194,333 +3056,6 @@ export default function TrendsPage() {
             <ShieldCheck size={12} className="text-slate-600" />
             <p className="text-[10px] text-slate-600">Crypto via CoinGecko. Stocks, forex, commodities are indicative. Prediction data from Polymarket & Kalshi. Not financial advice.</p>
           </div>
-        </div>
-      )}
-
-      {/* ════════════ DEEP RESEARCH ════════════ */}
-      {activeTab === 'research' && (
-        <div className="space-y-5">
-          {/* Search input */}
-          <div className="relative">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input
-              type="text"
-              value={researchQuery}
-              onChange={e => setResearchQuery(e.target.value)}
-              onKeyDown={async e => {
-                if (e.key === 'Enter' && researchQuery.trim()) {
-                  setResearchLoading(true);
-                  setResearchReport(null);
-                  try {
-                    const res = await fetch('/api/chat', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        messages: [{ role: 'user', content: `Research and analyze: ${researchQuery}\n\nProvide a structured deep research report. Format your response EXACTLY as JSON:\n{"title":"...","summary":"2-3 sentence overview","findings":["finding 1","finding 2","finding 3","finding 4","finding 5"],"sentiment":75,"sentimentLabel":"Bullish","risk":"risk assessment paragraph","plays":["play 1","play 2","play 3"]}` }],
-                        currentPage: 'trends',
-                        responseMode: 'analysis',
-                      }),
-                    });
-                    const data = await res.json();
-                    if (!data.fallback && data.content) {
-                      try {
-                        const jsonMatch = data.content.match(/\{[\s\S]*\}/);
-                        if (jsonMatch) {
-                          const parsed = JSON.parse(jsonMatch[0]);
-                          setResearchReport({
-                            title: parsed.title || `Deep Analysis: ${researchQuery}`,
-                            summary: parsed.summary || 'Analysis complete.',
-                            findings: Array.isArray(parsed.findings) ? parsed.findings.slice(0, 7) : ['Analysis complete.'],
-                            sentiment: typeof parsed.sentiment === 'number' ? parsed.sentiment : 55,
-                            sentimentLabel: parsed.sentimentLabel || 'Neutral',
-                            risk: parsed.risk || 'Risk assessment unavailable.',
-                            plays: Array.isArray(parsed.plays) ? parsed.plays.slice(0, 5) : ['No specific plays identified.'],
-                          });
-                        } else {
-                          setResearchReport({
-                            title: `Deep Analysis: ${researchQuery}`,
-                            summary: data.content.slice(0, 500),
-                            findings: data.content.split('\n').filter(l => l.trim().startsWith('-') || l.trim().match(/^\d/)).slice(0, 5).map(l => l.replace(/^[-\d.)\s]+/, '').trim()).filter(Boolean).concat(['See full analysis above.']).slice(0, 5),
-                            sentiment: 55, sentimentLabel: 'Neutral',
-                            risk: 'See full analysis above.',
-                            plays: ['Review analysis and identify entry points', 'Monitor for catalyst events', 'Set risk parameters before taking positions'],
-                          });
-                        }
-                      } catch {
-                        setResearchReport({
-                          title: `Deep Analysis: ${researchQuery}`,
-                          summary: data.content.slice(0, 500),
-                          findings: ['AI-generated analysis available in summary.'],
-                          sentiment: 55, sentimentLabel: 'Neutral',
-                          risk: 'Consult full analysis.',
-                          plays: ['Review the full analysis for recommendations'],
-                        });
-                      }
-                    } else { throw new Error('fallback'); }
-                  } catch {
-                    // Fallback to static on API failure
-                    const q = researchQuery.toLowerCase();
-                    let report;
-                    if (q.includes('btc') || q.includes('bitcoin')) {
-                      report = { title: `BTC Deep Analysis: ${researchQuery}`, summary: 'Bitcoin showing institutional accumulation with on-chain metrics signaling potential breakout. Market structure resembles pre-rally conditions with decreasing exchange reserves.', findings: ['Exchange reserves at multi-year lows — accumulation confirmed', 'RSI divergence on weekly — momentum building', 'Institutional ETF inflows averaging $340M/week', 'Hash rate at ATH — miner confidence high', 'Options skew favoring calls 1.3x ratio'], sentiment: 78, sentimentLabel: 'Bullish', risk: 'Moderate. Macro liquidity tightening is key downside risk.', plays: ['Long BTC spot with defined stop', 'Call spreads targeting higher range', 'DCA on dips'] };
-                    } else if (q.includes('ai') || q.includes('tech') || q.includes('nvidia')) {
-                      report = { title: `AI Sector Analysis: ${researchQuery}`, summary: 'AI sector shows explosive growth with compute demand outpacing supply. Transitioning from hype to fundamental value creation.', findings: ['Data center revenue up 154% YoY', 'Hyperscaler AI spend targeting $200B+ in 2026', 'Enterprise AI adoption 35% to 67% in 12 months', 'Open-source creating commoditization risk', 'AI agents driving next value wave'], sentiment: 82, sentimentLabel: 'Very Bullish', risk: 'Elevated valuations vulnerable to earnings misses. EU regulatory headwinds.', plays: ['Overweight AI infrastructure', 'Picks-and-shovels in AI software', 'Short overvalued AI wrappers'] };
-                    } else {
-                      report = { title: `Deep Analysis: ${researchQuery}`, summary: `Analysis of "${researchQuery}" across on-chain, sentiment, technicals & macro. Mixed signals with selective opportunities.`, findings: [`Sentiment around "${researchQuery}" trending moderately positive`, 'Consolidation pattern — breakout pending catalyst', 'Volume suggests accumulation at current levels', 'Correlation with risk appetite elevated at 0.72', 'Smart money flow neutral-to-positive 7-day'], sentiment: 58, sentimentLabel: 'Slightly Bullish', risk: 'Moderate. Position sizing should reflect uncertainty.', plays: ['Scale in with 3-5 tranches over 2 weeks', 'Tight risk management 5-8% stops', 'Monitor for catalyst events'] };
-                    }
-                    setResearchReport(report);
-                  }
-                  setResearchLoading(false);
-                }
-              }}
-              placeholder="Enter topic for deep analysis... (e.g., 'BTC breakout potential', 'AI sector momentum')"
-              className="w-full pl-11 pr-4 py-4 rounded-xl bg-white/[0.03] border border-white/[0.08] text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand/30 focus:bg-white/[0.05] transition-all"
-            />
-            {researchQuery && (
-              <button onClick={() => { setResearchQuery(''); setResearchReport(null); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-600 hover:text-white transition-colors">
-                <X size={14} />
-              </button>
-            )}
-          </div>
-
-          {/* Loading state */}
-          {researchLoading && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-20 gap-4">
-              <div className="relative">
-                <div className="w-16 h-16 rounded-full border-2 border-brand/20 border-t-brand animate-spin" />
-                <Brain size={24} className="text-brand absolute inset-0 m-auto" />
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-bold text-white mb-1">GOATED AI analyzing...</p>
-                <p className="text-xs text-slate-500">Scanning on-chain data, sentiment feeds, technical indicators & macro signals</p>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Research report */}
-          {researchReport && !researchLoading && (
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-              {/* Report header */}
-              <div className="bg-gradient-to-r from-brand/10 via-purple-500/5 to-blue-500/10 border border-brand/20 rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-2">
-                  <Brain size={18} className="text-brand" />
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/15 text-brand font-bold uppercase tracking-wider">Deep Research Report</span>
-                  <span className="ml-auto text-[10px] text-slate-500">{new Date().toLocaleDateString()}</span>
-                </div>
-                <h2 className="text-lg font-black text-white">{researchReport.title}</h2>
-              </div>
-
-              {/* Executive Summary */}
-              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles size={14} className="text-purple-400" />
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Executive Summary</h3>
-                </div>
-                <p className="text-sm text-slate-300 leading-relaxed">{researchReport.summary}</p>
-              </div>
-
-              {/* Key Findings */}
-              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <Target size={14} className="text-emerald-400" />
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Key Findings</h3>
-                </div>
-                <div className="space-y-2.5">
-                  {researchReport.findings.map((f, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-brand/10 text-brand text-[10px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
-                      <p className="text-sm text-slate-300 leading-relaxed">{f}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sentiment Analysis */}
-              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <Activity size={14} className="text-blue-400" />
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Sentiment Analysis</h3>
-                </div>
-                <div className="flex items-center gap-6">
-                  <Ring score={researchReport.sentiment} label={researchReport.sentimentLabel} sz="lg" />
-                  <div className="flex-1">
-                    <div className="h-3 bg-white/5 rounded-full overflow-hidden flex">
-                      <div className="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-emerald-500 rounded-full transition-all" style={{ width: `${researchReport.sentiment}%` }} />
-                    </div>
-                    <div className="flex justify-between mt-1.5 text-[10px] text-slate-600">
-                      <span>Bearish</span>
-                      <span>Neutral</span>
-                      <span>Bullish</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Risk Assessment */}
-              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle size={14} className="text-amber-400" />
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Risk Assessment</h3>
-                </div>
-                <p className="text-sm text-slate-300 leading-relaxed">{researchReport.risk}</p>
-              </div>
-
-              {/* Recommended Plays — Actionable */}
-              <div className="bg-white/[0.02] border-2 border-brand/25 rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <Target size={16} className="text-brand" />
-                  <h3 className="text-base font-black text-white uppercase tracking-wider">Actionable Recommendations</h3>
-                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand/10 text-brand font-bold border border-brand/20">ALPHA</span>
-                </div>
-                <div className="space-y-2.5">
-                  {researchReport.plays.map((p, i) => (
-                    <div key={i} className="flex items-start gap-3 p-3.5 rounded-lg bg-brand/5 border border-brand/15">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand/15 text-brand text-[10px] font-black flex items-center justify-center mt-0.5">{i + 1}</span>
-                      <div className="flex-1">
-                        <p className="text-sm text-white font-medium">{p}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Generate Alpha Report button */}
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => {
-                    const report = researchReport;
-                    const text = [
-                      `GOATED Alpha Report — ${new Date().toLocaleDateString()}`,
-                      `${'='.repeat(50)}`,
-                      ``,
-                      `TITLE: ${report.title}`,
-                      `SENTIMENT: ${report.sentimentLabel} (${report.sentiment}/100)`,
-                      ``,
-                      `EXECUTIVE SUMMARY:`,
-                      report.summary,
-                      ``,
-                      `KEY FINDINGS:`,
-                      ...report.findings.map((f, i) => `  ${i + 1}. ${f}`),
-                      ``,
-                      `RISK ASSESSMENT:`,
-                      report.risk,
-                      ``,
-                      `ACTIONABLE RECOMMENDATIONS:`,
-                      ...report.plays.map((p, i) => `  ${i + 1}. ${p}`),
-                      ``,
-                      `${'='.repeat(50)}`,
-                      `Generated by GOATED Intelligence — Not Financial Advice`,
-                    ].join('\n');
-                    const blob = new Blob([text], { type: 'text/plain' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `goated-alpha-report-${new Date().toISOString().slice(0,10)}.txt`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand/10 text-brand font-bold text-xs border border-brand/20 hover:bg-brand/20 hover:border-brand/40 transition-all"
-                >
-                  <Download size={14} />Generate Alpha Report
-                </button>
-                <span className="text-[10px] text-slate-600">Downloads a summary of this research as a text file</span>
-              </div>
-
-              {/* Disclaimer */}
-              <div className="flex items-center gap-2 pt-1">
-                <Shield size={10} className="text-slate-600" />
-                <p className="text-[10px] text-slate-600">AI-generated analysis. Not financial advice. Always do your own research before making investment decisions.</p>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Empty state + AI Market Brief */}
-          {!researchLoading && !researchReport && (
-            <div className="space-y-6">
-              {/* AI Market Brief */}
-              <div className="bg-gradient-to-r from-brand/5 via-cyan-500/5 to-purple-500/5 border border-brand/15 rounded-xl p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Newspaper size={16} className="text-brand" />
-                    <span className="text-sm font-bold text-white">AI Market Brief</span>
-                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand/15 text-brand font-bold uppercase tracking-wider">Daily</span>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      setMarketBriefLoading(true);
-                      try {
-                        const res = await fetch('/api/chat', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            messages: [{ role: 'user', content: 'Generate a concise daily market brief covering: 1) Macro conditions (rates, inflation, employment sentiment), 2) Crypto market structure (BTC dominance, major moves, sentiment), 3) Top 3 sectors to watch today with momentum direction, 4) Key risks on the radar. Keep each section to 1-2 sentences. Be specific with numbers and percentages.' }],
-                            currentPage: 'trends',
-                            responseMode: 'analysis',
-                          }),
-                        });
-                        const data = await res.json();
-                        if (!data.fallback && data.content) {
-                          setMarketBrief(data.content);
-                        } else {
-                          setMarketBrief('**Macro:** Risk-on environment with rate cuts priced in. Institutional flows rotating into growth.\n\n**Crypto:** BTC holding above key support with ETF inflows steady. Altcoin rotation beginning.\n\n**Sectors to Watch:** AI/ML (+42% momentum), Revenue Intelligence (+38%), Creator Economy B2B (+35%)\n\n**Risks:** Inflation re-acceleration, geopolitical escalation, regulatory surprises in crypto/AI.');
-                        }
-                      } catch {
-                        setMarketBrief('**Macro:** Risk-on environment with rate cuts priced in. Institutional flows rotating into growth.\n\n**Crypto:** BTC holding above key support with ETF inflows steady. Altcoin rotation beginning.\n\n**Sectors to Watch:** AI/ML (+42% momentum), Revenue Intelligence (+38%), Creator Economy B2B (+35%)\n\n**Risks:** Inflation re-acceleration, geopolitical escalation, regulatory surprises in crypto/AI.');
-                      }
-                      setMarketBriefLoading(false);
-                    }}
-                    disabled={marketBriefLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-brand/10 text-brand border border-brand/20 hover:bg-brand/20 hover:border-brand/40 transition-all disabled:opacity-50"
-                  >
-                    {marketBriefLoading ? (
-                      <>
-                        <div className="w-3 h-3 rounded-full border border-brand/30 border-t-brand animate-spin" />
-                        Generating...
-                      </>
-                    ) : marketBrief ? (
-                      <>
-                        <RefreshCw size={11} />
-                        Refresh
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={11} />
-                        Generate Brief
-                      </>
-                    )}
-                  </button>
-                </div>
-                {marketBrief ? (
-                  <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
-                    {marketBrief.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
-                      part.startsWith('**') && part.endsWith('**')
-                        ? <strong key={i} className="text-white font-semibold">{part.slice(2, -2)}</strong>
-                        : <span key={i}>{part}</span>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-500">Click "Generate Brief" to get an AI-powered daily market summary with macro conditions, crypto sentiment, and sector momentum.</p>
-                )}
-              </div>
-
-              {/* Search prompt area */}
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <div className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-4">
-                  <Brain size={28} className="text-slate-600" />
-                </div>
-                <h3 className="text-sm font-bold text-slate-400 mb-1">Enter a topic to research</h3>
-                <p className="text-xs text-slate-600 max-w-sm">GOATED AI will analyze sentiment, technicals, on-chain data, and macro conditions to generate a comprehensive research report.</p>
-                <div className="flex flex-wrap gap-2 mt-4 justify-center">
-                  {['BTC breakout potential', 'AI sector momentum', 'Election market impact', 'SOL ecosystem growth', 'Solana DeFi outlook', 'SaaS valuations 2026'].map(suggestion => (
-                    <button key={suggestion} onClick={() => setResearchQuery(suggestion)}
-                      className="px-3 py-1.5 rounded-lg text-xs text-slate-500 bg-white/[0.03] border border-white/[0.06] hover:text-white hover:border-brand/20 transition-all">
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
