@@ -298,12 +298,16 @@ function VoiceBrief({ lead, el, dv, safeConversion, safePainPoints }) {
 function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfidence, safeCallScript, safePackages, safeObjections, safeOutreach, safePainPoints, safeConversion, setTab }) {
   const [expandedStep, setExpandedStep] = useState(null);
   const [fastTrackMode, setFastTrackMode] = useState(false);
-  const [stepChecks, setStepChecks] = useState({});
-  const [streakDays] = useState(Math.floor(Math.random() * 12) + 1);
+  const [stepChecks, setStepChecks] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('goated_close_checks_' + lead.id) || '{}'); } catch { return {}; }
+  });
+
+  // Persist step checks to localStorage
+  useEffect(() => {
+    try { localStorage.setItem('goated_close_checks_' + lead.id, JSON.stringify(stepChecks)); } catch {}
+  }, [stepChecks, lead.id]);
 
   const commission = Math.round(dv * 0.12);
-  const xpPerStep = 150;
-  const totalXP = completedSteps * xpPerStep;
   const currentStep = closeSteps.find(s => s.status === 'current') || closeSteps[0];
   const currentStepIdx = currentStep ? currentStep.step - 1 : 0;
   const recommendedPkg = safePackages.find(p => p.recommended) || safePackages[1];
@@ -317,26 +321,6 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
     { script: `Based on our conversation, here's what I've put together for ${lead.company}:\n\nPackage: ${safePackages.find(p => p.recommended)?.name || 'Growth'} Plan\nInvestment: ${fmt(safePackages.find(p => p.recommended)?.price || Math.round(dv * 0.025))}/mo\nProjected ROI: ${fmt(Math.round(dv * 0.15))} in the first 90 days\n\nThis includes everything we discussed to solve ${safePainPoints[0]?.toLowerCase() || 'your core challenges'}.`, label: 'Proposal Script' },
     { script: `I completely understand your concern about [objection]. Let me address that directly:\n\n${safeObjections[0]?.response || 'Our ROI typically covers the investment within 90 days.'}\n\nWhat if we did a 30-day pilot so you can see the results firsthand with zero risk?`, label: 'Negotiation Script' },
     { script: `${(lead.name || '').split(' ')[0]}, based on everything we've discussed, it sounds like this is a great fit. Let's get the paperwork started today so we can begin delivering results by next week.\n\nI'll send over the agreement now — it's a simple ${safePackages.find(p => p.recommended)?.name || 'Growth'} plan at ${fmt(safePackages.find(p => p.recommended)?.price || Math.round(dv * 0.025))}/mo. Fair?`, label: 'Closing Script' },
-  ];
-
-  // Expected outcomes per step
-  const expectedOutcomes = [
-    'Full understanding of company pain points, decision makers identified, competitive landscape mapped',
-    `${(lead.name || '').split(' ')[0]} responds positively and agrees to a discovery call within 48 hours`,
-    'Pain points confirmed, budget authority verified, timeline established, and next steps agreed upon',
-    `${(lead.name || '').split(' ')[0]} reviews proposal and schedules a follow-up to discuss terms`,
-    'Objections handled, terms agreed upon, verbal commitment received',
-    `Deal closed at ${fmt(dv)} — contract signed, payment processed, onboarding initiated`,
-  ];
-
-  // "If they say no" handling per step
-  const noHandling = [
-    'N/A for research step — this is internal prep work',
-    `If no response after 48hrs: Try ${el.bestMethod === 'email' ? 'LinkedIn DM' : 'email'} as secondary channel. If still no response after 5 touches across 2 weeks, move to nurturing.`,
-    `"I understand you're busy. When would be a better time this week?" — If they refuse entirely: "No problem. Can I send you a quick case study showing how we helped a similar ${lead.industry} company? Just 2 minutes to review."`,
-    `"I get it — this is a big decision. What specifically would you need to see to feel confident moving forward?" — Address their specific concerns with data points.`,
-    `"What would need to change for this to make sense?" — Listen, then: "What if we structured it as [modified offer]? Would that work better for your situation?"`,
-    `"I respect that. Can I ask — what's holding you back? Is it timing, budget, or something else?" — Then offer: trial period, smaller package, or deferred payment terms.`,
   ];
 
   // CTA actions per step
@@ -370,25 +354,13 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
             <h2 className="text-lg font-bold flex items-center gap-2">
               GOATED Close Guide
               <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20 font-bold uppercase tracking-wider">
-                Guaranteed
+                Status: {lead.status || 'New'}
               </span>
             </h2>
             <p className="text-xs text-slate-500">AI-analyzed step-by-step path to close this deal</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
-          {/* XP + Streak */}
-          <div className="hidden sm:flex items-center gap-3 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
-            <div className="flex items-center gap-1.5">
-              <Sparkles size={14} className="text-purple-400" />
-              <span className="text-xs font-bold text-purple-400">{totalXP} XP</span>
-            </div>
-            <div className="w-px h-4 bg-white/[0.06]" />
-            <div className="flex items-center gap-1.5">
-              <Flame size={14} className="text-orange-400" />
-              <span className="text-xs font-bold text-orange-400">{streakDays}d streak</span>
-            </div>
-          </div>
           <div className="text-right">
             <div className="text-2xl font-black text-brand">{closeConfidence}%</div>
             <div className="text-[10px] text-slate-500 uppercase tracking-wider">Close Probability</div>
@@ -396,15 +368,14 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
         </div>
       </div>
 
-      {/* Revenue Impact Banner */}
+      {/* Commission Banner */}
       <div className="p-4 rounded-xl border border-brand/20 bg-brand/[0.03] flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Shield size={20} className="text-brand shrink-0" />
+          <DollarSign size={20} className="text-brand shrink-0" />
           <div>
-            <div className="text-sm font-bold text-brand">GOATED Guarantee&trade;</div>
+            <div className="text-sm font-bold text-brand">Potential Commission</div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Follow every step with AI coaching enabled. Leads with 85+ score and all steps completed have a
-              <span className="text-brand font-bold"> 90%+ close rate</span> on our platform.
+              Based on deal value of {fmt(dv)} at 12% commission rate
             </p>
           </div>
         </div>
@@ -500,7 +471,7 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
                         )}
                         {s.status === 'done' && (
                           <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-brand/10 text-brand font-bold flex items-center gap-1">
-                            <Sparkles size={8} /> +{xpPerStep} XP
+                            <Check size={8} /> Done
                           </span>
                         )}
                       </div>
@@ -537,21 +508,12 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
                           <p className="text-xs text-slate-300 whitespace-pre-line leading-relaxed">{stepScripts[i]?.script}</p>
                         </div>
 
-                        {/* Expected Outcome */}
-                        <div className="p-3 rounded-lg bg-cyan-500/[0.04] border border-cyan-500/15">
-                          <div className="text-[10px] text-cyan-400 uppercase tracking-wider mb-1 font-bold flex items-center gap-1">
-                            <Target size={10} /> Expected Outcome
-                          </div>
-                          <p className="text-xs text-slate-300">{expectedOutcomes[i]}</p>
-                        </div>
-
-                        {/* If They Say No */}
-                        <div className="p-3 rounded-lg bg-red-500/[0.04] border border-red-500/15">
-                          <div className="text-[10px] text-red-400 uppercase tracking-wider mb-1 font-bold flex items-center gap-1">
-                            <AlertTriangle size={10} /> If They Say No...
-                          </div>
-                          <p className="text-xs text-slate-300">{noHandling[i]}</p>
-                        </div>
+                        {/* Step completion checkbox */}
+                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04] cursor-pointer hover:bg-white/[0.04] transition-colors">
+                          <input type="checkbox" checked={!!stepChecks[i]} onChange={() => setStepChecks(prev => ({ ...prev, [i]: !prev[i] }))}
+                            className="accent-[#00ff88] w-4 h-4" />
+                          <span className="text-xs text-slate-300">{stepChecks[i] ? 'Completed' : 'Mark as completed'}</span>
+                        </label>
 
                         {/* DO THIS NOW CTA */}
                         <button onClick={ctaActions[i]}
@@ -570,26 +532,19 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
         </div>
       )}
 
-      {/* Daily Goal Tracker */}
+      {/* Close Progress Summary */}
       <GlassCard className="!p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Trophy size={16} className="text-yellow-400" />
-            Daily Close Quest
+            <Target size={16} className="text-brand" />
+            Close Progress
           </h3>
-          <div className="flex items-center gap-2">
-            <Flame size={14} className="text-orange-400" />
-            <span className="text-xs font-bold text-orange-400">{streakDays} day streak</span>
-          </div>
+          <span className="text-xs text-slate-400">{lead.status || 'New'}</span>
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div className="text-center p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-            <div className="text-2xl font-black text-purple-400">{totalXP}</div>
-            <div className="text-[10px] text-slate-500 uppercase tracking-wider">Total XP</div>
-            <div className="mt-1 h-1.5 bg-white/[0.03] rounded-full overflow-hidden">
-              <div className="h-full bg-purple-500 rounded-full" style={{ width: `${Math.min(100, (totalXP / 900) * 100)}%` }} />
-            </div>
-            <div className="text-[9px] text-slate-600 mt-0.5">{totalXP}/900 to next level</div>
+            <div className="text-2xl font-black text-brand">{closeConfidence}%</div>
+            <div className="text-[10px] text-slate-500 uppercase tracking-wider">Close Prob</div>
           </div>
           <div className="text-center p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
             <div className="text-2xl font-black text-brand">{completedSteps}</div>
@@ -602,8 +557,8 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
           </div>
           <div className="text-center p-3 rounded-lg bg-brand/[0.04] border border-brand/15">
             <div className="text-2xl font-black text-brand">{fmt(commission)}</div>
-            <div className="text-[10px] text-slate-500 uppercase tracking-wider">Prize</div>
-            <div className="text-[9px] text-brand mt-1">Complete all steps to earn</div>
+            <div className="text-[10px] text-slate-500 uppercase tracking-wider">Commission</div>
+            <div className="text-[9px] text-brand mt-1">if closed at {fmt(dv)}</div>
           </div>
         </div>
       </GlassCard>
