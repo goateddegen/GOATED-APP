@@ -5,21 +5,14 @@ import { useGoatedAI } from '../hooks/useGoatedAI';
 // Real-time market data fetcher
 function useTickerData() {
   const [data, setData] = useState([
-    { label: 'BTC', value: '$97,420', change: '+2.1%', src: 'CoinGecko', positive: true },
-    { label: 'ETH', value: '$3,841', change: '+4.7%', src: 'CoinGecko', positive: true },
-    { label: 'SOL', value: '$198', change: '+6.3%', src: 'CoinGecko', positive: true },
-    { label: 'Trend Score', value: '94/100', change: '+7', src: 'Pulse', positive: true },
-    { label: 'Fear & Greed', value: '72', change: 'Greed', src: 'Alt.me', positive: true },
-    { label: 'Active Signals', value: '23', change: 'LIVE', src: 'GOATED', positive: true },
-    { label: 'AI Coach', value: 'Ready', change: 'LIVE', src: 'GOATED', positive: true },
-    { label: 'Pipeline', value: '$0', change: 'Pre-Revenue', src: 'Pipeline', positive: true },
-    { label: 'Win Rate', value: '—', change: 'No Data', src: 'Analytics', positive: true },
-    { label: 'Active Leads', value: '250K+', change: '+127', src: 'LeadGen', positive: true },
-    { label: 'Meetings', value: '0', change: 'Setup', src: 'Calendar', positive: true },
-    { label: 'Revenue MTD', value: '$0', change: 'Pre-Revenue', src: 'Revenue', positive: true },
-    { label: 'Close Rate', value: '—', change: 'No Data', src: 'Analytics', positive: true },
-    { label: 'Avg Deal Target', value: '$8.5K-$25K+', change: 'B2B', src: 'Revenue', positive: true },
-    { label: 'Top Sector', value: 'SaaS', change: 'Hot', src: 'Intel', positive: true },
+    { label: 'BTC', value: '$97,420', change: '+2.1%', src: 'COINGECKO', positive: true },
+    { label: 'ETH', value: '$3,841', change: '+4.7%', src: 'COINGECKO', positive: true },
+    { label: 'SOL', value: '$198', change: '+6.3%', src: 'COINGECKO', positive: true },
+    { label: 'Trend Score', value: '94/100', change: '+7', src: 'PULSE', positive: true },
+    { label: 'Fear & Greed', value: '72', change: 'Greed', src: 'ALT.ME', positive: true },
+    { label: 'Signals', value: '23', change: 'LIVE', src: 'GOATED', positive: true },
+    { label: 'Leads DB', value: '250K+', change: 'LIVE', src: 'GOATED', positive: true },
+    { label: 'Top Sector', value: 'SaaS', change: 'Hot', src: 'INTEL', positive: true },
   ]);
 
   useEffect(() => {

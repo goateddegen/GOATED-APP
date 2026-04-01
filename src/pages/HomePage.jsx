@@ -490,7 +490,7 @@ export default function HomePage() {
             <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500 mb-8">
               <span className="flex items-center gap-1.5"><Shield size={14} className="text-brand" />$0 platform fee</span>
               <span className="text-slate-700">|</span>
-              <span className="flex items-center gap-1.5"><DollarSign size={14} className="text-yellow-400" />10-15% on closed deals</span>
+              <span className="flex items-center gap-1.5"><DollarSign size={14} className="text-yellow-400" />10% on closed deals</span>
               <span className="text-slate-700">|</span>
               <span className="flex items-center gap-1.5"><Wallet size={14} className="text-cyan-400" />Instant SOL payouts</span>
             </div>
@@ -979,7 +979,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto mb-10">
             {[
               { icon: DollarSign, title: '$0 Platform Fee', value: '$0', desc: 'Full access to every tool, every feature, every lead. Zero upfront cost.', color: '#10b981', label: 'Always free' },
-              { icon: Target, title: 'Deal Commission', value: '10-15%', desc: 'Commission on closed deals only. We eat when you eat.', color: '#f59e0b', label: 'On closed deals' },
+              { icon: Target, title: 'Deal Commission', value: '10%', desc: 'Commission on closed deals only. We eat when you eat.', color: '#f59e0b', label: 'On closed deals' },
               { icon: TrendingUp, title: 'Betting Spreads', value: '2-5%', desc: 'Spread on prediction market bets. Better odds, more markets.', color: '#a855f7', label: 'On market bets' },
               { icon: Wallet, title: 'Crypto Transactions', value: '1-2%', desc: 'Small fee on crypto transactions. Lower than any exchange.', color: '#06b6d4', label: 'On transactions' },
             ].map((item, i) => (
@@ -1164,7 +1164,7 @@ export default function HomePage() {
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-slate-500 mb-8">
               <span>$0 platform fee</span>
               <span className="text-slate-700">|</span>
-              <span>10-15% on closed deals</span>
+              <span>10% on closed deals</span>
               <span className="text-slate-700">|</span>
               <span>2-5% betting spreads</span>
               <span className="text-slate-700">|</span>

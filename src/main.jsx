@@ -39,3 +39,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </RootErrorBoundary>
   </React.StrictMode>
 )
+
+// Signal to the error handler in index.html that React mounted successfully
+if (typeof window.__goatedMounted === 'function') window.__goatedMounted();

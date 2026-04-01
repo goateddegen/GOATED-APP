@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "goated-dev",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "--port", "5174", "--host", "127.0.0.1"],
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": ["node_modules/.bin/vite", "--port", "5174", "--host", "127.0.0.1"],
       "port": 5174
     }
   ]

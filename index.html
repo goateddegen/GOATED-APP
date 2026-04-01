@@ -179,19 +179,24 @@
 <body>
   <div id="root"></div>
   <script>
-    // Global error recovery — prevents permanent black screen
+    // Global error recovery — only fires if React completely fails to mount after 5s
+    // Does NOT fire on transient errors (font loading, 3rd party scripts, etc.)
+    var _goatedMounted = false;
+    window.__goatedMounted = function() { _goatedMounted = true; };
     window.addEventListener('error', function(e) {
+      // Ignore non-script errors (images, fonts, stylesheets)
+      if (e.target && e.target !== window) return;
+      // Ignore errors from external scripts
+      if (e.filename && !e.filename.includes(location.hostname) && !e.filename.includes('localhost')) return;
       console.error('[GOATED] Runtime error:', e.message, e.filename, e.lineno);
-      var root = document.getElementById('root');
-      if (root && !root.hasChildNodes()) {
-        // Wait 2s to let React try to mount first
-        setTimeout(function() {
-          if (root && !root.hasChildNodes()) {
-            root.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#030712;color:#94a3b8;font-family:Inter,sans-serif;flex-direction:column;gap:16px"><div style="font-size:48px">🐐</div><div style="font-size:18px;color:white;font-weight:600">GOATED ran into an issue</div><div style="font-size:14px;max-width:400px;text-align:center">Try a hard refresh (Ctrl+Shift+R) or click below to reset.</div><div style="font-size:11px;color:#475569;max-width:400px;text-align:center;word-break:break-all">' + (e.message || 'Unknown error') + '</div><div style="display:flex;gap:12px;margin-top:8px"><button onclick="location.reload()" style="padding:8px 20px;background:#10b981;color:black;border:none;border-radius:8px;font-weight:600;cursor:pointer">Reload</button><button onclick="localStorage.clear();sessionStorage.clear();location.reload()" style="padding:8px 20px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:8px;font-weight:600;cursor:pointer">Full Reset</button></div></div>';
-          }
-        }, 2000);
-      }
     });
+    // Only show error fallback if React never mounts at all
+    setTimeout(function() {
+      var root = document.getElementById('root');
+      if (!_goatedMounted && root && (!root.hasChildNodes() || root.innerHTML.trim() === '')) {
+        root.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#030712;color:#94a3b8;font-family:Inter,sans-serif;flex-direction:column;gap:16px"><div style="font-size:48px">🐐</div><div style="font-size:18px;color:white;font-weight:600">GOATED ran into an issue</div><div style="font-size:14px;max-width:400px;text-align:center">Try a hard refresh (Ctrl+Shift+R) or click below to reset.</div><div style="display:flex;gap:12px;margin-top:8px"><button onclick="location.reload()" style="padding:8px 20px;background:#10b981;color:black;border:none;border-radius:8px;font-weight:600;cursor:pointer">Reload</button><button onclick="localStorage.clear();sessionStorage.clear();location.reload()" style="padding:8px 20px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:8px;font-weight:600;cursor:pointer">Full Reset</button></div></div>';
+      }
+    }, 5000);
   </script>
   <script type="module" src="/src/main.jsx"></script>
 </body>
