@@ -458,10 +458,10 @@ function DashboardContent({ onSelect }) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-white">GOATED Guarantee</span>
-                <span className="text-[10px] text-brand bg-brand/15 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">90%+ Close Rate</span>
+                <span className="text-sm font-bold text-white">Commission Model</span>
+                <span className="text-[10px] text-brand bg-brand/15 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">12% / 15% Partner</span>
               </div>
-              <p className="text-xs text-slate-400">Our AI-powered system delivers industry-leading conversion rates across all pipeline stages</p>
+              <p className="text-xs text-slate-400">Platform is 100% free. 12% commission on closed deals, 15% for approved partners and $100K+ deals.</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
