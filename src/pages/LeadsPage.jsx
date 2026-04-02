@@ -88,6 +88,19 @@ const INDUSTRY_PAIN_POINTS = {
   'EdTech': ['Low course completion rates', 'Student acquisition cost too high', 'No community engagement strategy'],
   'Cybersecurity': ['Long enterprise sales cycles', 'Difficulty proving ROI to prospects', 'Crowded market positioning'],
   'AI/ML': ['Difficulty monetizing research', 'Enterprise trust and explainability concerns', 'Data pipeline reliability issues'],
+  'MarTech': ['Client retention under 60%', 'No scalable fulfillment process', 'Proposal-to-close ratio below 20%'],
+  'Construction': ['No online lead generation', 'Relying 100% on referrals', 'No CRM or follow-up system'],
+  'PropTech': ['Long sales cycles with multiple stakeholders', 'No digital transaction workflow', 'Market data blind spots'],
+  'InsurTech': ['Agent productivity declining', 'Claims processing bottlenecks', 'Customer experience gaps'],
+  'LegalTech': ['Billable hour tracking inefficiency', 'Client intake process too slow', 'No marketing or referral pipeline'],
+  'FoodTech': ['Thin margins with no upsell strategy', 'No online ordering presence', 'Customer loyalty program gaps'],
+  'HRTech': ['Time-to-fill exceeding 45 days', 'Candidate sourcing costs too high', 'No employer branding strategy'],
+  'Logistics': ['Route optimization gaps costing 20%+ fuel', 'No real-time tracking visibility', 'Manual dispatch processes'],
+  'CleanTech': ['Long government procurement cycles', 'Difficulty proving ROI payback period', 'Market education burden'],
+  'SupplyChain': ['Production downtime exceeding 15%', 'No predictive maintenance system', 'Quality control gaps'],
+  'Media': ['Content monetization challenges', 'Audience growth plateau', 'Ad revenue declining year over year'],
+  'Gaming': ['User retention dropping after day 7', 'Monetization rate below industry average', 'Rising UA costs'],
+  'Web3/Crypto': ['Community growth stalling', 'Token utility unclear to users', 'Regulatory uncertainty blocking partnerships'],
   'default': ['No clear digital presence', 'Inefficient lead generation process', 'Poor conversion rates on website'],
 };
 
@@ -147,46 +160,173 @@ function scoreBarColor(score) {
 }
 
 // ---------------------------------------------------------------------------
-// AI Chat Prompt Parser
+// AI Chat Prompt Parser — Natural Language Lead Search
 // ---------------------------------------------------------------------------
 function parseAIPrompt(prompt) {
   const text = prompt.toLowerCase();
   const filters = { industry: null, status: null, priority: null, minScore: 0, maxScore: 100, minDeal: 0, maxDeal: Infinity, location: null, title: null, source: null, momentum: null, search: null, sort: null, order: null };
   const understood = [];
 
-  const industryList = ['SaaS', 'Fintech', 'E-commerce', 'Healthcare', 'EdTech', 'Cybersecurity', 'AI/ML', 'DevTools', 'MarTech', 'PropTech', 'InsurTech', 'LegalTech', 'CleanTech', 'BioTech', 'MedTech', 'FoodTech', 'HRTech', 'AdTech', 'Logistics', 'Gaming', 'Media', 'Retail', 'Construction', 'Travel', 'Fashion', 'Energy', 'Automotive', 'Aerospace', 'Sports'];
-  for (const ind of industryList) {
-    if (text.includes(ind.toLowerCase())) { filters.industry = ind; understood.push(`Industry: ${ind}`); break; }
+  // Industry matching with aliases
+  const industryAliases = {
+    'SaaS': ['saas', 'software', 'b2b software', 'cloud'],
+    'Fintech': ['fintech', 'finance', 'financial', 'banking', 'payments', 'accounting'],
+    'E-commerce': ['ecommerce', 'e-commerce', 'online store', 'retail', 'shop', 'dtc', 'd2c'],
+    'Healthcare': ['healthcare', 'health', 'medical', 'dental', 'clinic', 'hospital', 'wellness', 'fitness'],
+    'EdTech': ['edtech', 'education', 'learning', 'training', 'academy'],
+    'AI/ML': ['ai', 'artificial intelligence', 'machine learning', 'ml', 'deep tech', 'neural'],
+    'MarTech': ['martech', 'marketing', 'agency', 'creative agency', 'digital agency', 'advertising'],
+    'Construction': ['construction', 'roofing', 'plumbing', 'hvac', 'electric', 'home service', 'contractor', 'landscaping', 'painting'],
+    'PropTech': ['proptech', 'real estate', 'realty', 'property'],
+    'InsurTech': ['insurtech', 'insurance'],
+    'LegalTech': ['legaltech', 'legal', 'law firm', 'attorney', 'lawyer'],
+    'CleanTech': ['cleantech', 'clean energy', 'solar', 'renewable', 'sustainability', 'green energy'],
+    'FoodTech': ['foodtech', 'food', 'restaurant', 'catering', 'bakery', 'brewery', 'coffee'],
+    'HRTech': ['hrtech', 'hr', 'staffing', 'recruiting', 'talent'],
+    'Logistics': ['logistics', 'shipping', 'freight', 'transport', 'supply chain'],
+    'SupplyChain': ['manufacturing', 'industrial', 'fabrication'],
+    'Media': ['media', 'content', 'production', 'studio', 'publishing'],
+    'Gaming': ['gaming', 'game', 'esports'],
+    'Web3/Crypto': ['web3', 'crypto', 'blockchain', 'defi', 'dao', 'nft', 'token'],
+    'DevTools': ['devtools', 'developer tools', 'dev tools', 'infrastructure'],
+    'Cybersecurity': ['cybersecurity', 'security', 'infosec'],
+    'IoT': ['iot', 'internet of things', 'connected devices'],
+  };
+  for (const [ind, aliases] of Object.entries(industryAliases)) {
+    for (const alias of aliases) {
+      if (text.includes(alias)) { filters.industry = ind; understood.push(`Industry: ${ind}`); break; }
+    }
+    if (filters.industry) break;
   }
-  for (const s of statuses) { if (text.includes(s)) { filters.status = s; understood.push(`Status: ${s}`); break; } }
+
+  // Status matching with natural language
+  const statusAliases = {
+    'negotiation': ['negotiation', 'negotiating', 'closing', 'close', 'almost closed', 'about to close'],
+    'proposal': ['proposal', 'proposed', 'sent proposal'],
+    'qualified': ['qualified', 'warm'],
+    'contacted': ['contacted', 'reached out', 'outreached'],
+    'new': ['new', 'fresh', 'untouched', 'cold'],
+    'won': ['won', 'closed won', 'converted', 'customer'],
+    'lost': ['lost', 'closed lost', 'dead'],
+    'nurturing': ['nurturing', 'nurture', 'drip'],
+    're-engaged': ['re-engaged', 'reengaged', 'came back', 'returned'],
+    'unresponsive': ['unresponsive', 'ghosted', 'no response', 'silent'],
+  };
+  for (const [status, aliases] of Object.entries(statusAliases)) {
+    for (const alias of aliases) {
+      if (text.includes(alias)) { filters.status = status; understood.push(`Status: ${status}`); break; }
+    }
+    if (filters.status) break;
+  }
+
+  // Priority
   for (const p of priorities) { if (text.includes(p)) { filters.priority = p; understood.push(`Priority: ${p}`); break; } }
 
-  const scoreMatch = text.match(/(?:score|rating)\s*(?:>=?|above|over|>)\s*(\d+)/);
-  if (scoreMatch) { filters.minScore = parseInt(scoreMatch[1]); understood.push(`Score >= ${scoreMatch[1]}`); }
-  const dealMatch = text.match(/(?:\$|deal|value)\s*(?:>=?|above|over|>)\s*\$?(\d+)k?/i);
-  if (dealMatch) { const v = parseInt(dealMatch[1]); filters.minDeal = v < 1000 ? v * 1000 : v; understood.push(`Deal >= $${(filters.minDeal / 1000).toFixed(0)}K`); }
+  // Score parsing — more patterns
+  const scorePatterns = [
+    /(?:score|rating)\s*(?:>=?|above|over|>)\s*(\d+)/,
+    /(\d+)\+?\s*(?:score|rating)/,
+    /(?:above|over|min(?:imum)?)\s*(\d+)\s*(?:score|rating)/,
+  ];
+  for (const pat of scorePatterns) {
+    const m = text.match(pat);
+    if (m) { filters.minScore = parseInt(m[1]); understood.push(`Score >= ${m[1]}`); break; }
+  }
 
-  const cities = ['san francisco', 'new york', 'austin', 'chicago', 'seattle', 'miami', 'boston', 'denver', 'los angeles', 'london', 'toronto', 'berlin', 'singapore', 'sydney', 'tokyo'];
+  // Deal value parsing — more patterns including plain dollar amounts
+  const dealPatterns = [
+    /\$(\d+)\s*k/i,
+    /\$(\d+),?(\d{3})/,
+    /(\d+)\s*k\s*(?:\+|deal|value)/i,
+    /(?:deal|value|worth|pipeline)\s*(?:>=?|above|over|>)\s*\$?(\d+)\s*k?/i,
+    /(?:above|over|more than|at least|minimum)\s*\$(\d+)\s*k?/i,
+  ];
+  for (const pat of dealPatterns) {
+    const m = text.match(pat);
+    if (m) {
+      let v = parseInt(m[1]);
+      if (m[2]) v = parseInt(m[1] + m[2]); // Handle $50,000
+      else if (v < 1000) v *= 1000; // Handle $50k
+      filters.minDeal = v;
+      understood.push(`Deal >= $${(v / 1000).toFixed(0)}K`);
+      break;
+    }
+  }
+
+  // Location — expanded city list
+  const cities = [
+    'san francisco', 'new york', 'austin', 'chicago', 'seattle', 'miami', 'boston', 'denver',
+    'los angeles', 'london', 'toronto', 'berlin', 'singapore', 'sydney', 'tokyo', 'portland',
+    'atlanta', 'dallas', 'phoenix', 'nashville', 'raleigh', 'salt lake', 'vancouver', 'dubai',
+    'mumbai', 'bangalore', 'seoul', 'amsterdam', 'dublin', 'tel aviv', 'paris', 'stockholm',
+    'copenhagen', 'melbourne', 'cape town', 'lagos', 'nairobi',
+  ];
   for (const city of cities) { if (text.includes(city)) { filters.location = city; understood.push(`Location: ${city}`); break; } }
 
-  const roles = [{ kw: ['ceo', 'founder', 'chief executive'], val: 'CEO' }, { kw: ['cto', 'chief technology', 'tech lead'], val: 'CTO' }, { kw: ['cmo', 'marketing'], val: 'CMO' }, { kw: ['vp', 'vice president'], val: 'VP' }, { kw: ['director'], val: 'Director' }];
+  // Roles — expanded with more aliases
+  const roles = [
+    { kw: ['ceo', 'chief executive', 'c-suite'], val: 'CEO' },
+    { kw: ['founder', 'cofounder', 'co-founder'], val: 'Founder' },
+    { kw: ['cto', 'chief technology', 'tech lead'], val: 'CTO' },
+    { kw: ['cmo', 'chief marketing'], val: 'CMO' },
+    { kw: ['cfo', 'chief financial'], val: 'CFO' },
+    { kw: ['cro', 'chief revenue'], val: 'CRO' },
+    { kw: ['vp', 'vice president'], val: 'VP' },
+    { kw: ['director'], val: 'Director' },
+    { kw: ['owner', 'owner-operator'], val: 'Owner' },
+    { kw: ['manager', 'head of'], val: 'Manager' },
+    { kw: ['partner', 'managing partner'], val: 'Partner' },
+    { kw: ['marketing director', 'marketing manager', 'marketer'], val: 'Marketing' },
+    { kw: ['sales manager', 'head of sales', 'sales lead'], val: 'Sales' },
+    { kw: ['operations', 'ops'], val: 'Operations' },
+  ];
   for (const r of roles) { for (const kw of r.kw) { if (text.includes(kw)) { filters.title = r.val; understood.push(`Role: ${r.val}`); break; } } if (filters.title) break; }
 
-  if (text.includes('hot') || text.includes('best') || text.includes('top')) { filters.minScore = Math.max(filters.minScore, 80); if (!understood.some(u => u.startsWith('Score'))) understood.push('Score >= 80 (hot leads)'); }
-  if (text.includes('closing') || text.includes('close') || text.includes('negotiat')) { filters.status = 'negotiation'; understood.push('Status: negotiation'); }
-  if (text.includes('highest value') || text.includes('biggest deal')) { filters.sort = 'dealValue'; filters.order = 'desc'; understood.push('Sort: highest deal value'); }
+  // Momentum
+  if (text.includes('surging') || text.includes('momentum') || text.includes('trending up')) { filters.momentum = 'surging'; understood.push('Momentum: surging'); }
+  else if (text.includes('rising') || text.includes('growing')) { filters.momentum = 'rising'; understood.push('Momentum: rising'); }
+  else if (text.includes('declining') || text.includes('dropping') || text.includes('falling')) { filters.momentum = 'declining'; understood.push('Momentum: declining'); }
 
+  // Natural language intent shortcuts
+  if (text.includes('hot') || text.includes('best') || text.includes('top') || text.includes('highest score') || text.includes('strongest')) {
+    filters.minScore = Math.max(filters.minScore, 80); if (!understood.some(u => u.startsWith('Score'))) understood.push('Score >= 80 (hot leads)');
+  }
+  if (text.includes('whale') || text.includes('enterprise') || text.includes('big fish') || text.includes('largest')) {
+    filters.minDeal = Math.max(filters.minDeal, 50000); if (!understood.some(u => u.startsWith('Deal'))) understood.push('Deal >= $50K (whales)');
+    filters.sort = 'dealValue'; filters.order = 'desc';
+  }
+  if (text.includes('quick win') || text.includes('easy close') || text.includes('low hanging') || text.includes('ready to buy')) {
+    filters.minScore = Math.max(filters.minScore, 70);
+    if (!filters.status) { filters.status = 'negotiation'; understood.push('Status: negotiation (ready to close)'); }
+    if (!understood.some(u => u.startsWith('Score'))) understood.push('Score >= 70 (quick wins)');
+  }
+  if (text.includes('highest value') || text.includes('biggest deal') || text.includes('most valuable') || text.includes('highest revenue')) {
+    filters.sort = 'dealValue'; filters.order = 'desc'; understood.push('Sort: highest deal value');
+  }
+  if (text.includes('newest') || text.includes('most recent') || text.includes('latest')) {
+    filters.sort = 'created_at'; filters.order = 'desc'; understood.push('Sort: newest first');
+  }
+  if (text.includes('highest score') || text.includes('best score')) {
+    filters.sort = 'score'; filters.order = 'desc'; understood.push('Sort: highest score');
+  }
+
+  // Lead source matching
+  const sources = ['apollo', 'linkedin', 'cold email', 'website', 'referral', 'paid ad', 'webinar', 'conference', 'partner', 'inbound'];
+  for (const src of sources) { if (text.includes(src)) { filters.source = src; understood.push(`Source: ${src}`); break; } }
+
+  // Fallback to text search if nothing was parsed
   if (understood.length === 0 && text.trim()) { filters.search = prompt.trim(); }
 
   return { filters, understood };
 }
 
 const PRESET_PROMPTS = [
-  { label: 'Hot Leads', prompt: 'Show me hot leads with score above 85', icon: Flame },
-  { label: 'Ready to Close', prompt: 'Show leads in negotiation status ready to close', icon: Target },
-  { label: 'Big Deals', prompt: 'Show highest value deals above $25K', icon: DollarSign },
-  { label: 'SaaS CEOs', prompt: 'SaaS founders and CEOs with high scores', icon: Crown },
-  { label: 'This Week', prompt: 'Leads with decision timeline this week', icon: Timer },
+  { label: 'Quick Wins', prompt: 'Show me quick wins ready to close with high scores', icon: Flame },
+  { label: 'Whales', prompt: 'Show me whale enterprise deals above $50K', icon: DollarSign },
+  { label: 'SaaS Founders', prompt: 'SaaS founders and CEOs with surging momentum', icon: Crown },
+  { label: 'Healthcare', prompt: 'Healthcare leads in negotiation', icon: Target },
+  { label: 'Fintech NYC', prompt: 'Fintech leads in New York', icon: Building2 },
+  { label: 'Ghosted', prompt: 'Show unresponsive leads that ghosted us', icon: UserSearch },
 ];
 
 // ---------------------------------------------------------------------------
@@ -375,7 +515,7 @@ function CloseCoachRow({ lead, index, colSpan, onCallClick, showToast }) {
               <div className="space-y-2 mb-3">
                 <button onClick={() => intel.phone ? onCallClick(lead, intel.phone) : showToast('Connect Apollo.io API key to enrich contact data')}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors text-left">
-                  <Phone size={13} /> {intel.phone || 'Enrich to unlock phone'}
+                  <Phone size={13} /> {intel.phone ? 'Call Now · Direct line' : 'Enrich to unlock phone'}
                 </button>
                 <button onClick={() => setActiveOutreach(activeOutreach === 'email' ? null : 'email')}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs font-medium text-purple-400 hover:bg-purple-500/20 transition-colors text-left">
@@ -523,16 +663,19 @@ export default function LeadsPage({ onSelect }) {
       if (filters.maxDeal < Infinity && l.dealValue > filters.maxDeal) continue;
       if (filters.location && !l.location?.toLowerCase().includes(filters.location.toLowerCase())) continue;
       if (filters.title && !l.title?.toLowerCase().includes(filters.title.toLowerCase())) continue;
-      if (filters.search && !(l.name.toLowerCase().includes(filters.search.toLowerCase()) || l.company.toLowerCase().includes(filters.search.toLowerCase()))) continue;
+      if (filters.momentum && l.momentum !== filters.momentum) continue;
+      if (filters.source && !l.lead_source?.toLowerCase().includes(filters.source.toLowerCase())) continue;
+      if (filters.search && !(l.name.toLowerCase().includes(filters.search.toLowerCase()) || l.company.toLowerCase().includes(filters.search.toLowerCase()) || l.industry.toLowerCase().includes(filters.search.toLowerCase()) || l.title?.toLowerCase().includes(filters.search.toLowerCase()) || l.location?.toLowerCase().includes(filters.search.toLowerCase()))) continue;
       matchCount++;
       pipeline += l.dealValue || 0;
       totalScore += l.score;
       if (topLeads.length < 5) topLeads.push({ name: l.name, company: l.company, score: l.score, dealValue: l.dealValue, status: l.status, industry: l.industry });
     }
     const avgScore = matchCount > 0 ? Math.round(totalScore / matchCount) : 0;
+    const commission = Math.round(pipeline * 0.12);
     const quickMsg = understood.length > 0
-      ? `Found ${matchCount.toLocaleString()} leads. Pipeline: ${fmt(pipeline)}, avg score: ${avgScore}.`
-      : `Searched "${text}" \u2014 ${matchCount.toLocaleString()} results.`;
+      ? `Found ${matchCount.toLocaleString()} leads matching your criteria. Total pipeline: ${fmt(pipeline)} (${fmt(commission)} commission potential). Average score: ${avgScore}/100.${matchCount > 0 && topLeads.length > 0 ? ` Top match: ${topLeads[0].name} at ${topLeads[0].company} (${topLeads[0].score}/100, ${fmt(topLeads[0].dealValue)}).` : ''}`
+      : matchCount > 0 ? `Found ${matchCount.toLocaleString()} results for "${text}". Try being more specific — mention an industry, role, location, or deal size.` : `No results for "${text}". Try: "SaaS founders in Austin" or "healthcare leads above $20K".`;
     setAiMessages(prev => [...prev, { role: 'assistant', content: quickMsg, understood, leadCount: matchCount }]);
     setLeadsPage(0);
     setVisibleCount(50);
@@ -574,6 +717,8 @@ export default function LeadsPage({ onSelect }) {
         if (aiFilters.maxDeal < Infinity && l.dealValue > aiFilters.maxDeal) return false;
         if (aiFilters.location && !l.location?.toLowerCase().includes(aiFilters.location.toLowerCase())) return false;
         if (aiFilters.title && !l.title?.toLowerCase().includes(aiFilters.title.toLowerCase())) return false;
+        if (aiFilters.momentum && l.momentum !== aiFilters.momentum) return false;
+        if (aiFilters.source && !l.lead_source?.toLowerCase().includes(aiFilters.source.toLowerCase())) return false;
         return true;
       });
     }

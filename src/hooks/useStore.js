@@ -252,6 +252,106 @@ const fundingRounds = ['Pre-seed', 'Seed', 'Series A', 'Series B', 'Series C', '
 // Pre-compute company slugs for email generation (avoid repeated regex in hot loop)
 const companySlugs = companies.map(c => c.toLowerCase().replace(/[^a-z0-9]/g, ''));
 
+// ---------------------------------------------------------------------------
+// Company → Industry mapping (ensures data correlation)
+// Each company maps to its natural sector based on name/type
+// ---------------------------------------------------------------------------
+const companyIndustries = [
+  // Tech/SaaS (0-43)
+  ...Array(44).fill('SaaS'),
+  // E-Commerce (44-66)
+  ...Array(23).fill('E-commerce'),
+  // Agencies (67-86)
+  ...Array(20).fill('MarTech'),
+  // Service Businesses (87-101)
+  ...Array(15).fill('Construction'),
+  // Fintech (102-116)
+  ...Array(15).fill('Fintech'),
+  // Healthcare (117-132)
+  ...Array(16).fill('Healthcare'),
+  // Manufacturing (133-144)
+  ...Array(12).fill('SupplyChain'),
+  // Consulting (145-156)
+  ...Array(12).fill('SaaS'),
+  // Real Estate (157-168)
+  ...Array(12).fill('PropTech'),
+  // Fitness/Wellness (169-176)
+  ...Array(8).fill('Healthcare'),
+  // Food & Beverage (177-184)
+  ...Array(8).fill('FoodTech'),
+  // Media/Content (185-192)
+  ...Array(8).fill('Media'),
+  // Construction (193-200)
+  ...Array(8).fill('Construction'),
+  // Law Firms (201-208)
+  ...Array(8).fill('LegalTech'),
+  // Accounting (209-216)
+  ...Array(8).fill('Fintech'),
+  // Insurance (217-224)
+  ...Array(8).fill('InsurTech'),
+  // Staffing (225-232)
+  ...Array(8).fill('HRTech'),
+  // Logistics (233-240)
+  ...Array(8).fill('Logistics'),
+  // Education/EdTech (241-248)
+  ...Array(8).fill('EdTech'),
+  // Sustainability/CleanTech (249-256)
+  ...Array(8).fill('CleanTech'),
+  // AI/Deep Tech (257-264)
+  ...Array(8).fill('AI/ML'),
+  // Gaming (265-268)
+  ...Array(4).fill('Gaming'),
+  // Crypto/Web3 (269-276)
+  ...Array(8).fill('Web3/Crypto'),
+];
+
+// Industry → Title pools (realistic role mapping)
+const industryTitles = {
+  'SaaS': ['CEO', 'CTO', 'Founder', 'Co-Founder', 'VP of Sales', 'VP of Engineering', 'Head of Growth', 'Head of Product', 'Director of Sales', 'CRO', 'Head of Revenue', 'Director of Customer Success'],
+  'E-commerce': ['Owner', 'Founder', 'CEO', 'Marketing Director', 'Head of Growth', 'Director of Operations', 'General Manager', 'Head of Marketing', 'Creative Director', 'COO'],
+  'MarTech': ['Founder', 'CEO', 'Managing Partner', 'Creative Director', 'Head of Marketing', 'Director of Partnerships', 'Partner', 'Business Development Manager', 'CMO', 'Head of Growth'],
+  'Construction': ['Owner', 'Owner-Operator', 'General Manager', 'Operations Manager', 'President', 'Managing Partner', 'Branch Manager', 'Regional Manager', 'Office Manager', 'Founder'],
+  'Fintech': ['CEO', 'CTO', 'Founder', 'Co-Founder', 'CFO', 'VP of Engineering', 'Head of Product', 'Director of Operations', 'Managing Director', 'Chief Growth Officer'],
+  'Healthcare': ['Clinic Director', 'Practice Manager', 'Owner', 'Managing Partner', 'Office Manager', 'President', 'Executive Director', 'Director of Operations', 'Regional Manager', 'Founder'],
+  'SupplyChain': ['Owner', 'President', 'General Manager', 'Operations Manager', 'VP of Operations', 'Director of Operations', 'COO', 'Managing Director', 'Regional Manager', 'Founder'],
+  'PropTech': ['CEO', 'Founder', 'Managing Director', 'Principal', 'Senior Partner', 'Partner', 'Director of Operations', 'VP of Sales', 'Head of Growth', 'President'],
+  'FoodTech': ['Owner', 'Founder', 'General Manager', 'Managing Partner', 'Operations Manager', 'Creative Director', 'Head of Marketing', 'Owner-Operator', 'CEO', 'COO'],
+  'Media': ['Founder', 'Creative Director', 'CEO', 'Head of Marketing', 'Managing Partner', 'Director of Partnerships', 'Executive Director', 'Studio Manager', 'CMO', 'Partner'],
+  'LegalTech': ['Managing Partner', 'Senior Partner', 'Partner', 'Principal', 'Founder', 'CEO', 'Executive Director', 'Director of Operations', 'Office Manager', 'COO'],
+  'InsurTech': ['CEO', 'President', 'Managing Director', 'Founder', 'VP of Sales', 'Director of Operations', 'Regional Manager', 'Branch Manager', 'CFO', 'COO'],
+  'HRTech': ['CEO', 'Founder', 'Managing Director', 'Head of Sales', 'VP of Operations', 'Director of Operations', 'Business Development Manager', 'Regional Manager', 'COO', 'Head of Growth'],
+  'Logistics': ['Owner', 'President', 'General Manager', 'Operations Manager', 'VP of Operations', 'Director of Operations', 'COO', 'Regional Manager', 'Founder', 'Managing Director'],
+  'EdTech': ['CEO', 'Founder', 'Head of Product', 'Director of Operations', 'Managing Director', 'VP of Engineering', 'CTO', 'Head of Growth', 'Executive Director', 'COO'],
+  'CleanTech': ['CEO', 'Founder', 'CTO', 'VP of Operations', 'Director of Operations', 'Head of Product', 'Managing Director', 'COO', 'Chief Growth Officer', 'President'],
+  'AI/ML': ['CEO', 'CTO', 'Founder', 'Co-Founder', 'VP of Engineering', 'Head of Product', 'Chief of Staff', 'Head of Revenue', 'Director of Sales', 'CRO'],
+  'Gaming': ['CEO', 'Founder', 'Creative Director', 'CTO', 'Studio Manager', 'Head of Product', 'Managing Director', 'Director of Operations', 'COO', 'VP of Engineering'],
+  'Web3/Crypto': ['CEO', 'Founder', 'CTO', 'Co-Founder', 'Head of Growth', 'VP of Engineering', 'Head of Product', 'Managing Director', 'Chief Growth Officer', 'Director of Partnerships'],
+};
+
+// Industry → Employee range [min, max] and Revenue range [min, max]
+const industryProfiles = {
+  'SaaS':        { emp: [10, 500],  rev: [500000, 50000000],  deal: [15000, 100000] },
+  'E-commerce':  { emp: [3, 80],    rev: [200000, 15000000],  deal: [8500, 40000] },
+  'MarTech':     { emp: [5, 60],    rev: [300000, 8000000],   deal: [10000, 50000] },
+  'Construction':{ emp: [3, 50],    rev: [200000, 5000000],   deal: [8500, 25000] },
+  'Fintech':     { emp: [15, 400],  rev: [1000000, 80000000], deal: [20000, 150000] },
+  'Healthcare':  { emp: [5, 100],   rev: [300000, 10000000],  deal: [8500, 35000] },
+  'SupplyChain': { emp: [20, 300],  rev: [2000000, 30000000], deal: [15000, 75000] },
+  'PropTech':    { emp: [5, 80],    rev: [500000, 20000000],  deal: [12000, 60000] },
+  'FoodTech':    { emp: [3, 40],    rev: [100000, 3000000],   deal: [8500, 20000] },
+  'Media':       { emp: [5, 50],    rev: [200000, 8000000],   deal: [10000, 40000] },
+  'LegalTech':   { emp: [5, 40],    rev: [500000, 10000000],  deal: [12000, 50000] },
+  'InsurTech':   { emp: [10, 200],  rev: [1000000, 30000000], deal: [15000, 80000] },
+  'HRTech':      { emp: [8, 100],   rev: [400000, 15000000],  deal: [10000, 45000] },
+  'Logistics':   { emp: [10, 200],  rev: [500000, 20000000],  deal: [12000, 60000] },
+  'EdTech':      { emp: [8, 120],   rev: [300000, 15000000],  deal: [10000, 50000] },
+  'CleanTech':   { emp: [10, 150],  rev: [500000, 25000000],  deal: [15000, 80000] },
+  'AI/ML':       { emp: [10, 300],  rev: [500000, 40000000],  deal: [20000, 120000] },
+  'Gaming':      { emp: [8, 200],   rev: [300000, 20000000],  deal: [12000, 60000] },
+  'Web3/Crypto': { emp: [5, 100],   rev: [200000, 30000000],  deal: [15000, 80000] },
+};
+const defaultProfile = { emp: [5, 100], rev: [200000, 10000000], deal: [10000, 50000] };
+
 // Industry-aware TLD mapping for realistic website URLs
 const industryTLDs = {
   'SaaS': ['.io', '.dev', '.app', '.com', '.co'],
@@ -404,23 +504,27 @@ function generateLeads(count = DEFAULT_LEAD_COUNT) {
     const lastName = lastNames[lnIdx];
     const company = companies[compIdx];
     const slug = companySlugs[compIdx];
-    const industry = industries[(rand() * indLen) | 0];
+    // Use correlated industry from company sector (not random)
+    const industry = companyIndustries[compIdx] || industries[(rand() * indLen) | 0];
     const priority = priorities[(rand() * priLen) | 0];
     const status = statuses[(rand() * statLen) | 0];
     const score = (rand() * 100) | 0;
     const engagementScore = (rand() * 100) | 0;
-    // Deal value distribution: most $8.5K-$25K, fewer $25K-$50K, rare $50K+
-    // Use combined random samples for a right-skewed natural distribution
+    // Industry-correlated deal value, employees, revenue
+    const profile = industryProfiles[industry] || defaultProfile;
+    const dealRange = profile.deal[1] - profile.deal[0];
     const dvRoll = rand();
     const dealValue = dvRoll < 0.65
-      ? ((rand() * 16500) | 0) + 8500          // 65% chance: $8,500 - $25,000
+      ? ((rand() * (dealRange * 0.4)) | 0) + profile.deal[0]
       : dvRoll < 0.88
-        ? ((rand() * 25000) | 0) + 25000       // 23% chance: $25,000 - $50,000
+        ? ((rand() * (dealRange * 0.3)) | 0) + profile.deal[0] + (dealRange * 0.4 | 0)
         : dvRoll < 0.96
-          ? ((rand() * 25000) | 0) + 50000     // 8% chance:  $50,000 - $75,000
-          : ((rand() * 75000) | 0) + 75000;    // 4% chance:  $75,000 - $150,000 (enterprise)
-    const employees = ((rand() * 495) | 0) + 5;
-    const revenue = ((rand() * 19900000) | 0) + 100000;
+          ? ((rand() * (dealRange * 0.2)) | 0) + profile.deal[0] + (dealRange * 0.7 | 0)
+          : ((rand() * (dealRange * 0.1)) | 0) + profile.deal[0] + (dealRange * 0.9 | 0);
+    const empRange = profile.emp[1] - profile.emp[0];
+    const employees = ((rand() * empRange) | 0) + profile.emp[0];
+    const revRange = profile.rev[1] - profile.rev[0];
+    const revenue = ((rand() * revRange) | 0) + profile.rev[0];
 
     // Determine TLD based on industry
     const tldPool = industryTLDs[industry] || defaultTLDs;
@@ -466,7 +570,7 @@ function generateLeads(count = DEFAULT_LEAD_COUNT) {
       linkedin_company_url: `https://www.linkedin.com/company/${slug}`,
       company_description: companyDescriptions[(rand() * companyDescriptions.length) | 0],
       company,
-      title: titles[(rand() * titLen) | 0],
+      title: (industryTitles[industry] || titles)[(rand() * (industryTitles[industry] || titles).length) | 0],
       industry,
       priority,
       status,
