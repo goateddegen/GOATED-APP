@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   ArrowLeft, Phone, Mail, Calendar, Globe, Building2, AlertCircle, Copy, Check,
   TrendingUp, TrendingDown, Minus, Target, Shield, Zap, Star, ChevronRight,
@@ -161,7 +161,7 @@ function VoiceBrief({ lead, el, dv, safeConversion, safePainPoints }) {
       ? 'Request a referral and explore upsell opportunities.'
       : 'Initiate first contact via their preferred channel with a personalized value proposition.';
 
-    return `${name} at ${company}, ${industry}. Deal value ${amount}. Close probability ${prob}%. ${painPoint}. Recommended approach: ${strategy}`;
+    return `Quick brief on ${name} at ${company}. They're in ${industry}, deal worth ${amount} with a ${prob}% close probability. Main pain point is ${painPoint}. Here's what I'd do next: ${strategy}`;
   }, [lead, el, dv, safeConversion, safePainPoints]);
 
   const handlePlay = useCallback(() => {
@@ -183,14 +183,19 @@ function VoiceBrief({ lead, el, dv, safeConversion, safePainPoints }) {
     setBriefText(text);
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
+    utterance.rate = 0.92;
+    utterance.pitch = 1.05;
     utterance.volume = 1;
 
-    // Try to get a good English voice
+    // Pick the most natural-sounding English voice available
     const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => v.name.includes('Samantha') || v.name.includes('Google US') || v.name.includes('Alex'));
-    if (preferred) utterance.voice = preferred;
+    const naturalVoice = voices.find(v => v.name.includes('Samantha')) // macOS natural
+      || voices.find(v => v.name.includes('Karen')) // macOS AU
+      || voices.find(v => v.name.includes('Daniel')) // macOS UK
+      || voices.find(v => v.name.includes('Google US English'))
+      || voices.find(v => v.name.includes('Google UK English Female'))
+      || voices.find(v => v.lang.startsWith('en') && v.localService);
+    if (naturalVoice) utterance.voice = naturalVoice;
 
     utterance.onend = () => setVoiceState('idle');
     utterance.onerror = () => setVoiceState('idle');
@@ -298,14 +303,34 @@ function VoiceBrief({ lead, el, dv, safeConversion, safePainPoints }) {
 function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfidence, safeCallScript, safePackages, safeObjections, safeOutreach, safePainPoints, safeConversion, setTab }) {
   const [expandedStep, setExpandedStep] = useState(null);
   const [fastTrackMode, setFastTrackMode] = useState(false);
-  const [stepChecks, setStepChecks] = useState(() => {
+  // Step checks derived from lead status + manual overrides persisted in localStorage
+  const [manualChecks, setManualChecks] = useState(() => {
     try { return JSON.parse(localStorage.getItem('goated_close_checks_' + lead.id) || '{}'); } catch { return {}; }
   });
 
-  // Persist step checks to localStorage
+  // Auto-derive completed steps from lead status
+  const stepChecks = useMemo(() => {
+    const checks = {};
+    closeSteps.forEach((s, i) => {
+      // Steps with status 'done' are auto-checked
+      if (s.status === 'done') checks[i] = true;
+      // Manual overrides for current/pending steps
+      else if (manualChecks[i]) checks[i] = true;
+    });
+    return checks;
+  }, [closeSteps, manualChecks]);
+
+  const setStepChecks = (updater) => {
+    setManualChecks(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      return next;
+    });
+  };
+
+  // Persist manual checks to localStorage
   useEffect(() => {
-    try { localStorage.setItem('goated_close_checks_' + lead.id, JSON.stringify(stepChecks)); } catch {}
-  }, [stepChecks, lead.id]);
+    try { localStorage.setItem('goated_close_checks_' + lead.id, JSON.stringify(manualChecks)); } catch {}
+  }, [manualChecks, lead.id]);
 
   const commission = Math.round(dv * 0.12);
   const currentStep = closeSteps.find(s => s.status === 'current') || closeSteps[0];
@@ -508,11 +533,17 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
                           <p className="text-xs text-slate-300 whitespace-pre-line leading-relaxed">{stepScripts[i]?.script}</p>
                         </div>
 
-                        {/* Step completion checkbox */}
-                        <label className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04] cursor-pointer hover:bg-white/[0.04] transition-colors">
-                          <input type="checkbox" checked={!!stepChecks[i]} onChange={() => setStepChecks(prev => ({ ...prev, [i]: !prev[i] }))}
+                        {/* Step completion checkbox — auto-checked for 'done' steps, toggleable for others */}
+                        <label className={`flex items-center gap-2 p-2 rounded-lg border transition-colors ${
+                          s.status === 'done' ? 'bg-brand/[0.06] border-brand/15' : 'bg-white/[0.02] border-white/[0.04] cursor-pointer hover:bg-white/[0.04]'
+                        }`}>
+                          <input type="checkbox" checked={!!stepChecks[i]}
+                            disabled={s.status === 'done'}
+                            onChange={() => { if (s.status !== 'done') setStepChecks(prev => ({ ...prev, [i]: !prev[i] })); }}
                             className="accent-[#00ff88] w-4 h-4" />
-                          <span className="text-xs text-slate-300">{stepChecks[i] ? 'Completed' : 'Mark as completed'}</span>
+                          <span className="text-xs text-slate-300">
+                            {s.status === 'done' ? 'Auto-completed (lead progressed past this step)' : stepChecks[i] ? 'Completed' : 'Mark as completed'}
+                          </span>
                         </label>
 
                         {/* DO THIS NOW CTA */}
@@ -957,22 +988,16 @@ export default function LeadDetail() {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <a href={`tel:${(lead.phone || '').replace(/[^+\d]/g, '')}`} data-action="voip-call"
-                className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-brand text-black font-medium text-sm hover:bg-brand/90 transition-colors cursor-pointer"
-                onClick={(e) => { if (!lead.phone) { e.preventDefault(); alert('No phone number available for this lead.'); } }}>
-                <Phone size={14} /> Call {lead.phone ? lead.phone : ''}
+              <a href={lead.phone ? `tel:${(lead.phone || '').replace(/[^+\d]/g, '')}` : '#'} data-action="voip-call"
+                className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm transition-colors cursor-pointer ${lead.phone ? 'bg-brand text-black hover:bg-brand/90' : 'bg-white/[0.04] border border-white/[0.06] text-slate-400'}`}
+                onClick={(e) => { if (!lead.phone) { e.preventDefault(); alert('No phone number available. Enrich this lead to unlock contact data.'); } }}>
+                <Phone size={14} /> Call
               </a>
-              <button onClick={() => {
-                const start = new Date(); start.setDate(start.getDate() + 1); start.setHours(10, 0, 0, 0);
-                const end = new Date(start); end.setMinutes(30);
-                const title = encodeURIComponent(`Call with ${lead.name} — ${lead.company}`);
-                const details = encodeURIComponent(`Lead: ${lead.name}\nCompany: ${lead.company}\nPhone: ${lead.phone || 'N/A'}\nEmail: ${lead.email}\nDeal: $${(lead.dealValue || 0).toLocaleString()}\n\nGenerated by GOATED`);
-                const fmt2 = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-                window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt2(start)}/${fmt2(end)}&details=${details}`, '_blank');
-              }} className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05] text-sm hover:bg-white/[0.04] transition-colors">
-                <Calendar size={14} /> Schedule
-              </button>
-              <button onClick={() => setTab('outreach')} className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-purple-500/15 border border-purple-500/20 text-sm text-purple-400 hover:bg-purple-500/25 transition-colors">
+              <a href={`mailto:${lead.email || ''}`}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.02] border border-white/[0.05] text-sm hover:bg-white/[0.04] transition-colors">
+                <Mail size={14} /> Email
+              </a>
+              <button onClick={() => setTab('outreach')} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/15 border border-purple-500/20 text-sm text-purple-400 hover:bg-purple-500/25 transition-colors">
                 <Brain size={14} /> AI Coach
               </button>
             </div>
@@ -1125,10 +1150,11 @@ export default function LeadDetail() {
                 <PhoneCall size={22} className={lead.phone ? 'text-emerald-400' : 'text-slate-600'} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className={`text-[10px] uppercase tracking-wider font-bold mb-1 ${lead.phone ? 'text-emerald-400' : 'text-slate-500'}`}>Phone</div>
-                <div className="text-lg font-mono font-bold text-white truncate">{lead.phone || 'No number'}</div>
+                <div className={`text-[10px] uppercase tracking-wider font-bold mb-1 ${lead.phone ? 'text-emerald-400' : 'text-slate-500'}`}>
+                  {lead.phone ? 'Call Now' : 'Phone Unavailable'}
+                </div>
+                <div className="text-sm font-medium text-white">{lead.phone ? 'Direct line available — tap to call' : 'Enrich lead to unlock phone'}</div>
               </div>
-              {lead.phone && <CopyBtn text={lead.phone} />}
             </a>
             {/* Email */}
             <a href={`mailto:${lead.email}`}
@@ -1715,10 +1741,14 @@ export default function LeadDetail() {
                     <Phone size={15} className="text-slate-500" />
                     <div>
                       <div className="text-[10px] text-slate-500 uppercase tracking-wider">Phone</div>
-                      <a href={`tel:${(lead.phone || '').replace(/[^+\d]/g, '')}`} className="text-sm text-brand hover:text-white underline decoration-brand/30 hover:decoration-white/50 transition-colors">{lead.phone}</a>
+                      {lead.phone ? (
+                        <a href={`tel:${(lead.phone || '').replace(/[^+\d]/g, '')}`} className="text-sm text-brand hover:text-white transition-colors cursor-pointer">Call direct line</a>
+                      ) : (
+                        <span className="text-sm text-slate-500">Enrich to unlock</span>
+                      )}
                     </div>
                   </div>
-                  <CopyBtn text={lead.phone || ''} />
+                  {lead.phone && <CopyBtn text={lead.phone} />}
                 </div>
                 {/* Website */}
                 <div className="group relative flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">

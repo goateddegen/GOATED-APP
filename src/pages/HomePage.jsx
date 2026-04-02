@@ -422,14 +422,10 @@ export default function HomePage() {
     { name: 'Gong', price: '$100+/seat', leads: false, ai: true, voip: false, predictions: false, wallet: false, sentiment: false, outreach: false, coaching: true },
     { name: 'Kalshi', price: 'Per-trade fees', leads: false, ai: false, voip: false, predictions: true, wallet: false, sentiment: false, outreach: false, coaching: false },
     { name: 'Polymarket', price: 'Per-trade fees', leads: false, ai: false, voip: false, predictions: true, wallet: false, sentiment: false, outreach: false, coaching: false },
-    { name: 'GOATED', price: '$0 + 12%', leads: true, ai: true, voip: true, predictions: true, wallet: true, sentiment: true, outreach: true, coaching: true, isUs: true },
+    { name: 'GOATED', price: '$0 + 12-15%', leads: true, ai: true, voip: true, predictions: true, wallet: true, sentiment: true, outreach: true, coaching: true, isUs: true },
   ];
 
-  const pricingTiers = [
-    { name: 'Starter', price: 'Free', desc: 'Full platform access. Zero bullshit.', features: ['500K+ AI-scored leads', 'GOATED AI co-pilot', 'VoIP calling (100 min/mo)', 'SMS outreach (500/mo)', 'Prediction markets', 'Multi-chain wallet', 'Real-time trend pulse'], color: '#10b981', popular: true },
-    { name: 'Closer', price: '12%', desc: 'Commission on closed deals only. WAGMI.', features: ['Everything in Starter', 'Unlimited VoIP minutes', 'Unlimited SMS', 'AI call coaching', 'Deep research per lead', 'Priority AI processing', 'Advanced analytics'], color: '#f59e0b' },
-    { name: 'Enterprise', price: 'Custom', desc: 'For whale teams and venture studios.', features: ['Everything in Closer', 'Custom AI model training', 'White-label deployment', 'Dedicated success manager', 'API access & webhooks', 'Team analytics', 'Custom integrations'], color: '#a855f7' },
-  ];
+  // No pricing tiers — platform is 100% free, commission-only model
 
   return (
     <div className="min-h-screen overflow-hidden">
@@ -490,7 +486,7 @@ export default function HomePage() {
             <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500 mb-8">
               <span className="flex items-center gap-1.5"><Shield size={14} className="text-brand" />$0 platform fee</span>
               <span className="text-slate-700">|</span>
-              <span className="flex items-center gap-1.5"><DollarSign size={14} className="text-yellow-400" />10% on closed deals</span>
+              <span className="flex items-center gap-1.5"><DollarSign size={14} className="text-yellow-400" />12% on closed deals</span>
               <span className="text-slate-700">|</span>
               <span className="flex items-center gap-1.5"><Wallet size={14} className="text-cyan-400" />Instant SOL payouts</span>
             </div>
@@ -832,7 +828,7 @@ export default function HomePage() {
               { emoji: '\u{1F4B0}', title: 'Money Printer Go Brr', desc: 'Direct outreach that converts like crazy. VoIP, SMS, voicemail drops — skip the inbox, go direct to the decision maker. Close while your competition writes follow-up emails.', stat: '10x', label: 'Reply rate vs email' },
               { emoji: '\u{1F410}', title: 'GOATED AI Agent', desc: 'Your always-on degen co-pilot. Real-time coaching, research, scripts — like having a senior closer whispering alpha in your ear 24/7. No sleep needed.', stat: '24/7', label: 'Always available' },
               { emoji: '\u{1F4C8}', title: 'Moon Signals', desc: 'Cross-platform sentiment analysis. Instagram, TikTok, crypto Twitter — see the trend before it moons. Ape into the right deal at the right time.', stat: 'LIVE', label: 'Real-time data' },
-              { emoji: '\u26A1', title: 'Zero Fee, No Cap', desc: 'Free forever. We only eat when you eat. 12% on closed deals, that\'s the whole model. $2.50 withdrawal fee. No monthly bags being drained. This is a no-brainer, anon.', stat: '$0', label: 'Monthly cost' },
+              { emoji: '\u26A1', title: 'Zero Fee, No Cap', desc: 'Free forever. We only eat when you eat. 12% on closed deals, 15% for $100K+ whales. No monthly bags being drained. This is a no-brainer, anon.', stat: '$0', label: 'Monthly cost' },
             ].map((item, i) => (
               <div key={i} className="bg-black/40 backdrop-blur rounded-xl p-6 border border-white/[0.03] group hover:border-orange-500/20 transition-all duration-300 relative overflow-hidden hover:-translate-y-1">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(249,115,22,0.05) 0%, transparent 70%)' }} />
@@ -953,7 +949,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <div className="font-bold text-white mb-1">We bet on you</div>
-                  <p className="text-sm text-slate-400">$0 upfront. We only make money when you make money. 12% on closed deals. $2.50 withdrawal fee. Our incentives are perfectly aligned with yours.</p>
+                  <p className="text-sm text-slate-400">$0 upfront. We only make money when you make money. 12% on closed deals, 15% on $100K+ deals. Our incentives are perfectly aligned with yours.</p>
                 </div>
                 <div>
                   <div className="font-bold text-white mb-1">All-in-one monster</div>
@@ -979,7 +975,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto mb-10">
             {[
               { icon: DollarSign, title: '$0 Platform Fee', value: '$0', desc: 'Full access to every tool, every feature, every lead. Zero upfront cost.', color: '#10b981', label: 'Always free' },
-              { icon: Target, title: 'Deal Commission', value: '10%', desc: 'Commission on closed deals only. We eat when you eat.', color: '#f59e0b', label: 'On closed deals' },
+              { icon: Target, title: 'Deal Commission', value: '12%', desc: 'Commission on closed deals. 15% on $100K+ deals. We eat when you eat.', color: '#f59e0b', label: 'On closed deals' },
               { icon: TrendingUp, title: 'Betting Spreads', value: '2-5%', desc: 'Spread on prediction market bets. Better odds, more markets.', color: '#a855f7', label: 'On market bets' },
               { icon: Wallet, title: 'Crypto Transactions', value: '1-2%', desc: 'Small fee on crypto transactions. Lower than any exchange.', color: '#06b6d4', label: 'On transactions' },
             ].map((item, i) => (
@@ -1013,25 +1009,26 @@ export default function HomePage() {
             <p className="text-sm text-slate-500 mt-2">Apollo ($39-149/mo), ZoomInfo ($14K+/yr), Outreach ($100+/seat), Gong ($100+/seat) -- all charge you whether you make money or not. We don't.</p>
           </motion.div>
 
-          {/* Pricing Tiers */}
-          <StaggeredCards className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {pricingTiers.map((tier, i) => (
-              <div key={i} className={`bg-black/40 backdrop-blur rounded-2xl p-6 border relative hover:-translate-y-1 transition-all duration-300 flex flex-col ${tier.popular ? 'border-brand/40 ring-1 ring-brand/20 shadow-[0_0_30px_rgba(16,185,129,0.08)]' : 'border-white/[0.05]'}`}>
-                {tier.popular && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-brand text-black text-xs font-black rounded-full uppercase tracking-wider">Most Popular</div>}
-                <div className="text-center mb-6 pt-2">
-                  <h3 className="font-bold text-lg mb-2">{tier.name}</h3>
-                  <div className="text-4xl font-black mb-1" style={{ color: tier.color }}>{tier.price}</div>
-                  <p className="text-xs text-slate-500 mt-1">{tier.desc}</p>
-                </div>
-                <div className="space-y-2.5 mb-6 flex-1">
-                  {tier.features.map((f, j) => <div key={j} className="flex items-center gap-2.5 text-sm text-slate-300"><CheckCircle2 size={14} style={{ color: tier.color }} className="flex-shrink-0" />{f}</div>)}
-                </div>
-                <button onClick={() => tier.price === 'Custom' ? setAccountModalOpen(true) : setPage('leads')} className={`w-full py-3 rounded-xl font-bold text-sm transition-all duration-300 ${tier.popular ? 'bg-brand text-black hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]' : 'bg-white/[0.03] border border-white/[0.06] text-slate-300 hover:bg-white/[0.06]'}`}>
-                  {tier.price === 'Free' ? 'Start Printing Money' : tier.price === 'Custom' ? 'Contact Us' : 'Start Earning'}
-                </button>
+          {/* Commission-only model — no tiers, no subscriptions */}
+          <motion.div className="max-w-3xl mx-auto text-center p-8 rounded-2xl border border-brand/20 bg-brand/5" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+            <h3 className="text-2xl font-black text-white mb-3">No Tiers. No Subscriptions. <span className="text-brand">Ever.</span></h3>
+            <p className="text-slate-400 mb-6">Every user gets full access to every feature from day one. We make money when you make money — that's it.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div className="p-4 rounded-xl bg-black/40 border border-white/[0.05]">
+                <div className="text-3xl font-black text-yellow-400 mb-1">12%</div>
+                <div className="text-sm text-slate-300 font-bold">Standard Commission</div>
+                <p className="text-xs text-slate-500 mt-1">On every closed deal. Full platform access. No caps.</p>
               </div>
-            ))}
-          </StaggeredCards>
+              <div className="p-4 rounded-xl bg-black/40 border border-white/[0.05]">
+                <div className="text-3xl font-black text-pink-400 mb-1">15%</div>
+                <div className="text-sm text-slate-300 font-bold">Partner / $100K+ Deals</div>
+                <p className="text-xs text-slate-500 mt-1">Approved partners and whale deals. Priority support + co-marketing.</p>
+              </div>
+            </div>
+            <GlowButton onClick={() => setPage('leads')} color="brand">
+              <Target size={18} />Start Closing — It's Free<ArrowRight size={16} />
+            </GlowButton>
+          </motion.div>
         </div>
       </section>
 
@@ -1164,7 +1161,7 @@ export default function HomePage() {
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-slate-500 mb-8">
               <span>$0 platform fee</span>
               <span className="text-slate-700">|</span>
-              <span>10% on closed deals</span>
+              <span>12% on closed deals (15% for partners)</span>
               <span className="text-slate-700">|</span>
               <span>2-5% betting spreads</span>
               <span className="text-slate-700">|</span>
@@ -1193,7 +1190,7 @@ export default function HomePage() {
           <div className="flex items-center gap-2">
             <GoatIcon className="w-5 h-5" />
             <span className="font-bold text-slate-400">GOATED Solutions</span>
-            <span>v4.0 — Revenue Intelligence OS</span>
+            <span>v6.5 — Revenue Intelligence OS</span>
           </div>
           <div className="flex gap-6">
             <span className="hover:text-slate-300 transition-colors cursor-pointer">Privacy</span>

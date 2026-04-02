@@ -5,9 +5,9 @@ import { useGoatedAI } from '../hooks/useGoatedAI';
 import { useStore } from '../hooks/useStore';
 
 // ---------------------------------------------------------------------------
-// GOAT Token helpers — sync with WalletPage localStorage
+// SOL balance helpers — Phantom wallet (Solana)
 // ---------------------------------------------------------------------------
-const GOAT_BALANCE_KEY = 'goated_goat_balance';
+const SOL_BALANCE_KEY = 'goated_sol_balance';
 const CASINO_BETS_KEY = 'goated_casino_bets';
 const CASINO_RESOLVED_KEY = 'goated_casino_resolved';
 const WALLET_KEY = 'goated_wallet';
@@ -16,14 +16,14 @@ const BET_HISTORY_KEY = 'goated_casino_bet_history';
 const DAILY_BONUS_KEY = 'goated_daily_bonus';
 const STREAK_KEY = 'goated_streaks';
 
-function loadGoatBalance() {
+function loadSolBalance() {
   try {
-    const v = localStorage.getItem(GOAT_BALANCE_KEY);
-    return v !== null ? parseFloat(v) : 1000; // default 1000 GOAT welcome credits
-  } catch { return 1000; }
+    const v = localStorage.getItem(SOL_BALANCE_KEY);
+    return v !== null ? parseFloat(v) : 0; // 0 SOL default — must deposit
+  } catch { return 0; }
 }
-function saveGoatBalance(bal) {
-  try { localStorage.setItem(GOAT_BALANCE_KEY, String(bal)); } catch {}
+function saveSolBalance(bal) {
+  try { localStorage.setItem(SOL_BALANCE_KEY, String(bal)); } catch {}
 }
 function loadSavedBets(key) {
   try {
@@ -140,19 +140,19 @@ const recentWinGames = ['Prediction Market'];
 
 // Daily challenges templates
 const dailyChallengesPool = [
-  { id: 'bet5', title: 'Place 5 Prediction Bets', desc: 'Place bets on 5 different prediction markets', reward: 100, icon: Target, target: 5, type: 'market_bets' },
-  { id: 'bet3crypto', title: 'Bet on 3 Crypto Markets', desc: 'Place bets on 3 crypto prediction markets', reward: 150, icon: TrendingUp, target: 3, type: 'crypto_bets' },
-  { id: 'bet2ai', title: 'Bet on 2 AI Markets', desc: 'Place bets on AI-related prediction markets', reward: 125, icon: Sparkles, target: 2, type: 'ai_bets' },
-  { id: 'hotbet', title: 'Bet on a Hot Market', desc: 'Place a bet on a trending HOT market', reward: 100, icon: Flame, target: 1, type: 'hot_bet' },
-  { id: 'bigbet', title: 'Place a 250+ GOAT Bet', desc: 'Go big or go home - place a 250+ GOAT bet', reward: 200, icon: Target, target: 1, type: 'big_bet' },
-  { id: 'diversify', title: 'Bet on 3 Categories', desc: 'Place bets across 3 different market categories', reward: 175, icon: BarChart3, target: 3, type: 'diverse_bets' },
+  { id: 'bet5', title: 'Place 5 Prediction Bets', desc: 'Place bets on 5 different prediction markets', reward: 0.02, icon: Target, target: 5, type: 'market_bets' },
+  { id: 'bet3crypto', title: 'Bet on 3 Crypto Markets', desc: 'Place bets on 3 crypto prediction markets', reward: 0.03, icon: TrendingUp, target: 3, type: 'crypto_bets' },
+  { id: 'bet2ai', title: 'Bet on 2 AI Markets', desc: 'Place bets on AI-related prediction markets', reward: 0.025, icon: Sparkles, target: 2, type: 'ai_bets' },
+  { id: 'hotbet', title: 'Bet on a Hot Market', desc: 'Place a bet on a trending HOT market', reward: 0.02, icon: Flame, target: 1, type: 'hot_bet' },
+  { id: 'bigbet', title: 'Place a 1+ SOL Bet', desc: 'Go big or go home - place a 1+ SOL bet', reward: 0.05, icon: Target, target: 1, type: 'big_bet' },
+  { id: 'diversify', title: 'Bet on 3 Categories', desc: 'Place bets across 3 different market categories', reward: 0.035, icon: BarChart3, target: 3, type: 'diverse_bets' },
 ];
 
 // Difficulty levels for AI Oracle
 const AO_DIFFICULTIES = [
-  { id: 'easy', label: 'Easy', color: '#10b981', multiplier: 1, questionCount: 10, baseReward: 15, bonusThreshold: 7, bonus: 50, desc: '10 questions, 15 GOAT each' },
-  { id: 'medium', label: 'Medium', color: '#f59e0b', multiplier: 1.5, questionCount: 10, baseReward: 25, bonusThreshold: 8, bonus: 100, desc: '10 questions, 25 GOAT each' },
-  { id: 'hard', label: 'Hard', color: '#ef4444', multiplier: 2.5, questionCount: 10, baseReward: 50, bonusThreshold: 9, bonus: 250, desc: '10 questions, 50 GOAT each' },
+  { id: 'easy', label: 'Easy', color: '#10b981', multiplier: 1, questionCount: 10, baseReward: 0.005, bonusThreshold: 7, bonus: 0.02, desc: '10 questions, 0.005 SOL each' },
+  { id: 'medium', label: 'Medium', color: '#f59e0b', multiplier: 1.5, questionCount: 10, baseReward: 0.01, bonusThreshold: 8, bonus: 0.05, desc: '10 questions, 0.01 SOL each' },
+  { id: 'hard', label: 'Hard', color: '#ef4444', multiplier: 2.5, questionCount: 10, baseReward: 0.025, bonusThreshold: 9, bonus: 0.1, desc: '10 questions, 0.025 SOL each' },
 ];
 
 const newsItems = [
@@ -168,11 +168,11 @@ const newsItems = [
 
 // Token unlocks info
 const tokenUnlocks = [
-  { threshold: 5000, label: 'DEGEN Badge', desc: 'Flex your degen status on leaderboard' },
-  { threshold: 10000, label: 'Priority Markets', desc: 'Early access to new prediction markets' },
-  { threshold: 25000, label: 'Insider Access', desc: 'Exclusive high-value prediction markets' },
-  { threshold: 50000, label: 'Market Maker', desc: 'Create custom prediction markets' },
-  { threshold: 100000, label: 'Whale Status', desc: 'Custom leaderboard flair + reduced commission' },
+  { threshold: 5, label: 'DEGEN Badge', desc: 'Flex your degen status on leaderboard' },
+  { threshold: 25, label: 'Priority Markets', desc: 'Early access to new prediction markets' },
+  { threshold: 100, label: 'Insider Access', desc: 'Exclusive high-value prediction markets' },
+  { threshold: 500, label: 'Market Maker', desc: 'Create custom prediction markets' },
+  { threshold: 1000, label: 'Whale Status', desc: 'Custom leaderboard flair + reduced commission' },
 ];
 
 // Mini sparkline component
@@ -284,7 +284,7 @@ export default function CasinoPage() {
   const { regime, sentiment } = useGoatedAI();
   const isLoggedIn = useStore(s => s.isLoggedIn);
   const [tab, setTab] = useState('markets');
-  const [balance, setBalance] = useState(() => loadGoatBalance());
+  const [balance, setBalance] = useState(() => loadSolBalance());
   const [selectedCat, setSelectedCat] = useState('All');
   const [markets, setMarkets] = useState(initialMarkets);
   const [bets, setBets] = useState(() => loadSavedBets(CASINO_BETS_KEY));
@@ -407,7 +407,7 @@ export default function CasinoPage() {
   const [showWalletRequired, setShowWalletRequired] = useState(false);
 
   // Persist balance changes
-  useEffect(() => { saveGoatBalance(balance); }, [balance]);
+  useEffect(() => { saveSolBalance(balance); }, [balance]);
   useEffect(() => { saveBets(CASINO_BETS_KEY, bets); }, [bets]);
   useEffect(() => { saveBets(CASINO_RESOLVED_KEY, resolvedBets); }, [resolvedBets]);
   useEffect(() => { saveStreaks(streaks); }, [streaks]);
@@ -446,7 +446,7 @@ export default function CasinoPage() {
   // Claim daily bonus
   const claimDailyBonus = useCallback(() => {
     if (!dailyBonusAvailable) return;
-    const bonusAmount = 250 + Math.floor(Math.random() * 250); // 250-500 random
+    const bonusAmount = 0.01 + Math.random() * 0.04; // 0.01-0.05 SOL
     setBalance(prev => prev + bonusAmount);
     claimDailyBonusStorage();
     setDailyBonusAvailable(false);
@@ -498,24 +498,6 @@ export default function CasinoPage() {
     }
   };
 
-  const connectMetaMask = async () => {
-    try {
-      if (window.ethereum && window.ethereum.isMetaMask) {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        if (accounts.length > 0) {
-          const w = { type: 'metamask', address: accounts[0], chain: 'Ethereum', connectedAt: Date.now() };
-          setWallet(w);
-          saveWallet(w);
-          setShowWalletModal(false);
-        }
-      } else {
-        window.open('https://metamask.io/', '_blank');
-      }
-    } catch (err) {
-      console.error('MetaMask connect error:', err);
-    }
-  };
-
   const disconnectWallet = () => {
     setWallet(null);
     saveWallet(null);
@@ -524,19 +506,15 @@ export default function CasinoPage() {
   const handleDeposit = () => {
     const amt = parseFloat(depositAmount);
     if (!amt || amt <= 0) return;
-    const goatTokens = Math.floor(amt * 100);
-    setBalance(prev => prev + goatTokens);
+    setBalance(prev => prev + amt);
     setDepositAmount('');
     setWalletAction(null);
   };
 
   const handleWithdraw = () => {
     const amt = parseFloat(withdrawAmount);
-    if (!amt || amt <= 0) return;
-    const goatTokens = Math.floor(amt * 100);
-    if (goatTokens > balance) return;
-    const fee = Math.ceil(goatTokens * 0.005);
-    setBalance(prev => prev - goatTokens);
+    if (!amt || amt <= 0 || amt > balance) return;
+    setBalance(prev => prev - amt);
     setWithdrawAmount('');
     setWalletAction(null);
   };
@@ -661,7 +639,7 @@ export default function CasinoPage() {
     if (requireWallet()) return;
     setActiveBetMarket(marketId);
     setActiveBetSide(side);
-    setBetAmount(50);
+    setBetAmount(0.1);
     setShowConfirm(false);
     setBetResult(null);
   };
@@ -669,7 +647,7 @@ export default function CasinoPage() {
   const closeBetPanel = () => {
     setActiveBetMarket(null);
     setActiveBetSide(null);
-    setBetAmount(50);
+    setBetAmount(0.1);
     setShowConfirm(false);
     setBetResult(null);
   };
@@ -785,7 +763,7 @@ export default function CasinoPage() {
     setPdPicks([]); setPdRunning(false); setPdRound(0); setPdPlayerValues([]); setPdBotValues([]); setPdBotPicks([]); setPdResult(null); setPdRevealing(false);
     if (pdTimerRef.current) { clearInterval(pdTimerRef.current); pdTimerRef.current = null; }
     setAoQuestion(0); setAoScore(0); setAoSelected(null); setAoFinished(false); setAoQuestions([]); setAoDifficulty(null); setAoConsecutiveCorrect(0);
-    setGameBet(50);
+    setGameBet(0.1);
     setDoubleOrNothing(null);
   }, []);
 
@@ -1007,7 +985,7 @@ export default function CasinoPage() {
           <Dice5 size={28} className="text-brand" />
           <div>
             <h1 className="text-2xl font-bold">Prediction Casino</h1>
-            <p className="text-slate-500 text-sm">Bet GOAT tokens on markets, trends & outcomes</p>
+            <p className="text-slate-500 text-sm">Bet SOL on markets, trends & outcomes — Phantom wallet required</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -1056,11 +1034,12 @@ export default function CasinoPage() {
             </div>
           )}
 
-          {/* GOAT Balance */}
+          {/* SOL Balance */}
           <div className="px-4 py-2 rounded-xl bg-surface-3 border border-white/[0.05] flex items-center gap-2">
-            <Coins size={16} className="text-yellow-400" />
-            <span className="text-slate-500 text-sm">GOAT:</span>
-            <span className="font-bold text-lg text-yellow-400">{balance.toLocaleString()}</span>
+            <Coins size={16} className="text-purple-400" />
+            <span className="text-slate-500 text-sm">SOL:</span>
+            <span className="font-bold text-lg text-purple-400">{balance.toFixed(2)}</span>
+            {cryptoPrices?.SOL?.price && <span className="text-xs text-slate-500">(${(balance * cryptoPrices.SOL.price).toFixed(2)})</span>}
           </div>
 
           {/* Active bets badge */}
@@ -1095,7 +1074,7 @@ export default function CasinoPage() {
           <div className="flex-1">
             <div className="flex items-center justify-between text-xs mb-1">
               <span className="text-slate-400">Next unlock: <span className="text-yellow-400 font-bold">{nextUnlock.label}</span> - {nextUnlock.desc}</span>
-              <span className="text-slate-500">{balance.toLocaleString()} / {nextUnlock.threshold.toLocaleString()} GOAT</span>
+              <span className="text-slate-500">{balance.toLocaleString()} / {nextUnlock.threshold.toLocaleString()} SOL</span>
             </div>
             <div className="h-1.5 bg-surface-1 rounded-full overflow-hidden">
               <motion.div className="h-full bg-yellow-500 rounded-full" initial={{ width: 0 }} animate={{ width: `${Math.min(100, (balance / nextUnlock.threshold) * 100)}%` }} transition={{ duration: 1 }} />
@@ -1108,7 +1087,7 @@ export default function CasinoPage() {
       <div className="bg-yellow-500/5 border border-yellow-500/15 rounded-xl px-4 py-2.5 mb-4 flex items-center gap-3 text-xs">
         <Shield size={14} className="text-yellow-400 flex-shrink-0" />
         <span className="text-slate-400">
-          <span className="text-yellow-400 font-bold">12% commission</span> on winnings | <span className="text-yellow-400 font-bold">0% deposit fee</span> | <span className="text-yellow-400 font-bold">$2.50 withdrawal fee</span> | All bets in GOAT tokens (1 GOAT = $0.01)
+          <span className="text-purple-400 font-bold">12% commission</span> on winnings | <span className="text-purple-400 font-bold">0% deposit fee</span> | All bets in <span className="text-purple-400 font-bold">SOL</span> via Phantom wallet
           {streaks.best > 0 && <span className="ml-2">| Best streak: <span className="text-orange-400 font-bold">{streaks.best}W</span></span>}
         </span>
       </div>
@@ -1318,7 +1297,7 @@ export default function CasinoPage() {
                               <span className="font-bold text-brand">YES</span>
                               <span className="text-2xl font-black text-white">{m.yes}x</span>
                             </div>
-                            <div className="text-xs text-slate-500">Return on 100 GOAT: <span className="text-brand font-bold">{(100 * m.yes).toFixed(0)} GOAT</span></div>
+                            <div className="text-xs text-slate-500">Return on 100 SOL: <span className="text-brand font-bold">{(100 * m.yes).toFixed(0)} SOL</span></div>
                           </button>
                           <button onClick={() => openBetPanel(m.id, 'no')}
                             className={`p-4 rounded-xl border transition-colors group ${isActive && activeBetSide === 'no' ? 'bg-red-500/20 border-red-500/50' : 'bg-red-500/10 border-red-500/20 hover:border-red-500/40'}`}>
@@ -1326,7 +1305,7 @@ export default function CasinoPage() {
                               <span className="font-bold text-red-400">NO</span>
                               <span className="text-2xl font-black text-white">{m.no}x</span>
                             </div>
-                            <div className="text-xs text-slate-500">Return on 100 GOAT: <span className="text-red-400 font-bold">{(100 * m.no).toFixed(0)} GOAT</span></div>
+                            <div className="text-xs text-slate-500">Return on 100 SOL: <span className="text-red-400 font-bold">{(100 * m.no).toFixed(0)} SOL</span></div>
                           </button>
                         </div>
 
@@ -1357,10 +1336,10 @@ export default function CasinoPage() {
 
                                 {/* Preset amounts */}
                                 <div className="flex gap-2 mb-4">
-                                  {[10, 50, 100, 500].map(amt => (
+                                  {[0.05, 0.1, 0.5, 1].map(amt => (
                                     <button key={amt} onClick={() => setBetAmount(Math.min(amt, balance))}
                                       className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${betAmount === amt ? (activeBetSide === 'yes' ? 'bg-brand/20 border-brand/40 text-brand' : 'bg-red-500/20 border-red-500/40 text-red-400') : 'bg-surface-2 border-white/[0.03] text-slate-400 hover:text-white'}`}>
-                                      {amt} GOAT
+                                      {amt} SOL
                                     </button>
                                   ))}
                                   <button onClick={() => setBetAmount(balance)}
@@ -1373,7 +1352,7 @@ export default function CasinoPage() {
                                 <div className="bg-surface-1 rounded-lg p-3 mb-4">
                                   <div className="flex justify-between text-sm mb-1">
                                     <span className="text-slate-400">Your bet</span>
-                                    <span className="font-bold">{betAmount.toLocaleString()} GOAT</span>
+                                    <span className="font-bold">{betAmount.toLocaleString()} SOL</span>
                                   </div>
                                   <div className="flex justify-between text-sm mb-1">
                                     <span className="text-slate-400">Odds</span>
@@ -1387,16 +1366,16 @@ export default function CasinoPage() {
                                       <>
                                         <div className="flex justify-between text-sm mb-1">
                                           <span className="text-slate-400">Gross payout</span>
-                                          <span className="font-medium text-slate-300">{gross.toFixed(0)} GOAT</span>
+                                          <span className="font-medium text-slate-300">{gross.toFixed(0)} SOL</span>
                                         </div>
                                         <div className="flex justify-between text-sm mb-1">
                                           <span className="text-yellow-400/70 flex items-center gap-1"><Percent size={10} />Commission (12%)</span>
-                                          <span className="text-yellow-400/70">-{comm} GOAT</span>
+                                          <span className="text-yellow-400/70">-{comm} SOL</span>
                                         </div>
                                         <div className="border-t border-white/[0.03] pt-1 mt-1 flex justify-between text-sm">
                                           <span className="text-slate-400">Net payout (if win)</span>
                                           <span className={`font-black text-lg ${activeBetSide === 'yes' ? 'text-brand' : 'text-red-400'}`}>
-                                            {net.toFixed(0)} GOAT
+                                            {net.toFixed(0)} SOL
                                           </span>
                                         </div>
                                       </>
@@ -1416,14 +1395,14 @@ export default function CasinoPage() {
                                     <motion.div key="fail" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
                                       className="py-3 rounded-lg bg-red-500/20 border border-red-500/40 text-center">
                                       <X size={20} className="text-red-400 mx-auto mb-1" />
-                                      <span className="text-red-400 font-bold text-sm">Insufficient GOAT Balance</span>
+                                      <span className="text-red-400 font-bold text-sm">Insufficient SOL Balance</span>
                                     </motion.div>
                                   ) : !showConfirm ? (
                                     <motion.button key="place" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                                       onClick={() => setShowConfirm(true)}
                                       disabled={betAmount <= 0 || betAmount > balance}
                                       className={`w-full py-3 rounded-lg font-bold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${activeBetSide === 'yes' ? 'bg-brand text-black hover:bg-brand/90' : 'bg-red-500 text-white hover:bg-red-500/90'}`}>
-                                      Place {betAmount.toLocaleString()} GOAT on {activeBetSide.toUpperCase()}
+                                      Place {betAmount.toLocaleString()} SOL on {activeBetSide.toUpperCase()}
                                     </motion.button>
                                   ) : (
                                     <motion.div key="confirm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-2">
@@ -1475,7 +1454,7 @@ export default function CasinoPage() {
             </div>
             <div className="flex-1">
               <h3 className="font-bold text-lg text-yellow-400">Daily Bonus Available!</h3>
-              <p className="text-sm text-slate-500">Claim your daily GOAT tokens (250-500 GOAT)</p>
+              <p className="text-sm text-slate-500">Claim your daily bonus (0.01-0.05 SOL)</p>
             </div>
             <motion.button
               onClick={claimDailyBonus}
@@ -1507,7 +1486,7 @@ export default function CasinoPage() {
             </div>
             <div className="text-right">
               <div className={`font-bold text-lg ${resolvedPnl >= 0 ? 'text-brand' : 'text-red-400'}`}>
-                {resolvedPnl >= 0 ? '+' : ''}{resolvedPnl.toLocaleString()} GOAT
+                {resolvedPnl >= 0 ? '+' : ''}{resolvedPnl.toLocaleString()} SOL
               </div>
               <div className="text-xs text-slate-500">P&L</div>
             </div>
@@ -1544,7 +1523,7 @@ export default function CasinoPage() {
         <div>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
             <motion.div className="bg-surface-3 rounded-xl p-4 border border-white/[0.03]" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <div className="text-xs text-slate-500 mb-1">GOAT Balance</div>
+              <div className="text-xs text-slate-500 mb-1">SOL Balance</div>
               <div className="text-xl font-black text-yellow-400">{balance.toLocaleString()}</div>
             </motion.div>
             <motion.div className="bg-surface-3 rounded-xl p-4 border border-white/[0.03]" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
@@ -1587,17 +1566,17 @@ export default function CasinoPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm truncate">{bet.market}</div>
-                    <div className="text-xs text-slate-500">Odds: {bet.odds}x | Potential: {bet.potentialPayout.toFixed(0)} GOAT | {bet.category}</div>
+                    <div className="text-xs text-slate-500">Odds: {bet.odds}x | Potential: {bet.potentialPayout.toFixed(0)} SOL | {bet.category}</div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold">{bet.amount.toLocaleString()} GOAT</div>
+                    <div className="font-bold">{bet.amount.toLocaleString()} SOL</div>
                     <div className="text-xs text-yellow-400 flex items-center gap-1 justify-end"><Clock size={10} />Pending</div>
                   </div>
                 </motion.div>
               ))}
               <div className="bg-surface-3 rounded-xl border border-white/[0.03] p-4 flex items-center justify-between">
                 <span className="text-slate-400">Total at stake</span>
-                <span className="font-bold text-lg">{totalAtStake.toLocaleString()} GOAT</span>
+                <span className="font-bold text-lg">{totalAtStake.toLocaleString()} SOL</span>
               </div>
             </div>
           )}
@@ -1622,12 +1601,12 @@ export default function CasinoPage() {
                     <div className="font-medium text-sm truncate">{bet.market}</div>
                     <div className="text-xs text-slate-500">
                       Bet {bet.side.toUpperCase()} at {bet.odds}x | {bet.category}
-                      {bet.commission > 0 && <span className="text-yellow-400/70 ml-1">| {bet.commission} GOAT fee</span>}
+                      {bet.commission > 0 && <span className="text-yellow-400/70 ml-1">| {bet.commission} SOL fee</span>}
                     </div>
                   </div>
                   <div className="text-right">
                     <div className={`font-bold ${bet.won ? 'text-brand' : 'text-red-400'}`}>
-                      {bet.won ? `+${(bet.payout - bet.amount).toFixed(0)}` : `-${bet.amount}`} GOAT
+                      {bet.won ? `+${(bet.payout - bet.amount).toFixed(0)}` : `-${bet.amount}`} SOL
                     </div>
                     <div className={`text-xs ${bet.won ? 'text-brand' : 'text-red-400'}`}>{bet.won ? 'WON' : 'LOST'}</div>
                   </div>
@@ -1691,7 +1670,7 @@ export default function CasinoPage() {
                     <div className="text-xs text-slate-500">{new Date(b.time).toLocaleTimeString()}</div>
                   </div>
                   <div className={`font-bold text-sm ${b.pnl >= 0 ? 'text-brand' : 'text-red-400'}`}>
-                    {b.pnl >= 0 ? '+' : ''}{b.pnl.toLocaleString()} GOAT
+                    {b.pnl >= 0 ? '+' : ''}{b.pnl.toLocaleString()} SOL
                   </div>
                 </motion.div>
               ))}
@@ -1721,7 +1700,7 @@ export default function CasinoPage() {
             >
               <Lock size={32} className="text-yellow-400 mx-auto mb-3" />
               <h2 className="text-lg font-bold mb-2">Account Required</h2>
-              <p className="text-sm text-slate-400 mb-4">You need to be logged in to place bets and play games. Sign up to get 1,000 free GOAT tokens!</p>
+              <p className="text-sm text-slate-400 mb-4">You need to be logged in to place bets and play games. Sign up and connect your Phantom wallet to start betting with SOL.</p>
               <button
                 onClick={() => {
                   setShowLoginPrompt(false);
@@ -1812,7 +1791,7 @@ export default function CasinoPage() {
                           <Wallet size={14} className="text-emerald-400" />
                         </div>
                         <div>
-                          <div className="text-sm font-bold text-emerald-400">{wallet.type === 'phantom' ? 'Phantom' : 'MetaMask'}</div>
+                          <div className="text-sm font-bold text-emerald-400">Phantom</div>
                           <div className="text-xs text-slate-500">{wallet.chain}</div>
                         </div>
                       </div>
@@ -1821,12 +1800,12 @@ export default function CasinoPage() {
                     <div className="font-mono text-xs text-slate-400 break-all bg-surface-1 rounded-lg px-3 py-2">{wallet.address}</div>
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <div className="bg-surface-1 rounded-lg p-2 text-center">
-                        <div className="text-xs text-slate-500">GOAT Balance</div>
-                        <div className="font-bold text-yellow-400">{balance.toLocaleString()}</div>
+                        <div className="text-xs text-slate-500">SOL Balance</div>
+                        <div className="font-bold text-purple-400">{balance.toFixed(4)}</div>
                       </div>
                       <div className="bg-surface-1 rounded-lg p-2 text-center">
                         <div className="text-xs text-slate-500">USD Value</div>
-                        <div className="font-bold">${(balance * 0.01).toFixed(2)}</div>
+                        <div className="font-bold">${cryptoPrices?.SOL?.price ? (balance * cryptoPrices.SOL.price).toFixed(2) : '—'}</div>
                       </div>
                     </div>
                   </div>
@@ -1839,21 +1818,12 @@ export default function CasinoPage() {
                       className="w-full p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 hover:border-purple-500/40 transition-colors flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-purple-500/15 flex items-center justify-center text-purple-400 font-bold text-lg">P</div>
                       <div className="flex-1 text-left">
-                        <div className="font-bold">Phantom</div>
-                        <div className="text-xs text-slate-500">Connect Solana wallet</div>
+                        <div className="font-bold">Phantom Wallet</div>
+                        <div className="text-xs text-slate-500">Connect Solana wallet to bet with SOL</div>
                       </div>
                       <ChevronRight size={16} className="text-slate-500" />
                     </button>
-
-                    <button onClick={connectMetaMask}
-                      className="w-full p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 hover:border-orange-500/40 transition-colors flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-orange-500/15 flex items-center justify-center text-orange-400 font-bold text-lg">M</div>
-                      <div className="flex-1 text-left">
-                        <div className="font-bold">MetaMask</div>
-                        <div className="text-xs text-slate-500">Connect Ethereum wallet</div>
-                      </div>
-                      <ChevronRight size={16} className="text-slate-500" />
-                    </button>
+                    <p className="text-[10px] text-slate-600 text-center">Solana only. All bets and payouts in SOL.</p>
                   </>
                 )}
 
@@ -1879,19 +1849,19 @@ export default function CasinoPage() {
                 {walletAction === 'deposit' && (
                   <div className="bg-surface-3 rounded-xl p-4 border border-brand/20">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-bold text-sm text-brand">Deposit Crypto</h3>
+                      <h3 className="font-bold text-sm text-brand">Deposit SOL</h3>
                       <button onClick={() => setWalletAction(null)} className="text-xs text-slate-500 hover:text-white">Back</button>
                     </div>
                     <div className="mb-3">
-                      <label className="text-xs text-slate-500 mb-1 block">Amount (USD value)</label>
+                      <label className="text-xs text-slate-500 mb-1 block">Amount (SOL)</label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
-                        <input type="number" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} placeholder="0.00"
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400 text-sm font-bold">◎</span>
+                        <input type="number" step="0.01" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} placeholder="0.00"
                           className="w-full pl-7 pr-3 py-2.5 bg-surface-1 border border-white/[0.05] rounded-lg outline-none focus:border-brand/30 transition-colors" />
                       </div>
-                      {depositAmount && parseFloat(depositAmount) > 0 && (
+                      {depositAmount && parseFloat(depositAmount) > 0 && cryptoPrices?.SOL?.price && (
                         <div className="text-xs text-slate-500 mt-1">
-                          You will receive: <span className="text-yellow-400 font-bold">{Math.floor(parseFloat(depositAmount) * 100).toLocaleString()} GOAT</span>
+                          ≈ <span className="text-brand font-bold">${(parseFloat(depositAmount) * cryptoPrices.SOL.price).toFixed(2)} USD</span>
                         </div>
                       )}
                     </div>
@@ -1906,30 +1876,27 @@ export default function CasinoPage() {
                 {walletAction === 'withdraw' && (
                   <div className="bg-surface-3 rounded-xl p-4 border border-red-500/20">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-bold text-sm text-red-400">Withdraw to Wallet</h3>
+                      <h3 className="font-bold text-sm text-red-400">Withdraw SOL</h3>
                       <button onClick={() => setWalletAction(null)} className="text-xs text-slate-500 hover:text-white">Back</button>
                     </div>
                     <div className="mb-3">
-                      <label className="text-xs text-slate-500 mb-1 block">Amount (USD value)</label>
+                      <label className="text-xs text-slate-500 mb-1 block">Amount (SOL)</label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
-                        <input type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} placeholder="0.00"
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400 text-sm font-bold">◎</span>
+                        <input type="number" step="0.01" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} placeholder="0.00"
                           className="w-full pl-7 pr-3 py-2.5 bg-surface-1 border border-white/[0.05] rounded-lg outline-none focus:border-red-500/30 transition-colors" />
                       </div>
-                      {withdrawAmount && parseFloat(withdrawAmount) > 0 && (() => {
-                        const goat = Math.floor(parseFloat(withdrawAmount) * 100);
-                        const fee = Math.ceil(goat * 0.005);
-                        return (
-                          <div className="text-xs text-slate-500 mt-1">
-                            Deducting: <span className="text-red-400 font-bold">{goat.toLocaleString()} GOAT</span>
-                            <span className="text-yellow-400/70 ml-1">(+{fee} fee)</span>
-                            {goat > balance && <span className="text-red-500 ml-1">Insufficient balance</span>}
-                          </div>
-                        );
-                      })()}
+                      {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
+                        <div className="text-xs text-slate-500 mt-1">
+                          {parseFloat(withdrawAmount) > balance && <span className="text-red-500">Insufficient balance</span>}
+                          {cryptoPrices?.SOL?.price && parseFloat(withdrawAmount) <= balance && (
+                            <span>≈ <span className="text-red-400 font-bold">${(parseFloat(withdrawAmount) * cryptoPrices.SOL.price).toFixed(2)} USD</span></span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <button onClick={handleWithdraw}
-                      disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || Math.floor(parseFloat(withdrawAmount) * 100) > balance}
+                      disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) > balance}
                       className="w-full py-2.5 rounded-lg bg-red-500 text-white font-bold text-sm transition-colors hover:bg-red-500/90 disabled:opacity-40 disabled:cursor-not-allowed">
                       Confirm Withdrawal
                     </button>
@@ -1939,9 +1906,9 @@ export default function CasinoPage() {
                 {/* Fee structure */}
                 <div className="bg-surface-1 rounded-lg p-3 text-xs space-y-1">
                   <div className="flex justify-between text-slate-500"><span>Deposit Fee</span><span className="text-brand font-bold">0%</span></div>
-                  <div className="flex justify-between text-slate-500"><span>Withdrawal Fee</span><span className="text-yellow-400 font-bold">$2.50</span></div>
-                  <div className="flex justify-between text-slate-500"><span>Win Commission</span><span className="text-yellow-400 font-bold">12%</span></div>
-                  <div className="flex justify-between text-slate-500"><span>GOAT Rate</span><span>1 GOAT = $0.01</span></div>
+                  <div className="flex justify-between text-slate-500"><span>Withdrawal Fee</span><span className="text-purple-400 font-bold">2%</span></div>
+                  <div className="flex justify-between text-slate-500"><span>Win Commission</span><span className="text-purple-400 font-bold">12%</span></div>
+                  <div className="flex justify-between text-slate-500"><span>Currency</span><span className="text-purple-400 font-bold">SOL (Solana)</span></div>
                 </div>
               </div>
             </motion.div>
