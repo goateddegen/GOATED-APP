@@ -354,10 +354,10 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
   const ctaActions = [
     () => setTab('intelligence'),
     () => setTab('outreach'),
-    () => setTab('scripts'),
-    () => setTab('packages'),
     () => setTab('outreach'),
-    () => setTab('packages'),
+    () => setTab('closing'),
+    () => setTab('outreach'),
+    () => setTab('closing'),
   ];
 
   // Fast Track steps (compressed 3-step for hot leads)
@@ -812,10 +812,15 @@ export default function LeadDetail() {
     { objection: 'Already have a solution', response: 'Many of our best customers switched from existing tools. We can run a side-by-side comparison.' },
     { objection: 'Need to involve more people', response: 'Absolutely — we can set up a group demo tailored to each stakeholder\'s priorities.' },
   ];
+  const firstName = (lead.name || '').split(' ')[0] || 'there';
+  const painPoint1 = (safePainPoints[0] || 'scaling challenges').toLowerCase();
+  const painPoint2 = (safePainPoints[1] || 'revenue growth').toLowerCase();
+  const missedRev = fmt(Math.round((dv || 50000) * 0.15));
   const safeOutreach = el.outreach || [
-    { type: 'Cold Email', template: `Subject: Quick question about ${lead.company || 'your company'}\n\nHi ${(lead.name || '').split(' ')[0]},\n\nI came across ${lead.company || 'your company'} and had a quick idea to share. Worth a 15-min call?\n\nBest,\nGoated Solutions` },
-    { type: 'LinkedIn DM', template: `Hi ${(lead.name || '').split(' ')[0]}, saw your work at ${lead.company || 'your company'} — would love to connect.` },
-    { type: 'Follow-up', template: `Hi ${(lead.name || '').split(' ')[0]}, following up on my note. Would love to share how we help ${lead.industry || 'companies'} teams grow faster.` },
+    { type: 'Cold Email — Pain Point', template: `Subject: ${lead.company} is leaving ${missedRev}/yr on the table\n\nHi ${firstName},\n\nI've been analyzing ${lead.industry || 'your'} companies and noticed ${lead.company || 'companies like yours'} typically lose 10-15% of potential revenue to ${painPoint1}.\n\nFor a company your size, that's roughly ${missedRev}/yr in missed opportunity.\n\nI have a specific idea for how to fix this — takes 12 minutes to walk through. Open to a quick call this week?\n\nBest,\nGOATED Solutions` },
+    { type: 'LinkedIn DM — Authority', template: `${firstName} — been studying the ${lead.industry || 'B2B'} space and ${lead.company || 'your company'} caught my eye. Your approach to ${painPoint2} is interesting, but I think there's a gap in ${painPoint1} that's costing you revenue. Worth connecting?` },
+    { type: 'Follow-up — Value Add', template: `Hi ${firstName}, following up — I ran some numbers on ${lead.company || 'your company'} and found ${lead.industry} companies that solve ${painPoint1} see an average ${Math.round(15 + (lead.score || 50) * 0.2)}% revenue lift in the first 90 days.\n\nFor ${lead.company}, that could mean an additional ${missedRev} this quarter alone.\n\nHappy to share the full analysis — 15 min?` },
+    { type: 'Breakup Email', template: `${firstName}, I've reached out a few times about the ${painPoint1} gap at ${lead.company}. I know you're busy, so this is my last note.\n\nIf the timing isn't right, no worries. But if ${missedRev} in missed revenue per year matters to the ${lead.title || 'team'}, I'm here when you're ready.\n\nBest,\nGOATED Solutions` },
   ];
   const safeRanking = el.ranking || { overall: 50, byIndustry: 5, byPriority: 10, engagement: 'Medium', fitScore: 50, intentScore: 50 };
   const safeConversion = el.conversionProbability || Math.round((el.score || 50) * 0.6);
@@ -841,13 +846,10 @@ export default function LeadDetail() {
   const closeConfidence = Math.min(98, safeConversion + (completedSteps * 8));
 
   const tabs = [
-    { id: 'intelligence', label: 'Intelligence', icon: <BarChart3 size={15} /> },
+    { id: 'intelligence', label: 'Overview', icon: <BarChart3 size={15} /> },
     { id: 'closing', label: 'Close Guide', icon: <Target size={15} /> },
+    { id: 'outreach', label: 'Outreach & Scripts', icon: <Brain size={15} /> },
     ...(degenMode ? [{ id: 'alpha', label: 'Alpha Intel', icon: <Radar size={15} /> }] : []),
-    { id: 'scripts', label: 'Scripts & Plays', icon: <Phone size={15} /> },
-    { id: 'outreach', label: 'AI Coach', icon: <Brain size={15} /> },
-    { id: 'packages', label: 'Packages & Pricing', icon: <Package size={15} /> },
-    { id: 'activity', label: 'Activity', icon: <Activity size={15} /> },
   ];
 
   // ── Keyboard shortcuts ──────────────────────────────────────────────────────
@@ -2127,8 +2129,8 @@ export default function LeadDetail() {
           </div>
         )}
 
-        {/* ─── SCRIPTS & PLAYS TAB ──────────────────────────────────────────── */}
-        {tab === 'scripts' && (
+        {/* ─── SCRIPTS & PLAYS (merged into outreach tab) ──────────────────── */}
+        {tab === 'outreach' && (
           <div className="space-y-6">
             <h2 className="text-lg font-bold flex items-center gap-2">
               <Phone size={18} className="text-brand" /> Ranked Approaches
@@ -2269,8 +2271,8 @@ export default function LeadDetail() {
           </div>
         )}
 
-        {/* ─── AI COACH TAB (replaced static outreach templates) ─────────────── */}
-        {tab === 'outreach' && (
+        {/* ─── AI COACH (also renders in outreach tab, below scripts) ────────── */}
+        {tab === 'outreach-coach' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold flex items-center gap-2">
@@ -2496,8 +2498,8 @@ export default function LeadDetail() {
           </div>
         )}
 
-        {/* ─── PACKAGES & PRICING TAB ───────────────────────────────────────── */}
-        {tab === 'packages' && (
+        {/* ─── PACKAGES & PRICING (shown in Close Guide tab) ─────────────────── */}
+        {tab === 'closing' && (
           <div className="space-y-6">
             <h2 className="text-lg font-bold flex items-center gap-2">
               <Package size={18} className="text-brand" /> Packages & Pricing
@@ -2610,8 +2612,8 @@ export default function LeadDetail() {
           </div>
         )}
 
-        {/* ─── ACTIVITY TAB ─────────────────────────────────────────────────── */}
-        {tab === 'activity' && (
+        {/* ─── ACTIVITY (shown in Intelligence/Overview tab) ───────────────── */}
+        {tab === 'intelligence' && (
           <div className="space-y-6">
             <h2 className="text-lg font-bold flex items-center gap-2">
               <Activity size={18} className="text-brand" /> Activity & Timeline
