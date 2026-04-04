@@ -335,7 +335,6 @@ export default async function handler(req, res) {
       wallet: 'The user is on the WALLET page — focus on revenue tracking, commission analysis, earnings projections, and financial optimization.',
       admin: 'The user is on the ADMIN page — focus on team performance, system health, user analytics, and platform optimization.',
       home: 'The user is on the HOME page — give a broad overview and guide them to the most relevant features for their question.',
-      launchpad: 'The user is on the LAUNCHPAD page — focus on live events, startup incubation, prediction market bets, and high-growth opportunities.',
     };
     const pageContext = PAGE_CONTEXT_MAP[currentPage] || PAGE_CONTEXT_MAP.home;
 

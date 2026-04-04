@@ -146,22 +146,39 @@ function VoiceBrief({ lead, el, dv, safeConversion, safePainPoints }) {
 
   const generateBriefText = useCallback(() => {
     const name = lead.name || 'Unknown';
+    const firstName = (lead.name || '').split(' ')[0] || 'this contact';
     const company = lead.company || 'Unknown Company';
-    const industry = lead.industry || 'Unknown Industry';
-    const amount = dv ? `$${dv.toLocaleString()}` : 'Unknown';
+    const industry = lead.industry || 'their industry';
+    const amount = dv ? `$${dv.toLocaleString()}` : 'an undisclosed amount';
     const prob = safeConversion || 0;
-    const painPoint = safePainPoints?.[0] || 'scaling challenges';
-    const strategy = lead.status === 'negotiation'
-      ? 'Push for verbal commitment today with a simplified proposal and urgency-based close.'
-      : lead.status === 'qualified'
-      ? 'Schedule a tailored demo focusing on their primary pain point and present ROI projections.'
-      : lead.status === 'contacted'
-      ? 'Send a follow-up referencing your last interaction with a relevant case study.'
-      : lead.status === 'won'
-      ? 'Request a referral and explore upsell opportunities.'
-      : 'Initiate first contact via their preferred channel with a personalized value proposition.';
+    const pain1 = (safePainPoints?.[0] || 'operational inefficiency').toLowerCase();
+    const pain2 = (safePainPoints?.[1] || 'customer acquisition').toLowerCase();
+    const lostRev = `$${Math.round(dv * 0.15).toLocaleString()}`;
+    const annualLeak = `$${Math.round(dv * 0.3).toLocaleString()}`;
+    const employees = el.employees ? `${el.employees.toLocaleString()} employees` : 'a mid-size team';
 
-    return `Quick brief on ${name} at ${company}. They're in ${industry}, deal worth ${amount} with a ${prob}% close probability. Main pain point is ${painPoint}. Here's what I'd do next: ${strategy}`;
+    // Industry-specific revenue angle
+    const industryAngles = {
+      'SaaS': `${company} is likely hemorrhaging revenue through ${pain1}. SaaS companies this size typically lose 15 to 25% of potential ARR to churn and inefficient customer acquisition.`,
+      'E-commerce': `${company} is probably bleeding money on ${pain1}. E-commerce businesses with ${employees} usually have a 60 to 70% cart abandonment rate — that's ${annualLeak} per year walking out the door.`,
+      'Fintech': `${company} has a compliance and growth tension. Fintech firms fighting ${pain1} typically overspend 20 to 30% on customer acquisition while leaving existing revenue unoptimized.`,
+      'Healthcare': `${company} is sitting on a patient acquisition cost problem. Healthcare orgs dealing with ${pain1} are usually spending 3x what they should on new patient acquisition.`,
+      'MarTech': `${company} has a classic attribution gap. MarTech companies struggling with ${pain1} typically waste 30% of ad spend because they can't track what's actually converting.`,
+      'Construction': `${company} is losing bids and margin to ${pain1}. Construction firms this size usually leave ${annualLeak} per year on the table through manual estimating and poor lead follow-up.`,
+    };
+    const industryAngle = industryAngles[lead.industry] || `${company} is dealing with ${pain1} and ${pain2}. Companies in ${industry} with ${employees} typically lose ${annualLeak} per year in missed revenue and inefficient operations.`;
+
+    const strategy = lead.status === 'negotiation'
+      ? `${firstName} is in negotiation mode. Don't let this cool off. The money angle: every week they delay costs them roughly ${lostRev} in continued revenue leakage from ${pain1}. Push for the close today — frame it as stopping the bleeding, not adding a cost.`
+      : lead.status === 'qualified'
+      ? `${firstName} is qualified and engaged. Now's the time to hit them with the numbers. Show them the ${lostRev} they're losing monthly to ${pain1}, then demo exactly how you fix it. Make the ROI so obvious that NOT buying feels like the risky move.`
+      : lead.status === 'contacted'
+      ? `You've touched base with ${firstName} but haven't hooked them yet. Follow up with a hard number — tell them ${company} is leaving ${annualLeak} per year on the table because of ${pain1}. That's the kind of stat that gets a callback.`
+      : lead.status === 'won'
+      ? `${firstName} is already a customer — nice. Now squeeze the upsell. Their ${pain2} problem is still unsolved and that's another ${lostRev} in value you can unlock. Ask for a referral while you're at it.`
+      : `${firstName} is fresh. Lead with the pain, not the pitch. Open with: "${company} is probably losing ${lostRev} a month to ${pain1} — I can show you exactly where." That's how you get the meeting.`;
+
+    return `Alright, here's the play on ${name} at ${company}. ${industryAngle} This is a ${amount} opportunity with a ${prob}% close probability. ${strategy}`;
   }, [lead, el, dv, safeConversion, safePainPoints]);
 
   const handlePlay = useCallback(() => {
@@ -319,14 +336,24 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
   const recommendedPkg = safePackages.find(p => p.recommended) || safePackages[1];
   const roiMultiple = recommendedPkg ? ((dv / (recommendedPkg.price * 12)) || 0).toFixed(1) : 0;
 
-  // "What to Say Right Now" scripts per step
+  // Lost revenue calculations for psychology-driven scripts
+  const monthlyLeak = fmt(Math.round(dv * 0.15));
+  const annualLeak = fmt(Math.round(dv * 0.15 * 12));
+  const costOfInaction = fmt(Math.round(dv * 0.15 * 3)); // 3 months of delay
+  const fn = (lead.name || '').split(' ')[0];
+  const recPkg = safePackages.find(p => p.recommended);
+  const recPrice = fmt(recPkg?.price || Math.round(dv * 0.025));
+  const pp1 = (safePainPoints[0] || 'operational gaps').toLowerCase();
+  const pp2 = (safePainPoints[1] || 'customer acquisition costs').toLowerCase();
+
+  // "What to Say Right Now" scripts per step — tailored to THIS lead's pain + lost revenue
   const stepScripts = [
-    { script: safeCallScript.opener || `Hi ${(lead.name || '').split(' ')[0]}, I came across ${lead.company} and noticed some interesting opportunities in your space. Do you have 2 minutes?`, label: 'Opening Script' },
-    { script: (safeOutreach[0]?.template) || `Subject: Quick idea for ${lead.company}\n\nHi ${(lead.name || '').split(' ')[0]},\n\nI noticed ${lead.company} is growing fast in ${lead.industry}. I had an idea that could accelerate that growth — worth a 15-min chat?\n\nBest,\nGOATED Solutions`, label: 'Outreach Template' },
-    { script: `${(lead.name || '').split(' ')[0]}, thanks for taking the time. I've done some research on ${lead.company} and I'm curious — what's your #1 growth challenge right now?\n\n[Listen]\n\nInteresting. A lot of ${lead.industry} companies tell us the same thing. How is that affecting your bottom line?\n\n[Listen]\n\nGot it. What if I could show you how we solve exactly that for companies like yours?`, label: 'Discovery Script' },
-    { script: `Based on our conversation, here's what I've put together for ${lead.company}:\n\nPackage: ${safePackages.find(p => p.recommended)?.name || 'Growth'} Plan\nInvestment: ${fmt(safePackages.find(p => p.recommended)?.price || Math.round(dv * 0.025))}/mo\nProjected ROI: ${fmt(Math.round(dv * 0.15))} in the first 90 days\n\nThis includes everything we discussed to solve ${safePainPoints[0]?.toLowerCase() || 'your core challenges'}.`, label: 'Proposal Script' },
-    { script: `I completely understand your concern about [objection]. Let me address that directly:\n\n${safeObjections[0]?.response || 'Our ROI typically covers the investment within 90 days.'}\n\nWhat if we did a 30-day pilot so you can see the results firsthand with zero risk?`, label: 'Negotiation Script' },
-    { script: `${(lead.name || '').split(' ')[0]}, based on everything we've discussed, it sounds like this is a great fit. Let's get the paperwork started today so we can begin delivering results by next week.\n\nI'll send over the agreement now — it's a simple ${safePackages.find(p => p.recommended)?.name || 'Growth'} plan at ${fmt(safePackages.find(p => p.recommended)?.price || Math.round(dv * 0.025))}/mo. Fair?`, label: 'Closing Script' },
+    { script: `${fn}, I've been studying ${lead.company}'s ${lead.industry} operation and I found something that might be costing you money. Companies your size dealing with ${pp1} typically lose ${monthlyLeak} per month in missed revenue. I have a specific fix — got 2 minutes?`, label: 'Pain-First Opener' },
+    { script: `Subject: ${lead.company} is leaving ${annualLeak}/yr on the table\n\nHi ${fn},\n\nI analyzed ${lead.industry} companies with ${(lead.employees || 50).toLocaleString()}+ employees and found that ${pp1} typically costs businesses like ${lead.company} around ${monthlyLeak}/month in lost revenue and inflated customer acquisition costs.\n\nI have a 12-minute walkthrough showing exactly where the leak is and how to plug it. Worth a quick look?\n\nBest,\nGOATED Solutions`, label: 'Lost Revenue Email' },
+    { script: `${fn}, thanks for the time. Before I pitch anything, I want to understand YOUR numbers. Walk me through how ${lead.company} handles ${pp1} today.\n\n[Listen — let them talk]\n\nSo when that breaks down, what happens to your customer acquisition cost? What does it actually cost you to land a new client right now?\n\n[Listen — anchor the pain in dollars]\n\nGot it. So between ${pp1} and ${pp2}, you're looking at roughly ${monthlyLeak}/month in leakage. What if I showed you exactly how to cut that in half within 60 days?`, label: 'Discovery — Dollar Anchoring' },
+    { script: `${fn}, based on what you told me about ${lead.company}'s challenges with ${pp1} and ${pp2}, here's the math:\n\nYou're currently losing: ~${monthlyLeak}/mo (${annualLeak}/yr)\nOur fix costs: ${recPrice}/mo\nProjected recovery: ${fmt(Math.round(dv * 0.15))} in 90 days\nNet ROI: ${((dv * 0.15) / ((recPkg?.price || dv * 0.025) * 3)).toFixed(1)}x in the first quarter\n\nEvery month you wait costs ${lead.company} another ${monthlyLeak}. That's the real price of doing nothing.`, label: 'ROI-Anchored Proposal' },
+    { script: `I hear you, ${fn}. But let's look at this differently:\n\nThe cost of this solution: ${recPrice}/mo\nThe cost of NOT solving ${pp1}: ${monthlyLeak}/mo\n\nYou're already paying ${monthlyLeak}/mo for this problem — you're just paying it in lost revenue instead of a solution. A 30-day pilot proves the ROI with zero long-term commitment. If we don't deliver, you walk away. But if we do — and we will — you just stopped a ${annualLeak}/yr bleed.`, label: 'Cost-of-Inaction Close' },
+    { script: `${fn}, here's where we are: ${lead.company} has been losing ${monthlyLeak} every month to ${pp1}. We've shown you exactly how to fix it. Every week you wait to sign is another ${fmt(Math.round(dv * 0.15 / 4))} walking out the door.\n\nI'm sending the ${recPkg?.name || 'Growth'} agreement over now — ${recPrice}/mo, 30-day performance guarantee. Let's stop the bleeding and start recovering that ${annualLeak}/yr. Ready to go?`, label: 'Urgency Close' },
   ];
 
   // CTA actions per step
@@ -341,11 +368,11 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
     () => setTab('closing'),
   ];
 
-  // Fast Track steps (compressed 3-step for hot leads)
+  // Fast Track steps (compressed 3-step for hot leads) — revenue-loss driven
   const fastTrackSteps = [
-    { step: 1, name: 'Power Call', desc: 'Skip research — go straight to a high-energy discovery + pitch call', script: `${(lead.name || '').split(' ')[0]}! I'll be direct — I found something that could add ${fmt(Math.round(dv * 0.15))} to ${lead.company}'s revenue this quarter. Got 10 minutes?` },
-    { step: 2, name: 'Power Pitch', desc: 'Combine discovery + proposal into one compelling presentation', script: `Here's what I see: ${lead.company} is losing roughly ${fmt(Math.round(dv * 0.1))}/mo on ${safePainPoints[0]?.toLowerCase() || 'missed opportunities'}. Our ${safePackages.find(p => p.recommended)?.name || 'Growth'} plan fixes that in 30 days. Investment: ${fmt(safePackages.find(p => p.recommended)?.price || Math.round(dv * 0.025))}/mo. ROI: ${fmt(Math.round(dv * 0.15))} in 90 days.` },
-    { step: 3, name: 'Power Close', desc: 'Handle objections on the spot and close in the same conversation', script: `${(lead.name || '').split(' ')[0]}, everything we discussed makes sense for ${lead.company}. Let's get started today — I'll send the agreement right now and we'll have you onboarded by end of week. Deal?` },
+    { step: 1, name: 'Pain Strike', desc: `Lead with ${lead.company}'s specific revenue leak — make them feel the cost of inaction`, script: `${fn}, I'll cut straight to it — I ran the numbers on ${lead.company} and your ${pp1} problem is costing you roughly ${monthlyLeak} every single month. That's ${annualLeak} a year walking out the door. I can show you exactly where the leak is in 10 minutes. Worth a look?` },
+    { step: 2, name: 'Dollar Demo', desc: 'Show the math: what they lose vs. what the fix costs — make inaction the expensive option', script: `Here's ${lead.company}'s situation in black and white:\n\nYou're losing: ${monthlyLeak}/mo to ${pp1}\nYour customer acquisition cost is inflated by ${pp2}\nOur fix: ${recPrice}/mo — pays for itself ${((dv * 0.15) / ((recPkg?.price || dv * 0.025))).toFixed(0)}x over\n\nYou're already spending ${monthlyLeak}/mo on this problem — you're just spending it on lost revenue instead of a solution.` },
+    { step: 3, name: 'Bleed Close', desc: `Every day without signing costs ${lead.company} real money — close on the urgency`, script: `${fn}, we've seen the numbers. ${lead.company} is bleeding ${monthlyLeak} every month from ${pp1}. That's ${fmt(Math.round(dv * 0.15 / 4))} per week. Every week you wait to decide is another ${fmt(Math.round(dv * 0.15 / 4))} gone.\n\nI'm sending the agreement now. ${recPrice}/mo, 30-day money-back guarantee. Let's stop the bleeding today.` },
   ];
 
   return (
@@ -374,21 +401,39 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
         </div>
       </div>
 
-      {/* Commission Banner */}
-      <div className="p-4 rounded-xl border border-brand/20 bg-brand/[0.03] flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <DollarSign size={20} className="text-brand shrink-0" />
-          <div>
-            <div className="text-sm font-bold text-brand">Potential Commission</div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Based on deal value of {fmt(dv)} at 12% commission rate
-            </p>
+      {/* Revenue Impact Banner */}
+      <div className="p-4 rounded-xl border border-brand/20 bg-brand/[0.03]">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <DollarSign size={20} className="text-brand shrink-0" />
+            <div>
+              <div className="text-sm font-bold text-brand">Deal Economics</div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                What {lead.company} loses by NOT buying vs. what you earn when they do
+              </p>
+            </div>
+          </div>
+          <div className="text-right shrink-0 ml-4">
+            <div className="text-[10px] text-slate-500 uppercase tracking-wider">Your Commission</div>
+            <div className="text-xl font-black text-brand">{fmt(commission)}</div>
           </div>
         </div>
-        <div className="text-right shrink-0 ml-4">
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider">Your Commission</div>
-          <div className="text-xl font-black text-brand">{fmt(commission)}</div>
-          <div className="text-[10px] text-slate-500">if you close this deal</div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="p-2.5 rounded-lg bg-red-500/[0.06] border border-red-500/15 text-center">
+            <div className="text-[10px] text-red-400 uppercase tracking-wider font-bold">Their Monthly Loss</div>
+            <div className="text-base font-bold text-red-400">{fmt(Math.round(dv * 0.15))}</div>
+            <div className="text-[10px] text-slate-500">from {(safePainPoints[0] || 'inaction').toLowerCase()}</div>
+          </div>
+          <div className="p-2.5 rounded-lg bg-orange-500/[0.06] border border-orange-500/15 text-center">
+            <div className="text-[10px] text-orange-400 uppercase tracking-wider font-bold">Annual Revenue Leak</div>
+            <div className="text-base font-bold text-orange-400">{fmt(Math.round(dv * 0.15 * 12))}</div>
+            <div className="text-[10px] text-slate-500">cost of doing nothing</div>
+          </div>
+          <div className="p-2.5 rounded-lg bg-brand/[0.06] border border-brand/15 text-center">
+            <div className="text-[10px] text-brand uppercase tracking-wider font-bold">Deal Value</div>
+            <div className="text-base font-bold text-brand">{fmt(dv)}</div>
+            <div className="text-[10px] text-slate-500">{fmt(commission)} commission</div>
+          </div>
         </div>
       </div>
 
@@ -574,30 +619,42 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
         </div>
       </GlassCard>
 
-      {/* AI Recommendations */}
+      {/* AI Recommendations — Tailored to THIS business */}
       <GlassCard highlight>
         <h3 className="text-sm font-bold text-brand mb-3 flex items-center gap-2">
           <Brain size={16} />
-          AI Close Recommendations
+          AI Close Strategy for {lead.company}
         </h3>
         <div className="space-y-2 text-xs text-slate-300">
-          <p>Based on analysis of {lead.name}'s profile, similar deals, and current pipeline stage:</p>
-          <ul className="space-y-1.5 mt-2">
+          <p className="font-medium text-white">Why {lead.company} needs to buy — and why NOW:</p>
+          <ul className="space-y-2.5 mt-2">
+            <li className="flex items-start gap-2">
+              <DollarSign size={12} className="text-red-400 shrink-0 mt-0.5" />
+              <span><strong className="text-red-400">Revenue leak:</strong> {lead.company}'s struggle with {(safePainPoints[0] || 'operational gaps').toLowerCase()} is costing them an estimated <strong className="text-white">{fmt(Math.round(dv * 0.15))}/mo ({fmt(Math.round(dv * 0.15 * 12))}/yr)</strong>. Frame every conversation around stopping this bleed — not "adding a tool."</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Users size={12} className="text-orange-400 shrink-0 mt-0.5" />
+              <span><strong className="text-orange-400">Customer acquisition:</strong> {lead.industry} companies with {(lead.employees || 50).toLocaleString()}+ employees typically overspend <strong className="text-white">{Math.round(20 + (lead.score % 15))}%</strong> on customer acquisition due to {(safePainPoints[1] || 'inefficient processes').toLowerCase()}. Show {(lead.name || '').split(' ')[0]} the CAC math — it's the fastest way to get budget approval.</span>
+            </li>
             <li className="flex items-start gap-2">
               <Zap size={12} className="text-brand shrink-0 mt-0.5" />
-              <span>Best approach: <strong className="text-white">{el.bestMethod || 'Direct call'}</strong> — leads in {lead.industry} respond {Math.round(15 + lead.score * 0.3)}% better to this channel</span>
+              <span><strong className="text-brand">Attack vector:</strong> Lead with <strong className="text-white">{el.bestMethod || 'direct call'}</strong> — {lead.industry} {lead.title?.toLowerCase().includes('founder') || lead.title?.toLowerCase().includes('ceo') ? 'founders respond to direct, numbers-first outreach' : lead.title?.toLowerCase().includes('vp') || lead.title?.toLowerCase().includes('director') ? 'directors want proof of ROI before looping in their exec team' : 'decision-makers at this level need to see the cost of inaction vs. cost of solution'}. {lead.momentum === 'rising' ? 'Momentum is rising — strike while intent is hot.' : 'Don\'t wait for momentum — create urgency with the lost revenue angle.'}</span>
             </li>
             <li className="flex items-start gap-2">
               <Timer size={12} className="text-yellow-400 shrink-0 mt-0.5" />
-              <span>Optimal timing: <strong className="text-white">{el.decisionTimeline || '1-3 months'}</strong> — act fast, {lead.momentum === 'rising' ? 'momentum is rising' : 'before competitor locks them in'}</span>
+              <span><strong className="text-yellow-400">Cost of delay:</strong> Every month {lead.company} delays costs them <strong className="text-white">{fmt(Math.round(dv * 0.15))}</strong>. In {el.decisionTimeline || '3 months'}, that's <strong className="text-white">{fmt(Math.round(dv * 0.15 * 3))}</strong> gone. Use this number in your close: <em>"The question isn't whether you can afford this — it's whether you can afford another {fmt(Math.round(dv * 0.15))} month of doing nothing."</em></span>
             </li>
             <li className="flex items-start gap-2">
-              <AlertTriangle size={12} className="text-orange-400 shrink-0 mt-0.5" />
-              <span>Key risk: <strong className="text-white">{safePainPoints[0]}</strong> — address this in your first interaction to build credibility</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <DollarSign size={12} className="text-brand shrink-0 mt-0.5" />
-              <span>Expected deal range: <strong className="text-white">{fmt(Math.round(dv * 0.8))} — {fmt(Math.round(dv * 1.2))}</strong> based on company size and industry benchmarks</span>
+              <Crosshair size={12} className="text-cyan-400 shrink-0 mt-0.5" />
+              <span><strong className="text-cyan-400">Killer angle for {lead.industry}:</strong> {
+                lead.industry === 'SaaS' ? `SaaS companies at ${lead.company}'s stage are obsessed with NRR and CAC payback. Lead with: "Every point of churn costs you ${fmt(Math.round(dv * 0.05))} — we cut churn drivers by 30%."` :
+                lead.industry === 'E-commerce' ? `E-commerce is all about conversion rate and AOV. Lead with: "Your cart abandonment is costing ${fmt(Math.round(dv * 0.2))}/mo — we recover 15-20% of abandoned carts."` :
+                lead.industry === 'Fintech' ? `Fintech buyers care about compliance risk and processing costs. Lead with: "Non-compliance penalties in your space average ${fmt(Math.round(dv * 0.25))} — we de-risk that completely."` :
+                lead.industry === 'Healthcare' ? `Healthcare decision-makers respond to patient acquisition cost and compliance. Lead with: "Your patient acquisition cost is probably 3x higher than it should be — we've cut it by 40% for similar practices."` :
+                lead.industry === 'MarTech' ? `MarTech buyers need attribution proof. Lead with: "You're likely wasting 30% of ad spend on channels that don't convert — we show you exactly where."` :
+                lead.industry === 'Construction' ? `Construction firms bleed margin on manual estimates and slow follow-up. Lead with: "Every missed bid costs ${fmt(Math.round(dv * 0.08))} — we cut your estimate-to-close time by 50%."` :
+                `${lead.industry} companies at ${lead.company}'s size are usually losing ${fmt(Math.round(dv * 0.15))}/mo to ${(safePainPoints[0] || 'process inefficiency').toLowerCase()}. Lead with the specific dollar amount — make the pain tangible and impossible to ignore.`
+              }</span>
             </li>
           </ul>
         </div>
@@ -732,13 +789,13 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
           </div>
           <div className="p-4 rounded-xl bg-black/30 border border-brand/15">
             <p className="text-sm text-slate-200 leading-relaxed">
-              {currentStep && currentStep.step === 1 && `Complete your research on ${lead.company}. Review the AI Executive Summary and Pain Point analysis above, then prepare a personalized ${el.bestMethod || 'outreach'} message targeting "${safePainPoints[0]}". Move to Initial Outreach within 24 hours.`}
-              {currentStep && currentStep.step === 2 && `Send your initial outreach via ${el.bestMethod || 'email'} today. Use the AI-generated scripts from the Outreach tab. Reference "${safePainPoints[0]}" in your opener. Set a 48-hour follow-up reminder.`}
-              {currentStep && currentStep.step === 3 && `Schedule and conduct your discovery call with ${lead.name}. Focus on confirming pain points (${safePainPoints.slice(0, 2).join(', ')}), verifying budget authority, and establishing their timeline. Use AI coaching mode for real-time objection handling.`}
-              {currentStep && currentStep.step === 4 && `Prepare and send the ${safePackages.find(p => p.recommended)?.name || 'Growth'} proposal at ${fmt(safePackages.find(p => p.recommended)?.price || Math.round(dv * 0.025))}/mo. Include custom ROI projections showing ${roiMultiple}x return. Schedule a follow-up within 3 days.`}
-              {currentStep && currentStep.step === 5 && `${lead.name} is in negotiation. Lead with the industry objection handlers above. If budget is the concern, offer the 30-day pilot. Target closing this week — momentum is ${lead.momentum}.`}
-              {currentStep && currentStep.step === 6 && `Finalize the contract with ${lead.name} at ${fmt(dv)}. Process payment, set up onboarding, and send a welcome sequence. Your commission: ${fmt(Math.round(dv * 0.12))}.`}
-              {!currentStep && `Review the intelligence dashboard and prepare a personalized outreach strategy for ${lead.name}.`}
+              {currentStep && currentStep.step === 1 && `${lead.company} is losing ~${fmt(Math.round(dv * 0.15))}/mo to ${(safePainPoints[0] || 'operational gaps').toLowerCase()}. Review the pain point analysis above and craft your opening around this number. Your first message should make ${(lead.name || '').split(' ')[0]} feel the cost of inaction — not hear a sales pitch. Prepare a ${el.bestMethod || 'direct outreach'} message and move to contact within 24 hours.`}
+              {currentStep && currentStep.step === 2 && `Hit ${(lead.name || '').split(' ')[0]} today via ${el.bestMethod || 'email'}. Lead with the money: "${lead.company} is leaving ${fmt(Math.round(dv * 0.15 * 12))}/yr on the table because of ${(safePainPoints[0] || 'process gaps').toLowerCase()}." Don't sell — diagnose. Your goal is to get them to confirm the pain and agree to a discovery call.`}
+              {currentStep && currentStep.step === 3 && `Discovery call with ${(lead.name || '').split(' ')[0]}: Your job is to get them to say the dollar amount out loud. Ask: "What does ${(safePainPoints[0] || 'this problem').toLowerCase()} cost ${lead.company} per month?" Then anchor: "So you're spending ${fmt(Math.round(dv * 0.15))}/mo on a problem that has a ${fmt(safePackages.find(p => p.recommended)?.price || Math.round(dv * 0.025))}/mo fix." Verify budget authority and timeline.`}
+              {currentStep && currentStep.step === 4 && `Send the proposal NOW. Frame it as: "${lead.company} is currently paying ${fmt(Math.round(dv * 0.15))}/mo for ${(safePainPoints[0] || 'this problem').toLowerCase()} — you're just paying it in lost revenue instead of a solution. The ${safePackages.find(p => p.recommended)?.name || 'Growth'} plan at ${fmt(safePackages.find(p => p.recommended)?.price || Math.round(dv * 0.025))}/mo pays for itself ${roiMultiple}x over." Follow up in 48 hours — every day of delay costs them.`}
+              {currentStep && currentStep.step === 5 && `${(lead.name || '').split(' ')[0]} is negotiating — they WANT to buy but need justification. Reframe any budget objection: "The question isn't whether you can afford ${fmt(safePackages.find(p => p.recommended)?.price || Math.round(dv * 0.025))}/mo — it's whether you can afford another ${fmt(Math.round(dv * 0.15))} month of doing nothing." Offer the 30-day pilot if needed. Close this week.`}
+              {currentStep && currentStep.step === 6 && `Lock it down. ${lead.company} at ${fmt(dv)} — your commission: ${fmt(Math.round(dv * 0.12))}. Send the agreement, process payment, and schedule onboarding. Then immediately ask: "Who else in ${lead.industry} should I be talking to?" Every won deal should generate 2-3 warm referrals.`}
+              {!currentStep && `Start with the revenue leak: ${lead.company} is losing ~${fmt(Math.round(dv * 0.15))}/mo to ${(safePainPoints[0] || 'inefficiency').toLowerCase()}. Build your outreach around making ${(lead.name || '').split(' ')[0]} feel that cost.`}
             </p>
           </div>
           <div className="flex items-center gap-2 mt-3">
@@ -802,23 +859,25 @@ export default function LeadDetail() {
     { name: 'Enterprise', price: Math.round(dv * 0.05), features: ['Everything in Growth', 'Dedicated CSM', 'Custom API', 'SLA guarantees', 'White-glove onboarding'], recommended: false },
   ];
   const safeObjections = el.objections || [
-    { objection: 'Budget constraints', response: 'Our ROI typically covers the investment within 90 days. We can start with a pilot.' },
-    { objection: 'Already have a solution', response: 'Many of our best customers switched from existing tools. We can run a side-by-side comparison.' },
-    { objection: 'Need to involve more people', response: 'Absolutely — we can set up a group demo tailored to each stakeholder\'s priorities.' },
+    { objection: 'Budget constraints', response: `You're already spending ${fmt(Math.round(dv * 0.15))}/mo on this problem — you're just spending it on lost revenue instead of a solution. Our fix costs a fraction of what ${(safePainPoints[0] || 'inaction').toLowerCase()} is costing you. 30-day pilot, zero risk — if we don't prove the ROI, you walk away.` },
+    { objection: 'Already have a solution', response: `If your current solution was working, ${(safePainPoints[0] || 'this problem').toLowerCase()} wouldn't still be costing ${lead.company} ${fmt(Math.round(dv * 0.15))}/mo. We've displaced ${lead.competitorUsing || 'incumbents'} at 3 similar ${lead.industry} companies this quarter. Let's run a side-by-side — if your current tool wins, I'll tell you myself.` },
+    { objection: 'Need to involve more people', response: `Smart move. Here's what usually gets buy-in: show them the ${fmt(Math.round(dv * 0.15 * 12))}/yr revenue leak from ${(safePainPoints[0] || 'current gaps').toLowerCase()} and the ${fmt(Math.round(dv * 0.15 * 3))} recovered in the first quarter. I can prep a stakeholder deck with those numbers — who else needs to see this?` },
   ];
+  const safePainPoints = el.painPoints || lead.painPoints || ['Scaling challenges', 'Revenue growth', 'Operational efficiency'];
   const firstName = (lead.name || '').split(' ')[0] || 'there';
   const painPoint1 = (safePainPoints[0] || 'scaling challenges').toLowerCase();
   const painPoint2 = (safePainPoints[1] || 'revenue growth').toLowerCase();
   const missedRev = fmt(Math.round((dv || 50000) * 0.15));
+  const cacInflation = fmt(Math.round(dv * 0.08));
+  const quarterlyLoss = fmt(Math.round(dv * 0.15 * 3));
   const safeOutreach = el.outreach || [
-    { type: 'Cold Email — Pain Point', template: `Subject: ${lead.company} is leaving ${missedRev}/yr on the table\n\nHi ${firstName},\n\nI've been analyzing ${lead.industry || 'your'} companies and noticed ${lead.company || 'companies like yours'} typically lose 10-15% of potential revenue to ${painPoint1}.\n\nFor a company your size, that's roughly ${missedRev}/yr in missed opportunity.\n\nI have a specific idea for how to fix this — takes 12 minutes to walk through. Open to a quick call this week?\n\nBest,\nGOATED Solutions` },
-    { type: 'LinkedIn DM — Authority', template: `${firstName} — been studying the ${lead.industry || 'B2B'} space and ${lead.company || 'your company'} caught my eye. Your approach to ${painPoint2} is interesting, but I think there's a gap in ${painPoint1} that's costing you revenue. Worth connecting?` },
-    { type: 'Follow-up — Value Add', template: `Hi ${firstName}, following up — I ran some numbers on ${lead.company || 'your company'} and found ${lead.industry} companies that solve ${painPoint1} see an average ${Math.round(15 + (lead.score || 50) * 0.2)}% revenue lift in the first 90 days.\n\nFor ${lead.company}, that could mean an additional ${missedRev} this quarter alone.\n\nHappy to share the full analysis — 15 min?` },
-    { type: 'Breakup Email', template: `${firstName}, I've reached out a few times about the ${painPoint1} gap at ${lead.company}. I know you're busy, so this is my last note.\n\nIf the timing isn't right, no worries. But if ${missedRev} in missed revenue per year matters to the ${lead.title || 'team'}, I'm here when you're ready.\n\nBest,\nGOATED Solutions` },
+    { type: 'Cold Email — Revenue Leak', template: `Subject: ${lead.company} is burning ${missedRev}/mo on ${painPoint1}\n\nHi ${firstName},\n\nI analyze ${lead.industry} companies for a living, and ${lead.company} has a pattern I see all the time: ${painPoint1} is silently draining revenue — typically ${missedRev}/mo for a company your size.\n\nOn top of that, your customer acquisition costs are probably ${Math.round(20 + (lead.score || 50) * 0.15)}% higher than they need to be because ${painPoint2} is making every new customer more expensive to land.\n\nI built a 12-minute breakdown showing exactly where the money is going and how to plug the leak. No pitch, just math.\n\nOpen to seeing the numbers?\n\nBest,\nGOATED Solutions` },
+    { type: 'LinkedIn DM — CAC Attack', template: `${firstName} — quick question. Do you know what it actually costs ${lead.company} to acquire a new customer right now?\n\n${lead.industry} companies dealing with ${painPoint1} typically overspend ${cacInflation}/yr on customer acquisition alone — and most don't realize it until someone shows them the math.\n\nI've got the breakdown for companies your size. Worth a 10-min look?` },
+    { type: 'Follow-up — Competitor Displacement', template: `Hi ${firstName}, following up with some numbers that might surprise you.\n\n${lead.industry} companies that fix ${painPoint1} see:\n• ${Math.round(15 + (lead.score || 50) * 0.2)}% revenue lift in 90 days\n• ${Math.round(20 + (lead.score || 50) * 0.1)}% drop in customer acquisition cost\n• ${missedRev}/mo back in recovered revenue\n\n${lead.competitorUsing ? `I know you're using ${lead.competitorUsing} — we've displaced them at 3 similar ${lead.industry} companies this quarter alone. Happy to share what changed.` : `For ${lead.company}, that's ${quarterlyLoss} recovered in the first quarter.`}\n\nWorth a quick look?` },
+    { type: 'Breakup Email — Cost of Inaction', template: `${firstName}, last note from me.\n\nSince I first reached out, ${lead.company} has likely lost another ${missedRev}+ to ${painPoint1}. That's not a guess — it's what the data shows for ${lead.industry} companies your size.\n\nIf stopping a ${fmt(Math.round(dv * 0.15 * 12))}/yr revenue leak ever becomes a priority for the ${lead.title || 'leadership team'}, I've got the playbook ready.\n\nNo hard feelings either way. The numbers will still be here when the timing is right.\n\nBest,\nGOATED Solutions` },
   ];
   const safeRanking = el.ranking || { overall: 50, byIndustry: 5, byPriority: 10, engagement: 'Medium', fitScore: 50, intentScore: 50 };
   const safeConversion = el.conversionProbability || Math.round((el.score || 50) * 0.6);
-  const safePainPoints = el.painPoints || lead.painPoints || ['Scaling challenges', 'Revenue growth', 'Operational efficiency'];
   const safeBuyingSignals = el.buyingSignals || lead.buyingSignals || [];
 
   const pc = priorityColors[lead.priority] || priorityColors.medium;
@@ -989,10 +1048,9 @@ export default function LeadDetail() {
                 onClick={(e) => { if (!lead.phone) { e.preventDefault(); alert('No phone number available. Enrich this lead to unlock contact data.'); } }}>
                 <Phone size={14} /> Call
               </a>
-              <a href={`mailto:${lead.email || ''}`}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.02] border border-white/[0.05] text-sm hover:bg-white/[0.04] transition-colors">
-                <Mail size={14} /> Email
-              </a>
+              <button onClick={() => setTab('closing')} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-500/15 border border-cyan-500/20 text-sm text-cyan-400 hover:bg-cyan-500/25 transition-colors">
+                <Target size={14} /> Close Guide
+              </button>
               <button onClick={() => setTab('outreach')} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/15 border border-purple-500/20 text-sm text-purple-400 hover:bg-purple-500/25 transition-colors">
                 <Brain size={14} /> AI Coach
               </button>
@@ -1093,24 +1151,22 @@ export default function LeadDetail() {
                 <span className="text-white font-medium">{lead.name}</span> is {lead.title} at{' '}
                 <span className="text-white font-medium">{lead.company}</span>, a {lead.industry} company{' '}
                 {el.employees ? `with approximately ${el.employees.toLocaleString()} employees` : 'operating in the mid-market segment'}.{' '}
-                The business has an estimated annual revenue of{' '}
-                <span className="text-brand font-medium">{fmt(dv * (8 + (lead.score % 7)))}</span>{' '}
-                with projected profit margins of {12 + (lead.score % 18)}%.{' '}
+                Estimated annual revenue: <span className="text-brand font-medium">{fmt(dv * (8 + (lead.score % 7)))}</span>{' '}
+                with projected margins of {12 + (lead.score % 18)}%.{' '}
                 {safePainPoints.length > 0 && (
-                  <>Key vulnerability areas include {safePainPoints.slice(0, 2).map(p => p.toLowerCase()).join(' and ')}, {' '}
-                  which represent significant revenue leakage estimated at {fmt(dv * 0.15)} to {fmt(dv * 0.35)} annually. </>
+                  <><span className="text-red-400 font-medium">Critical revenue leaks</span> identified in {safePainPoints.slice(0, 2).map(p => p.toLowerCase()).join(' and ')}, {' '}
+                  costing an estimated <span className="text-red-400 font-medium">{fmt(Math.round(dv * 0.15))}/mo ({fmt(Math.round(dv * 0.15 * 12))}/yr)</span> in lost revenue.{' '}
+                  Customer acquisition costs are likely inflated {Math.round(20 + (lead.score % 15))}% above industry benchmark due to {(safePainPoints[1] || 'process inefficiency').toLowerCase()}.{' '}</>
                 )}
                 {safeBuyingSignals.length > 0 && (
                   <>Active buying signals — {safeBuyingSignals.slice(0, 2).join(', ').toLowerCase()} — indicate {' '}
                   a <span className="text-brand font-medium">{safeConversion}% conversion probability</span>.{' '}</>
                 )}
-                Our analysis suggests a potential deposit/engagement value of{' '}
-                <span className="text-white font-medium">{fmt(Math.round(dv * 0.08))} to {fmt(Math.round(dv * 0.25))}</span>{' '}
-                based on deal structure, with a recommended approach via{' '}
-                <span className="text-white font-medium">{el.bestMethod || 'direct outreach'}</span>{' '}
-                targeting a {el.decisionTimeline || '1-3 month'} close window.{' '}
-                {lead.competitorUsing && <>Currently using <span className="text-yellow-400">{lead.competitorUsing}</span>, presenting a displacement opportunity. </>}
-                Priority classification: <span className="font-medium" style={{ color: pc.hex }}>{lead.priority?.toUpperCase()}</span>.
+                Recommended attack: <span className="text-white font-medium">{el.bestMethod || 'direct outreach'}</span>{' '}
+                leading with the <span className="text-red-400">{fmt(Math.round(dv * 0.15))}/mo revenue leak</span> — make the cost of inaction louder than the cost of buying.{' '}
+                Close window: {el.decisionTimeline || '1-3 months'}.{' '}
+                {lead.competitorUsing && <>Currently on <span className="text-yellow-400">{lead.competitorUsing}</span> — displacement opportunity via superior ROI and {(safePainPoints[0] || 'pain point').toLowerCase()} resolution. </>}
+                Priority: <span className="font-medium" style={{ color: pc.hex }}>{lead.priority?.toUpperCase()}</span>.
               </p>
             </div>
           </div>

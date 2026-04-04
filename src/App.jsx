@@ -22,8 +22,7 @@ const TrendsPage = React.memo(lazy(() => import('./pages/TrendsPage')));
 // const MarketPage = lazy(() => import('./pages/MarketPage'));
 const WalletPage = React.memo(lazy(() => import('./pages/WalletPage')));
 const AdminPage = React.memo(lazy(() => import('./pages/AdminPage')));
-// BuilderPage and WhopPage removed — don't help users close deals
-const LaunchPadPage = React.memo(lazy(() => import('./pages/LaunchPadPage')));
+// BuilderPage, WhopPage, LaunchPadPage removed
 const CasinoPage = React.memo(lazy(() => import('./pages/CasinoPage')));
 // CommsPage and FinderPage removed — outreach built into leads side
 
@@ -388,7 +387,7 @@ export default function App() {
       // If keybinds modal is open, handle navigation keys then close
       if (state.keybindsOpen) {
         e.preventDefault();
-        const keybindNav = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', u: 'whop', p: 'casino', m: 'trends', r: 'launchpad' };
+        const keybindNav = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', u: 'whop', p: 'casino', m: 'trends' };
         const target = keybindNav[key];
         setKeybindsOpen(false);
         if (target) { navTo(target); }
@@ -417,7 +416,7 @@ export default function App() {
 
       // Navigation map — single lookup
       // Debounce same-key rapid presses (200ms) to reduce CSR overhead on low-memory devices
-      const navMap = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', u: 'whop', r: 'launchpad', p: 'casino' };
+      const navMap = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', u: 'whop', p: 'casino' };
       const navTarget = navMap[key];
       if (navTarget) {
         const now = Date.now();
@@ -452,7 +451,7 @@ export default function App() {
       case 'wallet': return <WalletPage />;
       case 'admin': return <AdminPage />;
       // builder and whop removed — don't help users close deals
-      case 'launchpad': return <LaunchPadPage />;
+      // LaunchPad removed
       case 'casino': return <CasinoPage />;
       // comms and finder removed
       default: return <HomePage />;

@@ -370,11 +370,6 @@ const FEATURE_LINKS = {
   solana:     { page: 'wallet',    label: 'Wallet',     icon: Wallet },
   dashboard:  { page: 'dashboard', label: 'Dashboard',  icon: BarChart3 },
   admin:      { page: 'admin',     label: 'Admin',      icon: LayoutDashboard },
-  launchpad:  { page: 'launchpad', label: 'LaunchPad',  icon: Zap },
-  launch:     { page: 'launchpad', label: 'LaunchPad',  icon: Zap },
-  events:     { page: 'launchpad', label: 'LaunchPad',  icon: Zap },
-  incubator:  { page: 'launchpad', label: 'LaunchPad',  icon: Zap },
-  startup:    { page: 'launchpad', label: 'LaunchPad',  icon: Zap },
   gamble:     { page: 'casino',    label: 'Casino',     icon: Flame },
   betting:    { page: 'casino',    label: 'Casino',     icon: Flame },
   casino:     { page: 'casino',    label: 'Casino',     icon: Flame },
@@ -415,12 +410,6 @@ const PAGE_PROMPTS = {
     { label: 'Competitor landscape', icon: Target },
     { label: 'Emerging opportunities', icon: Lightbulb },
     { label: 'Investment signals', icon: Zap },
-  ],
-  launchpad: [
-    { label: 'Top incubator projects', icon: Zap },
-    { label: 'Prediction accuracy', icon: Target },
-    { label: 'Market event analysis', icon: Globe },
-    { label: 'Startup idea generator', icon: Lightbulb },
   ],
   casino: [
     { label: 'Best odds right now', icon: Flame },
@@ -496,12 +485,6 @@ const DEGEN_PROMPTS = {
     { label: 'Find me asymmetric bets', icon: Lightbulb },
     { label: 'Whale movement alerts', icon: Zap },
   ],
-  launchpad: [
-    { label: 'Which events are printing money?', icon: Zap },
-    { label: 'Give me a 100x startup idea', icon: Lightbulb },
-    { label: 'Best degen bets right now', icon: Globe },
-    { label: 'Ape into the hottest event', icon: Target },
-  ],
   admin: [
     { label: 'Show me the revenue matrix', icon: BarChart3 },
     { label: 'Who are the power users?', icon: Users },
@@ -559,11 +542,6 @@ const DEGEN_QUICK_ACTIONS = {
     { label: 'Degen Playbook', prompt: 'Degen pipeline playbook: aggressive close strategies for every deal in negotiation. No paper hands allowed.', icon: Flame },
     { label: 'Send It Analysis', prompt: 'Full send it analysis on my pipeline: what is mooning, what is dumping, and where do I double down?', icon: Sparkles },
   ],
-  launchpad: [
-    { label: 'Best Alpha RN', prompt: 'Best alpha on LaunchPad right now: which events and predictions have the fattest edge?', icon: Zap },
-    { label: 'Degen Bets', prompt: 'Show me the highest-conviction degen bets on LaunchPad. I want asymmetric upside. NFA.', icon: Flame },
-    { label: 'Send It Analysis', prompt: 'Send it analysis on live events: probability edges, expected value, and where to deploy. Go aggressive.', icon: Sparkles },
-  ],
 };
 
 // ─── CONTEXTUAL QUICK ACTION BUTTONS (below chat input) ──────────────
@@ -588,12 +566,6 @@ const QUICK_ACTIONS = {
     { label: 'Best Bets', prompt: 'What are the best prediction market bets right now? Show me odds, edge, and expected value.', icon: Flame },
     { label: 'Spread Comparison', prompt: 'Compare spreads across Kalshi and Polymarket — where are the pricing inefficiencies?', icon: BarChart3 },
     { label: 'DEGEN Mode Picks', prompt: 'Give me your highest conviction DEGEN plays — high risk, high reward. I want 10x potential.', icon: Zap },
-  ],
-  launchpad: [
-    { label: 'Event Analysis', prompt: 'Analyze the hottest live events on LaunchPad — which ones have the best risk/reward right now?', icon: Zap },
-    { label: 'Startup Ideas', prompt: 'Generate 3 high-potential startup ideas based on current market trends, incubator data, and prediction market signals', icon: Lightbulb },
-    { label: 'Best Bets Now', prompt: 'What are the best live events to bet on right now? Show me probability, edge, and expected value.', icon: Target },
-    { label: 'Incubator Review', prompt: 'Review the current incubator projects — which ones have the highest growth potential and why?', icon: Activity },
   ],
 };
 
@@ -655,7 +627,6 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
       'dashboard': 'dashboard', 'dash': 'dashboard',
       'trend': 'trends', 'trendpulse': 'trends', 'market': 'trends', 'alpha': 'trends',
       'casino': 'casino', 'game': 'casino', 'roulette': 'casino', 'bet': 'casino',
-      'launch': 'launchpad', 'launchpad': 'launchpad', 'incubator': 'launchpad',
       'wallet': 'wallet', 'earnings': 'wallet', 'commission': 'wallet',
       'admin': 'admin', 'settings': 'admin',
       'home': 'home',
@@ -1123,7 +1094,6 @@ const ORB_CONTEXT = {
   home: { badge: null, modeLabel: 'Revenue Agent', icon: Sparkles },
   wallet: { badge: null, modeLabel: 'Wallet Intel', icon: Wallet },
   admin: { badge: null, modeLabel: 'Admin Console', icon: Shield },
-  launchpad: { badge: null, modeLabel: 'LaunchPad', icon: Zap },
 };
 
 const PROACTIVE_SUGGESTIONS = {
@@ -1147,11 +1117,6 @@ const PROACTIVE_SUGGESTIONS = {
     'Your betting edge is +12% this session',
     'Best odds shifted on 3 markets',
   ],
-  launchpad: [
-    'New prediction market opened with thin spreads',
-    '2 incubator projects hit funding milestones',
-    'Pipeline predictions recalibrated with latest signals',
-  ],
 };
 
 const DEGEN_PROACTIVE_SUGGESTIONS = {
@@ -1174,11 +1139,6 @@ const DEGEN_PROACTIVE_SUGGESTIONS = {
     'Giga-brain EV play just dropped — send it',
     'You\'re up +12% this session — absolute degen alpha',
     'Odds shifting on 3 markets — whale money moving in',
-  ],
-  launchpad: [
-    'New market opened with thin spreads — early ape advantage',
-    '2 incubator projects hit milestones — 100x potential. NFA',
-    'Pipeline signals are strong — keep executing. WAGMI',
   ],
 };
 
@@ -1281,7 +1241,6 @@ const CONTEXT_TIPS = {
   trends: "BTC sentiment shifted bullish \u2014 see alpha plays",
   dashboard: "Your pipeline is empty \u2014 let me find leads",
   casino: "Try Price Prediction \u2014 most popular game",
-  launchpad: "10 live predictions to track",
   home: "Welcome! Press Shift+D for DEGEN mode",
 };
 
@@ -1668,7 +1627,7 @@ export default function AIOverlay() {
           const navMatch = data.content.match(/\[NAVIGATE:(\w+)\]/);
           if (navMatch) {
             const navPage = navMatch[1];
-            if (['leads', 'trends', 'dashboard', 'casino', 'launchpad', 'wallet', 'admin'].includes(navPage)) {
+            if (['leads', 'trends', 'dashboard', 'casino', 'wallet', 'admin'].includes(navPage)) {
               setPage(navPage);
               window.scrollTo(0, 0);
             }
@@ -1695,7 +1654,6 @@ export default function AIOverlay() {
       trends: /\b(trend|market|crypto|btc|eth|sol|sentiment|chart|price|trading|alpha)\b/,
       dashboard: /\b(dashboard|stats|analytics|kpi|overview|performance)\b/,
       wallet: /\b(wallet|balance|commission|earning|payment|payout|invoic)\b/,
-      launchpad: /\b(launch|incubat|startup|event|program)\b/,
     };
     for (const [page, regex] of Object.entries(PAGE_INTENTS)) {
       if (regex.test(lower) && currentPage !== page) {
@@ -1774,7 +1732,7 @@ export default function AIOverlay() {
           .then(data => {
             if (!data.fallback && data.content) {
               const navM = data.content.match(/\[NAVIGATE:(\w+)\]/);
-              if (navM && ['leads','trends','dashboard','casino','launchpad','wallet','admin'].includes(navM[1])) {
+              if (navM && ['leads','trends','dashboard','casino','wallet','admin'].includes(navM[1])) {
                 setPage(navM[1]);
                 window.scrollTo(0, 0);
               }

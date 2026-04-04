@@ -8,7 +8,6 @@ const nav = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', key: 'D' },
   { id: 'trends', icon: TrendingUp, label: 'TrendPulse & Markets', key: 'T', badge: 'ALPHA' },
   { id: 'leads', icon: Users, label: 'Leads', key: 'L' },
-  { id: 'launchpad', icon: Rocket, label: 'LaunchPad', key: 'R', badge: 'NEW' },
   { id: 'casino', icon: Dice5, label: 'Casino', key: 'P', badge: 'LIVE' },
   { id: 'wallet', icon: Wallet, label: 'Wallet', key: 'W' },
   { id: 'admin', icon: Shield, label: 'Admin', key: 'X', badge: 'PRO' },

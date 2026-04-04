@@ -396,7 +396,6 @@ export default function HomePage() {
     { icon: Globe, title: 'Sentiment Fusion', desc: 'Multi-source sentiment engine: Fear/Greed Index, news NLP, market momentum, social signals. All fused into one composite score. Absolute alpha.', page: 'trends', color: '#ec4899', stats: 'Multi-source' },
     { icon: Wallet, title: 'Solana Wallet', desc: 'Native Phantom integration. USDC settlements, on-chain commission tracking, instant payouts. Your bags, your keys, your money.', page: 'wallet', color: '#f97316', stats: 'Solana-first' },
     { icon: BarChart3, title: 'Command Center', desc: 'Full pipeline analytics, autonomous AI agents, real-time KPIs. One dashboard to rule them all. Total fucking control.', page: 'dashboard', color: '#8b5cf6', stats: 'Full control' },
-    { icon: Rocket, title: 'LaunchPad', desc: 'Live events, real-time prediction betting, startup incubator. Take positions on market moves, sentiment shifts, and breaking news. Monetize everything.', page: 'launchpad', color: '#ec4899', stats: 'Live events' },
   ];
 
   const stats = [
@@ -486,7 +485,7 @@ export default function HomePage() {
             <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500 mb-8">
               <span className="flex items-center gap-1.5"><Shield size={14} className="text-brand" />$0 platform fee</span>
               <span className="text-slate-700">|</span>
-              <span className="flex items-center gap-1.5"><DollarSign size={14} className="text-yellow-400" />12% on closed deals</span>
+              <span className="flex items-center gap-1.5"><DollarSign size={14} className="text-yellow-400" />Keep 88% of every deal</span>
               <span className="text-slate-700">|</span>
               <span className="flex items-center gap-1.5"><Wallet size={14} className="text-cyan-400" />Instant SOL payouts</span>
             </div>
@@ -660,70 +659,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══ LAUNCHPAD UPSELL ═══ */}
-      <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-pink-500/[0.02] to-transparent" />
-        <div className="max-w-5xl mx-auto">
-          <motion.div
-            className="rounded-2xl border border-pink-500/20 p-8 sm:p-10 relative overflow-hidden"
-            style={{ background: 'linear-gradient(135deg, rgba(236,72,153,0.04) 0%, rgba(0,0,0,0.97) 50%, rgba(168,85,247,0.04) 100%)' }}
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <div className="absolute inset-0 rounded-2xl" style={{ boxShadow: '0 0 40px rgba(236,72,153,0.08)' }} />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center relative">
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-400 text-xs font-bold uppercase tracking-wider mb-4">
-                  <Rocket size={14} />LaunchPad
-                </div>
-                <h2 className="text-3xl sm:text-4xl font-black mb-4">
-                  Live Prediction Markets.{' '}
-                  <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text' }}>
-                    Real Money.
-                  </span>
-                </h2>
-                <p className="text-lg text-slate-400 mb-6 leading-relaxed">
-                  Take positions on crypto moves, political outcomes, tech launches, and macro events. Real-time odds from Kalshi and Polymarket — plus GOATED exclusive markets. Monetize your predictions.
-                </p>
-                <div className="flex flex-wrap gap-3 mb-6">
-                  {['Crypto', 'Politics', 'Tech', 'Macro', 'Sports', 'Culture'].map(tag => (
-                    <span key={tag} className="px-3 py-1.5 rounded-full text-xs font-medium bg-pink-500/10 border border-pink-500/20 text-pink-300">{tag}</span>
-                  ))}
-                </div>
-                <GlowButton onClick={() => setPage('launchpad')} color="pink">
-                  <Rocket size={18} />Enter LaunchPad<ArrowRight size={16} />
-                </GlowButton>
-              </div>
-
-              {/* Live stats panel */}
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { value: liveEvents, label: 'Live Events', color: '#ec4899', suffix: '' },
-                  { value: '25', label: 'Active Markets', color: '#a855f7', suffix: '+' },
-                  { value: '$0', label: 'Volume Today', color: '#06b6d4', suffix: '' },
-                  { value: '89', label: 'Accuracy Rate', color: '#10b981', suffix: '%' },
-                ].map((stat, i) => (
-                  <motion.div
-                    key={i}
-                    className="bg-black/60 backdrop-blur rounded-xl p-5 border border-white/[0.04] text-center group hover:border-pink-500/20 transition-all duration-300"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.1 }}
-                  >
-                    <div className="text-3xl font-black mb-1" style={{ color: stat.color }}>
-                      {stat.value}{stat.suffix}
-                    </div>
-                    <div className="text-xs text-slate-500 uppercase tracking-wider">{stat.label}</div>
-                    {i === 0 && <div className="w-2 h-2 rounded-full bg-pink-500 mx-auto mt-2 animate-pulse" />}
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
 
       {/* ═══ ELEVATOR PITCH ═══ */}
       <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
@@ -828,7 +763,7 @@ export default function HomePage() {
               { emoji: '\u{1F4B0}', title: 'Money Printer Go Brr', desc: 'Direct outreach that converts like crazy. VoIP, SMS, voicemail drops — skip the inbox, go direct to the decision maker. Close while your competition writes follow-up emails.', stat: '10x', label: 'Reply rate vs email' },
               { emoji: '\u{1F410}', title: 'GOATED AI Agent', desc: 'Your always-on degen co-pilot. Real-time coaching, research, scripts — like having a senior closer whispering alpha in your ear 24/7. No sleep needed.', stat: '24/7', label: 'Always available' },
               { emoji: '\u{1F4C8}', title: 'Moon Signals', desc: 'Cross-platform sentiment analysis. Instagram, TikTok, crypto Twitter — see the trend before it moons. Ape into the right deal at the right time.', stat: 'LIVE', label: 'Real-time data' },
-              { emoji: '\u26A1', title: 'Zero Fee, No Cap', desc: 'Free forever. We only eat when you eat. 12% on closed deals, 15% for $100K+ whales. No monthly bags being drained. This is a no-brainer, anon.', stat: '$0', label: 'Monthly cost' },
+              { emoji: '\u26A1', title: 'Zero Fee, No Cap', desc: 'Free forever. You keep the bag — we just take a small 12% platform fee on closed deals (15% on $100K+ whales). No subscriptions, no monthly drain. Pure upside.', stat: '$0', label: 'Monthly cost' },
             ].map((item, i) => (
               <div key={i} className="bg-black/40 backdrop-blur rounded-xl p-6 border border-white/[0.03] group hover:border-orange-500/20 transition-all duration-300 relative overflow-hidden hover:-translate-y-1">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(249,115,22,0.05) 0%, transparent 70%)' }} />
@@ -949,7 +884,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <div className="font-bold text-white mb-1">We bet on you</div>
-                  <p className="text-sm text-slate-400">$0 upfront. We only make money when you make money. 12% on closed deals, 15% on $100K+ deals. Our incentives are perfectly aligned with yours.</p>
+                  <p className="text-sm text-slate-400">$0 upfront. You close the deal, you keep the bag. We take a 12% platform fee (15% on $100K+ deals). That's it. Our incentives are perfectly aligned.</p>
                 </div>
                 <div>
                   <div className="font-bold text-white mb-1">All-in-one monster</div>
@@ -975,7 +910,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto mb-10">
             {[
               { icon: DollarSign, title: '$0 Platform Fee', value: '$0', desc: 'Full access to every tool, every feature, every lead. Zero upfront cost.', color: '#10b981', label: 'Always free' },
-              { icon: Target, title: 'Deal Commission', value: '12%', desc: 'Commission on closed deals. 15% on $100K+ deals. We eat when you eat.', color: '#f59e0b', label: 'On closed deals' },
+              { icon: Target, title: 'Platform Fee', value: '12%', desc: 'You close the deal, keep 88%. We take a 12% platform fee. 15% on $100K+ deals.', color: '#f59e0b', label: 'GOATED fee' },
               { icon: TrendingUp, title: 'Betting Spreads', value: '2-5%', desc: 'Spread on prediction market bets. Better odds, more markets.', color: '#a855f7', label: 'On market bets' },
               { icon: Wallet, title: 'Crypto Transactions', value: '1-2%', desc: 'Small fee on crypto transactions. Lower than any exchange.', color: '#06b6d4', label: 'On transactions' },
             ].map((item, i) => (
@@ -1003,10 +938,10 @@ export default function HomePage() {
           </div>
 
           {/* Competitor comparison callout */}
-          <motion.div className="max-w-4xl mx-auto mb-10 p-5 rounded-xl border border-red-500/20 bg-red-500/5 text-center" initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <p className="text-sm text-red-400 font-bold uppercase tracking-wider mb-2">vs. The Competition</p>
-            <p className="text-lg text-slate-300">Competitors charge <span className="text-red-400 font-black">$99-$299/mo</span> regardless of whether you close a single deal.</p>
-            <p className="text-sm text-slate-500 mt-2">Apollo ($39-149/mo), ZoomInfo ($14K+/yr), Outreach ($100+/seat), Gong ($100+/seat) -- all charge you whether you make money or not. We don't.</p>
+          <motion.div className="max-w-4xl mx-auto mb-10 p-5 rounded-xl border border-brand/20 bg-brand/5 text-center" initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+            <p className="text-sm text-brand font-bold uppercase tracking-wider mb-2">Why this model wins</p>
+            <p className="text-lg text-slate-300">Other platforms charge <span className="text-red-400 font-black">$99-$14K+/yr</span> whether you close deals or not.</p>
+            <p className="text-sm text-slate-500 mt-2">GOATED is free until you profit. You close the deal, keep the majority, we take a small cut. Zero risk, pure upside.</p>
           </motion.div>
 
           {/* Commission-only model — no tiers, no subscriptions */}
@@ -1015,14 +950,14 @@ export default function HomePage() {
             <p className="text-slate-400 mb-6">Every user gets full access to every feature from day one. We make money when you make money — that's it.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div className="p-4 rounded-xl bg-black/40 border border-white/[0.05]">
-                <div className="text-3xl font-black text-yellow-400 mb-1">12%</div>
-                <div className="text-sm text-slate-300 font-bold">Standard Commission</div>
-                <p className="text-xs text-slate-500 mt-1">On every closed deal. Full platform access. No caps.</p>
+                <div className="text-3xl font-black text-brand mb-1">88%</div>
+                <div className="text-sm text-slate-300 font-bold">You Keep</div>
+                <p className="text-xs text-slate-500 mt-1">Close the deal, keep 88%. GOATED takes a 12% platform fee. No caps, no hidden costs.</p>
               </div>
               <div className="p-4 rounded-xl bg-black/40 border border-white/[0.05]">
-                <div className="text-3xl font-black text-pink-400 mb-1">15%</div>
-                <div className="text-sm text-slate-300 font-bold">Partner / $100K+ Deals</div>
-                <p className="text-xs text-slate-500 mt-1">Approved partners and whale deals. Priority support + co-marketing.</p>
+                <div className="text-3xl font-black text-brand mb-1">85%</div>
+                <div className="text-sm text-slate-300 font-bold">You Keep on $100K+</div>
+                <p className="text-xs text-slate-500 mt-1">Whale deals ($100K+) have a 15% platform fee. You still keep the lion's share.</p>
               </div>
             </div>
             <GlowButton onClick={() => setPage('leads')} color="brand">
@@ -1032,122 +967,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══ GOATED PARTNER PROGRAM ═══ */}
-      <section className="px-6 py-16 sm:py-24 bg-surface-1/30 relative overflow-hidden">
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(236,72,153,0.02) 0%, rgba(168,85,247,0.02) 50%, rgba(16,185,129,0.02) 100%)' }} />
-        <div className="absolute top-20 right-20 w-72 h-72 bg-pink-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 left-20 w-56 h-56 bg-purple-500/5 rounded-full blur-3xl" />
-
-        <div className="max-w-5xl mx-auto relative">
-          <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-400 text-xs font-bold uppercase tracking-wider mb-4">
-              <Rocket size={14} />Partner Incubator
-            </div>
-            <h2 className="text-3xl lg:text-5xl font-black mb-4">The <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-brand bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text' }}>GOATED Partner Program</span></h2>
-            <p className="text-lg text-slate-400 max-w-3xl mx-auto leading-relaxed mb-3">
-              Free to join. Interview to get in. We handpick partners who are serious about closing, then give them everything they need to scale. This isn't a subscription — it's an <span className="text-pink-400 font-bold">incubator for closers</span>.
-            </p>
-            <p className="text-sm text-slate-500 max-w-2xl mx-auto">Apply, interview, get approved. Approved partners earn 15% commission on every closed deal, get priority support, and we actively help you grow.</p>
-          </motion.div>
-
-          {/* How It Works */}
-          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-12">
-            {[
-              { step: '01', title: 'Apply', desc: 'Fill out a short application telling us about your sales background, niche, and goals. Takes 2 minutes.', color: '#ec4899', icon: Rocket },
-              { step: '02', title: 'Interview', desc: 'Quick call with our team. We want to know you are serious, coachable, and ready to close. No fluff — just vibes and ambition.', color: '#a855f7', icon: Users },
-              { step: '03', title: 'Scale', desc: 'Get approved and unlock 15% commissions, priority leads, co-marketing, and a dedicated success manager who helps you win.', color: '#10b981', icon: TrendingUp },
-            ].map((item, i) => (
-              <motion.div
-                key={i}
-                className="bg-black/50 backdrop-blur rounded-2xl p-6 border border-white/[0.05] relative hover:-translate-y-1 transition-all duration-300 flex flex-col"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `${item.color}15`, color: item.color }}>
-                    <item.icon size={20} />
-                  </div>
-                  <span className="text-xs font-mono uppercase tracking-wider" style={{ color: item.color }}>Step {item.step}</span>
-                </div>
-                <h3 className="text-xl font-black text-white mb-2">{item.title}</h3>
-                <p className="text-sm text-slate-400 leading-relaxed flex-1">{item.desc}</p>
-              </motion.div>
-            ))}
-          </StaggeredCards>
-
-          {/* Partner Benefits */}
-          <motion.div
-            className="rounded-2xl border border-pink-500/20 p-8 sm:p-10 mb-12 relative overflow-hidden"
-            style={{ background: 'linear-gradient(135deg, rgba(236,72,153,0.04) 0%, rgba(0,0,0,0.97) 50%, rgba(168,85,247,0.04) 100%)' }}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-              <div>
-                <h3 className="text-2xl sm:text-3xl font-black mb-4">What Approved Partners <span className="text-pink-400">Get</span></h3>
-                <p className="text-slate-400 mb-6 leading-relaxed">
-                  This is not a generic affiliate program. We treat partners like founders in our incubator. You get real support, real promotion, and a team that wants you to win as bad as you do.
-                </p>
-                <div className="space-y-4">
-                  {[
-                    { icon: DollarSign, text: '15% commission on every closed deal — highest in the game' },
-                    { icon: Users, text: 'Dedicated success manager to help you scale and close bigger' },
-                    { icon: Megaphone, text: 'We promote your wins across GOATED channels and community' },
-                    { icon: Bot, text: 'Priority AI lead matching and first access to new features' },
-                    { icon: BarChart3, text: 'Real-time dashboard with your pipeline, earnings, and performance' },
-                    { icon: Crown, text: 'Partner spotlight features, case studies, and co-marketing' },
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-3 text-sm text-slate-300">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-pink-500/10 text-pink-400 flex-shrink-0">
-                        <item.icon size={16} />
-                      </div>
-                      {item.text}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Partner Stats */}
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { value: '15', label: 'Commission Rate', color: '#ec4899', suffix: '%' },
-                  { value: '$0', label: 'Cost to Join', color: '#10b981', suffix: '' },
-                  { value: '89', label: 'Active Partners', color: '#a855f7', suffix: '+' },
-                  { value: '48hr', label: 'Approval Time', color: '#f59e0b', suffix: '' },
-                ].map((stat, i) => (
-                  <motion.div
-                    key={i}
-                    className="bg-black/60 backdrop-blur rounded-xl p-5 border border-white/[0.04] text-center group hover:border-pink-500/20 transition-all duration-300"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.1 }}
-                  >
-                    <div className="text-3xl font-black mb-1" style={{ color: stat.color }}>
-                      {stat.value}{stat.suffix}
-                    </div>
-                    <div className="text-xs text-slate-500 uppercase tracking-wider">{stat.label}</div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Apply CTA */}
-          <motion.div className="text-center" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
-            <div className="inline-flex flex-col items-center gap-4 p-6 rounded-2xl border border-pink-500/20 bg-pink-500/5">
-              <p className="text-xl sm:text-2xl font-black text-white">Ready to go pro? <span className="text-pink-400">Apply to the Partner Program.</span></p>
-              <p className="text-sm text-slate-400 max-w-lg">Free to join. No fees, no subscriptions, no catches. Just an interview to make sure you are built for this. Approved partners earn 15% on every deal with priority support and co-marketing.</p>
-              <GlowButton onClick={() => setAccountModalOpen(true)} color="pink">
-                <Rocket size={18} />Apply to Partner Program<ArrowRight size={16} />
-              </GlowButton>
-            </div>
-          </motion.div>
-        </div>
-      </section>
 
       {/* ═══ FINAL CTA ═══ */}
       <section className="px-6 py-20 sm:py-28 relative overflow-hidden">
@@ -1161,7 +980,7 @@ export default function HomePage() {
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-slate-500 mb-8">
               <span>$0 platform fee</span>
               <span className="text-slate-700">|</span>
-              <span>12% on closed deals (15% for partners)</span>
+              <span>Keep 88% of every deal you close</span>
               <span className="text-slate-700">|</span>
               <span>2-5% betting spreads</span>
               <span className="text-slate-700">|</span>

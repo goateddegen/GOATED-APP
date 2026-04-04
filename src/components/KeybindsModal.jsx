@@ -11,7 +11,6 @@ const sections = [
       { key: 'D', label: 'Dashboard', icon: LayoutDashboard, color: '#06b6d4' },
       { key: 'T/C', label: 'TrendPulse & Markets', icon: TrendingUp, color: '#a855f7' },
       { key: 'L', label: 'Leads', icon: Users, color: '#f59e0b' },
-      { key: 'R', label: 'LaunchPad', icon: Rocket, color: '#ec4899' },
       { key: 'P', label: 'Casino', icon: Dice5, color: '#eab308' },
       { key: 'W', label: 'Wallet', icon: Wallet, color: '#3b82f6' },
       { key: 'X', label: 'Admin', icon: Shield, color: '#ef4444' },

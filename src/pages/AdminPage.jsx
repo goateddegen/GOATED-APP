@@ -290,84 +290,7 @@ function generateSparkData(base, variance, count = 20) {
   return data;
 }
 
-// ─── LaunchPad Application Review ────────────────────────────────────────────
-const LP_APPS_KEY = 'goated_launchpad_applications';
-const LP_APPROVED_KEY = 'goated_launchpad_approved';
-
-function LaunchPadReview() {
-  const [apps, setApps] = useState([]);
-  const [approved, setApproved] = useState([]);
-
-  useEffect(() => {
-    try { setApps(JSON.parse(localStorage.getItem(LP_APPS_KEY) || '[]')); } catch { setApps([]); }
-    try { setApproved(JSON.parse(localStorage.getItem(LP_APPROVED_KEY) || '[]')); } catch { setApproved([]); }
-  }, []);
-
-  const handleApprove = (app) => {
-    const newApproved = [...approved, { ...app, status: 'approved', approvedAt: new Date().toISOString() }];
-    setApproved(newApproved);
-    try { localStorage.setItem(LP_APPROVED_KEY, JSON.stringify(newApproved)); } catch {}
-    const remaining = apps.filter(a => a.id !== app.id);
-    setApps(remaining);
-    try { localStorage.setItem(LP_APPS_KEY, JSON.stringify(remaining)); } catch {}
-  };
-
-  const handleReject = (app) => {
-    const remaining = apps.filter(a => a.id !== app.id);
-    setApps(remaining);
-    try { localStorage.setItem(LP_APPS_KEY, JSON.stringify(remaining)); } catch {}
-  };
-
-  const pending = apps.filter(a => a.status === 'pending');
-
-  return (
-    <Section title="Partner Applications" icon={Users} delay={0.11} badge={`${pending.length} pending`}>
-      {pending.length === 0 && approved.length === 0 && (
-        <div className="text-center py-8">
-          <Users size={24} className="text-slate-600 mx-auto mb-2" />
-          <p className="text-sm text-slate-500">No applications yet</p>
-        </div>
-      )}
-      {pending.length > 0 && (
-        <div className="space-y-3 mb-4">
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider">Pending Review ({pending.length})</div>
-          {pending.map(app => (
-            <div key={app.id} className="p-4 rounded-xl bg-white/[0.02] border border-amber-500/20">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h4 className="text-sm font-bold text-white">{app.name || 'No Name'}</h4>
-                  <p className="text-xs text-slate-500">{app.email || 'No email'} · Applied {new Date(app.submittedAt).toLocaleDateString()}</p>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => handleApprove(app)} className="px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/30 text-brand text-xs font-bold hover:bg-brand/25 transition-colors">Approve</button>
-                  <button onClick={() => handleReject(app)} className="px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/25 transition-colors">Reject</button>
-                </div>
-              </div>
-              {app.background && <p className="text-xs text-slate-400 mb-1"><span className="text-slate-500 font-medium">Background:</span> {app.background}</p>}
-              {app.niche && <p className="text-xs text-slate-400 mb-1"><span className="text-slate-500 font-medium">Niche:</span> {app.niche}</p>}
-              {app.revenue && <p className="text-xs text-slate-400 mb-1"><span className="text-slate-500 font-medium">Revenue Target:</span> {app.revenue}</p>}
-              {app.why && <p className="text-xs text-slate-400"><span className="text-slate-500 font-medium">Why:</span> {app.why}</p>}
-            </div>
-          ))}
-        </div>
-      )}
-      {approved.length > 0 && (
-        <div className="space-y-2">
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider">Approved Partners ({approved.length})</div>
-          {approved.map(app => (
-            <div key={app.id} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-brand/10">
-              <div>
-                <span className="text-sm font-medium text-white">{app.name}</span>
-                <span className="text-xs text-slate-500 ml-2">{app.email}</span>
-              </div>
-              <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand/15 text-brand font-bold uppercase">Approved</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </Section>
-  );
-}
+// LaunchPad Application Review — removed
 
 // ─── Deployment Log ──────────────────────────────────────────────────────────
 function DeploymentPanel() {
@@ -1740,7 +1663,6 @@ export default function AdminPage() {
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* LAUNCHPAD APPLICATION REVIEW                                          */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
-      <LaunchPadReview />
 
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* EXISTING SECTIONS (preserved)                                        */}

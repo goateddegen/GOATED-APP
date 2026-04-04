@@ -22,7 +22,7 @@ export default function SearchModal() {
       pages: [
         { id: 'home', name: 'Home' }, { id: 'dashboard', name: 'Dashboard' }, { id: 'leads', name: 'Leads' },
         { id: 'trends', name: 'TrendPulse & Markets' },
-        { id: 'wallet', name: 'Wallet' }, { id: 'launchpad', name: 'LaunchPad' }, { id: 'casino', name: 'Casino' }, { id: 'admin', name: 'Admin' },
+        { id: 'wallet', name: 'Wallet' }, { id: 'casino', name: 'Casino' }, { id: 'admin', name: 'Admin' },
       ].filter(p => p.name.toLowerCase().includes(query)),
       actions: [
         { id: 'toggle-degen', name: 'Toggle DEGEN Mode', desc: 'Casino, Alpha Plays, Insider Intel, Market Signals' },
