@@ -567,7 +567,7 @@ function DashboardContent({ onSelect }) {
           <Mail size={15} /> Send Outreach
         </button>
         <button
-          onClick={() => showToast('Report generation coming soon — use AI Strategy for insights.')}
+          onClick={() => showToast('Press G to open AI Strategy for pipeline insights and reports.')}
           className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 text-sm font-medium hover:bg-purple-500/20 transition-colors"
         >
           <FileText size={15} /> Generate Report

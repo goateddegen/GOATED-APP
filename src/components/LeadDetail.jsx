@@ -303,34 +303,15 @@ function VoiceBrief({ lead, el, dv, safeConversion, safePainPoints }) {
 function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfidence, safeCallScript, safePackages, safeObjections, safeOutreach, safePainPoints, safeConversion, setTab }) {
   const [expandedStep, setExpandedStep] = useState(null);
   const [fastTrackMode, setFastTrackMode] = useState(false);
-  // Step checks derived from lead status + manual overrides persisted in localStorage
-  const [manualChecks, setManualChecks] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('goated_close_checks_' + lead.id) || '{}'); } catch { return {}; }
-  });
 
-  // Auto-derive completed steps from lead status
+  // Step completion is purely derived from lead status — no manual localStorage tracking
   const stepChecks = useMemo(() => {
     const checks = {};
     closeSteps.forEach((s, i) => {
-      // Steps with status 'done' are auto-checked
       if (s.status === 'done') checks[i] = true;
-      // Manual overrides for current/pending steps
-      else if (manualChecks[i]) checks[i] = true;
     });
     return checks;
-  }, [closeSteps, manualChecks]);
-
-  const setStepChecks = (updater) => {
-    setManualChecks(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      return next;
-    });
-  };
-
-  // Persist manual checks to localStorage
-  useEffect(() => {
-    try { localStorage.setItem('goated_close_checks_' + lead.id, JSON.stringify(manualChecks)); } catch {}
-  }, [manualChecks, lead.id]);
+  }, [closeSteps]);
 
   const commission = Math.round(dv * 0.12);
   const currentStep = closeSteps.find(s => s.status === 'current') || closeSteps[0];
@@ -533,18 +514,17 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
                           <p className="text-xs text-slate-300 whitespace-pre-line leading-relaxed">{stepScripts[i]?.script}</p>
                         </div>
 
-                        {/* Step completion checkbox — auto-checked for 'done' steps, toggleable for others */}
-                        <label className={`flex items-center gap-2 p-2 rounded-lg border transition-colors ${
-                          s.status === 'done' ? 'bg-brand/[0.06] border-brand/15' : 'bg-white/[0.02] border-white/[0.04] cursor-pointer hover:bg-white/[0.04]'
+                        {/* Step status indicator — auto-derived from lead status */}
+                        <div className={`flex items-center gap-2 p-2 rounded-lg border ${
+                          s.status === 'done' ? 'bg-brand/[0.06] border-brand/15' : s.status === 'current' ? 'bg-cyan-500/[0.04] border-cyan-500/15' : 'bg-white/[0.02] border-white/[0.04]'
                         }`}>
-                          <input type="checkbox" checked={!!stepChecks[i]}
-                            disabled={s.status === 'done'}
-                            onChange={() => { if (s.status !== 'done') setStepChecks(prev => ({ ...prev, [i]: !prev[i] })); }}
-                            className="accent-[#00ff88] w-4 h-4" />
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center ${s.status === 'done' ? 'bg-brand' : 'bg-white/[0.06]'}`}>
+                            {s.status === 'done' && <Check size={10} className="text-black" />}
+                          </div>
                           <span className="text-xs text-slate-300">
-                            {s.status === 'done' ? 'Auto-completed (lead progressed past this step)' : stepChecks[i] ? 'Completed' : 'Mark as completed'}
+                            {s.status === 'done' ? 'Completed — lead progressed past this step' : s.status === 'current' ? 'In progress — current step' : 'Upcoming'}
                           </span>
-                        </label>
+                        </div>
 
                         {/* DO THIS NOW CTA */}
                         <button onClick={ctaActions[i]}
@@ -635,11 +615,25 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
             const painCloseData = safePainPoints.map((pain, i) => {
               const baseProb = Math.max(25, safeConversion - i * 12);
               const entryPoints = {
-                'Technology': ['CTO/VP Engineering technical review', 'IT infrastructure audit proposal', 'Developer productivity assessment'],
-                'Healthcare': ['Compliance gap analysis offer', 'Patient outcome improvement study', 'Operational efficiency benchmark'],
-                'Finance': ['Risk assessment walkthrough', 'Regulatory readiness scorecard', 'Portfolio optimization demo'],
-                'Real Estate': ['Market analytics deep-dive', 'Lead conversion optimization', 'Comparable analysis tool demo'],
-                'Manufacturing': ['Supply chain efficiency audit', 'Quality metrics benchmark', 'Automation ROI calculator'],
+                'SaaS': ['Product demo with ROI calculator', 'Technical architecture review', 'Competitive feature comparison'],
+                'E-commerce': ['Conversion rate optimization audit', 'Cart abandonment analysis', 'Customer lifetime value assessment'],
+                'MarTech': ['Campaign performance benchmark', 'Multi-channel attribution analysis', 'Creative ROI assessment'],
+                'Construction': ['Lead generation efficiency audit', 'Job costing optimization review', 'Digital presence assessment'],
+                'Fintech': ['Compliance readiness scorecard', 'Risk assessment walkthrough', 'Transaction cost analysis'],
+                'Healthcare': ['Patient acquisition cost analysis', 'Compliance gap assessment', 'Operational efficiency benchmark'],
+                'SupplyChain': ['Supply chain efficiency audit', 'Quality metrics benchmark', 'Automation ROI calculator'],
+                'PropTech': ['Market analytics deep-dive', 'Lead conversion optimization', 'Comparable analysis demo'],
+                'FoodTech': ['Margin optimization review', 'Online ordering audit', 'Customer retention analysis'],
+                'Media': ['Audience monetization assessment', 'Content ROI analysis', 'Distribution channel audit'],
+                'LegalTech': ['Client intake efficiency audit', 'Billable hours optimization', 'Practice growth assessment'],
+                'InsurTech': ['Agent productivity benchmark', 'Claims workflow audit', 'Customer experience scorecard'],
+                'HRTech': ['Time-to-fill benchmark analysis', 'Sourcing channel ROI review', 'Employer brand audit'],
+                'Logistics': ['Route optimization assessment', 'Fleet utilization audit', 'Last-mile efficiency analysis'],
+                'EdTech': ['Student engagement analysis', 'Completion rate optimization', 'Acquisition cost benchmark'],
+                'CleanTech': ['ROI payback period calculator', 'Energy savings projection', 'Sustainability impact report'],
+                'AI/ML': ['Model ROI demonstration', 'Data pipeline audit', 'Enterprise readiness assessment'],
+                'Gaming': ['Player retention analysis', 'Monetization benchmark', 'UA efficiency audit'],
+                'Web3/Crypto': ['Community growth assessment', 'Token utility review', 'Governance optimization'],
               };
               const industryEntries = entryPoints[lead.industry] || ['Business impact assessment', 'Industry benchmark comparison', 'ROI discovery session'];
               return {
@@ -1270,7 +1264,7 @@ export default function LeadDetail() {
           </button>
           {/* SMS Template */}
           <button onClick={() => {
-            const sms = `Hi ${(lead.name || '').split(' ')[0]}, this is [Your Name] from GOATED Solutions. I had a quick idea about how ${lead.company} could tackle ${safePainPoints[0]?.toLowerCase() || 'growth'}. Worth a 5-min chat? Let me know a good time.`;
+            const sms = `Hi ${(lead.name || '').split(' ')[0]}, this is your GOATED closer from GOATED Solutions. I had a quick idea about how ${lead.company} could tackle ${safePainPoints[0]?.toLowerCase() || 'growth'}. Worth a 5-min chat? Let me know a good time.`;
             navigator.clipboard.writeText(sms);
             alert('SMS template copied to clipboard!');
           }}
@@ -1391,6 +1385,38 @@ export default function LeadDetail() {
               </div>
             );
           })()}
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          QUICK NEXT STEP — Always-visible action bar
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3">
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-brand/[0.08] to-cyan-500/[0.05] border border-brand/15">
+          <div className="w-8 h-8 rounded-lg bg-brand/20 flex items-center justify-center shrink-0">
+            <Zap size={16} className="text-brand" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] text-brand uppercase tracking-wider font-bold">Next Step</div>
+            <div className="text-sm text-slate-300 truncate">
+              {lead.status === 'new' && `Research ${lead.company} and prepare ${el.bestMethod || 'outreach'} targeting "${safePainPoints[0]?.toLowerCase() || 'key pain points'}"`}
+              {lead.status === 'contacted' && `Follow up with ${firstName} via ${el.bestMethod || 'email'} — reference ${painPoint1}`}
+              {lead.status === 'qualified' && `Schedule discovery call with ${firstName} — confirm budget and timeline`}
+              {lead.status === 'proposal' && `Send proposal: ${fmt(dv)} deal with ${safePainPoints[0]?.toLowerCase() || 'core solution'} focus`}
+              {lead.status === 'negotiation' && `Close this deal — handle objections and push for verbal commitment today`}
+              {lead.status === 'won' && `Deal closed! Request referral and explore upsell opportunities`}
+              {lead.status === 'lost' && `Re-engage in 30 days with fresh value prop targeting ${painPoint1}`}
+              {!['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost'].includes(lead.status) && `Reach out to ${firstName} via ${el.bestMethod || 'email'} with personalized value prop`}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs font-bold text-brand">{fmt(Math.round(dv * 0.12))}</span>
+            <span className="text-[10px] text-slate-500">comm.</span>
+          </div>
+          <button onClick={() => setTab('closing')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand text-black text-xs font-bold hover:bg-brand/90 transition-colors shrink-0">
+            <Target size={12} /> Close Guide
+          </button>
         </div>
       </div>
 

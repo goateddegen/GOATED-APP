@@ -633,7 +633,7 @@ export default function WalletPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => alert('Bank connections coming soon. Plaid integration is being configured.')}
+                    onClick={() => alert('Connect your bank account via Plaid. Set PLAID_CLIENT_ID and PLAID_SECRET in environment to enable.')}
                     className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-500/15 text-blue-400 font-medium text-sm border border-blue-500/20 hover:bg-blue-500/25 transition-colors"
                   >
                     <Link2 className="w-4 h-4" />
@@ -651,7 +651,7 @@ export default function WalletPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => alert('Card payments coming soon. Stripe integration is being configured.')}
+                    onClick={() => alert('Add a payment method via Stripe. Set STRIPE_PUBLISHABLE_KEY and STRIPE_SECRET_KEY in environment to enable.')}
                     className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-purple-500/15 text-purple-400 font-medium text-sm border border-purple-500/20 hover:bg-purple-500/25 transition-colors"
                   >
                     <CreditCard className="w-4 h-4" />

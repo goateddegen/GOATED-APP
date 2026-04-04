@@ -118,10 +118,10 @@ function getCloseStrategy(lead, prob) {
 function getOutreachTemplates(lead) {
   const firstName = (lead.name || 'Unknown').split(' ')[0];
   return {
-    email: { subject: `Quick question about ${lead.company}'s growth`, body: `Hi ${firstName},\n\nI noticed ${lead.company} is doing great things in ${lead.industry}. I help similar companies increase revenue by 20-40% through optimized digital presence.\n\nWould you be open to a quick 15-min call this week?\n\nBest,\n[Your Name]` },
+    email: { subject: `Quick question about ${lead.company}'s growth`, body: `Hi ${firstName},\n\nI noticed ${lead.company} is doing great things in ${lead.industry}. I work with similar ${lead.industry} companies to unlock hidden revenue through AI-powered outreach and intelligence.\n\nWould you be open to a quick 15-min call this week?\n\nBest,\nyour closer` },
     linkedin: `Hi ${firstName}, I came across ${lead.company} and was impressed by your work in ${lead.industry}. I help companies like yours unlock hidden revenue. Would love to connect.`,
-    sms: `Hi ${firstName}, this is [Your Name] from GOATED. I have insights on how ${lead.company} could capture more revenue in ${lead.industry}. Worth a quick chat? Reply YES.`,
-    call: `Hi ${firstName}, this is [Your Name]. I work with companies in ${lead.industry} and noticed opportunities for ${lead.company} to capture additional revenue. Do you have a few minutes?`,
+    sms: `Hi ${firstName}, this is your closer from GOATED. I have insights on how ${lead.company} could capture more revenue in ${lead.industry}. Worth a quick chat? Reply YES.`,
+    call: `Hi ${firstName}, this is your closer. I work with companies in ${lead.industry} and noticed opportunities for ${lead.company} to capture additional revenue. Do you have a few minutes?`,
   };
 }
 
@@ -383,52 +383,29 @@ function AIChatMessage({ role, content, understood, leadCount, timestamp, isAI, 
 }
 
 // ---------------------------------------------------------------------------
-// VoIP Quick Dialer (simplified)
+// Call Modal — Native device calling via tel: links + copy number fallback
 // ---------------------------------------------------------------------------
-function VoIPDialer({ lead, phone, onClose, showToast }) {
-  const [callState, setCallState] = useState('idle');
-  const [duration, setDuration] = useState(0);
-  const timerRef = useRef(null);
-
-  useEffect(() => {
-    if (callState === 'active') { timerRef.current = setInterval(() => setDuration(d => d + 1), 1000); }
-    return () => clearInterval(timerRef.current);
-  }, [callState]);
-
-  const fmtDur = (s) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
-
+function CallModal({ lead, phone, onClose, showToast }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className="w-full max-w-sm mx-4 bg-[#0a0a0a] rounded-2xl border border-white/[0.08] shadow-2xl p-6 text-center" onClick={e => e.stopPropagation()}>
         <div className="w-16 h-16 rounded-full bg-brand/15 flex items-center justify-center mx-auto mb-3">
-          <Phone size={28} className={callState === 'active' ? 'text-emerald-400' : 'text-brand'} />
+          <Phone size={28} className="text-brand" />
         </div>
         <div className="text-lg font-bold text-white mb-1">{lead.name}</div>
-        <div className="text-sm text-slate-400 mb-1">{lead.company}</div>
-        <div className="text-lg font-mono text-brand mb-4">{phone}</div>
+        <div className="text-sm text-slate-400 mb-1">{lead.company} · {lead.industry}</div>
+        <div className="text-xs text-slate-500 mb-4">Direct line available</div>
 
-        {callState === 'idle' && (
-          <div className="space-y-2">
-            <button onClick={() => {
-              if (/Mobi|Android/i.test(navigator.userAgent)) { window.open(`tel:${phone.replace(/[^\d+]/g, '')}`, '_self'); return; }
-              setCallState('ringing'); setTimeout(() => setCallState('active'), 2000);
-            }} className="w-full py-3 rounded-xl bg-brand text-black font-bold text-sm hover:bg-brand/90 transition-colors flex items-center justify-center gap-2">
-              <PhoneCall size={16} /> Start Call
-            </button>
-            <button onClick={() => { navigator.clipboard.writeText(phone); showToast('Phone number copied'); }}
-              className="w-full py-2.5 rounded-xl bg-surface-2 text-slate-300 text-sm hover:bg-surface-1 transition-colors flex items-center justify-center gap-2">
-              <Copy size={14} /> Copy Number
-            </button>
-          </div>
-        )}
-        {callState === 'ringing' && <div className="text-amber-400 font-medium animate-pulse">Ringing...</div>}
-        {callState === 'active' && (
-          <div>
-            <div className="text-2xl font-mono text-emerald-400 mb-3">{fmtDur(duration)}</div>
-            <button onClick={() => { clearInterval(timerRef.current); setCallState('idle'); showToast(`Call ended — ${fmtDur(duration)}`); onClose(); }}
-              className="w-full py-3 rounded-xl bg-red-500 text-white font-bold text-sm">End Call</button>
-          </div>
-        )}
+        <div className="space-y-2">
+          <a href={`tel:${phone.replace(/[^\d+]/g, '')}`}
+            className="w-full py-3 rounded-xl bg-brand text-black font-bold text-sm hover:bg-brand/90 transition-colors flex items-center justify-center gap-2">
+            <PhoneCall size={16} /> Call from Device
+          </a>
+          <button onClick={() => { navigator.clipboard.writeText(phone); showToast('Phone number copied'); }}
+            className="w-full py-2.5 rounded-xl bg-surface-2 text-slate-300 text-sm hover:bg-surface-1 transition-colors flex items-center justify-center gap-2">
+            <Copy size={14} /> Copy Number
+          </button>
+        </div>
         <button onClick={onClose} className="mt-3 text-xs text-slate-500 hover:text-white">Close</button>
       </div>
     </div>
@@ -791,7 +768,7 @@ export default function LeadsPage({ onSelect }) {
       <Toast message={toastMsg} visible={toastVisible} onDone={() => setToastVisible(false)} />
 
       {/* Modals */}
-      {voipLead && <VoIPDialer lead={voipLead} phone={voipPhone} onClose={() => setVoipLead(null)} showToast={showToast} />}
+      {voipLead && <CallModal lead={voipLead} phone={voipPhone} onClose={() => setVoipLead(null)} showToast={showToast} />}
       {scheduleLead && <ScheduleModal lead={scheduleLead} onClose={() => setScheduleLead(null)} showToast={showToast} />}
 
       {/* ── Header ── */}

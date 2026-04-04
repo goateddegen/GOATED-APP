@@ -175,7 +175,7 @@ function useSignalEngine(leads, currentPage) {
       const systemMsgs = [
         { title: 'Pipeline health check', description: `${leads.filter(l => l.status !== 'won' && l.status !== 'lost').length} active leads in pipeline. ${hotLeads.length} high-probability.` },
         { title: 'Weekly target update', description: `You need ${Math.max(0, 3 - Math.floor(Math.random() * 2))} more closes this week to hit target.` },
-        { title: 'AI model updated', description: 'GOATED AI predictions recalibrated with latest market data. Accuracy: 78%.' },
+        { title: 'AI model updated', description: 'GOATED AI predictions recalibrated with latest market data. Recalibrated with latest data.' },
       ];
       const sys = systemMsgs[Math.floor(Math.random() * systemMsgs.length)];
       pool.push({
@@ -845,7 +845,7 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
 
   if (lower.includes('outreach') || lower.includes('call') || lower.includes('draft') || lower.includes('message') || lower.includes('sms') || lower.includes('voip') || lower.includes('script')) {
     const lead = leads[0];
-    return `**Direct Outreach Suite for ${lead.name}**\n\n**Lead Intel:**\n- Company: ${lead.company} (${lead.industry})\n- Score: ${lead.score}/100 | Value: ${fmt(lead.dealValue)}\n- Pain Points: ${lead.painPoints.join(', ')}\n- Buying Signals: ${lead.buyingSignals.join(', ')}\n\n---\n\n**VoIP Call Script:**\n\nOpener: "Hi ${lead.name.split(' ')[0]}, this is [Your Name] from GOATED Solutions. I noticed ${lead.company} is ${lead.buyingSignals[0]?.toLowerCase() || 'scaling fast'} — congrats on that."\n\nHook: "We've been helping ${lead.industry} companies solve ${lead.painPoints[0]?.toLowerCase() || 'pipeline challenges'}, and I think there's a quick win for you."\n\nAsk: "Do you have 2 minutes? I want to share something specific to ${lead.company}."\n\nValue: "We helped a similar company 3x their pipeline in 30 days using AI-powered lead scoring and direct outreach."\n\nClose: "Can we do a quick 15-minute deep dive Thursday or Friday?"\n\n---\n\n**SMS Sequence (3-touch):**\n\n#1 (Day 0): "Hey ${lead.name.split(' ')[0]}, just left you a VM about ${lead.company}'s growth. Quick question about your ${lead.painPoints[0]?.toLowerCase() || 'outreach'} — mind if I share something?"\n\n#2 (Day 2): "${lead.name.split(' ')[0]}, we just helped a ${lead.industry} company close $${Math.round(lead.dealValue * 0.1 / 1000)}K in 30 days. Thought of ${lead.company}. Worth 5 min?"\n\n#3 (Day 5): "Last ping ${lead.name.split(' ')[0]}! If ${lead.painPoints[0]?.toLowerCase() || 'scaling'} is on your radar, I've got something you'll want to see. Link: [meeting link]"\n\n---\n\n**Voicemail Drop:**\n\n"Hey ${lead.name.split(' ')[0]}, it's [Name] from GOATED. Calling because I saw ${lead.company} is ${lead.buyingSignals[0]?.toLowerCase() || 'growing fast'}. We help ${lead.industry} teams solve ${lead.painPoints[0]?.toLowerCase() || 'pipeline issues'} fast. I'll shoot you a text with details. Talk soon."\n\n---\n\nConversion probability: **${lead.conversionProbability}%**\nRecommended channel: **${lead.bestMethod}**\n\nGo to **Leads** for full details, or check **Dashboard** for pipeline metrics.\n\nWant me to adjust the scripts or target a different lead?`;
+    return `**Direct Outreach Suite for ${lead.name}**\n\n**Lead Intel:**\n- Company: ${lead.company} (${lead.industry})\n- Score: ${lead.score}/100 | Value: ${fmt(lead.dealValue)}\n- Pain Points: ${lead.painPoints.join(', ')}\n- Buying Signals: ${lead.buyingSignals.join(', ')}\n\n---\n\n**VoIP Call Script:**\n\nOpener: "Hi ${lead.name.split(' ')[0]}, this is your GOATED closer from GOATED Solutions. I noticed ${lead.company} is ${lead.buyingSignals[0]?.toLowerCase() || 'scaling fast'} — congrats on that."\n\nHook: "We've been helping ${lead.industry} companies solve ${lead.painPoints[0]?.toLowerCase() || 'pipeline challenges'}, and I think there's a quick win for you."\n\nAsk: "Do you have 2 minutes? I want to share something specific to ${lead.company}."\n\nValue: "We work with similar companies to accelerate their pipeline using AI-powered lead scoring and direct outreach."\n\nClose: "Can we do a quick 15-minute deep dive Thursday or Friday?"\n\n---\n\n**SMS Sequence (3-touch):**\n\n#1 (Day 0): "Hey ${lead.name.split(' ')[0]}, just left you a VM about ${lead.company}'s growth. Quick question about your ${lead.painPoints[0]?.toLowerCase() || 'outreach'} — mind if I share something?"\n\n#2 (Day 2): "${lead.name.split(' ')[0]}, we just helped a ${lead.industry} company close $${Math.round(lead.dealValue * 0.1 / 1000)}K in 30 days. Thought of ${lead.company}. Worth 5 min?"\n\n#3 (Day 5): "Last ping ${lead.name.split(' ')[0]}! If ${lead.painPoints[0]?.toLowerCase() || 'scaling'} is on your radar, I've got something you'll want to see. Link: goated.solutions/meet"\n\n---\n\n**Voicemail Drop:**\n\n"Hey ${lead.name.split(' ')[0]}, it's your closer from GOATED. Calling because I saw ${lead.company} is ${lead.buyingSignals[0]?.toLowerCase() || 'growing fast'}. We help ${lead.industry} teams solve ${lead.painPoints[0]?.toLowerCase() || 'pipeline issues'} fast. I'll shoot you a text with details. Talk soon."\n\n---\n\nConversion probability: **${lead.conversionProbability}%**\nRecommended channel: **${lead.bestMethod}**\n\nGo to **Leads** for full details, or check **Dashboard** for pipeline metrics.\n\nWant me to adjust the scripts or target a different lead?`;
   }
 
   if (lower.includes('forecast') || lower.includes('revenue') || lower.includes('project')) {
@@ -1150,7 +1150,7 @@ const PROACTIVE_SUGGESTIONS = {
   launchpad: [
     'New prediction market opened with thin spreads',
     '2 incubator projects hit funding milestones',
-    'Prediction accuracy update: 78% this week',
+    'Pipeline predictions recalibrated with latest signals',
   ],
 };
 
@@ -1178,7 +1178,7 @@ const DEGEN_PROACTIVE_SUGGESTIONS = {
   launchpad: [
     'New market opened with thin spreads — early ape advantage',
     '2 incubator projects hit milestones — 100x potential. NFA',
-    'Prediction accuracy at 78% — you\'re printing. WAGMI',
+    'Pipeline signals are strong — keep executing. WAGMI',
   ],
 };
 
