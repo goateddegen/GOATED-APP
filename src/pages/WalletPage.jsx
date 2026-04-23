@@ -1,93 +1,54 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Wallet, Link2, ExternalLink, Copy, Check, AlertCircle,
   ArrowUpRight, ArrowDownLeft, RefreshCw, Shield, CreditCard,
-  Building2, Coins,
+  Building2, DollarSign, Zap, Clock, TrendingUp, FileText,
+  CheckCircle2, Banknote, Receipt, BarChart3, ArrowRight, Info,
 } from 'lucide-react';
-
-// ── Constants ────────────────────────────────────────────────────────────────
-const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
-const LAMPORTS_PER_SOL = 1_000_000_000;
-const COMMISSION_RATE = 0.12; // 12% platform commission
-const PHANTOM_INSTALL_URL = 'https://phantom.app/';
+import { CONTACT_EMAIL, calLink, CAL_EVENT_DISCOVERY } from '../lib/config';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-const truncateAddress = (addr) =>
-  addr ? `${addr.slice(0, 4)}...${addr.slice(-4)}` : '';
+const fmtUsd = (amount) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(amount || 0);
 
-const formatSol = (lamports) => {
-  const sol = lamports / LAMPORTS_PER_SOL;
-  return sol.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+const fmtUsdCompact = (amount) => {
+  if (!amount) return '$0';
+  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
+  if (amount >= 10_000) return `$${Math.round(amount / 1_000).toLocaleString()}K`;
+  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(1)}K`;
+  return `$${Math.round(amount).toLocaleString()}`;
 };
 
-const formatUsd = (amount) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-
-const timeAgo = (unixTs) => {
-  const seconds = Math.floor(Date.now() / 1000) - unixTs;
-  if (seconds < 60) return 'just now';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
+const timeAgo = (ts) => {
+  if (!ts) return '—';
+  const d = (Date.now() - ts) / 1000;
+  if (d < 60) return 'just now';
+  if (d < 3600) return `${Math.floor(d / 60)}m ago`;
+  if (d < 86400) return `${Math.floor(d / 3600)}h ago`;
+  return `${Math.floor(d / 86400)}d ago`;
 };
 
-// ── LocalStorage persistence ─────────────────────────────────────────────────
-function loadSavedConnection() {
+const STRIPE_CONNECT_STATE_KEY = 'goated_stripe_connect_state';
+
+// Pre-launch: no real Stripe Connect account yet. State is persisted locally
+// and the OAuth flow is routed through /api/stripe-oauth when the server
+// endpoint is live. Until then we show the pending state honestly.
+function loadStripeState() {
   try {
-    const saved = localStorage.getItem('goated_phantom_pubkey');
-    return saved || null;
+    const saved = localStorage.getItem(STRIPE_CONNECT_STATE_KEY);
+    if (!saved) return null;
+    return JSON.parse(saved);
   } catch {
     return null;
   }
 }
 
-function saveConnection(pubkey) {
-  if (pubkey) localStorage.setItem('goated_phantom_pubkey', pubkey);
-  else localStorage.removeItem('goated_phantom_pubkey');
-}
-
-// ── Solana RPC calls ─────────────────────────────────────────────────────────
-async function fetchSolBalance(pubkey) {
-  const res = await fetch(SOLANA_RPC, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'getBalance',
-      params: [pubkey],
-    }),
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message);
-  return data.result.value; // lamports
-}
-
-async function fetchRecentTransactions(pubkey) {
-  const res = await fetch(SOLANA_RPC, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'getSignaturesForAddress',
-      params: [pubkey, { limit: 10 }],
-    }),
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message);
-  return data.result || [];
-}
-
-async function fetchSolPrice() {
+function saveStripeState(state) {
   try {
-    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
-    const data = await res.json();
-    return data.solana?.usd || 0;
-  } catch {
-    return 0;
-  }
+    if (state) localStorage.setItem(STRIPE_CONNECT_STATE_KEY, JSON.stringify(state));
+    else localStorage.removeItem(STRIPE_CONNECT_STATE_KEY);
+  } catch { /* ignore */ }
 }
 
 // ── Animation variants ───────────────────────────────────────────────────────
@@ -96,29 +57,28 @@ const fadeInUp = {
   visible: (i = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.08, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] },
+    transition: { delay: i * 0.06, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] },
   }),
 };
+const stagger = { visible: { transition: { staggerChildren: 0.06 } } };
 
-const stagger = {
-  visible: { transition: { staggerChildren: 0.08 } },
-};
-
-// ── Sub-components ───────────────────────────────────────────────────────────
-
-function StatusBadge({ connected }) {
+// ── StatusBadge ──────────────────────────────────────────────────────────────
+function StatusBadge({ status }) {
+  const map = {
+    connected: { bg: 'bg-[#00ff88]/10', border: 'border-[#00ff88]/20', dot: 'bg-[#00ff88] animate-pulse', text: 'text-[#00ff88]', label: 'Stripe Connected' },
+    pending:   { bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', dot: 'bg-yellow-400 animate-pulse', text: 'text-yellow-400', label: 'Onboarding Pending' },
+    idle:      { bg: 'bg-zinc-800', border: 'border-zinc-700', dot: 'bg-zinc-500', text: 'text-zinc-400', label: 'Not Connected' },
+  };
+  const s = map[status] || map.idle;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-      connected
-        ? 'bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/20'
-        : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
-    }`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-[#00ff88] animate-pulse' : 'bg-zinc-500'}`} />
-      {connected ? 'Connected' : 'Disconnected'}
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${s.bg} ${s.border} ${s.text}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+      {s.label}
     </span>
   );
 }
 
+// ── StatCard ─────────────────────────────────────────────────────────────────
 function StatCard({ icon: Icon, label, value, sublabel, color = '#00ff88', index = 0 }) {
   return (
     <motion.div
@@ -128,7 +88,7 @@ function StatCard({ icon: Icon, label, value, sublabel, color = '#00ff88', index
     >
       <div className="flex items-center gap-3 mb-3">
         <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: `${color}15` }}>
-          <Icon className="w-4.5 h-4.5" style={{ color }} />
+          <Icon className="w-[18px] h-[18px]" style={{ color }} />
         </div>
         <span className="text-xs text-zinc-500 uppercase tracking-wider font-medium">{label}</span>
       </div>
@@ -138,9 +98,17 @@ function StatCard({ icon: Icon, label, value, sublabel, color = '#00ff88', index
   );
 }
 
-function TransactionRow({ tx, index }) {
-  const isConfirmed = tx.confirmationStatus === 'finalized' || tx.confirmationStatus === 'confirmed';
-  const sig = tx.signature;
+// ── LedgerRow ────────────────────────────────────────────────────────────────
+function LedgerRow({ row, index }) {
+  const colorMap = {
+    charge:   { icon: ArrowDownLeft, tone: '#00ff88', bg: 'bg-[#00ff88]/10', label: 'Charge' },
+    payout:   { icon: Banknote,      tone: '#06b6d4', bg: 'bg-[#06b6d4]/10', label: 'Payout' },
+    fee:      { icon: Receipt,       tone: '#f59e0b', bg: 'bg-[#f59e0b]/10', label: 'Platform Split' },
+    refund:   { icon: ArrowUpRight,  tone: '#ef4444', bg: 'bg-[#ef4444]/10', label: 'Refund' },
+    pending:  { icon: Clock,         tone: '#a855f7', bg: 'bg-[#a855f7]/10', label: 'Pending' },
+  };
+  const c = colorMap[row.kind] || colorMap.pending;
+  const I = c.icon;
 
   return (
     <motion.div
@@ -149,190 +117,125 @@ function TransactionRow({ tx, index }) {
       className="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/[0.02] transition-colors group"
     >
       <div className="flex items-center gap-3 min-w-0">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-          tx.err ? 'bg-red-500/10' : 'bg-[#00ff88]/10'
-        }`}>
-          {tx.err
-            ? <AlertCircle className="w-4 h-4 text-red-400" />
-            : <ArrowUpRight className="w-4 h-4 text-[#00ff88]" />
-          }
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${c.bg}`}>
+          <I className="w-4 h-4" style={{ color: c.tone }} />
         </div>
         <div className="min-w-0">
-          <p className="text-sm text-white font-medium truncate">
-            {truncateAddress(sig)}
-          </p>
-          <p className="text-xs text-zinc-500">
-            {tx.blockTime ? timeAgo(tx.blockTime) : 'Pending'}
-          </p>
+          <p className="text-sm text-white font-medium truncate">{row.title}</p>
+          <p className="text-xs text-zinc-500">{c.label} · {timeAgo(row.ts)}</p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <span className={`text-xs px-2 py-0.5 rounded-full ${
-          tx.err
-            ? 'bg-red-500/10 text-red-400'
-            : isConfirmed
-              ? 'bg-[#00ff88]/10 text-[#00ff88]'
-              : 'bg-yellow-500/10 text-yellow-400'
-        }`}>
-          {tx.err ? 'Failed' : isConfirmed ? 'Confirmed' : 'Processing'}
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-bold" style={{ color: c.tone }}>
+          {row.kind === 'refund' || row.kind === 'fee' ? '-' : '+'}{fmtUsd(row.amount)}
         </span>
-        <a
-          href={`https://solscan.io/tx/${sig}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <ExternalLink className="w-3.5 h-3.5 text-zinc-500 hover:text-[#00ff88]" />
-        </a>
+        {row.stripeUrl && (
+          <a
+            href={row.stripeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+            title="View in Stripe"
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-zinc-500 hover:text-[#00ff88]" />
+          </a>
+        )}
       </div>
     </motion.div>
   );
 }
 
 // ── Main Component ───────────────────────────────────────────────────────────
-
 export default function WalletPage() {
-  // Wallet state
-  const [pubkey, setPubkey] = useState(() => loadSavedConnection());
+  const [stripeState, setStripeState] = useState(() => loadStripeState());
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [ledger, setLedger] = useState([]);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
 
-  // Data state
-  const [balanceLamports, setBalanceLamports] = useState(null);
-  const [solPrice, setSolPrice] = useState(0);
-  const [transactions, setTransactions] = useState([]);
-  const [loadingBalance, setLoadingBalance] = useState(false);
-  const [loadingTxs, setLoadingTxs] = useState(false);
+  const status = stripeState?.accountId
+    ? (stripeState.payoutsEnabled ? 'connected' : 'pending')
+    : 'idle';
+  const isConnected = status === 'connected';
+  const isPending = status === 'pending';
 
-  // Phantom detection
-  const getProvider = useCallback(() => {
-    if (typeof window === 'undefined') return null;
-    return window.phantom?.solana || window.solana || null;
-  }, []);
-
-  const isPhantomInstalled = useCallback(() => {
-    const provider = getProvider();
-    return provider?.isPhantom === true;
-  }, [getProvider]);
-
-  // ── Fetch wallet data ──────────────────────────────────────────────────────
-  const refreshBalance = useCallback(async (address) => {
-    const key = address || pubkey;
-    if (!key) return;
-    setLoadingBalance(true);
+  // ── Load ledger from /api/stripe-ledger (server) when connected ───────────
+  const refreshLedger = useCallback(async () => {
+    if (!stripeState?.accountId) return;
+    setLedgerLoading(true);
     try {
-      const [balance, price] = await Promise.all([
-        fetchSolBalance(key),
-        fetchSolPrice(),
-      ]);
-      setBalanceLamports(balance);
-      setSolPrice(price);
+      const res = await fetch(`/api/stripe-ledger?accountId=${encodeURIComponent(stripeState.accountId)}`);
+      if (!res.ok) throw new Error(`Ledger fetch failed: ${res.status}`);
+      const data = await res.json();
+      setLedger(Array.isArray(data?.rows) ? data.rows : []);
     } catch (err) {
-      console.error('Balance fetch error:', err);
+      console.info('Stripe ledger unavailable (pre-launch):', err?.message);
+      // Pre-launch: server endpoint may not exist yet — just show empty
+      setLedger([]);
     } finally {
-      setLoadingBalance(false);
+      setLedgerLoading(false);
     }
-  }, [pubkey]);
+  }, [stripeState?.accountId]);
 
-  const refreshTransactions = useCallback(async (address) => {
-    const key = address || pubkey;
-    if (!key) return;
-    setLoadingTxs(true);
-    try {
-      const txs = await fetchRecentTransactions(key);
-      setTransactions(txs);
-    } catch (err) {
-      console.error('Transaction fetch error:', err);
-    } finally {
-      setLoadingTxs(false);
-    }
-  }, [pubkey]);
-
-  const refreshAll = useCallback(async (address) => {
-    await Promise.all([refreshBalance(address), refreshTransactions(address)]);
-  }, [refreshBalance, refreshTransactions]);
-
-  // ── Auto-reconnect on mount ────────────────────────────────────────────────
   useEffect(() => {
-    if (!pubkey) return;
-
-    const provider = getProvider();
-    if (provider?.isPhantom) {
-      provider.connect({ onlyIfTrusted: true })
-        .then((resp) => {
-          const key = resp.publicKey.toString();
-          setPubkey(key);
-          saveConnection(key);
-          refreshAll(key);
-        })
-        .catch(() => {
-          // User revoked — clear saved state
-          setPubkey(null);
-          saveConnection(null);
-        });
-    } else {
-      // Phantom not available but we had a saved key — fetch data anyway
-      refreshAll(pubkey);
-    }
+    if (stripeState?.accountId) refreshLedger();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Connect ────────────────────────────────────────────────────────────────
-  const connectWallet = useCallback(async () => {
+  // ── Connect Stripe Express (OAuth flow via /api/stripe-oauth) ─────────────
+  const connectStripe = useCallback(async () => {
     setError(null);
     setConnecting(true);
-
-    const provider = getProvider();
-    if (!provider?.isPhantom) {
-      setError('phantom_not_installed');
-      setConnecting(false);
-      return;
-    }
-
     try {
-      const resp = await provider.connect();
-      const key = resp.publicKey.toString();
-      setPubkey(key);
-      saveConnection(key);
-      await refreshAll(key);
-    } catch (err) {
-      if (err.code === 4001) {
-        setError('Connection request was rejected.');
-      } else {
-        setError(err.message || 'Failed to connect to Phantom.');
+      // Initiate OAuth. Server should return { url: 'https://connect.stripe.com/...' }
+      const res = await fetch('/api/stripe-oauth', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.url) {
+          window.location.href = data.url;
+          return;
+        }
       }
+      // Pre-launch fallback: mark as pending so the user sees a clear state
+      const pending = {
+        accountId: null,
+        status: 'oauth_pending',
+        startedAt: Date.now(),
+      };
+      saveStripeState(pending);
+      setStripeState(pending);
+      setError('Stripe onboarding endpoint is still provisioning. We saved your intent — email support to finish manually.');
+    } catch (err) {
+      setError(err?.message || 'Stripe OAuth failed to launch.');
     } finally {
       setConnecting(false);
     }
-  }, [getProvider, refreshAll]);
+  }, []);
 
-  // ── Disconnect ─────────────────────────────────────────────────────────────
-  const disconnectWallet = useCallback(() => {
-    const provider = getProvider();
-    provider?.disconnect?.();
-    setPubkey(null);
-    saveConnection(null);
-    setBalanceLamports(null);
-    setTransactions([]);
-    setSolPrice(0);
-    setError(null);
-  }, [getProvider]);
+  const disconnectStripe = useCallback(() => {
+    saveStripeState(null);
+    setStripeState(null);
+    setLedger([]);
+  }, []);
 
-  // ── Copy address ───────────────────────────────────────────────────────────
-  const copyAddress = useCallback(() => {
-    if (!pubkey) return;
-    navigator.clipboard.writeText(pubkey);
+  const copyAccountId = useCallback(() => {
+    if (!stripeState?.accountId) return;
+    navigator.clipboard.writeText(stripeState.accountId);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }, [pubkey]);
+  }, [stripeState?.accountId]);
 
-  // ── Derived values ─────────────────────────────────────────────────────────
-  const solBalance = balanceLamports !== null ? balanceLamports / LAMPORTS_PER_SOL : 0;
-  const usdValue = solBalance * solPrice;
-  const isConnected = !!pubkey;
+  // ── Ledger-derived summary ────────────────────────────────────────────────
+  const summary = useMemo(() => {
+    const grossClosed = ledger.filter(r => r.kind === 'charge').reduce((s, r) => s + (r.amount || 0), 0);
+    const platformSplit = ledger.filter(r => r.kind === 'fee').reduce((s, r) => s + (r.amount || 0), 0);
+    const net = grossClosed - platformSplit;
+    const nextPayout = ledger.find(r => r.kind === 'pending')?.amount || 0;
+    return { grossClosed, platformSplit, net, nextPayout };
+  }, [ledger]);
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen p-4 md:p-6 max-w-6xl mx-auto">
       {/* Header */}
@@ -340,33 +243,33 @@ export default function WalletPage() {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6"
       >
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#00ff88]/10 flex items-center justify-center">
               <Wallet className="w-5 h-5 text-[#00ff88]" />
             </div>
-            Wallet
+            Master Wallet
           </h1>
-          <p className="text-sm text-zinc-500 mt-1 ml-[52px]">Manage your Solana wallet and bank connections</p>
+          <p className="text-sm text-zinc-500 mt-1 ml-[52px]">Stripe Connect Express — payouts straight to your bank. Zero crypto.</p>
         </div>
-        <StatusBadge connected={isConnected} />
+        <StatusBadge status={status} />
       </motion.div>
 
       {/* Error banner */}
       <AnimatePresence>
-        {error && error !== 'phantom_not_installed' && (
+        {error && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             className="mb-6"
           >
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{error}</span>
-              <button onClick={() => setError(null)} className="ml-auto text-red-400/60 hover:text-red-400">
+            <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 text-sm">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span className="flex-1">{error}</span>
+              <button onClick={() => setError(null)} className="text-yellow-300/60 hover:text-yellow-200 flex-shrink-0">
                 Dismiss
               </button>
             </div>
@@ -376,32 +279,39 @@ export default function WalletPage() {
 
       <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6">
 
-        {/* ── Phantom Wallet Section ──────────────────────────────────── */}
+        {/* ── Stripe Connect Section ──────────────────────────────────────── */}
         <motion.div variants={fadeInUp} custom={0}>
           <div className="bg-surface-1 border border-white/5 rounded-2xl overflow-hidden">
-            {/* Section header */}
             <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#ab9ff2]/10 flex items-center justify-center">
-                  <Coins className="w-4 h-4 text-[#ab9ff2]" />
+                <div className="w-8 h-8 rounded-lg bg-[#635bff]/15 flex items-center justify-center">
+                  <CreditCard className="w-4 h-4 text-[#635bff]" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-semibold text-white">Phantom Wallet</h2>
-                  <p className="text-xs text-zinc-500">Solana Ecosystem</p>
+                  <h2 className="text-sm font-semibold text-white">Stripe Connect Express</h2>
+                  <p className="text-xs text-zinc-500">Accept cards · auto-split platform fee · instant payouts</p>
                 </div>
               </div>
               {isConnected && (
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => refreshAll()}
-                    disabled={loadingBalance}
+                    onClick={async () => { setRefreshing(true); await refreshLedger(); setRefreshing(false); }}
+                    disabled={refreshing || ledgerLoading}
                     className="p-2 rounded-lg hover:bg-white/5 transition-colors text-zinc-400 hover:text-white disabled:opacity-40"
-                    title="Refresh"
+                    title="Refresh ledger"
                   >
-                    <RefreshCw className={`w-4 h-4 ${loadingBalance ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-4 h-4 ${(refreshing || ledgerLoading) ? 'animate-spin' : ''}`} />
                   </button>
+                  <a
+                    href="https://dashboard.stripe.com/express"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-300 hover:bg-white/5 border border-white/10 transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" /> Stripe Dashboard
+                  </a>
                   <button
-                    onClick={disconnectWallet}
+                    onClick={disconnectStripe}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium text-red-400 hover:bg-red-500/10 border border-red-500/20 transition-colors"
                   >
                     Disconnect
@@ -410,82 +320,98 @@ export default function WalletPage() {
               )}
             </div>
 
-            {/* Content */}
             <div className="p-6">
               <AnimatePresence mode="wait">
-                {!isConnected ? (
-                  /* ── Not connected state ──────────────────────────────── */
+                {!stripeState?.accountId && !isPending ? (
+                  /* ── Not connected: onboard CTA ─────────────────────────── */
                   <motion.div
                     key="disconnected"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
+                    className="text-center py-8 space-y-5"
                   >
-                    {error === 'phantom_not_installed' ? (
-                      /* Phantom not installed prompt */
-                      <div className="text-center py-8 space-y-4">
-                        <div className="w-16 h-16 rounded-2xl bg-[#ab9ff2]/10 flex items-center justify-center mx-auto">
-                          <AlertCircle className="w-8 h-8 text-[#ab9ff2]" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold text-white mb-1">Phantom Wallet Required</h3>
-                          <p className="text-sm text-zinc-400 max-w-md mx-auto">
-                            Phantom is the leading Solana wallet. Install it to connect your wallet and manage your SOL balance.
-                          </p>
-                        </div>
-                        <a
-                          href={PHANTOM_INSTALL_URL}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#ab9ff2] text-white font-medium text-sm hover:bg-[#9b8fe2] transition-colors"
-                        >
-                          Install Phantom
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                        <button
-                          onClick={() => setError(null)}
-                          className="block mx-auto text-xs text-zinc-500 hover:text-zinc-300 transition-colors mt-2"
-                        >
-                          Try connecting again
-                        </button>
-                      </div>
-                    ) : (
-                      /* Default connect prompt */
-                      <div className="text-center py-8 space-y-5">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ab9ff2]/20 to-[#00ff88]/10 flex items-center justify-center mx-auto border border-white/5">
-                          <Wallet className="w-8 h-8 text-[#ab9ff2]" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold text-white mb-1">Connect Your Wallet</h3>
-                          <p className="text-sm text-zinc-400 max-w-md mx-auto">
-                            Connect your Phantom wallet to view your SOL balance, track transactions, and manage platform payments.
-                          </p>
-                        </div>
-                        <button
-                          onClick={connectWallet}
-                          disabled={connecting}
-                          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#00ff88] text-black font-semibold text-sm hover:bg-[#00e67a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {connecting ? (
-                            <>
-                              <RefreshCw className="w-4 h-4 animate-spin" />
-                              Connecting...
-                            </>
-                          ) : (
-                            <>
-                              <Link2 className="w-4 h-4" />
-                              Connect Phantom
-                            </>
-                          )}
-                        </button>
-                        <p className="text-xs text-zinc-600">
-                          Solana network only. Ensure Phantom is installed.
-                        </p>
-                      </div>
-                    )}
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#635bff]/20 to-[#00ff88]/10 flex items-center justify-center mx-auto border border-white/5">
+                      <CreditCard className="w-8 h-8 text-[#635bff]" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white mb-1">Connect your Stripe Express account</h3>
+                      <p className="text-sm text-zinc-400 max-w-md mx-auto">
+                        Every closed deal routes through GOATED via Stripe Connect. Application Fees auto-split to the platform. Your cut lands in your bank — same day on eligible accounts.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-3 justify-center">
+                      <button
+                        onClick={connectStripe}
+                        disabled={connecting}
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#635bff] text-white font-semibold text-sm hover:bg-[#554fd9] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {connecting ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            Launching Stripe…
+                          </>
+                        ) : (
+                          <>
+                            <Link2 className="w-4 h-4" />
+                            Connect Stripe Express
+                          </>
+                        )}
+                      </button>
+                      <a
+                        href={calLink(CAL_EVENT_DISCOVERY)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 text-zinc-300 font-semibold text-sm hover:bg-white/10 border border-white/10 transition-colors"
+                      >
+                        Book 15-min onboarding <ArrowRight className="w-4 h-4" />
+                      </a>
+                    </div>
+                    <p className="text-xs text-zinc-600 max-w-md mx-auto">
+                      We never touch the money. Stripe holds it, auto-splits the platform fee, and pays the rest to your Stripe Express account.
+                    </p>
+                  </motion.div>
+                ) : isPending ? (
+                  /* ── Onboarding pending ─────────────────────────────────── */
+                  <motion.div
+                    key="pending"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-center py-8 space-y-5"
+                  >
+                    <div className="w-16 h-16 rounded-2xl bg-yellow-500/10 flex items-center justify-center mx-auto border border-yellow-500/20">
+                      <Clock className="w-8 h-8 text-yellow-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white mb-1">Stripe onboarding in progress</h3>
+                      <p className="text-sm text-zinc-400 max-w-md mx-auto">
+                        Your Stripe Express account is being provisioned. Once verification clears, payouts will enable automatically.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-3 justify-center">
+                      <button
+                        onClick={connectStripe}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#635bff] text-white font-semibold text-sm hover:bg-[#554fd9] transition-colors"
+                      >
+                        <RefreshCw className="w-4 h-4" /> Resume onboarding
+                      </button>
+                      <a
+                        href={`mailto:${CONTACT_EMAIL}?subject=Stripe%20onboarding%20help`}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 text-zinc-300 font-semibold text-sm hover:bg-white/10 border border-white/10 transition-colors"
+                      >
+                        Email support
+                      </a>
+                      <button
+                        onClick={disconnectStripe}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-500 hover:text-red-400 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </motion.div>
                 ) : (
-                  /* ── Connected state ──────────────────────────────────── */
+                  /* ── Connected: account bar + summary + ledger ─────────── */
                   <motion.div
                     key="connected"
                     initial={{ opacity: 0 }}
@@ -493,95 +419,71 @@ export default function WalletPage() {
                     exit={{ opacity: 0 }}
                     className="space-y-6"
                   >
-                    {/* Address bar */}
+                    {/* Account bar */}
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-black/40 border border-white/5">
-                      <div className="w-8 h-8 rounded-full bg-[#ab9ff2]/20 flex items-center justify-center flex-shrink-0">
-                        <Wallet className="w-4 h-4 text-[#ab9ff2]" />
+                      <div className="w-8 h-8 rounded-full bg-[#635bff]/20 flex items-center justify-center flex-shrink-0">
+                        <CreditCard className="w-4 h-4 text-[#635bff]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs text-zinc-500 mb-0.5">Wallet Address</p>
-                        <p className="text-sm font-mono text-white truncate">{pubkey}</p>
+                        <p className="text-xs text-zinc-500 mb-0.5">Stripe Account</p>
+                        <p className="text-sm font-mono text-white truncate">{stripeState.accountId}</p>
                       </div>
                       <button
-                        onClick={copyAddress}
+                        onClick={copyAccountId}
                         className="p-2 rounded-lg hover:bg-white/5 transition-colors flex-shrink-0"
-                        title="Copy address"
+                        title="Copy account ID"
                       >
-                        {copied ? (
-                          <Check className="w-4 h-4 text-[#00ff88]" />
-                        ) : (
-                          <Copy className="w-4 h-4 text-zinc-400" />
-                        )}
+                        {copied ? <Check className="w-4 h-4 text-[#00ff88]" /> : <Copy className="w-4 h-4 text-zinc-400" />}
                       </button>
                       <a
-                        href={`https://solscan.io/account/${pubkey}`}
+                        href="https://dashboard.stripe.com/express"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-2 rounded-lg hover:bg-white/5 transition-colors flex-shrink-0"
-                        title="View on Solscan"
+                        title="Open Stripe Dashboard"
                       >
                         <ExternalLink className="w-4 h-4 text-zinc-400" />
                       </a>
                     </div>
 
-                    {/* Balance cards */}
+                    {/* Summary cards */}
                     <motion.div
                       variants={stagger}
                       initial="hidden"
                       animate="visible"
-                      className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+                      className="grid grid-cols-2 sm:grid-cols-4 gap-4"
                     >
-                      <StatCard
-                        icon={Coins}
-                        label="SOL Balance"
-                        value={loadingBalance && balanceLamports === null ? '---' : `${formatSol(balanceLamports || 0)} SOL`}
-                        sublabel={solPrice > 0 ? `${formatUsd(usdValue)}` : 'Price unavailable'}
-                        color="#ab9ff2"
-                        index={0}
-                      />
-                      <StatCard
-                        icon={ArrowUpRight}
-                        label="SOL Price"
-                        value={solPrice > 0 ? formatUsd(solPrice) : '---'}
-                        sublabel="via CoinGecko"
-                        color="#06b6d4"
-                        index={1}
-                      />
-                      <StatCard
-                        icon={Shield}
-                        label="Platform Fee"
-                        value={`${COMMISSION_RATE * 100}%`}
-                        sublabel="On platform transactions"
-                        color="#f59e0b"
-                        index={2}
-                      />
+                      <StatCard icon={TrendingUp} label="Gross Closed" value={fmtUsdCompact(summary.grossClosed)} sublabel="Settled via Stripe" color="#00ff88" index={0} />
+                      <StatCard icon={Receipt}    label="Platform Split" value={fmtUsdCompact(summary.platformSplit)} sublabel="Per invoice" color="#f59e0b" index={1} />
+                      <StatCard icon={Banknote}   label="Your Net" value={fmtUsdCompact(summary.net)} sublabel="Post-split" color="#06b6d4" index={2} />
+                      <StatCard icon={Zap}        label="Next Payout" value={fmtUsdCompact(summary.nextPayout)} sublabel={stripeState?.payoutSchedule || 'Standard'} color="#a855f7" index={3} />
                     </motion.div>
 
-                    {/* Recent transactions */}
+                    {/* Recent Ledger */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-semibold text-white">Recent Transactions</h3>
+                        <h3 className="text-sm font-semibold text-white">Recent Activity</h3>
                         <button
-                          onClick={() => refreshTransactions()}
-                          disabled={loadingTxs}
+                          onClick={refreshLedger}
+                          disabled={ledgerLoading}
                           className="text-xs text-zinc-500 hover:text-white transition-colors flex items-center gap-1"
                         >
-                          <RefreshCw className={`w-3 h-3 ${loadingTxs ? 'animate-spin' : ''}`} />
+                          <RefreshCw className={`w-3 h-3 ${ledgerLoading ? 'animate-spin' : ''}`} />
                           Refresh
                         </button>
                       </div>
 
                       <div className="bg-black/30 border border-white/5 rounded-xl overflow-hidden">
-                        {loadingTxs && transactions.length === 0 ? (
+                        {ledgerLoading && ledger.length === 0 ? (
                           <div className="py-10 text-center">
                             <RefreshCw className="w-5 h-5 text-zinc-600 animate-spin mx-auto mb-2" />
-                            <p className="text-sm text-zinc-500">Loading transactions...</p>
+                            <p className="text-sm text-zinc-500">Loading ledger…</p>
                           </div>
-                        ) : transactions.length === 0 ? (
+                        ) : ledger.length === 0 ? (
                           <div className="py-10 text-center">
-                            <ArrowDownLeft className="w-6 h-6 text-zinc-700 mx-auto mb-2" />
-                            <p className="text-sm text-zinc-500">No recent transactions</p>
-                            <p className="text-xs text-zinc-600 mt-1">Transactions will appear here once activity occurs</p>
+                            <Receipt className="w-6 h-6 text-zinc-700 mx-auto mb-2" />
+                            <p className="text-sm text-zinc-500">No transactions yet</p>
+                            <p className="text-xs text-zinc-600 mt-1">Charges, refunds, platform splits, and payouts will appear here.</p>
                           </div>
                         ) : (
                           <motion.div
@@ -590,8 +492,8 @@ export default function WalletPage() {
                             animate="visible"
                             className="divide-y divide-white/5"
                           >
-                            {transactions.map((tx, i) => (
-                              <TransactionRow key={tx.signature} tx={tx} index={i} />
+                            {ledger.map((row, i) => (
+                              <LedgerRow key={row.id || i} row={row} index={i} />
                             ))}
                           </motion.div>
                         )}
@@ -604,141 +506,41 @@ export default function WalletPage() {
           </div>
         </motion.div>
 
-        {/* ── Fiat / Bank Account Section ───────────────────────────── */}
+        {/* ── How payouts work ───────────────────────────────────────────── */}
         <motion.div variants={fadeInUp} custom={1}>
-          <div className="bg-surface-1 border border-white/5 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <Building2 className="w-4 h-4 text-blue-400" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-semibold text-white">Bank & Fiat</h2>
-                  <p className="text-xs text-zinc-500">USD deposits, withdrawals & card payments</p>
-                </div>
-              </div>
-              <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                Plaid + Stripe
-              </span>
-            </div>
-            <div className="p-6 space-y-6">
-              {/* Bank Connection */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-5 rounded-xl bg-black/30 border border-white/5">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Building2 className="w-5 h-5 text-blue-400" />
-                    <div>
-                      <h3 className="text-sm font-semibold text-white">Bank Account (ACH)</h3>
-                      <p className="text-xs text-zinc-500">Link via Plaid for direct transfers</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => alert('Connect your bank account via Plaid. Set PLAID_CLIENT_ID and PLAID_SECRET in environment to enable.')}
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-500/15 text-blue-400 font-medium text-sm border border-blue-500/20 hover:bg-blue-500/25 transition-colors"
-                  >
-                    <Link2 className="w-4 h-4" />
-                    Connect Bank Account
-                  </button>
-                  <p className="text-[10px] text-zinc-600 mt-2 text-center">256-bit encryption · FDIC insured transfers</p>
-                </div>
-
-                <div className="p-5 rounded-xl bg-black/30 border border-white/5">
-                  <div className="flex items-center gap-3 mb-4">
-                    <CreditCard className="w-5 h-5 text-purple-400" />
-                    <div>
-                      <h3 className="text-sm font-semibold text-white">Card Payments</h3>
-                      <p className="text-xs text-zinc-500">Credit/debit via Stripe</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => alert('Add a payment method via Stripe. Set STRIPE_PUBLISHABLE_KEY and STRIPE_SECRET_KEY in environment to enable.')}
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-purple-500/15 text-purple-400 font-medium text-sm border border-purple-500/20 hover:bg-purple-500/25 transition-colors"
-                  >
-                    <CreditCard className="w-4 h-4" />
-                    Add Payment Method
-                  </button>
-                  <p className="text-[10px] text-zinc-600 mt-2 text-center">Visa, Mastercard, Amex · PCI compliant</p>
-                </div>
-              </div>
-
-              {/* Fiat Balance Display */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-black/20 border border-white/5 rounded-xl p-4">
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">USD Balance</p>
-                  <p className="text-lg font-bold text-white">$0.00</p>
-                </div>
-                <div className="bg-black/20 border border-white/5 rounded-xl p-4">
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Pending</p>
-                  <p className="text-lg font-bold text-zinc-500">$0.00</p>
-                </div>
-                <div className="bg-black/20 border border-white/5 rounded-xl p-4">
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Total Deposited</p>
-                  <p className="text-lg font-bold text-zinc-500">$0.00</p>
-                </div>
-                <div className="bg-black/20 border border-white/5 rounded-xl p-4">
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Total Withdrawn</p>
-                  <p className="text-lg font-bold text-zinc-500">$0.00</p>
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="flex gap-3">
-                <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-brand/10 text-brand border border-brand/20 text-sm font-medium hover:bg-brand/20 transition-colors">
-                  <ArrowDownLeft size={16} /> Deposit USD
-                </button>
-                <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-white/[0.02] border border-white/5 text-sm font-medium text-zinc-300 hover:bg-white/[0.04] transition-colors">
-                  <ArrowUpRight size={16} /> Withdraw USD
-                </button>
-                <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-white/[0.02] border border-white/5 text-sm font-medium text-zinc-300 hover:bg-white/[0.04] transition-colors">
-                  <RefreshCw size={16} /> Convert to SOL
-                </button>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ── Platform Commission Info ────────────────────────────────── */}
-        <motion.div variants={fadeInUp} custom={2}>
           <div className="bg-surface-1 border border-white/5 rounded-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-white/5 flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-[#00ff88]/10 flex items-center justify-center">
-                <Shield className="w-4 h-4 text-[#00ff88]" />
+                <Info className="w-4 h-4 text-[#00ff88]" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-white">Platform Commission</h2>
-                <p className="text-xs text-zinc-500">Transaction fee structure</p>
+                <h2 className="text-sm font-semibold text-white">How payouts work</h2>
+                <p className="text-xs text-zinc-500">Stripe is the money custodian. We never are.</p>
               </div>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl bg-black/30 border border-white/5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Coins className="w-4 h-4 text-[#00ff88]" />
-                    <span className="text-xs font-medium text-zinc-400">Deal Commission</span>
+                {[
+                  { icon: CreditCard, title: 'Customer pays via Stripe', desc: 'Invoice or payment link generated by GOATED. Customer pays with card, ACH, or wire. Funds land in Stripe — not in a GOATED-held account.', color: '#635bff' },
+                  { icon: Receipt,    title: 'Platform fee auto-splits', desc: 'Stripe routes the agreed platform cut to GOATED (Application Fee). The rest goes to your Stripe Express balance. The split is recorded on every invoice.', color: '#f59e0b' },
+                  { icon: Banknote,   title: 'Payout to your bank', desc: 'Stripe Express pays your balance to the bank you linked during onboarding. Standard schedule or Instant Payout (1% fee) — your choice.', color: '#00ff88' },
+                ].map((item, i) => (
+                  <div key={i} className="p-4 rounded-xl bg-black/30 border border-white/5">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: `${item.color}15`, color: item.color }}>
+                      <item.icon className="w-5 h-5" />
+                    </div>
+                    <h3 className="font-semibold text-white text-sm mb-1">{item.title}</h3>
+                    <p className="text-xs text-zinc-400 leading-relaxed">{item.desc}</p>
                   </div>
-                  <p className="text-2xl font-bold text-white">12%</p>
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Applied to every platform-processed transaction. Covers escrow, dispute resolution, and platform operations.
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl bg-black/30 border border-white/5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <ArrowUpRight className="w-4 h-4 text-[#06b6d4]" />
-                    <span className="text-xs font-medium text-zinc-400">Withdrawal Fee</span>
-                  </div>
-                  <p className="text-2xl font-bold text-white">$2.50</p>
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Flat fee per withdrawal to external wallets. No minimum withdrawal amount.
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl bg-black/30 border border-white/5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Shield className="w-4 h-4 text-[#a855f7]" />
-                    <span className="text-xs font-medium text-zinc-400">Escrow Protection</span>
-                  </div>
-                  <p className="text-2xl font-bold text-white">Free</p>
-                  <p className="text-xs text-zinc-500 mt-1">
-                    All deals include on-chain escrow at no extra cost. Funds are released only when both parties confirm.
+                ))}
+              </div>
+
+              <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-[#00ff88]/5 to-transparent border border-[#00ff88]/15 flex items-start gap-3">
+                <Shield className="w-4 h-4 text-[#00ff88] flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-white font-semibold mb-1">We never touch the money.</p>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    Stripe is the payment custodian. GOATED only receives the Application Fee the platform is entitled to on each transaction. No pooled wallets, no crypto exposure, no FinCEN MTL risk.
                   </p>
                 </div>
               </div>
@@ -746,7 +548,67 @@ export default function WalletPage() {
           </div>
         </motion.div>
 
-        {/* Stripe section integrated into Bank & Fiat above */}
+        {/* ── Rails-Only section ─────────────────────────────────────────── */}
+        <motion.div variants={fadeInUp} custom={2}>
+          <div className="bg-surface-1 border border-white/5 rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/5 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                <FileText className="w-4 h-4 text-cyan-400" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-white">Rails-only invoicing</h2>
+                <p className="text-xs text-zinc-500">You brought the deal — we just run it through clean rails.</p>
+              </div>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-zinc-400 mb-4 leading-relaxed max-w-3xl">
+                If GOATED didn&apos;t source the deal, you can still route it through our Stripe Connect rails for legally-clean invoicing and same-day payouts. Lower platform split, different terms — scoped on your audit call, not advertised publicly.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <a
+                  href={calLink(CAL_EVENT_DISCOVERY)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 font-semibold text-sm hover:bg-cyan-500/25 transition-colors"
+                >
+                  <Clock className="w-4 h-4" /> Book 15-min scoping call
+                </a>
+                <a
+                  href={`mailto:${CONTACT_EMAIL}?subject=Rails-only%20invoicing%20inquiry`}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 text-zinc-300 border border-white/10 font-semibold text-sm hover:bg-white/10 transition-colors"
+                >
+                  Email {CONTACT_EMAIL}
+                </a>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ── Security footer ───────────────────────────────────────────── */}
+        <motion.div variants={fadeInUp} custom={3}>
+          <div className="rounded-2xl border border-white/5 bg-black/30 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs text-zinc-500">
+                <Shield className="w-3.5 h-3.5 text-[#00ff88]" />
+                <span>PCI-DSS Level 1 via Stripe</span>
+                <span className="text-zinc-700">·</span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#00ff88]" />
+                <span>1099-K issued by Stripe on your behalf</span>
+                <span className="text-zinc-700">·</span>
+                <BarChart3 className="w-3.5 h-3.5 text-[#00ff88]" />
+                <span>Full ledger exported on request</span>
+              </div>
+              <a
+                href="https://stripe.com/connect/express"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-zinc-500 hover:text-[#00ff88] inline-flex items-center gap-1"
+              >
+                Learn about Stripe Express <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+        </motion.div>
 
       </motion.div>
     </div>

@@ -310,12 +310,19 @@ Headlines:\n${headlines.map((h, i) => `${i}. ${h}`).join('\n')}`,
 
 // ─── Main Handler ─────────────────────────────────────────────────────────────
 
-export default async function handler(req, res) {
-  const corsHeaders = getCorsHeaders(req);
-  Object.entries(corsHeaders).forEach(([k, v]) => res.setHeader(k, v));
+import { guardRequest, setCacheHeaders } from './_lib/guard.js';
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(req, res) {
+  const guard = guardRequest(req, res, {
+    rateMaxPerWindow: 20,
+    llmDailyCap: 200,
+    methods: ['GET'],
+  });
+  if (!guard.ok) {
+    if (guard.handled) return;
+    return res.status(guard.status).json(guard.body);
+  }
+  setCacheHeaders(res, 60, 30); // sentiment refreshes every ~60s at edge
 
   // Check cache
   if (cache && Date.now() - cacheTs < CACHE_TTL) {

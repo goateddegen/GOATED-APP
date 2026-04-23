@@ -1,14 +1,15 @@
 import React from 'react';
-import { Home, LayoutDashboard, Users, TrendingUp, Zap, BarChart3, Target, Wallet, Bot, Keyboard, Search, ChevronLeft, ChevronRight, Menu, X, Sparkles, User, Shield, Flame, Rocket, Dice5 } from 'lucide-react';
+import { Home, LayoutDashboard, Users, TrendingUp, Zap, BarChart3, Target, Wallet, Bot, Keyboard, Search, ChevronLeft, ChevronRight, Menu, X, Sparkles, User, Shield, Flame, Rocket, Dice5, Award, Crown } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { GoatIcon } from './GoatLogo';
 
 const nav = [
   { id: 'home', icon: Home, label: 'Home', key: 'H' },
+  { id: 'audit', icon: Award, label: 'Audit', key: 'U', badge: 'FREE' },
+  { id: 'managed', icon: Crown, label: 'Managed', key: 'M', badge: 'HOT' },
   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', key: 'D' },
-  { id: 'trends', icon: TrendingUp, label: 'TrendPulse & Markets', key: 'T', badge: 'ALPHA' },
+  { id: 'trends', icon: TrendingUp, label: 'TrendPulse', key: 'T' },
   { id: 'leads', icon: Users, label: 'Leads', key: 'L' },
-  { id: 'casino', icon: Dice5, label: 'Casino', key: 'P', badge: 'LIVE' },
   { id: 'wallet', icon: Wallet, label: 'Wallet', key: 'W' },
   { id: 'admin', icon: Shield, label: 'Admin', key: 'X', badge: 'PRO' },
 ];
@@ -32,8 +33,12 @@ export default function Sidebar() {
 
   const navContent = (expanded) => (
     <>
-      {/* Logo with neon effect — clickable to homepage */}
-      <button onClick={() => { setPage('home'); setMobileMenu(false); window.scrollTo(0, 0); }} aria-label="Go to homepage" className="w-full p-4 border-b border-white/[0.03] flex items-center gap-3 relative overflow-hidden group hover:bg-white/[0.02] transition-colors">
+      {/* Logo with neon effect — clickable to homepage. Fixed height prevents vertical shift during expand/collapse. */}
+      <button
+        onClick={() => { setPage('home'); setMobileMenu(false); window.scrollTo(0, 0); }}
+        aria-label="Go to homepage"
+        className="w-full h-[72px] px-4 border-b border-white/[0.03] flex items-center gap-3 relative overflow-hidden group hover:bg-white/[0.02] transition-colors flex-shrink-0"
+      >
         {/* Ambient glow behind logo */}
         <div className="absolute inset-0 bg-gradient-to-r from-brand/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" aria-hidden="true" />
         <div className="relative text-brand flex-shrink-0" aria-hidden="true">
@@ -74,7 +79,7 @@ export default function Sidebar() {
               <>
                 <span className="flex-1 text-left text-sm">{n.label}</span>
                 {n.badge && <span className="text-[10px] bg-brand/15 text-brand px-2 py-0.5 rounded-full font-medium" aria-label={`${n.label} ${n.badge}`}>{n.badge}</span>}
-                <kbd className="text-[10px] text-slate-600 font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-0.5 leading-none" aria-hidden="true">{n.key}</kbd>
+                {n.key && <kbd className="text-[10px] text-slate-600 font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-0.5 leading-none" aria-hidden="true">{n.key}</kbd>}
               </>
             )}
           </button>
@@ -105,8 +110,8 @@ export default function Sidebar() {
         </button>
       </nav>
 
-      {/* Account button */}
-      <div className="p-2 border-t border-white/[0.03]">
+      {/* Account button — no top border (was causing green-rectangle artifact during transitions) */}
+      <div className="p-2">
         <button onClick={() => { setAccountModalOpen(true); setMobileMenu(false); }} aria-label={isLoggedIn && user ? `Account: ${user.name}` : 'Sign in to your account'}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-white/[0.02] hover:text-slate-200 transition-colors">
           {isLoggedIn && user ? (
@@ -125,35 +130,34 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* DEGEN MODE Toggle */}
-      <div className="p-2 border-t border-white/[0.03]">
+      {/* WOLF / CHILL Toggle — Wolf mode is default-on */}
+      <div className="p-2">
         <button
           onClick={() => {
             const wasOff = !degenMode;
             toggleDegenMode();
-            // Screen shake + confetti on activation
+            // Screen shake + confetti when flipping INTO wolf mode
             if (wasOff) {
               const root = document.querySelector('.min-h-screen');
               if (root) {
                 root.classList.add('degen-activate');
                 setTimeout(() => root.classList.remove('degen-activate'), 600);
               }
-              // Delay confetti slightly for dramatic effect
               setTimeout(() => triggerConfetti(), 200);
             }
           }}
-          aria-label={degenMode ? 'Disable DEGEN MODE' : 'Enable DEGEN MODE'}
+          aria-label={degenMode ? 'Switch to CHILL mode' : 'Switch to WOLF mode'}
           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-300 group ${
             degenMode
               ? 'bg-gradient-to-r from-orange-500/20 via-red-500/20 to-yellow-500/20 text-orange-400 border border-orange-500/30'
-              : 'text-slate-500 hover:bg-white/[0.02] hover:text-orange-400'
+              : 'text-emerald-400 bg-emerald-500/5 border border-emerald-500/20 hover:bg-emerald-500/10'
           }`}
         >
-          <Flame size={18} className={`flex-shrink-0 ${degenMode ? 'text-orange-400 animate-pulse' : ''}`} aria-hidden="true" />
+          <Flame size={18} className={`flex-shrink-0 ${degenMode ? 'text-orange-400 animate-pulse' : 'text-emerald-400'}`} aria-hidden="true" />
           {expanded && (
             <>
-              <span className="flex-1 text-left text-xs font-bold tracking-wider uppercase">{degenMode ? 'DEGEN ON' : 'DEGEN'}</span>
-              <div className={`w-8 h-4 rounded-full transition-colors relative ${degenMode ? 'bg-orange-500' : 'bg-zinc-700'}`}>
+              <span className="flex-1 text-left text-xs font-bold tracking-wider uppercase">{degenMode ? 'WOLF MODE' : 'CHILL MODE'}</span>
+              <div className={`w-8 h-4 rounded-full transition-colors relative ${degenMode ? 'bg-orange-500' : 'bg-emerald-600'}`}>
                 <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${degenMode ? 'translate-x-4' : 'translate-x-0.5'}`} />
               </div>
             </>
@@ -164,7 +168,7 @@ export default function Sidebar() {
       {/* Version tag at bottom */}
       {expanded && (
         <div className="px-4 py-2 border-t border-white/[0.03]">
-          <div className="text-[10px] text-slate-600 text-center">{degenMode ? 'v4.0 — WOLF MODE ACTIVATED' : 'v4.0 — Intelligence Engine'}</div>
+          <div className="text-[10px] text-slate-600 text-center">{degenMode ? 'v4.0 — WOLF MODE' : 'v4.0 — CHILL MODE'}</div>
         </div>
       )}
     </>
@@ -202,8 +206,8 @@ export default function Sidebar() {
       <aside
         role="navigation"
         aria-label="Main navigation"
-        className="fixed left-0 top-9 bottom-0 glass z-40 transition-[width] duration-300 flex-col hidden md:flex"
-        style={{ width: sidebar ? 240 : 72 }}
+        className="fixed left-0 top-9 bottom-0 glass z-40 transition-[width] duration-300 flex-col hidden md:flex overflow-hidden"
+        style={{ width: sidebar ? 240 : 72, willChange: 'width' }}
       >
         {navContent(sidebar)}
 

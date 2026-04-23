@@ -1,5 +1,5 @@
 import React from 'react';
-import { Keyboard, X, Home, LayoutDashboard, Users, TrendingUp, BarChart3, Wallet, Bot, Search, Eye, Shield, Rocket, User, Dice5, Flame } from 'lucide-react';
+import { Keyboard, X, Home, LayoutDashboard, Users, TrendingUp, BarChart3, Wallet, Bot, Search, Eye, Shield, Rocket, User, Dice5, Flame, Crown, Award } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 
 const sections = [
@@ -8,10 +8,11 @@ const sections = [
     desc: 'Jump to any page instantly',
     keys: [
       { key: 'H', label: 'Home', icon: Home, color: '#10b981' },
+      { key: 'U', label: 'Audit', icon: Award, color: '#22d3ee' },
+      { key: 'M', label: 'Managed Service', icon: Crown, color: '#facc15' },
       { key: 'D', label: 'Dashboard', icon: LayoutDashboard, color: '#06b6d4' },
-      { key: 'T/C', label: 'TrendPulse & Markets', icon: TrendingUp, color: '#a855f7' },
+      { key: 'T/C', label: 'TrendPulse', icon: TrendingUp, color: '#a855f7' },
       { key: 'L', label: 'Leads', icon: Users, color: '#f59e0b' },
-      { key: 'P', label: 'Casino', icon: Dice5, color: '#eab308' },
       { key: 'W', label: 'Wallet', icon: Wallet, color: '#3b82f6' },
       { key: 'X', label: 'Admin', icon: Shield, color: '#ef4444' },
     ]

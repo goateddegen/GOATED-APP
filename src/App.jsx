@@ -8,7 +8,8 @@ import Ticker from './components/Ticker';
 import SearchModal from './components/SearchModal';
 import KeybindsModal from './components/KeybindsModal';
 import LeadDetail from './components/LeadDetail';
-import AIOverlay from './components/AIOverlay';
+// AIOverlay is 2600+ LOC + framer-motion + voice synth imports — lazy-load so first-paint stays thin.
+const AIOverlay = lazy(() => import('./components/AIOverlay'));
 import AccountModal from './components/AccountModal';
 import Onboarding from './components/Onboarding';
 import { onAuthStateChange, trackPerformance, trackPageView, startAutoSync, stopAutoSync, loadUserDataFromCloud } from './lib/supabase';
@@ -22,8 +23,12 @@ const TrendsPage = React.memo(lazy(() => import('./pages/TrendsPage')));
 // const MarketPage = lazy(() => import('./pages/MarketPage'));
 const WalletPage = React.memo(lazy(() => import('./pages/WalletPage')));
 const AdminPage = React.memo(lazy(() => import('./pages/AdminPage')));
+// Public lead magnet — Revenue Loss Auditor. No login. Shareable at /#/for/{slug}
+const AuditPage = React.memo(lazy(() => import('./pages/AuditPage')));
+// Managed Service page — the money page. Tiers, deposit CTA, Cal.com embed.
+const ManagedPage = React.memo(lazy(() => import('./pages/ManagedPage')));
 // BuilderPage, WhopPage, LaunchPadPage removed
-const CasinoPage = React.memo(lazy(() => import('./pages/CasinoPage')));
+// CasinoPage removed — fake bets/P&L, will rethink tied to TrendPulse later
 // CommsPage and FinderPage removed — outreach built into leads side
 
 // Loading fallback — NO black background, NO framer-motion delays
@@ -81,31 +86,13 @@ function CustomCursor() {
       const { x, y } = mouseRef.current;
       // Ring follows with smooth lerp
       if (showRing) {
-        ringPos.current.x += (x - 14 - ringPos.current.x) * 0.2;
-        ringPos.current.y += (y - 14 - ringPos.current.y) * 0.2;
+        ringPos.current.x += (x - 14 - ringPos.current.x) * 0.45;
+        ringPos.current.y += (y - 14 - ringPos.current.y) * 0.45;
         if (ringRef.current) {
           ringRef.current.style.transform = `translate3d(${ringPos.current.x}px, ${ringPos.current.y}px, 0)`;
         }
       }
-      // Throttled hover detection — check every 500ms, skip during page transitions
-      if (now - lastHoverCheck > 500 && !transitioning) {
-        lastHoverCheck = now;
-        if (x > 0 && y > 0) {
-          try {
-            const el = document.elementFromPoint(x, y);
-            if (el) {
-              const isInteractive = el.closest('button, a, [role="button"], input, select, textarea, [data-clickable]');
-              if (isInteractive && !hoveringRef.current) {
-                hoveringRef.current = true;
-                ringRef.current?.classList.add('hovering');
-              } else if (!isInteractive && hoveringRef.current) {
-                hoveringRef.current = false;
-                ringRef.current?.classList.remove('hovering');
-              }
-            }
-          } catch { /* ignore during DOM teardown */ }
-        }
-      }
+      // Hover detection via CSS pointer-events — no more elementFromPoint reflows
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -328,6 +315,22 @@ export default function App() {
     trackPageView(page);
   }, [page]);
 
+  // Hash router — shareable audits at /#/for/{slug} and /#/audit
+  // Public-facing lead magnet URLs need to resolve even on first page load.
+  useEffect(() => {
+    const resolveHash = () => {
+      const h = window.location.hash || '';
+      if (/^#\/(for\/|audit)/i.test(h)) {
+        setPage('audit');
+      } else if (/^#\/managed/i.test(h)) {
+        setPage('managed');
+      }
+    };
+    resolveHash();
+    window.addEventListener('hashchange', resolveHash);
+    return () => window.removeEventListener('hashchange', resolveHash);
+  }, [setPage]);
+
   // Debounced page navigation — prevents choppy rapid-fire page switching
   // Also scrolls to top so pages never open mid-scroll
   const lastNavRef = useRef(0);
@@ -387,7 +390,7 @@ export default function App() {
       // If keybinds modal is open, handle navigation keys then close
       if (state.keybindsOpen) {
         e.preventDefault();
-        const keybindNav = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', u: 'whop', p: 'casino', m: 'trends' };
+        const keybindNav = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', m: 'managed', u: 'audit' };
         const target = keybindNav[key];
         setKeybindsOpen(false);
         if (target) { navTo(target); }
@@ -397,17 +400,17 @@ export default function App() {
         return;
       }
 
-      // Shift+D — toggle DEGEN mode
+      // Shift+D — flip WOLF / CHILL mode
       if (e.shiftKey && key === 'd') {
         e.preventDefault();
         const store = useStore.getState();
         store.toggleDegenMode();
-        const nowDegen = !store.degenMode;
+        const nowWolf = !store.degenMode;
         clearTimeout(degenToastTimer.current);
-        setDegenToast(nowDegen
-          ? '\u{1F525} DEGEN MODE ACTIVE \u2014 Casino, Alpha Plays, Insider Intel, Market Signals unlocked'
-          : 'DEGEN MODE OFF \u2014 Standard mode');
-        degenToastTimer.current = setTimeout(() => setDegenToast(null), 3000);
+        setDegenToast(nowWolf
+          ? '\u{1F525} WOLF MODE ACTIVE \u2014 Alpha plays, real-time intel, closer OS engaged'
+          : 'CHILL MODE \u2014 Toned down, same engine');
+        degenToastTimer.current = setTimeout(() => setDegenToast(null), 1100);
         return;
       }
 
@@ -416,7 +419,7 @@ export default function App() {
 
       // Navigation map — single lookup
       // Debounce same-key rapid presses (200ms) to reduce CSR overhead on low-memory devices
-      const navMap = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', u: 'whop', p: 'casino' };
+      const navMap = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', m: 'managed', u: 'audit' };
       const navTarget = navMap[key];
       if (navTarget) {
         const now = Date.now();
@@ -450,9 +453,11 @@ export default function App() {
       case 'market': return <TrendsPage />; // legacy route — C key now maps to trends
       case 'wallet': return <WalletPage />;
       case 'admin': return <AdminPage />;
+      case 'audit': return <AuditPage />;
+      case 'managed': return <ManagedPage />;
       // builder and whop removed — don't help users close deals
       // LaunchPad removed
-      case 'casino': return <CasinoPage />;
+      // casino removed
       // comms and finder removed
       default: return <HomePage />;
     }
@@ -493,17 +498,25 @@ export default function App() {
         {accountModalOpen && <AccountModal key="account" />}
       </AnimatePresence>
       <PageErrorBoundary pageKey="ai-overlay">
-        <AIOverlay />
+        {/* Defer AIOverlay mount until first open — shaves ~300KB off initial JS */}
+        {aiOpen && (
+          <Suspense fallback={null}>
+            <AIOverlay />
+          </Suspense>
+        )}
       </PageErrorBoundary>
       {!onboardingComplete && <Onboarding />}
       {degenToast && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[999] px-5 py-3 rounded-xl text-sm font-semibold shadow-2xl border border-white/10 backdrop-blur-md"
+        <div
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-[999] flex items-center gap-2.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider shadow-lg border backdrop-blur-md pointer-events-none"
           style={{
-            background: degenToast.includes('ACTIVE') ? 'rgba(249,115,22,0.15)' : 'rgba(0,0,0,0.8)',
-            color: degenToast.includes('ACTIVE') ? '#f97316' : '#94a3b8',
-            animation: 'scaleIn 0.2s ease-out',
+            background: degenToast.includes('ACTIVE') ? 'rgba(249,115,22,0.14)' : 'rgba(16,185,129,0.10)',
+            borderColor: degenToast.includes('ACTIVE') ? 'rgba(249,115,22,0.35)' : 'rgba(16,185,129,0.30)',
+            color: degenToast.includes('ACTIVE') ? '#f97316' : '#10b981',
+            animation: 'degenFlash 1.1s ease-out forwards',
           }}>
-          {degenToast}
+          <span style={{ fontSize: '14px' }}>{degenToast.includes('ACTIVE') ? '🔥' : '🌿'}</span>
+          <span>{degenToast.includes('ACTIVE') ? 'WOLF MODE' : 'CHILL MODE'}</span>
         </div>
       )}
       {/* Keyboard shortcut hint — fades out after 10s */}
@@ -521,6 +534,12 @@ export default function App() {
           5% { opacity: 1; }
           80% { opacity: 1; }
           100% { opacity: 0; }
+        }
+        @keyframes degenFlash {
+          0%   { opacity: 0; transform: translate(-50%, -8px) scale(0.92); }
+          18%  { opacity: 1; transform: translate(-50%, 0) scale(1); }
+          70%  { opacity: 1; transform: translate(-50%, 0) scale(1); }
+          100% { opacity: 0; transform: translate(-50%, -4px) scale(0.96); }
         }
       `}</style>
       <Analytics />

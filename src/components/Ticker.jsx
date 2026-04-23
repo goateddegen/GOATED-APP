@@ -10,8 +10,6 @@ function useTickerData() {
     { label: 'SOL', value: '$198', change: '+6.3%', src: 'COINGECKO', positive: true },
     { label: 'Trend Score', value: '94/100', change: '+7', src: 'PULSE', positive: true },
     { label: 'Fear & Greed', value: '72', change: 'Greed', src: 'ALT.ME', positive: true },
-    { label: 'Signals', value: '23', change: 'LIVE', src: 'GOATED', positive: true },
-    { label: 'Leads DB', value: '250K+', change: 'LIVE', src: 'GOATED', positive: true },
     { label: 'Top Sector', value: 'SaaS', change: 'Hot', src: 'INTEL', positive: true },
   ]);
 

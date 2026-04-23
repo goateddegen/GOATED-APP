@@ -492,17 +492,20 @@ function getAllLeads(poolSize = DEFAULT_POOL) {
 // ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
-export default async function handler(req, res) {
-  const corsHeaders = getCorsHeaders(req);
-  if (req.method === 'OPTIONS') {
-    res.writeHead(204, corsHeaders);
-    return res.end();
-  }
-  Object.entries(corsHeaders).forEach(([k, v]) => res.setHeader(k, v));
+import { guardRequest, setCacheHeaders } from './_lib/guard.js';
 
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed. Use GET.' });
+export default async function handler(req, res) {
+  // Apollo API passthrough — 30/min per IP is plenty, daily cap prevents quota burn
+  const guard = guardRequest(req, res, {
+    rateMaxPerWindow: 30,
+    llmDailyCap: 0, // no LLM here, but Apollo enrichment costs real $$
+    methods: ['GET'],
+  });
+  if (!guard.ok) {
+    if (guard.handled) return;
+    return res.status(guard.status).json(guard.body);
   }
+  setCacheHeaders(res, 30, 15);
 
   try {
     const {

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useStore, fmt } from '../hooks/useStore';
 import { GoatIcon } from './GoatLogo';
+import { notify, requestNotifPermission, getNotifPermission } from '../utils/notifications';
 
 // ─── STREAMING TEXT HOOK ──────────────────────────────────────────────
 // Reveals text word-by-word for a streaming feel, even when the response arrives all at once
@@ -64,13 +65,20 @@ const SIGNAL_CATEGORIES = {
 
 // ─── SIGNAL ENGINE HOOK ─────────────────────────────────────────────
 // Generates contextual signals every 15-30 seconds from lead + market data
+// NOTE: Uses refs for leads/currentPage so generateSignal stays stable and
+// the setInterval doesn't thrash on every parent render.
 function useSignalEngine(leads, currentPage) {
   const [signals, setSignals] = useState([]);
   const signalIdRef = useRef(0);
   const timerRef = useRef(null);
+  const leadsRef = useRef(leads);
+  const pageRef = useRef(currentPage);
+  useEffect(() => { leadsRef.current = leads; pageRef.current = currentPage; }, [leads, currentPage]);
 
-  // Signal generator templates
+  // Signal generator templates — stable reference, reads from refs
   const generateSignal = useCallback(() => {
+    const leads = leadsRef.current;
+    const currentPage = pageRef.current;
     if (!leads || leads.length === 0) return null;
 
     const negotiating = leads.filter(l => l.status === 'negotiation');
@@ -200,7 +208,7 @@ function useSignalEngine(leads, currentPage) {
       if (r <= 0) return pool[i];
     }
     return pool[pool.length - 1];
-  }, [leads, currentPage]);
+  }, []); // Stable — reads from refs above
 
   useEffect(() => {
     const schedule = () => {
@@ -218,6 +226,17 @@ function useSignalEngine(leads, currentPage) {
               read: false,
             };
             setSignals(prev => [newSignal, ...prev].slice(0, 20)); // Keep last 20
+
+            // Fire push notification for high-value signals (ALPHA/CLOSING)
+            // — only when chat is closed AND tab is focused but backgrounded-friendly
+            if (signal.category === 'ALPHA' || signal.category === 'CLOSING') {
+              notify({
+                title: signal.title,
+                body: signal.description,
+                tag: `signal-${signal.category}`,
+                category: signal.category,
+              });
+            }
           }
         }
         schedule();
@@ -621,19 +640,25 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
     return `**TrendPulse Money Plays**\n\nBased on current signals, here are your top plays:\n\n---\n\n**1. BTC Prediction Play** (Kalshi)\n- BTC above $100K by June → YES at $0.42 (58% implied)\n- GOATED AI confidence: 72% → **+30% alpha edge**\n- Bet $100 → Win $238 if YES | Risk: $100\n- [Place Bet on Kalshi →]\n\n**2. SOL Momentum Trade**\n- SOL showing rising momentum (+6.3% 24h)\n- Entry: $198 | Target: $220 | Stop: $185\n- Risk/Reward: 1:1.7\n- [Copy Trade Setup →]\n\n**3. B2B Revenue Play**\n- Your pipeline has **${lostRevenue}** in lost revenue leads\n- Close just 3 of your top 10 → **$${top3Commission.toLocaleString()} in commission**\n- [Call Top Lead Now →]\n\n---\n\n**Strategy: Split your time 70/30**\n- 70% → B2B closing (guaranteed commission)\n- 30% → Prediction markets (alpha plays)\n- Target: **$25K MRR** from closing + **$5K/mo** from trading\n\n**Your Edge:**\n- Total pipeline commission: **$${pipelineCommission.toLocaleString()}**\n- Current MRR: **$${currentMRR.toLocaleString()}**\n- ${negotiatingLeads.length} deals in negotiation ready to close\n\nGo to **Markets** for live prediction data, or **Leads** to start closing.`;
   }
 
-  // Navigation intent detection
-  if ((lower.includes('go to') || lower.includes('open') || lower.includes('show me') || lower.includes('take me to') || lower.includes('switch to')) && !lower.includes('lead')) {
+  // Navigation intent detection — short-circuits LLM for "go to X" / "open X" commands
+  // Exception: if the user is asking to SEARCH leads ("leads in austin", "show me $100k deals"),
+  // fall through to the specialized lead search below.
+  const isNavVerb = /(?:\bgo to\b|\bopen\b|\btake me to\b|\bswitch to\b|^show me\b|^show\b)/i.test(lower);
+  const isLeadSearch = lower.includes('lead') && /(?: in | above | below | over | under | industry | score | \$)/i.test(lower);
+  if (isNavVerb && !isLeadSearch) {
     const navMap = {
       'dashboard': 'dashboard', 'dash': 'dashboard',
       'trend': 'trends', 'trendpulse': 'trends', 'market': 'trends', 'alpha': 'trends',
-      'casino': 'casino', 'game': 'casino', 'roulette': 'casino', 'bet': 'casino',
-      'wallet': 'wallet', 'earnings': 'wallet', 'commission': 'wallet',
-      'admin': 'admin', 'settings': 'admin',
-      'home': 'home',
+      'lead': 'leads', 'pipeline': 'leads',
+      'audit': 'audit', 'leak': 'audit', 'revenue audit': 'audit',
+      'managed': 'managed', 'dfy': 'managed', 'done for you': 'managed', 'management': 'managed',
+      'wallet': 'wallet', 'earnings': 'wallet', 'commission': 'wallet', 'payout': 'wallet', 'stripe': 'wallet',
+      'admin': 'admin', 'settings': 'admin', 'account': 'admin',
+      'home': 'home', 'homepage': 'home', 'landing': 'home',
     };
     for (const [keyword, page] of Object.entries(navMap)) {
       if (lower.includes(keyword)) {
-        return `Navigating to **${page.charAt(0).toUpperCase() + page.slice(1)}**...\n\n[NAVIGATE:${page}]`;
+        return `Routing → **${page.charAt(0).toUpperCase() + page.slice(1)}**\n\n[NAVIGATE:${page}]`;
       }
     }
   }
@@ -1241,7 +1266,7 @@ const CONTEXT_TIPS = {
   trends: "BTC sentiment shifted bullish \u2014 see alpha plays",
   dashboard: "Your pipeline is empty \u2014 let me find leads",
   casino: "Try Price Prediction \u2014 most popular game",
-  home: "Welcome! Press Shift+D for DEGEN mode",
+  home: "Welcome. Wolf mode is on \u2014 Shift+D to flip to Chill.",
 };
 
 // ─── CLOSE COACH STEPS ────────────────────────────────────────────────
@@ -1269,17 +1294,41 @@ function getCoachStepFromStatus(status) {
 
 // ─── MAIN COMPONENT ────────────────────────────────────────────────────
 export default function AIOverlay() {
-  const { aiOpen, setAiOpen, leads: rawLeads, getLeads, page: currentPage, setPage, selectedLead, setSelectedLead, setDetailOpen, setPreviousPage, degenMode } = useStore();
+  // ─── GRANULAR SELECTORS (avoid full-store subscription) ────────────
+  // Subscribing via useStore() without a selector re-renders this component
+  // on every store change, including 500K+ lead array refs. Use atomic
+  // selectors so we only re-render when specific slices change.
+  const aiOpen = useStore(s => s.aiOpen);
+  const setAiOpen = useStore(s => s.setAiOpen);
+  const rawLeads = useStore(s => s.leads);
+  const getLeads = useStore(s => s.getLeads);
+  const currentPage = useStore(s => s.page);
+  const setPage = useStore(s => s.setPage);
+  const selectedLead = useStore(s => s.selectedLead);
+  const setSelectedLead = useStore(s => s.setSelectedLead);
+  const setDetailOpen = useStore(s => s.setDetailOpen);
+  const setPreviousPage = useStore(s => s.setPreviousPage);
+  const degenMode = useStore(s => s.degenMode);
   const leads = rawLeads || [];
 
   useEffect(() => {
     if (!rawLeads) getLeads();
   }, [rawLeads, getLeads]);
 
-  // Initial messages based on mode
-  const NORMAL_INTRO = "I'm **GOATED AI** \u2014 your revenue intelligence agent and deep research assistant.\n\nI have access to all platform data and can help with:\n- **Deep Research** \u2014 markets, companies, industries, competitive analysis\n- **Lead Intelligence** \u2014 search 500K+ leads, generate call scripts & SMS sequences\n- **Market Analysis** \u2014 real-time sentiment across all social platforms\n- **Predictive Analytics** \u2014 spread analysis, trend correlation, price predictions\n- **Direct Outreach** \u2014 VoIP scripts, SMS campaigns, voicemail drops\n- **General AI** \u2014 coding, writing, analysis, strategy, anything\n\nAll platform features (**Leads**, **TrendPulse**, **Dashboard**, **Markets**, **Wallet**) are embedded and accessible. Ask me anything.";
+  // One-shot notification permission prompt — 15s after mount, only if 'default'
+  // and user is in Wolf mode (opted in by default anyway). Non-blocking.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const perm = getNotifPermission();
+    if (perm !== 'default') return;
+    const t = setTimeout(() => { requestNotifPermission(); }, 15000);
+    return () => clearTimeout(t);
+  }, []);
 
-  const DEGEN_INTRO = "**WOLF MODE ACTIVATED** \u2014 I'm your GOATED AI degen co-pilot and I'm ready to make it rain.\n\nListen up king, here's what I bring to the table:\n- **Alpha Intelligence** \u2014 find the plays before anyone else, ape into the right deals\n- **Lead Sniping** \u2014 500K+ targets scored and ranked, I'll tell you exactly who to call and what to say\n- **Market Pulse** \u2014 real-time degen sentiment, whale movements, what's pumping and what's dumping\n- **Prediction Markets** \u2014 spreads, odds, probability scoring \u2014 gamble smarter not harder\n- **Outreach Warfare** \u2014 VoIP scripts, SMS blasts, voicemail drops that actually convert\n- **Big Brain Mode** \u2014 strategy, analysis, whatever you need, I don't miss\n\nAll features unlocked: **Leads**, **TrendPulse**, **Dashboard**, **Markets**, **Wallet**\n\nLFG. What are we closing today?";
+  // Initial messages based on mode
+  const NORMAL_INTRO = "**GOATED AI** \u2014 revenue terminal.\n\n- Lead search: 250K+ pipeline, ranked\n- Close scripts: per-lead, revenue-loss-first\n- Market data: real-time sentiment + AI alpha\n- Audit: revenue-leak report for any public URL\n- Nav: type \"go to leads\" / \"open wallet\" / \"open audit\"\n\nAsk short, get short. Ask for a breakdown, get numbers.";
+
+  const DEGEN_INTRO = "**WOLF MODE** \u2014 let's print.\n\n- Sniping leads: show me hot deals in [city/industry]\n- Alpha calls: BUY/SELL/HOLD with entry/exit\n- Audit attack: rip a competitor's URL, expose their leak\n- Close now: give me the 3 closest deals + next action\n\nLFG. What's the play?";
 
   // Core state
   const [messages, setMessages] = useState([
@@ -1418,15 +1467,19 @@ export default function AIOverlay() {
     };
   }, [currentPage]);
 
-  // Orb badge context
+  // Orb badge context — uses cached stats to avoid 500K-lead filter passes
   const orbCtx = ORB_CONTEXT[currentPage] || ORB_CONTEXT.home;
   const orbBadgeText = useMemo(() => {
+    // Scan a capped window (first 5000) instead of full 500K for O(1)-ish feel
+    const cap = Math.min(leads.length, 5000);
     if (currentPage === 'leads') {
-      const hot = leads.filter(l => l.conversionProbability >= 80).length;
+      let hot = 0;
+      for (let i = 0; i < cap; i++) if (leads[i].conversionProbability >= 80) hot++;
       return hot > 0 ? `${hot} hot leads` : null;
     }
     if (currentPage === 'trends') {
-      const rising = leads.filter(l => l.momentum === 'rising').length;
+      let rising = 0;
+      for (let i = 0; i < cap; i++) if (leads[i].momentum === 'rising') rising++;
       return rising > 2 ? `${Math.min(rising, 9)} new signals` : null;
     }
     return null;
@@ -1479,33 +1532,50 @@ export default function AIOverlay() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, typing]);
 
-  // Revenue tracking stats (always computed for AI context)
-  const revenueStats = useMemo(() => {
-    const wonDeals = leads.filter(l => l.status === 'won');
-    const wonValue = wonDeals.reduce((s, l) => s + l.dealValue, 0);
+  // Revenue tracking stats — computed lazily to avoid filtering 500K leads
+  // on every render. Only materializes when the AI panel is open OR when
+  // needed for a send() call. Cached by leads reference.
+  const revenueStatsCacheRef = useRef({ leads: null, value: null });
+  const computeRevenueStats = useCallback(() => {
+    if (revenueStatsCacheRef.current.leads === leads && revenueStatsCacheRef.current.value) {
+      return revenueStatsCacheRef.current.value;
+    }
     const commissionRate = 0.12;
+    // Single pass instead of 4 separate filter iterations over 500K items
+    let wonCount = 0, wonValue = 0, negCount = 0, negValue = 0, risingCount = 0, totalPipeline = 0;
+    for (let i = 0; i < leads.length; i++) {
+      const l = leads[i];
+      totalPipeline += l.dealValue;
+      if (l.status === 'won') { wonCount++; wonValue += l.dealValue; }
+      else if (l.status === 'negotiation') { negCount++; negValue += l.dealValue; }
+      if (l.momentum === 'rising') risingCount++;
+    }
     const currentMRR = Math.round((wonValue * commissionRate) / 12);
     const mrrGoal = 25000;
-    const negotiating = leads.filter(l => l.status === 'negotiation');
-    const pendingCommission = Math.round(negotiating.reduce((s, l) => s + l.dealValue, 0) * commissionRate);
-    const risingLeads = leads.filter(l => l.momentum === 'rising');
-    const weekActivity = { calls: 8 + Math.floor(Math.random() * 15), outreach: 12 + Math.floor(Math.random() * 20) };
-    const streakDays = 2 + Math.floor(Math.random() * 5);
-    return {
+    const pendingCommission = Math.round(negValue * commissionRate);
+    const value = {
       currentMRR,
       mrrGoal,
       distanceToGoal: Math.max(0, mrrGoal - currentMRR),
-      wonDeals: wonDeals.length,
+      wonDeals: wonCount,
       wonValue,
-      negotiatingCount: negotiating.length,
+      negotiatingCount: negCount,
       pendingCommission,
-      risingCount: risingLeads.length,
-      totalPipeline: leads.reduce((s, l) => s + l.dealValue, 0),
-      weekActivity,
-      streakDays,
-      pipelineHealth: risingLeads.length > leads.length * 0.3 ? 'Strong' : risingLeads.length > leads.length * 0.15 ? 'Good' : 'Needs Attention',
+      risingCount,
+      totalPipeline,
+      weekActivity: { calls: 8 + Math.floor(Math.random() * 15), outreach: 12 + Math.floor(Math.random() * 20) },
+      streakDays: 2 + Math.floor(Math.random() * 5),
+      pipelineHealth: risingCount > leads.length * 0.3 ? 'Strong' : risingCount > leads.length * 0.15 ? 'Good' : 'Needs Attention',
     };
+    revenueStatsCacheRef.current = { leads, value };
+    return value;
   }, [leads]);
+
+  // Only compute stats when panel actually opens — not on every keystroke elsewhere
+  const revenueStats = useMemo(() => {
+    if (!aiOpen) return null;
+    return computeRevenueStats();
+  }, [aiOpen, computeRevenueStats]);
 
   // Determine contextual thinking label based on message content and page
   const getThinkingLabel = useCallback((msg) => {
@@ -1594,7 +1664,8 @@ export default function AIOverlay() {
     if (!aiOpen) setAiOpen(true);
 
     const leadCtx = selectedLead ? `\n\nCurrently viewing lead: ${selectedLead.name} at ${selectedLead.company} (${selectedLead.industry}), Score: ${selectedLead.score}/100, Deal: $${(selectedLead.dealValue||0).toLocaleString()}, Status: ${selectedLead.status}, Priority: ${selectedLead.priority}, Phone: ${selectedLead.phone||'N/A'}, Email: ${selectedLead.email||'N/A'}, Website: ${selectedLead.website||'N/A'}, Location: ${selectedLead.location||'N/A'}, Pain Points: ${(selectedLead.painPoints||[]).join(', ')}, Buying Signals: ${(selectedLead.buyingSignals||[]).join(', ')}, Best Method: ${selectedLead.bestMethod||'email'}` : '';
-    const revenueCtx = `\n\nRevenue tracking: Current MRR: $${revenueStats.currentMRR.toLocaleString()}, Goal: $${revenueStats.mrrGoal.toLocaleString()}/mo, Distance to goal: $${revenueStats.distanceToGoal.toLocaleString()}, Won deals: ${revenueStats.wonDeals}, Pending commission: $${revenueStats.pendingCommission.toLocaleString()}, Deals in negotiation: ${revenueStats.negotiatingCount}, Pipeline health: ${revenueStats.pipelineHealth}, This week: ${revenueStats.weekActivity.calls} calls made, ${revenueStats.weekActivity.outreach} outreach sent, Closing streak: ${revenueStats.streakDays} days`;
+    const stats = revenueStats || computeRevenueStats();
+    const revenueCtx = `\n\nRevenue tracking: Current MRR: $${stats.currentMRR.toLocaleString()}, Goal: $${stats.mrrGoal.toLocaleString()}/mo, Distance to goal: $${stats.distanceToGoal.toLocaleString()}, Won deals: ${stats.wonDeals}, Pending commission: $${stats.pendingCommission.toLocaleString()}, Deals in negotiation: ${stats.negotiatingCount}, Pipeline health: ${stats.pipelineHealth}, This week: ${stats.weekActivity.calls} calls made, ${stats.weekActivity.outreach} outreach sent, Closing streak: ${stats.streakDays} days`;
     const coachCtx = coachMode ? '\n\nCOACH MODE IS ON: Act as a real-time closing coach. Be proactive, suggest next actions, celebrate wins, give specific dollar amounts for commission, create urgency based on decision timelines, and reference their pipeline goals.' : '';
     const pipelineContext = `Pipeline context: ${leads.length} leads, top 5: ${leads.slice(0, 5).map(l =>
       `${l.name} at ${l.company} (score: ${l.score}, value: ${fmt(l.dealValue)}, priority: ${l.priority}, status: ${l.status})`
@@ -1645,7 +1716,7 @@ export default function AIOverlay() {
     }
 
     // Instant template response — no artificial delay
-    const res = getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats, degenMode });
+    const res = getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats: stats, degenMode });
 
     // Smart auto-navigate based on user intent
     const lower = msg.toLowerCase();
@@ -1700,7 +1771,8 @@ export default function AIOverlay() {
 
       if (useAI) {
         const leadCtx = selectedLead ? `\n\nCurrently viewing lead: ${selectedLead.name} at ${selectedLead.company} (${selectedLead.industry}), Score: ${selectedLead.score}/100, Deal: $${(selectedLead.dealValue||0).toLocaleString()}, Status: ${selectedLead.status}` : '';
-        const revenueCtx = `\n\nRevenue tracking: Current MRR: $${revenueStats.currentMRR.toLocaleString()}, Goal: $${revenueStats.mrrGoal.toLocaleString()}/mo, Distance to goal: $${revenueStats.distanceToGoal.toLocaleString()}, Pending commission: $${revenueStats.pendingCommission.toLocaleString()}, Pipeline health: ${revenueStats.pipelineHealth}`;
+        const stats = revenueStats || computeRevenueStats();
+        const revenueCtx = `\n\nRevenue tracking: Current MRR: $${stats.currentMRR.toLocaleString()}, Goal: $${stats.mrrGoal.toLocaleString()}/mo, Distance to goal: $${stats.distanceToGoal.toLocaleString()}, Pending commission: $${stats.pendingCommission.toLocaleString()}, Pipeline health: ${stats.pipelineHealth}`;
         const coachCtx = coachMode ? '\n\nCOACH MODE IS ON: Act as a real-time closing coach.' : '';
         const pipelineContext = `Pipeline context: ${leads.length} leads, top 5: ${leads.slice(0, 5).map(l =>
           `${l.name} at ${l.company} (score: ${l.score}, value: ${fmt(l.dealValue)}, priority: ${l.priority}, status: ${l.status})`
@@ -1746,12 +1818,14 @@ export default function AIOverlay() {
             throw new Error('fallback');
           })
           .catch(() => {
-            const res = getTemplateResponse(label, leads, { coachMode, selectedLead, revenueStats, degenMode });
+            const fallbackStats = revenueStats || computeRevenueStats();
+            const res = getTemplateResponse(label, leads, { coachMode, selectedLead, revenueStats: fallbackStats, degenMode });
             setMessages(p => [...p, { role: 'assistant', content: res }]);
             setTyping(false);
           });
       } else {
-        const res = getTemplateResponse(label, leads, { coachMode, selectedLead, revenueStats, degenMode });
+        const fallbackStats = revenueStats || computeRevenueStats();
+        const res = getTemplateResponse(label, leads, { coachMode, selectedLead, revenueStats: fallbackStats, degenMode });
         setMessages(p => [...p, { role: 'assistant', content: res }]);
         setTyping(false);
       }

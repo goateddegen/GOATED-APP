@@ -7,7 +7,6 @@ import {
   Brain, Radar, Timer, AlertTriangle, Keyboard, ExternalLink, Search, UserSearch,
   Crown, Sparkles, PhoneCall, FileText, CreditCard, Trophy, Rocket, ChevronUp,
   MapPin, Linkedin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight,
-  Volume2, Pause, Square
 } from 'lucide-react';
 import { useStore, fmt, enrichLead } from '../hooks/useStore';
 
@@ -137,184 +136,6 @@ function GlassCard({ children, className = '', highlight = false }) {
 }
 
 // =============================================================================
-// AI VOICE BRIEF — Web Speech API powered lead summary reader
-// =============================================================================
-function VoiceBrief({ lead, el, dv, safeConversion, safePainPoints }) {
-  const [voiceState, setVoiceState] = useState('idle'); // idle | playing | paused
-  const [briefText, setBriefText] = useState('');
-  const utteranceRef = useRef(null);
-
-  const generateBriefText = useCallback(() => {
-    const name = lead.name || 'Unknown';
-    const firstName = (lead.name || '').split(' ')[0] || 'this contact';
-    const company = lead.company || 'Unknown Company';
-    const industry = lead.industry || 'their industry';
-    const amount = dv ? `$${dv.toLocaleString()}` : 'an undisclosed amount';
-    const prob = safeConversion || 0;
-    const pain1 = (safePainPoints?.[0] || 'operational inefficiency').toLowerCase();
-    const pain2 = (safePainPoints?.[1] || 'customer acquisition').toLowerCase();
-    const lostRev = `$${Math.round(dv * 0.15).toLocaleString()}`;
-    const annualLeak = `$${Math.round(dv * 0.3).toLocaleString()}`;
-    const employees = el.employees ? `${el.employees.toLocaleString()} employees` : 'a mid-size team';
-
-    // Industry-specific revenue angle
-    const industryAngles = {
-      'SaaS': `${company} is likely hemorrhaging revenue through ${pain1}. SaaS companies this size typically lose 15 to 25% of potential ARR to churn and inefficient customer acquisition.`,
-      'E-commerce': `${company} is probably bleeding money on ${pain1}. E-commerce businesses with ${employees} usually have a 60 to 70% cart abandonment rate — that's ${annualLeak} per year walking out the door.`,
-      'Fintech': `${company} has a compliance and growth tension. Fintech firms fighting ${pain1} typically overspend 20 to 30% on customer acquisition while leaving existing revenue unoptimized.`,
-      'Healthcare': `${company} is sitting on a patient acquisition cost problem. Healthcare orgs dealing with ${pain1} are usually spending 3x what they should on new patient acquisition.`,
-      'MarTech': `${company} has a classic attribution gap. MarTech companies struggling with ${pain1} typically waste 30% of ad spend because they can't track what's actually converting.`,
-      'Construction': `${company} is losing bids and margin to ${pain1}. Construction firms this size usually leave ${annualLeak} per year on the table through manual estimating and poor lead follow-up.`,
-    };
-    const industryAngle = industryAngles[lead.industry] || `${company} is dealing with ${pain1} and ${pain2}. Companies in ${industry} with ${employees} typically lose ${annualLeak} per year in missed revenue and inefficient operations.`;
-
-    const strategy = lead.status === 'negotiation'
-      ? `${firstName} is in negotiation mode. Don't let this cool off. The money angle: every week they delay costs them roughly ${lostRev} in continued revenue leakage from ${pain1}. Push for the close today — frame it as stopping the bleeding, not adding a cost.`
-      : lead.status === 'qualified'
-      ? `${firstName} is qualified and engaged. Now's the time to hit them with the numbers. Show them the ${lostRev} they're losing monthly to ${pain1}, then demo exactly how you fix it. Make the ROI so obvious that NOT buying feels like the risky move.`
-      : lead.status === 'contacted'
-      ? `You've touched base with ${firstName} but haven't hooked them yet. Follow up with a hard number — tell them ${company} is leaving ${annualLeak} per year on the table because of ${pain1}. That's the kind of stat that gets a callback.`
-      : lead.status === 'won'
-      ? `${firstName} is already a customer — nice. Now squeeze the upsell. Their ${pain2} problem is still unsolved and that's another ${lostRev} in value you can unlock. Ask for a referral while you're at it.`
-      : `${firstName} is fresh. Lead with the pain, not the pitch. Open with: "${company} is probably losing ${lostRev} a month to ${pain1} — I can show you exactly where." That's how you get the meeting.`;
-
-    return `Alright, here's the play on ${name} at ${company}. ${industryAngle} This is a ${amount} opportunity with a ${prob}% close probability. ${strategy}`;
-  }, [lead, el, dv, safeConversion, safePainPoints]);
-
-  const handlePlay = useCallback(() => {
-    if (!('speechSynthesis' in window)) {
-      alert('Voice synthesis is not supported in this browser.');
-      return;
-    }
-
-    if (voiceState === 'paused') {
-      window.speechSynthesis.resume();
-      setVoiceState('playing');
-      return;
-    }
-
-    // Stop any existing speech
-    window.speechSynthesis.cancel();
-
-    const text = generateBriefText();
-    setBriefText(text);
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.92;
-    utterance.pitch = 1.05;
-    utterance.volume = 1;
-
-    // Pick the most natural-sounding English voice available
-    const voices = window.speechSynthesis.getVoices();
-    const naturalVoice = voices.find(v => v.name.includes('Samantha')) // macOS natural
-      || voices.find(v => v.name.includes('Karen')) // macOS AU
-      || voices.find(v => v.name.includes('Daniel')) // macOS UK
-      || voices.find(v => v.name.includes('Google US English'))
-      || voices.find(v => v.name.includes('Google UK English Female'))
-      || voices.find(v => v.lang.startsWith('en') && v.localService);
-    if (naturalVoice) utterance.voice = naturalVoice;
-
-    utterance.onend = () => setVoiceState('idle');
-    utterance.onerror = () => setVoiceState('idle');
-
-    utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
-    setVoiceState('playing');
-  }, [voiceState, generateBriefText]);
-
-  const handlePause = useCallback(() => {
-    window.speechSynthesis.pause();
-    setVoiceState('paused');
-  }, []);
-
-  const handleStop = useCallback(() => {
-    window.speechSynthesis.cancel();
-    setVoiceState('idle');
-  }, []);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      window.speechSynthesis.cancel();
-    };
-  }, []);
-
-  return (
-    <div className="flex flex-col gap-2">
-      {/* Voice Brief Button + Controls */}
-      <div className="flex items-center gap-2">
-        {voiceState === 'idle' && (
-          <button
-            onClick={handlePlay}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/20 text-sm text-cyan-400 hover:bg-cyan-500/25 transition-colors"
-          >
-            <Volume2 size={14} /> AI Voice Brief
-          </button>
-        )}
-        {voiceState === 'playing' && (
-          <>
-            <button
-              onClick={handlePause}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-500/15 border border-yellow-500/20 text-sm text-yellow-400 hover:bg-yellow-500/25 transition-colors"
-            >
-              <Pause size={14} /> Pause
-            </button>
-            <button
-              onClick={handleStop}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/20 text-sm text-red-400 hover:bg-red-500/25 transition-colors"
-            >
-              <Square size={14} /> Stop
-            </button>
-          </>
-        )}
-        {voiceState === 'paused' && (
-          <>
-            <button
-              onClick={handlePlay}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/20 text-sm text-brand hover:bg-brand/25 transition-colors"
-            >
-              <Volume2 size={14} /> Resume
-            </button>
-            <button
-              onClick={handleStop}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/20 text-sm text-red-400 hover:bg-red-500/25 transition-colors"
-            >
-              <Square size={14} /> Stop
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Brief Text Card — shown while playing or paused */}
-      {(voiceState === 'playing' || voiceState === 'paused') && briefText && (
-        <div className="p-3 rounded-xl border border-cyan-500/20 bg-cyan-500/[0.04] relative overflow-hidden">
-          <div className="flex items-center gap-2 mb-2">
-            {voiceState === 'playing' && (
-              <div className="flex items-center gap-1">
-                {[0, 1, 2].map(i => (
-                  <div
-                    key={i}
-                    className="w-1 bg-cyan-400 rounded-full"
-                    style={{
-                      height: '12px',
-                      animation: `pulse 0.8s ${i * 0.15}s ease-in-out infinite alternate`,
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-            <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
-              {voiceState === 'playing' ? 'Reading Brief...' : 'Paused'}
-            </span>
-          </div>
-          <p className="text-xs text-slate-300 leading-relaxed">{briefText}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// =============================================================================
 // CLOSE GUIDE TAB — Enhanced linear closing experience
 // =============================================================================
 function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfidence, safeCallScript, safePackages, safeObjections, safeOutreach, safePainPoints, safeConversion, setTab }) {
@@ -386,11 +207,11 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
           <div>
             <h2 className="text-lg font-bold flex items-center gap-2">
               GOATED Close Guide
-              <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20 font-bold uppercase tracking-wider">
-                Status: {lead.status || 'New'}
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/[0.03] text-slate-400 border border-white/[0.06] font-bold uppercase tracking-wider">
+                Untouched
               </span>
             </h2>
-            <p className="text-xs text-slate-500">AI-analyzed step-by-step path to close this deal</p>
+            <p className="text-xs text-slate-500">Revenue-loss-first path to closing {lead.company}</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -822,10 +643,23 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
 // MAIN COMPONENT
 // =============================================================================
 export default function LeadDetail() {
-  const { selectedLead: lead, setDetailOpen, setSelectedLead, previousPage, setPreviousPage, setPage, degenMode, getLeadAlpha } = useStore();
+  // Selective selectors — never subscribe to the whole store. Prevents re-renders on
+  // unrelated state mutations (ticker prices, RAF animations, lead list scrolls, etc).
+  const lead = useStore(s => s.selectedLead);
+  const setDetailOpen = useStore(s => s.setDetailOpen);
+  const setSelectedLead = useStore(s => s.setSelectedLead);
+  const previousPage = useStore(s => s.previousPage);
+  const setPreviousPage = useStore(s => s.setPreviousPage);
+  const setPage = useStore(s => s.setPage);
+  const degenMode = useStore(s => s.degenMode);
+  const getLeadAlpha = useStore(s => s.getLeadAlpha);
   const [tab, setTab] = useState('intelligence');
   const [coachingOutput, setCoachingOutput] = useState(null);
   const [coachingLoading, setCoachingLoading] = useState(false);
+  // ── AI-generated per-lead outreach (replaces hardcoded templates on demand) ─
+  const [aiScripts, setAiScripts] = useState(null);
+  const [aiScriptsLoading, setAiScriptsLoading] = useState(false);
+  const [aiScriptsError, setAiScriptsError] = useState(null);
 
   const goBack = () => {
     setDetailOpen(false);
@@ -882,21 +716,65 @@ export default function LeadDetail() {
 
   const pc = priorityColors[lead.priority] || priorityColors.medium;
 
+  // ── Regenerate outreach with real AI, per-lead ──────────────────────────────
+  const regenerateAIScripts = useCallback(async () => {
+    setAiScriptsLoading(true);
+    setAiScriptsError(null);
+    try {
+      const ctx = `Lead: ${lead.name}, ${lead.title} at ${lead.company} (${lead.industry}).
+Employees: ${el.employees || 'unknown'}. Deal value: ${fmt(dv)}. Score: ${lead.score}.
+Pain points: ${safePainPoints.join('; ')}.
+Buying signals: ${safeBuyingSignals.join('; ') || 'none detected'}.
+Competitor: ${lead.competitorUsing || 'none'}.
+Revenue leak estimate: ${fmt(Math.round(dv * 0.15))}/mo (${fmt(Math.round(dv * 0.15 * 12))}/yr).
+Best channel: ${el.bestMethod || 'email'}.`;
+      const prompt = `Generate SHARP, revenue-loss-first outreach for this specific lead. Format exactly:
+
+1) **Cold Email** — subject line + body, leading with the $ leak
+2) **LinkedIn DM** — 3 lines max, pattern-interrupt opener
+3) **Cold Call Opener** — 15-second script, name the dollar amount in first sentence
+4) **Voicemail** — 20-second script, drop numbers + callback hook
+5) **Breakup Email** — short, cost-of-inaction framed
+
+Rules:
+- Cite the lead's exact pain points and dollar leak
+- Zero marketing fluff
+- No bullet padding
+- If competitor exists, reference it in the follow-up, not the cold email
+
+Context:\n${ctx}`;
+      const resp = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
+      });
+      const data = await resp.json();
+      if (data?.content) setAiScripts(data.content);
+      else setAiScriptsError(data?.fallback ? 'AI unavailable — using template scripts below.' : 'No response. Try again.');
+    } catch (e) {
+      setAiScriptsError(`Generation failed: ${e.message}`);
+    } finally {
+      setAiScriptsLoading(false);
+    }
+  }, [lead, el, dv, safePainPoints, safeBuyingSignals]);
+
   // Degen Alpha Intel — per-lead intelligence (only computed when degen mode is on)
   const alphaIntel = degenMode ? getLeadAlpha(el) : null;
 
   // ── GOATED Close Guide — step-by-step closing system ──────────────────────
+  // NOTE: Demo data never auto-ticks. Step 1 is the anchor, rest are pending until
+  // the operator actually works the deal. No gamification on seeded leads.
   const closeSteps = [
-    { step: 1, name: 'Research & Prep', status: lead.status === 'new' ? 'current' : 'done', desc: 'AI deep research on company, pain points, decision makers, and competitive landscape', check: 'Review AI Executive Summary above', action: 'Read the full intelligence report and pain point analysis' },
-    { step: 2, name: 'Initial Outreach', status: ['new', 'contacted'].includes(lead.status) && lead.status !== 'new' ? 'current' : lead.status === 'new' ? 'pending' : 'done', desc: 'Multi-channel first touch — personalized based on AI analysis of best method', check: `Use ${el.bestMethod || 'email'} as primary channel`, action: 'Send personalized outreach using AI-generated scripts' },
-    { step: 3, name: 'Discovery Call', status: lead.status === 'qualified' ? 'current' : ['new', 'contacted'].includes(lead.status) ? 'pending' : 'done', desc: 'Guided discovery with real-time AI coaching and objection handling', check: 'Confirm pain points and budget authority', action: 'Schedule and conduct discovery call with AI coaching enabled' },
-    { step: 4, name: 'Value Demonstration', status: lead.status === 'proposal' ? 'current' : ['new', 'contacted', 'qualified'].includes(lead.status) ? 'pending' : 'done', desc: 'Custom proposal with ROI projections tailored to their specific pain points', check: 'Present personalized packages from Packages tab', action: 'Send proposal with custom pricing and ROI analysis' },
-    { step: 5, name: 'Negotiation', status: lead.status === 'negotiation' ? 'current' : lead.status === 'won' ? 'done' : 'pending', desc: 'AI-powered negotiation support with real-time battle cards and competitor displacement strategies', check: 'Handle objections using AI battle cards', action: 'Navigate objections and align on terms' },
-    { step: 6, name: 'Close & Onboard', status: lead.status === 'won' ? 'done' : 'pending', desc: 'Secure commitment, process payment, and begin onboarding sequence', check: 'Confirm deal value and payment terms', action: 'Close the deal and initiate client onboarding' },
+    { step: 1, name: 'Research & Prep', status: 'current', desc: 'AI deep research on company, pain points, decision makers, and competitive landscape', check: 'Review AI Executive Summary above', action: 'Read the full intelligence report and pain point analysis' },
+    { step: 2, name: 'Initial Outreach', status: 'pending', desc: 'Multi-channel first touch — personalized based on AI analysis of best method', check: `Use ${el.bestMethod || 'email'} as primary channel`, action: 'Send personalized outreach using AI-generated scripts' },
+    { step: 3, name: 'Discovery Call', status: 'pending', desc: 'Guided discovery with real-time AI coaching and objection handling', check: 'Confirm pain points and budget authority', action: 'Schedule and conduct discovery call with AI coaching enabled' },
+    { step: 4, name: 'Value Demonstration', status: 'pending', desc: 'Custom proposal with ROI projections tailored to their specific pain points', check: 'Present personalized packages from Packages tab', action: 'Send proposal with custom pricing and ROI analysis' },
+    { step: 5, name: 'Negotiation', status: 'pending', desc: 'AI-powered negotiation support with real-time battle cards and competitor displacement strategies', check: 'Handle objections using AI battle cards', action: 'Navigate objections and align on terms' },
+    { step: 6, name: 'Close & Onboard', status: 'pending', desc: 'Secure commitment, process payment, and begin onboarding sequence', check: 'Confirm deal value and payment terms', action: 'Close the deal and initiate client onboarding' },
   ];
 
-  const completedSteps = closeSteps.filter(s => s.status === 'done').length;
-  const closeConfidence = Math.min(98, safeConversion + (completedSteps * 8));
+  const completedSteps = 0; // demo data never auto-completes steps
+  const closeConfidence = safeConversion; // base on lead quality, not fake progress
 
   const tabs = [
     { id: 'intelligence', label: 'Overview', icon: <BarChart3 size={15} /> },
@@ -907,7 +785,6 @@ export default function LeadDetail() {
 
   // ── Keyboard shortcuts ──────────────────────────────────────────────────────
   const [showKeybindHint, setShowKeybindHint] = useState(true);
-  const [voipConfirm, setVoipConfirm] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -940,28 +817,8 @@ export default function LeadDetail() {
 
       // Escape to close
       if (e.key === 'Escape') {
-        if (voipConfirm) {
-          setVoipConfirm(false);
-        } else {
-          e.preventDefault();
-          goBack();
-        }
-        return;
-      }
-
-      // V = VoIP call (with confirmation)
-      if (e.key === 'v' || e.key === 'V') {
         e.preventDefault();
-        if (voipConfirm) {
-          // Second press — trigger the call
-          setVoipConfirm(false);
-          // Trigger click on the Call button
-          const callBtn = document.querySelector('[data-action="voip-call"]');
-          if (callBtn) callBtn.click();
-        } else {
-          setVoipConfirm(true);
-          setTimeout(() => setVoipConfirm(false), 3000);
-        }
+        goBack();
         return;
       }
 
@@ -975,7 +832,7 @@ export default function LeadDetail() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tab, tabs, voipConfirm]);
+  }, [tab, tabs]);
 
   // Generate ranked approaches from the single callScript
   const approaches = [
@@ -1043,27 +900,15 @@ export default function LeadDetail() {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <a href={lead.phone ? `tel:${(lead.phone || '').replace(/[^+\d]/g, '')}` : '#'} data-action="voip-call"
-                className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm transition-colors cursor-pointer ${lead.phone ? 'bg-brand text-black hover:bg-brand/90' : 'bg-white/[0.04] border border-white/[0.06] text-slate-400'}`}
-                onClick={(e) => { if (!lead.phone) { e.preventDefault(); alert('No phone number available. Enrich this lead to unlock contact data.'); } }}>
-                <Phone size={14} /> Call
-              </a>
-              <button onClick={() => setTab('closing')} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-500/15 border border-cyan-500/20 text-sm text-cyan-400 hover:bg-cyan-500/25 transition-colors">
+              <button onClick={() => { setTab('closing'); setTimeout(() => document.getElementById('close-guide-section')?.scrollIntoView({ behavior: 'smooth' }), 50); }} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-500/15 border border-cyan-500/20 text-sm text-cyan-400 hover:bg-cyan-500/25 transition-colors">
                 <Target size={14} /> Close Guide
               </button>
-              <button onClick={() => setTab('outreach')} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/15 border border-purple-500/20 text-sm text-purple-400 hover:bg-purple-500/25 transition-colors">
+              <button onClick={() => { setTab('outreach'); setTimeout(() => document.getElementById('ai-coach-section')?.scrollIntoView({ behavior: 'smooth' }), 50); }} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/15 border border-purple-500/20 text-sm text-purple-400 hover:bg-purple-500/25 transition-colors">
                 <Brain size={14} /> AI Coach
               </button>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          AI VOICE BRIEF BAR
-      ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-3">
-        <VoiceBrief lead={lead} el={el} dv={dv} safeConversion={safeConversion} safePainPoints={safePainPoints} />
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
@@ -1100,14 +945,11 @@ export default function LeadDetail() {
                 <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${pc.bg} ${pc.text} border ${pc.border}`}>
                   {lead.priority}
                 </span>
-                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusColors[lead.status]}`}>
-                  {lead.status}
+                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/15 text-red-400 border border-red-500/25 flex items-center gap-1.5">
+                  <TrendingDown size={12} /> Bleeding {fmt(Math.round(dv * 0.15))}/mo
                 </span>
                 <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-brand/15 text-brand border border-brand/20">
-                  Rank #{safeRanking.overall}
-                </span>
-                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${momentumBg} ${momentumColor} flex items-center gap-1`}>
-                  <MomentumIcon size={12} /> {lead.momentum}
+                  Fit #{safeRanking.overall}
                 </span>
               </div>
             </div>
@@ -1503,10 +1345,12 @@ export default function LeadDetail() {
         {/* ─── DEGEN ALPHA INTEL TAB ──────────────────────────────────────────── */}
         {/* ─── GOATED CLOSE GUIDE TAB ──────────────────────────────────────── */}
         {tab === 'closing' && (
+          <div id="close-guide-section">
           <CloseGuideTab lead={lead} el={el} dv={dv} closeSteps={closeSteps} completedSteps={completedSteps}
             closeConfidence={closeConfidence} safeCallScript={safeCallScript} safePackages={safePackages}
             safeObjections={safeObjections} safeOutreach={safeOutreach} safePainPoints={safePainPoints}
             safeConversion={safeConversion} setTab={setTab} />
+          </div>
         )}
 
         {/* ─── DEGEN ALPHA INTEL TAB ──────────────────────────────────────────── */}
@@ -2213,10 +2057,55 @@ export default function LeadDetail() {
 
         {/* ─── SCRIPTS & PLAYS (merged into outreach tab) ──────────────────── */}
         {tab === 'outreach' && (
-          <div className="space-y-6">
+          <div id="ai-coach-section" className="space-y-6">
             <h2 className="text-lg font-bold flex items-center gap-2">
               <Phone size={18} className="text-brand" /> Ranked Approaches
             </h2>
+
+            {/* ── AI Per-Lead Regen ─────────────────────────────────────────── */}
+            <GlassCard highlight>
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div className="flex-1 min-w-[240px]">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={16} className="text-brand" />
+                    <h3 className="text-sm font-bold">Generate fresh scripts for {lead.company}</h3>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    The templates below are pattern-scaffolds. Hit the button to have Claude rewrite all 5 channels using {lead.company}'s exact pain points and {fmt(Math.round(dv * 0.15))}/mo revenue leak.
+                  </p>
+                </div>
+                <button
+                  onClick={regenerateAIScripts}
+                  disabled={aiScriptsLoading}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand text-black font-semibold text-sm hover:bg-brand/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shrink-0"
+                >
+                  {aiScriptsLoading ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Brain size={14} /> {aiScripts ? 'Regenerate' : 'Generate AI Scripts'}
+                    </>
+                  )}
+                </button>
+              </div>
+              {aiScriptsError && (
+                <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+                  {aiScriptsError}
+                </div>
+              )}
+              {aiScripts && (
+                <div className="mt-4 p-4 rounded-lg bg-black/40 border border-brand/20 relative">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] uppercase tracking-wider text-brand font-bold">AI-Tailored · Per-Lead</span>
+                    <CopyBtn text={aiScripts} />
+                  </div>
+                  <pre className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap font-sans">{aiScripts}</pre>
+                </div>
+              )}
+            </GlassCard>
 
             {approaches.map((approach, idx) => (
               <GlassCard key={idx} highlight={idx === 0} className={idx === 0 ? '' : 'opacity-90'}>
@@ -2840,23 +2729,10 @@ export default function LeadDetail() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          VOIP CONFIRMATION OVERLAY
-      ═══════════════════════════════════════════════════════════════════════ */}
-      {voipConfirm && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl bg-yellow-500/15 border border-yellow-500/30 backdrop-blur-xl shadow-2xl flex items-center gap-3 animate-in fade-in">
-          <AlertTriangle size={18} className="text-yellow-400 shrink-0" />
-          <div>
-            <div className="text-sm font-semibold text-yellow-400">Initiate VoIP call to {lead.name}?</div>
-            <div className="text-xs text-slate-400">Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-yellow-400 font-mono text-[10px]">V</kbd> again to confirm, <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-slate-300 font-mono text-[10px]">Esc</kbd> to cancel</div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════════
           KEYBIND HINT BAR
       ═══════════════════════════════════════════════════════════════════════ */}
       {showKeybindHint && (
-        <div className="fixed bottom-0 inset-x-0 z-40 bg-surface-0/90 backdrop-blur-xl border-t border-white/[0.06]">
+        <div className="fixed bottom-0 right-0 left-16 md:left-16 z-[60] bg-surface-0/95 backdrop-blur-xl border-t border-white/[0.06] pointer-events-auto">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex items-center justify-between">
             <div className="flex items-center gap-4 text-[10px] text-slate-500 overflow-x-auto no-scrollbar">
               <span className="flex items-center gap-1.5 shrink-0">
@@ -2874,10 +2750,6 @@ export default function LeadDetail() {
               <span className="flex items-center gap-1 shrink-0">
                 <kbd className="px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/[0.06] text-slate-400 font-mono text-[10px]">&larr;&rarr;</kbd>
                 <span className="text-slate-600">Prev/Next</span>
-              </span>
-              <span className="flex items-center gap-1 shrink-0">
-                <kbd className="px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/[0.06] text-slate-400 font-mono text-[10px]">V</kbd>
-                <span className="text-slate-600">VoIP</span>
               </span>
               <span className="flex items-center gap-1 shrink-0">
                 <kbd className="px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/[0.06] text-slate-400 font-mono text-[10px]">O</kbd>

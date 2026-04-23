@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  TrendingUp, ArrowUpRight, BarChart3, Activity, RefreshCw, Zap, Target,
+  TrendingUp, BarChart3, Activity, RefreshCw, Zap, Target,
   DollarSign, Layers, Flame, Lock, LogIn, Eye,
-  Phone, Mail, FileText, Brain, AlertTriangle, CheckCircle, Users, Award,
-  ArrowRight, Briefcase, ShieldCheck,
+  Phone, Mail, FileText, Brain, AlertTriangle, Users,
+  ArrowRight, ShieldCheck,
 } from 'lucide-react';
 import { useStore, fmt } from '../hooks/useStore';
 
@@ -88,18 +88,6 @@ function usePlatformStats() {
 }
 
 // ---------------------------------------------------------------------------
-// Seeded PRNG for deterministic activity feed (same seed = same output per day)
-// ---------------------------------------------------------------------------
-function seededRandom(seed) {
-  let s = seed | 0;
-  if (!s) s = 1;
-  return function () {
-    s = (s * 1664525 + 1013904223) & 0x7fffffff;
-    return s / 0x7fffffff;
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 function formatLargeNumber(n) {
@@ -109,16 +97,6 @@ function formatLargeNumber(n) {
   if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
   if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
   return `$${n.toFixed(0)}`;
-}
-
-function timeAgo(isoString) {
-  if (!isoString) return '';
-  const diff = Date.now() - new Date(isoString).getTime();
-  const sec = Math.floor(diff / 1000);
-  if (sec < 60) return 'just now';
-  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
-  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
-  return `${Math.floor(sec / 86400)}d ago`;
 }
 
 // ---------------------------------------------------------------------------
@@ -169,48 +147,6 @@ function AccessDenied({ onLogin }) {
       </motion.div>
     </div>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Generate deterministic B2B activity feed from leads
-// ---------------------------------------------------------------------------
-function generateActivityFeed(leads, dateSeed) {
-  const rand = seededRandom(dateSeed);
-  const items = [];
-  if (!leads || leads.length === 0) return items;
-
-  const actionTemplates = [
-    (l) => ({ icon: ArrowUpRight, color: '#10b981', text: `${(l.name||'Lead').split(' ')[0]} ${(l.name||'').split(' ')[1]?.[0] || ''}. moved to ${l.status === 'negotiation' ? 'Negotiation' : l.status === 'proposal' ? 'Proposal' : 'Qualified'} -- ${fmt(l.dealValue)} deal`, detail: `${l.company} | ${l.industry}` }),
-    (l) => ({ icon: Users, color: '#3b82f6', text: `New lead from ${l.lead_source || 'inbound'} -- ${l.company}`, detail: `${l.name} (${l.title}) | Score: ${l.score}` }),
-    (l) => ({ icon: CheckCircle, color: '#00ff88', text: `Deal closed! ${fmt(l.dealValue)} -- ${l.company}`, detail: `${l.name} | ${l.industry} | ${l.employees || '?'} employees` }),
-    (l) => ({ icon: Phone, color: '#a855f7', text: `Call completed with ${(l.name||'Lead').split(' ')[0]} at ${l.company}`, detail: `${l.title} | Next step: ${l.status === 'contacted' ? 'Schedule demo' : 'Send proposal'}` }),
-    (l) => ({ icon: Mail, color: '#06b6d4', text: `Outreach sent to ${l.name} -- ${l.company}`, detail: `Via ${l.lead_source || 'outbound'} | Deal size: ${fmt(l.dealValue)}` }),
-    (l) => ({ icon: TrendingUp, color: '#f97316', text: `${l.company} engagement surging -- momentum ${l.momentum || 'rising'}`, detail: `Score jumped to ${l.score} | ${fmt(l.dealValue)} pipeline` }),
-    (l) => ({ icon: AlertTriangle, color: '#ef4444', text: `${l.company} going cold -- last contact ${l.last_contact || 'unknown'}`, detail: `${fmt(l.dealValue)} at risk | Priority: ${l.priority || 'medium'}` }),
-    (l) => ({ icon: Award, color: '#eab308', text: `${(l.name||'Lead').split(' ')[0]} referred a new lead from ${l.industry}`, detail: `Referral from ${l.company} | High intent signal` }),
-    (l) => ({ icon: Briefcase, color: '#8b5cf6', text: `${l.company} requested custom proposal -- ${fmt(l.dealValue)}`, detail: `${l.name} (${l.title}) | ${l.employees || '?'} employees` }),
-    (l) => ({ icon: Target, color: '#22c55e', text: `Demo booked: ${l.name} at ${l.company}`, detail: `${l.title} | Budget: ${fmt(l.dealValue)} | ${l.location || 'TBD'}` }),
-  ];
-
-  // Pick 15 random leads and assign random actions
-  const usedIndices = new Set();
-  for (let i = 0; i < 15; i++) {
-    let idx;
-    do { idx = Math.floor(rand() * Math.min(leads.length, 5000)); } while (usedIndices.has(idx) && usedIndices.size < 5000);
-    usedIndices.add(idx);
-    const lead = leads[idx];
-    if (!lead) continue;
-    const templateIdx = Math.floor(rand() * actionTemplates.length);
-    const template = actionTemplates[templateIdx];
-    const item = template(lead);
-    items.push({
-      id: i + 1,
-      ...item,
-      timestamp: new Date(Date.now() - Math.floor(rand() * 7200000)), // within last 2 hours
-    });
-  }
-
-  return items.sort((a, b) => b.timestamp - a.timestamp);
 }
 
 // ---------------------------------------------------------------------------
@@ -396,13 +332,6 @@ function DashboardContent({ onSelect }) {
     };
   }, [leads, analytics]);
 
-  // ── Activity Feed (deterministic by date) ──
-  const activityFeed = useMemo(() => {
-    const today = new Date();
-    const dateSeed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
-    return generateActivityFeed(leads, dateSeed);
-  }, [leads]);
-
   // ── Loading state ──
   if (!revenueIntel) {
     return (
@@ -419,6 +348,15 @@ function DashboardContent({ onSelect }) {
 
   return (
     <div className="p-6 space-y-6">
+      {/* ================================================================= */}
+      {/* DEMO MODE BANNER                                                  */}
+      {/* ================================================================= */}
+      <div className="flex justify-center">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/25 text-amber-300 text-xs font-medium">
+          <BarChart3 size={12} /> Demo Mode &mdash; showing sample data
+        </span>
+      </div>
+
       {/* ================================================================= */}
       {/* HEADER                                                            */}
       {/* ================================================================= */}
@@ -466,9 +404,9 @@ function DashboardContent({ onSelect }) {
           </div>
           <div className="flex items-center gap-2">
             <div className="text-right">
-              <div className="text-xs text-slate-500">Won Revenue</div>
-              <div className="text-sm font-bold text-brand">{revenueIntel ? formatLargeNumber(revenueIntel.wonValue) : '$0'}</div>
-              <div className="text-[9px] text-slate-600">{revenueIntel ? `${revenueIntel.closeRate}% close rate` : '--'}</div>
+              <div className="text-xs text-slate-500">Real Revenue</div>
+              <div className="text-sm font-bold text-brand">$0</div>
+              <div className="text-[9px] text-slate-600">Pre-revenue</div>
             </div>
           </div>
         </div>
@@ -485,7 +423,7 @@ function DashboardContent({ onSelect }) {
               <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-500/15 text-blue-400">
                 <DollarSign size={18} />
               </div>
-              <span className="text-[10px] text-emerald-400 font-medium">Active</span>
+              <span className="text-[9px] text-amber-400/70 bg-amber-500/10 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Demo</span>
             </div>
             <div className="text-2xl font-bold text-white">{formatLargeNumber(revenueIntel.totalPipeline)}</div>
             <div className="text-sm text-slate-500">Total Pipeline</div>
@@ -497,7 +435,7 @@ function DashboardContent({ onSelect }) {
               <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-red-500/15 text-red-400">
                 <AlertTriangle size={18} />
               </div>
-              <span className="text-[10px] text-red-400 font-medium">{revenueIntel.atRiskCount} leads</span>
+              <span className="text-[9px] text-amber-400/70 bg-amber-500/10 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Demo</span>
             </div>
             <div className="text-2xl font-bold text-red-400">{formatLargeNumber(revenueIntel.revenueAtRisk)}</div>
             <div className="text-sm text-slate-500">Revenue at Risk</div>
@@ -509,7 +447,7 @@ function DashboardContent({ onSelect }) {
               <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-emerald-500/15 text-emerald-400">
                 <TrendingUp size={18} />
               </div>
-              <span className="text-[10px] text-slate-600">{revenueIntel.mrr > 0 ? 'Estimated' : 'No wins yet'}</span>
+              <span className="text-[9px] text-amber-400/70 bg-amber-500/10 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Demo</span>
             </div>
             <div className="text-2xl font-bold text-white">{formatLargeNumber(revenueIntel.mrr)}</div>
             <div className="text-sm text-slate-500">Monthly Recurring</div>
@@ -517,6 +455,7 @@ function DashboardContent({ onSelect }) {
 
           {/* Close Rate with gauge */}
           <motion.div className="rounded-xl border border-white/5 bg-surface-3 p-4 relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+            <span className="absolute top-2 right-2 text-[9px] text-amber-400/70 bg-amber-500/10 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Demo</span>
             <div className="flex items-center gap-3">
               <div className="relative">
                 <CircularGauge value={Math.round(revenueIntel.closeRate)} size={64} strokeWidth={5} color="#00ff88" sublabel="win rate" />
@@ -534,7 +473,7 @@ function DashboardContent({ onSelect }) {
               <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-purple-500/15 text-purple-400">
                 <Target size={18} />
               </div>
-              <span className="text-[10px] text-slate-500 font-medium">{revenueIntel.avgTimeToClose}</span>
+              <span className="text-[9px] text-amber-400/70 bg-amber-500/10 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Demo</span>
             </div>
             <div className="text-2xl font-bold text-white">{fmt(revenueIntel.avgDealSize)}</div>
             <div className="text-sm text-slate-500">Avg Deal Size</div>
@@ -849,7 +788,7 @@ function DashboardContent({ onSelect }) {
           </div>
         </motion.div>
 
-        {/* Activity Feed */}
+        {/* Activity Feed — empty state (pre-revenue) */}
         <motion.div
           className="rounded-xl border border-white/5 bg-surface-3 overflow-hidden"
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
@@ -858,45 +797,13 @@ function DashboardContent({ onSelect }) {
             <h2 className="font-bold text-sm flex items-center gap-2">
               <Zap size={16} className="text-brand" /> Recent Activity
             </h2>
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand" />
-              </span>
-              <span className="text-[10px] text-brand font-medium">Live feed</span>
-            </div>
           </div>
-          <div className="divide-y divide-white/5 max-h-[500px] overflow-y-auto">
-            <AnimatePresence mode="popLayout">
-              {activityFeed.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <motion.div
-                    key={item.id}
-                    layout
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors"
-                  >
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: `${item.color}15`, color: item.color }}>
-                      <Icon size={15} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm text-slate-300 truncate">{item.text}</div>
-                      <div className="text-[11px] text-slate-500 truncate">{item.detail}</div>
-                    </div>
-                    <span className="text-[10px] text-slate-600 flex-shrink-0 font-mono">
-                      {timeAgo(item.timestamp.toISOString())}
-                    </span>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-            {activityFeed.length === 0 && (
-              <div className="px-4 py-8 text-center text-sm text-slate-500">Loading activity feed...</div>
-            )}
+          <div className="px-4 py-12 text-center">
+            <div className="w-12 h-12 rounded-xl bg-white/[0.03] flex items-center justify-center mx-auto mb-3">
+              <Activity size={22} className="text-slate-600" />
+            </div>
+            <p className="text-sm text-slate-400 font-medium">No activity yet</p>
+            <p className="text-xs text-slate-600 mt-1">Close your first deal to see activity here</p>
           </div>
         </motion.div>
       </div>
@@ -907,7 +814,7 @@ function DashboardContent({ onSelect }) {
       <div className="flex items-center justify-center gap-2 pt-2">
         <Eye size={12} className="text-slate-600" />
         <p className="text-[10px] text-slate-600">
-          Pipeline data from GOATED lead engine. All metrics computed from store data.
+          Demo data from GOATED lead engine. Metrics are sample data, not real revenue.
         </p>
       </div>
 

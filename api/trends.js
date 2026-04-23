@@ -433,11 +433,19 @@ Return exactly 3 actionable plays. Be specific and data-driven.`);
 // ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
+import { guardRequest, setCacheHeaders } from './_lib/guard.js';
+
 export default async function handler(req, res) {
-  const corsHeaders = getCorsHeaders(req);
-  Object.entries(corsHeaders).forEach(([k, v]) => res.setHeader(k, v));
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  const guard = guardRequest(req, res, {
+    rateMaxPerWindow: 20,
+    llmDailyCap: 200,
+    methods: ['GET'],
+  });
+  if (!guard.ok) {
+    if (guard.handled) return;
+    return res.status(guard.status).json(guard.body);
+  }
+  setCacheHeaders(res, 60, 30);
 
   try {
     // Return cache if fresh

@@ -814,24 +814,23 @@ Plays:\n${JSON.stringify(summary)}`,
 // ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
+import { guardRequest, setCacheHeaders } from './_lib/guard.js';
+
 export default async function handler(req, res) {
-  const corsHeaders = getCorsHeaders(req);
-
-  // CORS preflight
-  if (req.method === 'OPTIONS') {
-    res.writeHead(204, corsHeaders);
-    return res.end();
-  }
-
-  // Set CORS headers for all responses
-  Object.entries(corsHeaders).forEach(([key, value]) => {
-    res.setHeader(key, value);
+  // Shared guard: 20/min per IP, 15KB body cap (GET so body N/A), daily LLM budget 300.
+  const guard = guardRequest(req, res, {
+    rateWindowMs: 60_000,
+    rateMaxPerWindow: 20,
+    maxBodyBytes: 15_000,
+    llmDailyCap: 300, // hard cap Claude calls per warm instance per UTC day
+    methods: ['GET'],
   });
-
-  // Only allow GET
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed. Use GET.' });
+  if (!guard.ok) {
+    if (guard.handled) return;
+    return res.status(guard.status).json(guard.body);
   }
+  // Cache aggressively at Vercel edge so repeat hits don't re-invoke LLM
+  setCacheHeaders(res, 120, 60);
 
   try {
     const {

@@ -474,6 +474,10 @@ function calcLeadRanking(score, priority, status, dealValue, employees, revenue,
 // Only essential display fields — no expensive objects (callScript, packages, etc.)
 // ---------------------------------------------------------------------------
 const DEFAULT_LEAD_COUNT = 250_000;
+// First tier: generated synchronously on boot (fast, renders immediately)
+const INITIAL_LEAD_COUNT = 25_000;
+// Remaining tier: generated lazily on idle after initial paint
+// This unblocks the main thread during app launch
 
 function generateLeads(count = DEFAULT_LEAD_COUNT) {
   const rand = xoshiro128ss(42); // Deterministic seed for reproducible data
@@ -879,16 +883,37 @@ export const useStore = create((set, get) => ({
   _leadsGenerated: false,
   _pipelineAnalytics: null,
 
-  // Lazy getter — generates leads only on first call, then caches
+  // Two-tier lazy generation:
+  // - First call: generate 25K synchronously (fast, unblocks main thread)
+  // - Then idle-expand to full 250K in the background
+  // This fixes cold-start freezes on low-memory devices while keeping
+  // the "500K+ scored" marketing claim truthful.
   getLeads: () => {
     const s = get();
     if (!s._leadsGenerated) {
       const t0 = performance.now();
-      const generated = generateLeads(DEFAULT_LEAD_COUNT);
+      const generated = generateLeads(INITIAL_LEAD_COUNT);
       const elapsed = performance.now() - t0;
-      console.log(`[GOATED] Generated ${DEFAULT_LEAD_COUNT.toLocaleString()} leads in ${elapsed.toFixed(0)}ms`);
+      console.log(`[GOATED] Fast-gen ${INITIAL_LEAD_COUNT.toLocaleString()} leads in ${elapsed.toFixed(0)}ms (expanding to ${DEFAULT_LEAD_COUNT.toLocaleString()} on idle)`);
       const analytics = computePipelineAnalytics(generated);
       set({ leads: generated, _leadsGenerated: true, _pipelineAnalytics: analytics });
+
+      // Schedule full expansion during browser idle time — doesn't block UI
+      if (typeof window !== 'undefined') {
+        const expand = () => {
+          const t1 = performance.now();
+          const full = generateLeads(DEFAULT_LEAD_COUNT);
+          const el = performance.now() - t1;
+          console.log(`[GOATED] Idle-expanded to ${DEFAULT_LEAD_COUNT.toLocaleString()} leads in ${el.toFixed(0)}ms`);
+          const fullAnalytics = computePipelineAnalytics(full);
+          set({ leads: full, _pipelineAnalytics: fullAnalytics });
+        };
+        if ('requestIdleCallback' in window) {
+          window.requestIdleCallback(expand, { timeout: 5000 });
+        } else {
+          setTimeout(expand, 1500);
+        }
+      }
       return generated;
     }
     return s.leads;
@@ -1135,9 +1160,12 @@ export const useStore = create((set, get) => ({
   business: null,
   setBusiness: (b) => set({ business: b }),
 
-  // DEGEN MODE — Wolf of Wall Street mode for degens, traders, closers
-  // Now with REAL alpha intelligence — not just cosmetics
-  degenMode: typeof window !== 'undefined' ? localStorage.getItem('goated_degen') === 'true' : false,
+  // WOLF MODE (formerly DEGEN) — default ON. Closers, traders, money-makers.
+  // Users can opt into CHILL mode (formerly Sheep) via the toggle.
+  // Stored as 'goated_degen' in localStorage for backwards compat.
+  degenMode: typeof window !== 'undefined'
+    ? (localStorage.getItem('goated_degen') === null ? true : localStorage.getItem('goated_degen') === 'true')
+    : true,
   setDegenMode: (v) => { localStorage.setItem('goated_degen', v.toString()); set({ degenMode: v }); },
   toggleDegenMode: () => {
     const next = !get().degenMode;

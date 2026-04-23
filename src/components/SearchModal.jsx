@@ -20,12 +20,13 @@ export default function SearchModal() {
     return {
       leads: leads.filter(l => l.name.toLowerCase().includes(query) || l.company.toLowerCase().includes(query) || l.industry.toLowerCase().includes(query)).slice(0, 8),
       pages: [
-        { id: 'home', name: 'Home' }, { id: 'dashboard', name: 'Dashboard' }, { id: 'leads', name: 'Leads' },
-        { id: 'trends', name: 'TrendPulse & Markets' },
-        { id: 'wallet', name: 'Wallet' }, { id: 'casino', name: 'Casino' }, { id: 'admin', name: 'Admin' },
+        { id: 'home', name: 'Home' }, { id: 'audit', name: 'Audit' }, { id: 'managed', name: 'Managed Service' },
+        { id: 'dashboard', name: 'Dashboard' }, { id: 'leads', name: 'Leads' },
+        { id: 'trends', name: 'TrendPulse' },
+        { id: 'wallet', name: 'Wallet' }, { id: 'admin', name: 'Admin' },
       ].filter(p => p.name.toLowerCase().includes(query)),
       actions: [
-        { id: 'toggle-degen', name: 'Toggle DEGEN Mode', desc: 'Casino, Alpha Plays, Insider Intel, Market Signals' },
+        { id: 'toggle-degen', name: 'Toggle DEGEN Mode', desc: 'Alpha Plays, Insider Intel, Market Signals' },
       ].filter(a => a.name.toLowerCase().includes(query) || a.desc.toLowerCase().includes(query))
     };
   }, [q, leads]);

@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
-  Users, Search, Download, Phone, Mail, ArrowUp, ArrowDown,
+  Users, Search, Phone, Mail, ArrowUp, ArrowDown,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   Loader2, DollarSign, TrendingUp, Building2, Zap, Send, Sparkles,
   Linkedin, Clock, Flame, Brain, MessageSquare, Bot, Wand2, Filter,
   Target, Star, Eye, Copy, X, Activity, CheckCircle,
   Crown, PhoneCall, CalendarClock, Timer, UserSearch, Table2,
-  CheckSquare, Square, ExternalLink, MapPin, Crosshair, AlertTriangle,
+  ExternalLink, MapPin, Crosshair, AlertTriangle,
 } from 'lucide-react';
 import { useStore, fmt, priorities, statuses, industries } from '../hooks/useStore';
 
@@ -28,7 +28,6 @@ const statusColors = {
   unresponsive: 'bg-gray-500/15 text-gray-400',
 };
 
-const perPageOptions = [25, 50, 100];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -570,24 +569,36 @@ function CloseCoachRow({ lead, index, colSpan, onCallClick, showToast }) {
 // MAIN COMPONENT
 // ---------------------------------------------------------------------------
 export default function LeadsPage({ onSelect }) {
-  const {
-    search, setSearch, filterPriority, setFilterPriority, filterStatus, setFilterStatus,
-    leadsPage, setLeadsPage, leadsPerPage, setLeadsPerPage,
-    sortField, setSortField, sortDirection, setSortDirection,
-    leads: allLeads, getLeads, degenMode,
-  } = useStore();
+  // Selective selectors to avoid full-store re-renders (ticker, RAF, etc).
+  const search = useStore(s => s.search);
+  const setSearch = useStore(s => s.setSearch);
+  const filterPriority = useStore(s => s.filterPriority);
+  const setFilterPriority = useStore(s => s.setFilterPriority);
+  const filterStatus = useStore(s => s.filterStatus);
+  const setFilterStatus = useStore(s => s.setFilterStatus);
+  const leadsPage = useStore(s => s.leadsPage);
+  const setLeadsPage = useStore(s => s.setLeadsPage);
+  const leadsPerPage = useStore(s => s.leadsPerPage);
+  const setLeadsPerPage = useStore(s => s.setLeadsPerPage);
+  const sortField = useStore(s => s.sortField);
+  const setSortField = useStore(s => s.setSortField);
+  const sortDirection = useStore(s => s.sortDirection);
+  const setSortDirection = useStore(s => s.setSortDirection);
+  const allLeads = useStore(s => s.leads);
+  const getLeads = useStore(s => s.getLeads);
+  const degenMode = useStore(s => s.degenMode);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, []);
   useEffect(() => { if (!allLeads) getLeads(); }, [allLeads, getLeads]);
   const activeLeads = allLeads || [];
 
   // Core state
-  const [selectedIds, setSelectedIds] = useState(new Set());
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [toastMsg, setToastMsg] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const showToast = useCallback((msg) => { setToastMsg(msg); setToastVisible(true); }, []);
   const [visibleCount, setVisibleCount] = useState(50);
+  const sentinelRef = useRef(null);
 
   // Modals
   const [voipLead, setVoipLead] = useState(null);
@@ -717,6 +728,21 @@ export default function LeadsPage({ onSelect }) {
   const leads = filteredLeads;
   const hasMore = visibleCount < totalFiltered;
 
+  // Infinite scroll via IntersectionObserver
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMore) {
+          setVisibleCount(prev => Math.min(prev + 50, totalFiltered));
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, totalFiltered]);
+
   // Pipeline stats
   const stats = useMemo(() => {
     const total = activeLeads.length;
@@ -740,28 +766,9 @@ export default function LeadsPage({ onSelect }) {
     setExpandedRows(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   }, []);
 
-  const toggleSelect = useCallback((id, e) => {
-    e.stopPropagation();
-    setSelectedIds(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
-  }, []);
-
-  const handleExport = useCallback(() => {
-    const selected = leads.filter(l => selectedIds.has(l.id));
-    const data = selected.length > 0 ? selected : leads;
-    const csv = [
-      ['Name', 'Email', 'Company', 'Score', 'Value', 'Priority', 'Status', 'Industry', 'Location'].join(','),
-      ...data.map(l => [l.name, l.email, l.company, l.score, l.dealValue || 0, l.priority, l.status, l.industry, l.location].join(','))
-    ].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `leads-${Date.now()}.csv`; a.click();
-    URL.revokeObjectURL(url);
-    showToast(`${data.length} leads exported`);
-  }, [leads, selectedIds, showToast]);
+  // Bulk select/action menu removed — leads are single-click to open detail
 
   const handleSelectLead = useCallback((lead) => { if (onSelect) onSelect(lead); }, [onSelect]);
-
-  const allOnPageSelected = leads.length > 0 && leads.every(l => selectedIds.has(l.id));
 
   return (
     <div className="p-4 sm:p-6 max-w-[1600px] mx-auto">
@@ -770,6 +777,14 @@ export default function LeadsPage({ onSelect }) {
       {/* Modals */}
       {voipLead && <CallModal lead={voipLead} phone={voipPhone} onClose={() => setVoipLead(null)} showToast={showToast} />}
       {scheduleLead && <ScheduleModal lead={scheduleLead} onClose={() => setScheduleLead(null)} showToast={showToast} />}
+
+      {/* ── Demo Data Banner ── */}
+      <div className="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-3">
+        <AlertTriangle size={16} className="text-amber-400 flex-shrink-0" />
+        <span className="text-sm text-amber-300/90">
+          <span className="font-semibold">Demo Data</span> — These leads are algorithmically generated for demonstration. Connect your API to load real prospects.
+        </span>
+      </div>
 
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
@@ -785,10 +800,6 @@ export default function LeadsPage({ onSelect }) {
           <button onClick={() => setAiChatOpen(!aiChatOpen)}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${aiChatOpen ? 'bg-brand/15 border-brand/30 text-brand' : 'bg-surface-2 border-white/[0.05] text-slate-400 hover:text-white'}`}>
             <Brain size={14} /> AI Search
-          </button>
-          <button onClick={handleExport}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-2 border border-white/[0.05] text-sm text-slate-400 hover:text-white transition-colors">
-            <Download size={14} /> {selectedIds.size > 0 ? `Export ${selectedIds.size}` : 'Export'}
           </button>
         </div>
       </div>
@@ -884,12 +895,6 @@ export default function LeadsPage({ onSelect }) {
           <option value="all">All Statuses</option>
           {statuses.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        {selectedIds.size > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand/10 border border-brand/20">
-            <span className="text-xs font-medium text-brand">{selectedIds.size} selected</span>
-            <button onClick={() => setSelectedIds(new Set())} className="text-slate-500 hover:text-white"><X size={12} /></button>
-          </div>
-        )}
       </div>
 
       {/* ── Lead Table ── */}
@@ -898,12 +903,6 @@ export default function LeadsPage({ onSelect }) {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/[0.03]">
-                <th className="px-3 py-3 text-left w-10">
-                  <button onClick={() => { if (allOnPageSelected) setSelectedIds(new Set()); else setSelectedIds(new Set(leads.map(l => l.id))); }}
-                    className="text-slate-500 hover:text-white">
-                    {allOnPageSelected ? <CheckSquare size={15} className="text-brand" /> : <Square size={15} />}
-                  </button>
-                </th>
                 <SortHeader field="name" label="Lead" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                 <SortHeader field="company" label="Company" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                 <SortHeader field="score" label="Score" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
@@ -916,7 +915,6 @@ export default function LeadsPage({ onSelect }) {
             </thead>
             <tbody>
               {leads.map((l, i) => {
-                const isSelected = selectedIds.has(l.id);
                 const isExpanded = expandedRows.has(l.id);
                 const prob = getCloseProbability(l, i);
                 const dv = l.dealValue || 0;
@@ -924,10 +922,7 @@ export default function LeadsPage({ onSelect }) {
                 return (
                   <React.Fragment key={l.id}>
                     <tr onClick={() => handleSelectLead(l)}
-                      className={`border-b border-white/[0.02] cursor-pointer hover:bg-white/[0.02] transition-colors ${isSelected ? 'bg-brand/5' : ''} ${isExpanded ? 'bg-brand/[0.03]' : ''}`}>
-                      <td className="px-3 py-2.5" onClick={e => toggleSelect(l.id, e)}>
-                        {isSelected ? <CheckSquare size={15} className="text-brand" /> : <Square size={15} className="text-slate-600" />}
-                      </td>
+                      className={`border-b border-white/[0.02] cursor-pointer hover:bg-white/[0.02] transition-colors ${isExpanded ? 'bg-brand/[0.03]' : ''}`}>
 
                       {/* Lead */}
                       <td className="px-3 py-2.5">
@@ -1007,12 +1002,12 @@ export default function LeadsPage({ onSelect }) {
                         </div>
                       </td>
                     </tr>
-                    {isExpanded && <CloseCoachRow lead={l} index={i} colSpan={9} onCallClick={handleCallClick} showToast={showToast} />}
+                    {isExpanded && <CloseCoachRow lead={l} index={i} colSpan={8} onCallClick={handleCallClick} showToast={showToast} />}
                   </React.Fragment>
                 );
               })}
               {leads.length === 0 && (
-                <tr><td colSpan={9} className="px-4 py-12 text-center text-slate-500 text-sm">
+                <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-500 text-sm">
                   {aiFilters ? 'No leads match your AI query. Try different criteria.' : 'No leads match your filters.'}
                 </td></tr>
               )}
@@ -1020,24 +1015,17 @@ export default function LeadsPage({ onSelect }) {
           </table>
         </div>
 
-        {/* Load More / Pagination */}
+        {/* Infinite scroll sentinel + status */}
         <div className="px-4 py-3 border-t border-white/[0.03] flex items-center justify-between">
           <span className="text-sm text-slate-500">
             Showing {leads.length.toLocaleString()} of {totalFiltered.toLocaleString()}
           </span>
-          <div className="flex items-center gap-3">
-            {hasMore && (
-              <button onClick={() => setVisibleCount(prev => Math.min(prev + 50, totalFiltered))}
-                className="px-4 py-2 rounded-lg bg-brand/15 border border-brand/25 text-sm font-medium text-brand hover:bg-brand/25 transition-colors">
-                Load More ({Math.min(50, totalFiltered - visibleCount)} more)
-              </button>
-            )}
-            <select value={leadsPerPage} onChange={e => setLeadsPerPage(Number(e.target.value))}
-              className="px-2 py-1 bg-surface-1 border border-white/[0.03] rounded text-sm text-white outline-none">
-              {perPageOptions.map(n => <option key={n} value={n}>{n}/page</option>)}
-            </select>
-          </div>
+          {hasMore && (
+            <span className="text-xs text-slate-600">Scroll for more</span>
+          )}
         </div>
+        {/* Sentinel for IntersectionObserver */}
+        <div ref={sentinelRef} className="h-1" />
       </div>
     </div>
   );

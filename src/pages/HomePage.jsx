@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, LayoutDashboard, Bot, Users, TrendingUp, Wallet, ArrowRight, Shield, Globe, Rocket, Crown, ChevronRight, BarChart3, Target, Flame, CheckCircle2, ArrowDown, Cpu, Activity, DollarSign, Gauge, Phone, MessageSquare, Mic, Headphones, Send, Radio, Sparkles, Eye, Lock, Crosshair, Layers, Building2, Code2, Star, Briefcase, ShoppingBag, ExternalLink, Trophy, Dice1, Swords, CircleDot, Megaphone, TrendingDown, Award, Gem, Zap as ZapIcon } from 'lucide-react';
+import { Zap, LayoutDashboard, Bot, Users, TrendingUp, Wallet, ArrowRight, Shield, Globe, Rocket, Crown, ChevronRight, BarChart3, Target, Flame, CheckCircle2, ArrowDown, Cpu, Activity, DollarSign, Gauge, Phone, MessageSquare, Mic, Headphones, Send, Radio, Sparkles, Eye, Lock, Crosshair, Layers, Building2, Code2, Star, Briefcase, ShoppingBag, ExternalLink, Trophy, Dice1, Swords, CircleDot, Megaphone, TrendingDown, Award, Gem, Zap as ZapIcon, Calendar } from 'lucide-react';
 import GoatLogo from '../components/GoatLogo';
 import { GoatIcon } from '../components/GoatLogo';
 import { useStore } from '../hooks/useStore';
@@ -57,123 +57,14 @@ function useMouseParallax() {
   return [ref, transform];
 }
 
-// ── Floating Particles ───────────────────────────────────────────────────────
-function FloatingParticles() {
-  const canvasRef = useRef(null);
-  const mouseRef = useRef({ x: 0, y: 0 });
-  const particlesRef = useRef([]);
-  const animRef = useRef(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let w = canvas.parentElement.offsetWidth;
-    let h = canvas.parentElement.offsetHeight;
-    canvas.width = w;
-    canvas.height = h;
-
-    // Initialize particles (reduced from 40 for perf — connection lines are O(n²))
-    const count = 20;
-    particlesRef.current = Array.from({ length: count }, () => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      vx: (Math.random() - 0.5) * 0.3,
-      vy: (Math.random() - 0.5) * 0.3,
-      r: Math.random() * 2 + 0.5,
-      alpha: Math.random() * 0.4 + 0.1,
-      color: Math.random() > 0.5 ? '16,185,129' : '6,182,212',
-    }));
-
-    const handleMouse = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      mouseRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    };
-    canvas.addEventListener('mousemove', handleMouse, { passive: true });
-
-    const animate = () => {
-      // Pause animation when tab is not visible
-      if (document.hidden) {
-        animRef.current = requestAnimationFrame(animate);
-        return;
-      }
-      ctx.clearRect(0, 0, w, h);
-      const mx = mouseRef.current.x;
-      const my = mouseRef.current.y;
-
-      particlesRef.current.forEach((p) => {
-        // Mouse influence
-        const ddx = mx - p.x;
-        const ddy = my - p.y;
-        const dist = Math.sqrt(ddx * ddx + ddy * ddy);
-        if (dist < 200 && dist > 0) {
-          const force = (200 - dist) / 200 * 0.02;
-          p.vx += ddx / dist * force;
-          p.vy += ddy / dist * force;
-        }
-
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vx *= 0.99;
-        p.vy *= 0.99;
-
-        if (p.x < 0) p.x = w;
-        if (p.x > w) p.x = 0;
-        if (p.y < 0) p.y = h;
-        if (p.y > h) p.y = 0;
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${p.color},${p.alpha})`;
-        ctx.fill();
-      });
-
-      // Draw connections
-      const pts = particlesRef.current;
-      for (let i = 0; i < pts.length; i++) {
-        for (let j = i + 1; j < pts.length; j++) {
-          const dx = pts[i].x - pts[j].x;
-          const dy = pts[i].y - pts[j].y;
-          const d = Math.sqrt(dx * dx + dy * dy);
-          if (d < 120) {
-            ctx.beginPath();
-            ctx.moveTo(pts[i].x, pts[i].y);
-            ctx.lineTo(pts[j].x, pts[j].y);
-            ctx.strokeStyle = `rgba(16,185,129,${0.06 * (1 - d / 120)})`;
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-          }
-        }
-      }
-
-      animRef.current = requestAnimationFrame(animate);
-    };
-    animate();
-
-    const handleResize = () => {
-      w = canvas.parentElement.offsetWidth;
-      h = canvas.parentElement.offsetHeight;
-      canvas.width = w;
-      canvas.height = h;
-    };
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      canvas.removeEventListener('mousemove', handleMouse);
-      window.removeEventListener('resize', handleResize);
-      if (animRef.current) cancelAnimationFrame(animRef.current);
-    };
-  }, []);
-
-  return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-auto" style={{ zIndex: 0, willChange: 'transform' }} />;
-}
+// ── Floating Particles removed — was O(n²) connection lines per frame, tanked homepage perf ──
 
 // ── Sandboxed AI Demo Chat for Homepage ──────────────────────────────────────
 const DEMO_RESPONSES = {
   'leads': "Found **3 hot leads** with rising momentum:\n\n1. **Mike Chen** at Pinnacle Dental — Score: 94, Deal: $85K\n   Pain: Lead quality issues. Just hired a marketing director.\n2. **Sarah Kim** at TechFlow — Score: 91, Deal: $120K\n   Pain: Scaling outreach. Evaluating competitors.\n3. **James Park** at Vertex AI — Score: 88, Deal: $95K\n   Pain: Pipeline visibility. Decision in 2 weeks.\n\nWant me to draft outreach for any of these?",
-  'market': "**Market Pulse — Live**\n\nBTC: $67,420 (+2.3%)\nETH: $3,285 (+1.8%)\nSOL: $142 (+5.1%)\n\nFear & Greed: 72 (Greed)\nTop Signal: Whale accumulation on SOL\n\nPrediction Markets:\n- Trump Win: 52% → 54% (trending up)\n- Fed Rate Cut June: 68%\n- BTC $100K by Q3: 41%",
-  'alpha': "**Alpha Play Detected**\n\nSignal: SOL whale accumulation + Polymarket volume spike\nConfidence: 87%\nSuggested: Long SOL/USDC with 3x leverage\nEntry: $140-142 | Target: $165 | Stop: $132\nEstimated Alpha: +16.4%\n\nCorrelated news: Solana Mobile Chapter 2 shipping next month.",
-  'default': "I'm GOATED AI — your revenue intelligence co-pilot. I can help with:\n\n- Finding and ranking leads\n- Real-time market analysis\n- Prediction market signals\n- Outreach scripts and coaching\n- Competitive intelligence\n\nTry asking about leads, market trends, or alpha plays!",
+  'market': "**B2B Pipeline Pulse**\n\nOutbound voice reply rates: 14.3% (vs 1.8% cold email)\nSMS open within 90s: 82%\nLinkedIn DM accept rate on warm signals: 38%\nCold email deliverability: collapsing Q2 '26 (Google/Yahoo DMARC)\n\nTop Signal: buyers answer phones between 10–11am + 2–3pm local.\nDecision windows: fiscal-year resets + new-hire triggers are the fastest entry points.",
+  'alpha': "**Revenue Recovery Detected**\n\nWhat we scan: your site, checkout, CTAs, tech stack, inbound funnel.\nWhat we find: missed-call rescue, abandoned carts, dead lead-magnet forms, dormant buyer lists, booking-page friction.\nQuick win: re-activate the last 90 days of no-shows + non-responders with an AI voice + SMS touch.\n\nExpected 90-day recovery: $11K–$34K/mo on most pipelines we audit.",
+  'default': "I'm GOATED AI — built for B2B founders, agencies, and sales teams. I can help with:\n\n- Auditing a website for revenue leaks in 15 seconds\n- Finding dormant leads that never got a second touch\n- Writing outbound scripts (voice / SMS / LinkedIn — not email)\n- Detecting tech-stack gaps that are killing conversion\n- Booking meetings via Vapi + Twilio + Cal.com, no email required\n\nDrop a URL into the audit, or ask me what to fix first.",
 };
 
 function HomepageAIDemo({ onOpenFull }) {
@@ -194,9 +85,9 @@ function HomepageAIDemo({ onOpenFull }) {
     setTyping(true);
     setTimeout(() => {
       let response = DEMO_RESPONSES.default;
-      if (msg.includes('lead') || msg.includes('find') || msg.includes('pipeline') || msg.includes('top')) response = DEMO_RESPONSES.leads;
-      else if (msg.includes('market') || msg.includes('btc') || msg.includes('crypto') || msg.includes('price')) response = DEMO_RESPONSES.market;
-      else if (msg.includes('alpha') || msg.includes('play') || msg.includes('signal') || msg.includes('trade') || msg.includes('bet')) response = DEMO_RESPONSES.alpha;
+      if (msg.includes('lead') || msg.includes('find') || msg.includes('pipeline') || msg.includes('top') || msg.includes('account')) response = DEMO_RESPONSES.leads;
+      else if (msg.includes('market') || msg.includes('pipeline') || msg.includes('trend') || msg.includes('response rate')) response = DEMO_RESPONSES.market;
+      else if (msg.includes('audit') || msg.includes('leak') || msg.includes('revenue') || msg.includes('opportunit') || msg.includes('alpha')) response = DEMO_RESPONSES.alpha;
       setMsgs(p => [...p, { role: 'assistant', text: response }]);
       setTyping(false);
     }, 800 + Math.random() * 600);
@@ -262,16 +153,7 @@ function HomepageAIDemo({ onOpenFull }) {
   );
 }
 
-function useLiveCounter(baseValue = 14832) {
-  const [count, setCount] = useState(baseValue);
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCount(prev => prev + Math.floor(Math.random() * 3) + 1);
-    }, 2500 + Math.random() * 2000);
-    return () => clearInterval(interval);
-  }, []);
-  return count;
-}
+// useLiveCounter removed — was faking incrementing user counts
 
 // ── Staggered Card Animation Wrapper ─────────────────────────────────────────
 function StaggeredCards({ children, className = '' }) {
@@ -355,11 +237,13 @@ function PartnerLogo({ name, color }) {
 
 
 export default function HomePage() {
-  const { setPage, setAiOpen, setAccountModalOpen } = useStore();
+  // Selective selectors — HomePage stays snappy even if store mutates elsewhere.
+  const setPage = useStore(s => s.setPage);
+  const setAiOpen = useStore(s => s.setAiOpen);
+  const setAccountModalOpen = useStore(s => s.setAccountModalOpen);
   const [hoveredFeature, setHoveredFeature] = useState(null);
   const [showAffiliateModal, setShowAffiliateModal] = useState(false);
-  const leadsToday = useLiveCounter(14832);
-  const liveEvents = useLiveCounter(47);
+  // Removed fake live counters — no more lying about platform activity
 
   // Mouse-tracking parallax for hero
   const [heroRef, heroTransform] = useMouseParallax();
@@ -390,12 +274,12 @@ export default function HomePage() {
   const features = [
     { icon: Users, title: 'Lead Intelligence', desc: '500K+ AI-scored leads with deep enrichment — buying signals, pain points, closing scripts, and company intel. This is your goddamn goldmine.', page: 'leads', color: '#10b981', stats: '500K+ leads' },
     { icon: TrendingUp, title: 'Trend Pulse', desc: 'Real-time global market intelligence with 3D visualization. See what\'s pumping before the herd. Alpha on tap.', page: 'trends', color: '#06b6d4', stats: 'Real-time' },
-    { icon: Phone, title: 'Direct Outreach', desc: 'VoIP calling, SMS blasts, voicemail drops. Skip the inbox bullshit — go direct to decision makers and close faster.', page: 'leads', color: '#f59e0b', stats: 'Multi-channel' },
-    { icon: Bot, title: 'GOATED AI Engine', desc: 'Custom AI with RSI, MACD, Bollinger Bands, regime detection, and predictive scoring. Not a ChatGPT wrapper — a proprietary intelligence engine built for alpha.', color: '#a855f7', action: () => setAiOpen(true), stats: 'Custom AI' },
-    { icon: Globe, title: 'Prediction Markets', desc: '25+ live prediction markets across crypto, politics, tech & macro. Spread analysis vs Kalshi & Polymarket. See the future, bet on it, profit.', page: 'trends', color: '#ef4444', stats: 'Live odds' },
-    { icon: Globe, title: 'Sentiment Fusion', desc: 'Multi-source sentiment engine: Fear/Greed Index, news NLP, market momentum, social signals. All fused into one composite score. Absolute alpha.', page: 'trends', color: '#ec4899', stats: 'Multi-source' },
-    { icon: Wallet, title: 'Solana Wallet', desc: 'Native Phantom integration. USDC settlements, on-chain commission tracking, instant payouts. Your bags, your keys, your money.', page: 'wallet', color: '#f97316', stats: 'Solana-first' },
-    { icon: BarChart3, title: 'Command Center', desc: 'Full pipeline analytics, autonomous AI agents, real-time KPIs. One dashboard to rule them all. Total fucking control.', page: 'dashboard', color: '#8b5cf6', stats: 'Full control' },
+    { icon: Phone, title: 'AI Voice Agent', desc: 'Vapi-powered outbound. Your AI rep dials every dormant lead, missed buyer, and high-intent visitor with a TrendPulse-tailored script. Books meetings to your calendar. Skip email — email is dead.', page: 'leads', color: '#f59e0b', stats: 'Voice + SMS + LinkedIn' },
+    { icon: Bot, title: 'TrendPulse', desc: 'Per-target intelligence engine. Scrapes your prospect\'s website, socials, and public signals — outputs a personalized revenue-loss briefing in 15 seconds. Makes every cold call land like you\'ve been studying them for weeks.', color: '#a855f7', action: () => setAiOpen(true), stats: 'Per-target AI' },
+    { icon: Globe, title: 'Account Intelligence', desc: 'Live site crawl, tech-stack detection, funding + hiring signals, buyer density per region. Know which accounts to hit, in what order, and what angle opens the door.', page: 'trends', color: '#ef4444', stats: 'Live-crawled' },
+    { icon: Award, title: 'Revenue Loss Auditor', desc: 'Free, public, shareable. Enter a brand URL — we estimate their leaking pipeline in seconds. Every audit is a warm outbound call waiting to happen.', page: 'audit', color: '#10b981', stats: 'Free forever' },
+    { icon: Wallet, title: 'Stripe Connect', desc: 'Every closed deal routes through your Stripe Express. Same-day / instant payouts. No pooled wallets, no crypto, no bullshit. You get paid like a grown-up.', page: 'wallet', color: '#06b6d4', stats: 'Instant payouts' },
+    { icon: BarChart3, title: 'Command Center', desc: 'Pipeline + activations + commission split + TCPA compliance logs. One dashboard. Daily close-rate, weekly revenue. Zero noise.', page: 'dashboard', color: '#8b5cf6', stats: 'One view' },
   ];
 
   const stats = [
@@ -414,15 +298,7 @@ export default function HomePage() {
     { icon: Radio, title: 'Network Signals', desc: 'Real-time job change alerts, funding announcements, and trigger events. Ape into the deal at the perfect moment.', color: '#ef4444' },
   ];
 
-  const competitorComparison = [
-    { name: 'Apollo', price: '$39-149/mo', leads: true, ai: false, voip: false, predictions: false, wallet: false, sentiment: false, outreach: false, coaching: false },
-    { name: 'ZoomInfo', price: '$14,000+/yr', leads: true, ai: false, voip: false, predictions: false, wallet: false, sentiment: false, outreach: false, coaching: false },
-    { name: 'Outreach', price: '$100+/seat', leads: false, ai: false, voip: false, predictions: false, wallet: false, sentiment: false, outreach: true, coaching: false },
-    { name: 'Gong', price: '$100+/seat', leads: false, ai: true, voip: false, predictions: false, wallet: false, sentiment: false, outreach: false, coaching: true },
-    { name: 'Kalshi', price: 'Per-trade fees', leads: false, ai: false, voip: false, predictions: true, wallet: false, sentiment: false, outreach: false, coaching: false },
-    { name: 'Polymarket', price: 'Per-trade fees', leads: false, ai: false, voip: false, predictions: true, wallet: false, sentiment: false, outreach: false, coaching: false },
-    { name: 'GOATED', price: '$0 + 12-15%', leads: true, ai: true, voip: true, predictions: true, wallet: true, sentiment: true, outreach: true, coaching: true, isUs: true },
-  ];
+  // Competitor comparison removed — we don't name-drop. The OS stands on its own.
 
   // No pricing tiers — platform is 100% free, commission-only model
 
@@ -439,10 +315,7 @@ export default function HomePage() {
             style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(16,185,129,0.15) 1px, transparent 0)', backgroundSize: '32px 32px' }} />
         </div>
 
-        {/* Floating Particles Canvas */}
-        <div className="absolute inset-0 overflow-hidden" style={{ pointerEvents: 'none' }}>
-          <FloatingParticles />
-        </div>
+        {/* Particles removed for performance */}
 
         {/* Mouse-tracking gradient orbs */}
         <div
@@ -459,43 +332,45 @@ export default function HomePage() {
             <div className="flex flex-wrap items-center gap-3 mb-6">
               <motion.div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand/10 border border-brand/20 text-brand text-sm" whileHover={{ scale: 1.05 }}>
                 <Zap size={16} />
-                <span className="font-medium">B2B Sales Intelligence + Degen Alpha</span>
+                <span className="font-medium">Gen Z Business OS — built for the ones who actually close</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
               </motion.div>
-              <motion.div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs" whileHover={{ scale: 1.05 }}>
-                <Flame size={12} />
-                <span className="font-bold">DEGEN MODE Available</span>
+              <motion.div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-slate-400 text-xs" whileHover={{ scale: 1.05 }}>
+                <Phone size={12} />
+                <span className="font-semibold">Voice · SMS · LinkedIn · Zero Email</span>
               </motion.div>
             </div>
 
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.05] mb-6 tracking-tight">
-              <span className="bg-gradient-to-r from-brand via-emerald-300 to-cyan-400 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text' }}>
-                THE DEGEN OS
-              </span>
+              <span className="text-white">You're losing</span>
               <br />
               <span className="relative">
-                <span className="text-white">FOR CLOSERS</span>
+                <span className="bg-gradient-to-r from-brand via-emerald-300 to-cyan-400 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text' }}>
+                  $18K a month
+                </span>
                 <motion.span className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-brand to-cyan-400 rounded-full" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.8, duration: 0.6 }} />
               </span>
+              <br />
+              <span className="text-white">in revenue you'll never see.</span>
             </h1>
 
             <p className="text-lg sm:text-xl text-slate-400 max-w-lg mb-4 leading-relaxed">
-              B2B Sales Intelligence x Degen Alpha. One platform to close deals, discover plays, and print money. <span className="text-brand font-semibold">250K+ leads scored</span>, real-time market signals, and an AI engine that never sleeps — this isn't a CRM, it's the operating system for closers and degens.
+              Drop your URL. We crawl it, find the leaks, and price the fix in 15 seconds. <span className="text-white font-semibold">Then our AI voice agent calls every dormant lead, missed buyer, and no-show</span> — while you run the business.
             </p>
             <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500 mb-8">
-              <span className="flex items-center gap-1.5"><Shield size={14} className="text-brand" />$0 platform fee</span>
+              <span className="flex items-center gap-1.5"><Shield size={14} className="text-brand" />Free forever</span>
               <span className="text-slate-700">|</span>
-              <span className="flex items-center gap-1.5"><DollarSign size={14} className="text-yellow-400" />Keep 88% of every deal</span>
+              <span className="flex items-center gap-1.5"><DollarSign size={14} className="text-brand" />$0 until money lands</span>
               <span className="text-slate-700">|</span>
-              <span className="flex items-center gap-1.5"><Wallet size={14} className="text-cyan-400" />Instant SOL payouts</span>
+              <span className="flex items-center gap-1.5"><Phone size={14} className="text-brand" />AI calls. No email.</span>
             </div>
 
             <div className="flex flex-wrap gap-4 mb-10">
-              <GlowButton onClick={() => setPage('leads')} color="brand">
-                <Target size={22} />Start Closing<ArrowRight size={18} />
+              <GlowButton onClick={() => setPage('audit')} color="brand">
+                <Sparkles size={22} />Run free audit<ArrowRight size={18} />
               </GlowButton>
-              <GlowButton onClick={() => setPage('trends')} variant="secondary">
-                <Eye size={22} className="text-brand" />See Alpha Plays
+              <GlowButton onClick={() => setPage('leads')} variant="secondary">
+                <Target size={22} className="text-brand" />Explore the platform
               </GlowButton>
             </div>
 
@@ -556,16 +431,25 @@ export default function HomePage() {
         </motion.div>
       </motion.section>
 
-      {/* ═══ SOCIAL PROOF ═══ */}
+      {/* ═══ SOCIAL PROOF — horizontal B2B capabilities ═══ */}
       <section className="px-6 py-5 border-y border-white/[0.03] bg-surface-1/20">
         <div className="max-w-7xl mx-auto flex flex-wrap justify-center gap-6 sm:gap-10 items-center text-sm text-slate-500">
-          {['Custom GOATED AI Engine', '500K+ leads scored', 'AI-powered close system', 'Solana-native wallet', 'Live prediction markets', `${leadsToday.toLocaleString()} leads processed today`].map((t, i) => (
-            <div key={i} className="flex items-center gap-2"><CheckCircle2 size={14} className="text-brand" /><span>{t}</span></div>
-          ))}
+          {[
+            { icon: Phone,    label: 'AI voice calls (Vapi)' },
+            { icon: MessageSquare, label: 'SMS follow-up (Twilio)' },
+            { icon: Users,    label: 'LinkedIn DMs (compliance-aware)' },
+            { icon: Shield,   label: 'TCPA + DNC baked in' },
+            { icon: Wallet,   label: 'Stripe Connect — instant payouts' },
+          ].map((t, i) => {
+            const I = t.icon;
+            return (
+              <div key={i} className="flex items-center gap-2"><I size={14} className="text-brand" /><span>{t.label}</span></div>
+            );
+          })}
         </div>
       </section>
 
-      {/* ═══ DEGEN MODE UPSELL ═══ */}
+      {/* ═══ WOLF MODE — default-on ═══ */}
       <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
         <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.03) 0%, rgba(239,68,68,0.02) 50%, rgba(0,0,0,0) 100%)' }} />
         <div className="absolute top-10 right-10 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl animate-pulse" />
@@ -586,7 +470,7 @@ export default function HomePage() {
               <div className="flex flex-wrap items-center gap-3 mb-2">
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/15 border border-orange-500/30">
                   <Flame size={16} className="text-orange-400" />
-                  <span className="text-orange-400 text-xs font-black uppercase tracking-widest">DEGEN MODE</span>
+                  <span className="text-orange-400 text-xs font-black uppercase tracking-widest">WOLF MODE</span>
                 </div>
                 <div className="px-3 py-1.5 rounded-full bg-white/[0.02] border border-white/[0.05]">
                   <span className="text-slate-400 text-xs font-mono">Press <kbd className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-bold mx-0.5">Shift+D</kbd> to activate</span>
@@ -598,43 +482,22 @@ export default function HomePage() {
 
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mt-4 mb-4">
                 <span className="bg-gradient-to-r from-orange-400 via-red-400 to-orange-500 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text' }}>
-                  Unlock DEGEN MODE
+                  Wolf mode is on by default.
                 </span>
               </h2>
               <p className="text-lg text-slate-400 max-w-3xl mb-8">
-                For the real ones. Activate DEGEN MODE and unlock the full alpha toolkit — casino games, insider signals, leaderboards, and market intel that normies will never see. This is the degenerate layer on top of professional-grade tools.
+                You showed up, you&apos;re already a wolf. Every push notification, every play, every script is tuned for aggression. Need a breather? Flip to CHILL and the same engine runs — quieter. Most never touch it.
               </p>
 
-              {/* Casino Games Row */}
-              <div className="mb-6">
-                <h3 className="text-sm font-black text-orange-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Sparkles size={14} />Casino Games</h3>
-                <StaggeredCards className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {[
-                    { icon: TrendingUp, label: 'Price Prediction', desc: 'Bet on where BTC, ETH, SOL go next. Real-time charts, real stakes.', color: '#f97316' },
-                    { icon: CircleDot, label: 'Roulette', desc: 'Crypto roulette with USDC. Fast rounds, instant payouts.', color: '#ef4444' },
-                    { icon: Swords, label: 'Portfolio Duel', desc: '1v1 portfolio battles. Build the best bag in 24hrs and win.', color: '#a855f7' },
-                    { icon: Bot, label: 'AI Oracle', desc: 'Bet against GOATED AI predictions. Think you know more? Prove it.', color: '#ec4899' },
-                  ].map((item, i) => (
-                    <div key={i} className="bg-black/60 backdrop-blur rounded-xl p-4 border border-orange-500/10 group hover:border-orange-500/30 transition-all duration-300 hover:-translate-y-1">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: `${item.color}15`, color: item.color }}>
-                        <item.icon size={20} />
-                      </div>
-                      <div className="font-bold text-white text-sm mb-1 group-hover:text-orange-400 transition-colors">{item.label}</div>
-                      <div className="text-xs text-slate-500 leading-relaxed">{item.desc}</div>
-                    </div>
-                  ))}
-                </StaggeredCards>
-              </div>
-
-              {/* Alpha & Intel Row */}
+              {/* Wolf toolkit row */}
               <div className="mb-8">
-                <h3 className="text-sm font-black text-orange-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Eye size={14} />Alpha Intel & Leaderboards</h3>
+                <h3 className="text-sm font-black text-orange-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Eye size={14} />What&apos;s always on in Wolf</h3>
                 <StaggeredCards className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {[
-                    { icon: Crosshair, label: 'Alpha Plays', desc: 'AI-detected trade signals with entry/exit targets and confidence scores.', color: '#f97316' },
-                    { icon: Activity, label: 'Live Closing Feed', desc: 'Real-time feed of deals being closed across the platform. See the money move.', color: '#10b981' },
-                    { icon: Trophy, label: 'Bet-on-Closers', desc: 'Leaderboard of top closers. Bet on who closes the most this week.', color: '#f59e0b' },
-                    { icon: Eye, label: 'Insider Signals', desc: 'Whale wallet tracking, social sentiment spikes, and breaking alpha.', color: '#ef4444' },
+                    { icon: Crosshair, label: 'AI Alpha Plays', desc: 'Market moves get turned into entry / target / stop, pushed live to your radar.', color: '#f97316' },
+                    { icon: Activity, label: 'Live Close Feed', desc: 'Real-time ticker of deals being closed across the OS. Watch the money move.', color: '#10b981' },
+                    { icon: Trophy, label: 'Closer Leaderboard', desc: 'Top earners ranked live. Community-driven fire under every login.', color: '#f59e0b' },
+                    { icon: Eye, label: 'Push Alerts', desc: 'Browser + mobile notifications the second a play or a lead heats up.', color: '#ef4444' },
                   ].map((item, i) => (
                     <div key={i} className="bg-black/60 backdrop-blur rounded-xl p-4 border border-orange-500/10 group hover:border-orange-500/30 transition-all duration-300 hover:-translate-y-1">
                       <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: `${item.color}15`, color: item.color }}>
@@ -650,9 +513,9 @@ export default function HomePage() {
               {/* CTA */}
               <div className="flex flex-wrap items-center gap-4">
                 <GlowButton onClick={() => setPage('leads')} color="orange">
-                  <Flame size={20} />Activate DEGEN MODE<ArrowRight size={18} />
+                  <Flame size={20} />Start Closing<ArrowRight size={18} />
                 </GlowButton>
-                <span className="text-sm text-slate-500">Toggle anytime with <kbd className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-bold text-xs mx-1">Shift+D</kbd></span>
+                <span className="text-sm text-slate-500">Toggle Wolf / Chill with <kbd className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-bold text-xs mx-1">Shift+D</kbd></span>
               </div>
             </div>
           </motion.div>
@@ -660,36 +523,39 @@ export default function HomePage() {
       </section>
 
 
-      {/* ═══ ELEVATOR PITCH ═══ */}
+      {/* ═══ 3 PILLARS / ELEVATOR PITCH ═══ */}
       <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-brand/[0.02] to-transparent" />
         <div className="max-w-5xl mx-auto relative">
           <motion.div className="text-center mb-10" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <span className="text-brand text-sm font-bold uppercase tracking-widest">Stop Paying Rent to Close Deals</span>
+            <span className="text-brand text-sm font-bold uppercase tracking-widest">Three pillars. One operating system. Zero subscription.</span>
             <h2 className="text-3xl lg:text-5xl font-black mt-3 mb-5 leading-tight">
-              Every Weapon. One Platform. <span className="text-brand">Zero Fucking Dollars.</span>
+              The money OS. <span className="text-brand">Built for the ones who actually move.</span>
             </h2>
             <p className="text-lg text-slate-400 max-w-3xl mx-auto leading-relaxed mb-8">
-              Apollo wants $149/mo for leads. Gong wants $100/seat for call intel. ZoomInfo wants $14K/yr for data. We said fuck all that and built everything into one platform for free. The <span className="text-brand font-bold">GOATED Guarantee</span>: our AI close system hits 90%+ or we work with you until it does. This isn't SaaS — it's a revenue printing press and you're the operator.
+              Everything that used to be scattered across ten tabs and ten subscriptions — market intel, targets, scripts, payouts — collapsed into one OS. You don&apos;t pay until a deal closes. Every win routes to your Master Wallet. The engine never sleeps.
             </p>
           </motion.div>
 
-          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
-            <div className="text-center p-6 rounded-2xl bg-black/40 border border-brand/20 hover:border-brand/40 transition-colors duration-300">
-              <div className="text-4xl font-black text-brand mb-2">500K+</div>
-              <div className="text-sm text-slate-400">AI-Scored Leads</div>
-              <div className="text-xs text-slate-600 mt-1">Ranked & ready to close</div>
-            </div>
-            <div className="text-center p-6 rounded-2xl bg-black/40 border border-brand/20 hover:border-cyan-400/40 transition-colors duration-300">
-              <div className="text-4xl font-black text-cyan-400 mb-2">$0</div>
-              <div className="text-sm text-slate-400">Revenue (Pre-Launch)</div>
-              <div className="text-xs text-slate-600 mt-1">$0 until real deals close</div>
-            </div>
-            <div className="text-center p-6 rounded-2xl bg-black/40 border border-brand/20 hover:border-yellow-400/40 transition-colors duration-300">
-              <div className="text-4xl font-black text-yellow-400 mb-2">94%</div>
-              <div className="text-sm text-slate-400">Avg Close Rate</div>
-              <div className="text-xs text-slate-600 mt-1">GOATED Guarantee system</div>
-            </div>
+          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            <button onClick={() => setPage('trends')} className="text-left p-6 rounded-2xl bg-black/40 border border-orange-500/20 hover:border-orange-500/50 transition-all duration-300 group hover:-translate-y-1">
+              <div className="flex items-center gap-2 mb-2"><Flame size={16} className="text-orange-400" /><span className="text-[10px] font-black uppercase tracking-widest text-orange-400">Pillar 01</span></div>
+              <div className="text-2xl font-black text-orange-400 mb-1">ALPHA RADAR</div>
+              <div className="text-sm text-slate-400 leading-snug">Globe view of every market. AI turns moves into plays — entry, target, stop. Push alerts when the opportunity hits.</div>
+              <div className="text-[11px] text-orange-300/70 mt-3 flex items-center gap-1 group-hover:translate-x-1 transition-transform">Scan live <ArrowRight size={12} /></div>
+            </button>
+            <button onClick={() => setPage('leads')} className="text-left p-6 rounded-2xl bg-black/40 border border-brand/20 hover:border-brand/50 transition-all duration-300 group hover:-translate-y-1">
+              <div className="flex items-center gap-2 mb-2"><Target size={16} className="text-brand" /><span className="text-[10px] font-black uppercase tracking-widest text-brand">Pillar 02</span></div>
+              <div className="text-2xl font-black text-brand mb-1">CLOSER OS</div>
+              <div className="text-sm text-slate-400 leading-snug">500K scored targets. AI scripts, objection handling, real-time coaching. Skip the inbox — go straight to the close.</div>
+              <div className="text-[11px] text-emerald-300/70 mt-3 flex items-center gap-1 group-hover:translate-x-1 transition-transform">Open pipeline <ArrowRight size={12} /></div>
+            </button>
+            <button onClick={() => setPage('wallet')} className="text-left p-6 rounded-2xl bg-black/40 border border-cyan-400/20 hover:border-cyan-400/50 transition-all duration-300 group hover:-translate-y-1">
+              <div className="flex items-center gap-2 mb-2"><Wallet size={16} className="text-cyan-400" /><span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">Pillar 03</span></div>
+              <div className="text-2xl font-black text-cyan-400 mb-1">STRIPE CONNECT</div>
+              <div className="text-sm text-slate-400 leading-snug">Every closed deal routes through your Stripe Express account. Same day to your bank. No pooled wallets, no crypto, no monthly drain — $0 until the money actually lands.</div>
+              <div className="text-[11px] text-cyan-300/70 mt-3 flex items-center gap-1 group-hover:translate-x-1 transition-transform">See payouts <ArrowRight size={12} /></div>
+            </button>
           </StaggeredCards>
         </div>
       </section>
@@ -729,8 +595,8 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
             <span className="text-yellow-400 text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2"><Phone size={16} />Direct Outreach Suite</span>
-            <h2 className="text-3xl lg:text-4xl font-black mt-2 mb-3">Email is Dead. <span className="text-yellow-400">Call Them Like You Mean It.</span></h2>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">Your competition is writing "just following up!" emails like a bunch of NPCs. You're going direct — VoIP, SMS, voicemail drops, AI call coaching. 10x reply rate. Skip the gatekeeper, talk to the whale.</p>
+            <h2 className="text-3xl lg:text-4xl font-black mt-2 mb-3">Email is Dead. <span className="text-yellow-400">Go Direct.</span></h2>
+            <p className="text-slate-400 text-lg max-w-2xl mx-auto">VoIP, SMS, voicemail drops, AI coaching — 10x reply rate. Skip the gatekeeper, talk to the whale. Your competition is writing follow-up emails like NPCs.</p>
           </motion.div>
           <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {outreachMethods.map((m, i) => (
@@ -751,9 +617,9 @@ export default function HomePage() {
         <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.02) 0%, rgba(239,68,68,0.02) 50%, rgba(168,85,247,0.02) 100%)' }} />
         <div className="max-w-7xl mx-auto relative">
           <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <span className="text-orange-400 text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2"><Flame size={16} />DEGEN MODE ACTIVATED</span>
-            <h2 className="text-3xl lg:text-5xl font-black mt-2 mb-3">Ape Into Deals. <span className="text-orange-400">Print Money While You Sleep.</span></h2>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">Real degens don't pay $300/mo for mid tools. The alpha is free, the bags are fat, and the close rate is absurd. This is the zero-to-hero play. WAGMI.</p>
+            <span className="text-orange-400 text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2"><Flame size={16} />WOLF MODE ACTIVATED</span>
+            <h2 className="text-3xl lg:text-5xl font-black mt-2 mb-3">Ape In. <span className="text-orange-400">Stack Bags. Repeat.</span></h2>
+            <p className="text-slate-400 text-lg max-w-2xl mx-auto">Free alpha. Fat bags. Absurd close rates. This is the zero-to-hero play — no monthly drain, pure upside.</p>
           </motion.div>
 
           <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
@@ -763,7 +629,7 @@ export default function HomePage() {
               { emoji: '\u{1F4B0}', title: 'Money Printer Go Brr', desc: 'Direct outreach that converts like crazy. VoIP, SMS, voicemail drops — skip the inbox, go direct to the decision maker. Close while your competition writes follow-up emails.', stat: '10x', label: 'Reply rate vs email' },
               { emoji: '\u{1F410}', title: 'GOATED AI Agent', desc: 'Your always-on degen co-pilot. Real-time coaching, research, scripts — like having a senior closer whispering alpha in your ear 24/7. No sleep needed.', stat: '24/7', label: 'Always available' },
               { emoji: '\u{1F4C8}', title: 'Moon Signals', desc: 'Cross-platform sentiment analysis. Instagram, TikTok, crypto Twitter — see the trend before it moons. Ape into the right deal at the right time.', stat: 'LIVE', label: 'Real-time data' },
-              { emoji: '\u26A1', title: 'Zero Fee, No Cap', desc: 'Free forever. You keep the bag — we just take a small 12% platform fee on closed deals (15% on $100K+ whales). No subscriptions, no monthly drain. Pure upside.', stat: '$0', label: 'Monthly cost' },
+              { emoji: '\u26A1', title: 'Zero Fee, No Cap', desc: 'Free forever. You keep the bag. We only take a cut when a real deal actually closes — terms get laid out on your first audit call. No subscriptions, no monthly drain, no pricing page games.', stat: '$0', label: 'Monthly cost' },
             ].map((item, i) => (
               <div key={i} className="bg-black/40 backdrop-blur rounded-xl p-6 border border-white/[0.03] group hover:border-orange-500/20 transition-all duration-300 relative overflow-hidden hover:-translate-y-1">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(249,115,22,0.05) 0%, transparent 70%)' }} />
@@ -830,65 +696,31 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══ COMPETITOR COMPARISON ═══ */}
+      {/* ═══ WHY GOATED — no competitor name-drops, universal ═══ */}
       <section className="px-6 py-16 sm:py-20 bg-surface-1/30">
         <div className="max-w-6xl mx-auto">
           <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <span className="text-brand text-sm font-bold uppercase tracking-widest">Why GOATED Wins</span>
-            <h2 className="text-3xl lg:text-4xl font-black mt-2 mb-3">Everyone Else is Mid. <span className="text-brand">We're Built Different.</span></h2>
-            <p className="text-slate-400 max-w-xl mx-auto">They charge you per seat, per feature, per fucking breath. We give you the entire arsenal for $0. Look at this chart and try to justify paying anyone else. You can't.</p>
+            <span className="text-brand text-sm font-bold uppercase tracking-widest">Built different</span>
+            <h2 className="text-3xl lg:text-4xl font-black mt-2 mb-3">The only OS that <span className="text-brand">only gets paid when you do.</span></h2>
+            <p className="text-slate-400 max-w-xl mx-auto">Every other tool rents you software by the month. We bet on the outcome. Log in, find the play, close the bag, get paid. If you don&apos;t, we don&apos;t.</p>
           </motion.div>
-          <div className="rounded-xl border border-white/[0.05] overflow-x-auto">
-            <table className="w-full min-w-[800px]">
-              <thead>
-                <tr className="bg-surface-2/50 border-b border-white/[0.03]">
-                  <th className="p-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Platform</th>
-                  <th className="p-3 text-center text-xs font-bold text-slate-400 uppercase">Price</th>
-                  {['Leads', 'AI Agent', 'VoIP', 'Predictions', 'Wallet', 'Sentiment', 'Outreach', 'Coaching'].map(h => (
-                    <th key={h} className="p-3 text-center text-xs font-bold text-slate-400 uppercase">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {competitorComparison.map((c, i) => (
-                  <tr key={i} className={`border-b border-white/[0.03] transition-colors ${c.isUs ? 'bg-brand/10 shadow-[0_0_30px_rgba(16,185,129,0.1)]' : 'hover:bg-white/[0.01]'}`}>
-                    <td className="p-3">
-                      <span className={`font-bold text-sm ${c.isUs ? 'text-brand text-base' : 'text-white'}`}>{c.name}</span>
-                      {c.isUs && <span className="ml-2 text-[9px] bg-brand/20 text-brand px-1.5 py-0.5 rounded-full font-black animate-pulse">GOATED</span>}
-                    </td>
-                    <td className="p-3 text-center"><span className={`font-bold text-sm ${c.isUs ? 'text-brand font-black' : 'text-red-400'}`}>{c.price}</span></td>
-                    {['leads', 'ai', 'voip', 'predictions', 'wallet', 'sentiment', 'outreach', 'coaching'].map(feat => (
-                      <td key={feat} className="p-3 text-center">
-                        {c[feat]
-                          ? <CheckCircle2 size={16} className={`mx-auto ${c.isUs ? 'text-brand' : 'text-slate-500'}`} />
-                          : <span className="text-red-500/40 text-sm">{'\u2717'}</span>
-                        }
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-center text-xs text-slate-600 mt-4">Prices as of March 2026. Feature availability based on standard plans.</p>
 
-          {/* Why We're Different Callout */}
-          <motion.div className="mt-8 p-6 rounded-2xl border border-brand/30 bg-brand/5 relative overflow-hidden" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+          <motion.div className="p-6 rounded-2xl border border-brand/30 bg-brand/5 relative overflow-hidden" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
             <div className="absolute inset-0 bg-gradient-to-r from-brand/5 to-transparent" />
             <div className="relative">
-              <h3 className="text-xl font-black text-brand mb-3 flex items-center gap-2"><Crown size={20} /> Why We're Different</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <h3 className="text-xl font-black text-brand mb-4 flex items-center gap-2"><Crown size={20} /> Why it hits different</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div>
-                  <div className="font-bold text-white mb-1">They charge rent</div>
-                  <p className="text-sm text-slate-400">Apollo, ZoomInfo, Outreach — they all want $100-$14K+ before you close a single deal. That's backwards as hell.</p>
+                  <div className="font-bold text-white mb-1">Zero rent, all outcome</div>
+                  <p className="text-sm text-slate-400">$0 upfront. You keep the majority of every closed deal — we take a small cut only when money actually moves. Exact split scoped on the audit call. Incentives are stapled to yours.</p>
                 </div>
                 <div>
-                  <div className="font-bold text-white mb-1">We bet on you</div>
-                  <p className="text-sm text-slate-400">$0 upfront. You close the deal, you keep the bag. We take a 12% platform fee (15% on $100K+ deals). That's it. Our incentives are perfectly aligned.</p>
+                  <div className="font-bold text-white mb-1">One OS, every surface</div>
+                  <p className="text-sm text-slate-400">Market intel, targets, scripts, wallet — one spine, one AI, one login. Stop paying ten subscriptions to do half a job.</p>
                 </div>
                 <div>
-                  <div className="font-bold text-white mb-1">All-in-one monster</div>
-                  <p className="text-sm text-slate-400">Leads + AI + VoIP + predictions + wallet + sentiment + outreach + coaching. Nobody else has all 8. Nobody. It's not even close.</p>
+                  <div className="font-bold text-white mb-1">Real time, always</div>
+                  <p className="text-sm text-slate-400">Push alerts the second a play lights up or a lead heats up. You&apos;re never the last person to know.</p>
                 </div>
               </div>
             </div>
@@ -896,73 +728,64 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══ REVENUE MODEL / PRICING ═══ */}
+      {/* ═══ OUTCOME MODEL (pricing hidden — qualified-call only) ═══ */}
       <section className="px-6 py-16 sm:py-20">
         <div className="max-w-7xl mx-auto">
           <motion.div className="text-center mb-10" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <span className="text-brand text-sm font-bold uppercase tracking-widest">Revenue Model</span>
-            <h2 className="text-3xl lg:text-5xl font-black mt-2 mb-3">$0 Platform Fee. <span className="text-brand">You Pay When You Profit.</span></h2>
-            <p className="text-xl text-slate-300 font-semibold mb-2">Multiple revenue streams. All performance-based.</p>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">No subscriptions. No seat fees. No monthly drain. Every revenue stream is tied to actual value delivered. We only win when you win.</p>
+            <span className="text-brand text-sm font-bold uppercase tracking-widest">The Outcome Model</span>
+            <h2 className="text-3xl lg:text-5xl font-black mt-2 mb-3">$0 Up Front. <span className="text-brand">We Eat When You Eat.</span></h2>
+            <p className="text-xl text-slate-300 font-semibold mb-2">No subscriptions. No seats. No pricing-page games.</p>
+            <p className="text-slate-400 text-lg max-w-2xl mx-auto">We don&apos;t show the hand on a public page. Every deal is scoped on the audit call, and the split is set at the transaction level — disclosed on the invoice, not the marketing site.</p>
           </motion.div>
 
-          {/* Revenue Streams Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto mb-10">
+          {/* Outcome tracks — no $$$ exposed */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto mb-10">
             {[
-              { icon: DollarSign, title: '$0 Platform Fee', value: '$0', desc: 'Full access to every tool, every feature, every lead. Zero upfront cost.', color: '#10b981', label: 'Always free' },
-              { icon: Target, title: 'Platform Fee', value: '12%', desc: 'You close the deal, keep 88%. We take a 12% platform fee. 15% on $100K+ deals.', color: '#f59e0b', label: 'GOATED fee' },
-              { icon: TrendingUp, title: 'Betting Spreads', value: '2-5%', desc: 'Spread on prediction market bets. Better odds, more markets.', color: '#a855f7', label: 'On market bets' },
-              { icon: Wallet, title: 'Crypto Transactions', value: '1-2%', desc: 'Small fee on crypto transactions. Lower than any exchange.', color: '#06b6d4', label: 'On transactions' },
+              { icon: DollarSign, title: 'Self-Serve OS', headline: 'Free', desc: 'Full platform access. Audit, AI voice, SMS, LinkedIn, pipeline, scripts. Nothing to pay until you actually close a deal through the stack.', color: '#10b981', cta: { label: 'Start free', page: 'audit' } },
+              { icon: Target, title: 'Commission Model', headline: 'Pay on close', desc: 'Close a deal sourced through GOATED, we take a small cut on settlement. Already have the deal? We can still process it as rails-only. Exact split discussed on the audit call.', color: '#f59e0b', cta: { label: 'Book audit', page: 'audit' } },
+              { icon: Crown, title: 'Managed Service', headline: 'Application-only', desc: 'White-glove: we run your outbound end-to-end. Setup + retainer + rev-share. Not open pricing — only for qualified operators. Apply to be let in.', color: '#a855f7', cta: { label: 'Apply', page: 'managed' } },
             ].map((item, i) => (
-              <motion.div
+              <motion.button
                 key={i}
-                className="bg-black/40 backdrop-blur rounded-2xl p-6 border border-white/[0.05] hover:border-brand/20 transition-all duration-300 hover:-translate-y-1 text-center flex flex-col justify-between min-h-[220px]"
+                onClick={() => setPage(item.cta.page)}
+                className="bg-black/40 backdrop-blur rounded-2xl p-6 border border-white/[0.05] hover:border-brand/30 transition-all duration-300 hover:-translate-y-1 text-left flex flex-col min-h-[260px]"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
               >
-                <div>
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ background: `${item.color}15`, color: item.color }}>
-                    <item.icon size={24} />
-                  </div>
-                  <div className="text-3xl font-black mb-1" style={{ color: item.color }}>{item.value}</div>
-                  <div className="text-xs text-slate-500 uppercase tracking-wider mb-3">{item.label}</div>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ background: `${item.color}15`, color: item.color }}>
+                  <item.icon size={24} />
                 </div>
-                <div>
-                  <h3 className="font-bold text-white text-sm mb-2">{item.title}</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">{item.desc}</p>
-                </div>
-              </motion.div>
+                <div className="text-[11px] uppercase tracking-widest font-black mb-1" style={{ color: item.color }}>{item.headline}</div>
+                <h3 className="font-black text-white text-lg mb-2">{item.title}</h3>
+                <p className="text-sm text-slate-400 leading-relaxed mb-4 flex-1">{item.desc}</p>
+                <span className="inline-flex items-center gap-1.5 text-sm font-bold" style={{ color: item.color }}>
+                  {item.cta.label}<ArrowRight size={14} />
+                </span>
+              </motion.button>
             ))}
           </div>
 
-          {/* Competitor comparison callout */}
+          {/* Why the model beats subscriptions */}
           <motion.div className="max-w-4xl mx-auto mb-10 p-5 rounded-xl border border-brand/20 bg-brand/5 text-center" initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
             <p className="text-sm text-brand font-bold uppercase tracking-wider mb-2">Why this model wins</p>
-            <p className="text-lg text-slate-300">Other platforms charge <span className="text-red-400 font-black">$99-$14K+/yr</span> whether you close deals or not.</p>
-            <p className="text-sm text-slate-500 mt-2">GOATED is free until you profit. You close the deal, keep the majority, we take a small cut. Zero risk, pure upside.</p>
+            <p className="text-lg text-slate-300">Other platforms charge <span className="text-red-400 font-black">$99–$14K+/yr</span> whether you close deals or not.</p>
+            <p className="text-sm text-slate-500 mt-2">GOATED only gets paid if GOATED actually makes you money. If not — you never cut a check. That&apos;s the whole pitch.</p>
           </motion.div>
 
-          {/* Commission-only model — no tiers, no subscriptions */}
+          {/* CTA band */}
           <motion.div className="max-w-3xl mx-auto text-center p-8 rounded-2xl border border-brand/20 bg-brand/5" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <h3 className="text-2xl font-black text-white mb-3">No Tiers. No Subscriptions. <span className="text-brand">Ever.</span></h3>
-            <p className="text-slate-400 mb-6">Every user gets full access to every feature from day one. We make money when you make money — that's it.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div className="p-4 rounded-xl bg-black/40 border border-white/[0.05]">
-                <div className="text-3xl font-black text-brand mb-1">88%</div>
-                <div className="text-sm text-slate-300 font-bold">You Keep</div>
-                <p className="text-xs text-slate-500 mt-1">Close the deal, keep 88%. GOATED takes a 12% platform fee. No caps, no hidden costs.</p>
-              </div>
-              <div className="p-4 rounded-xl bg-black/40 border border-white/[0.05]">
-                <div className="text-3xl font-black text-brand mb-1">85%</div>
-                <div className="text-sm text-slate-300 font-bold">You Keep on $100K+</div>
-                <p className="text-xs text-slate-500 mt-1">Whale deals ($100K+) have a 15% platform fee. You still keep the lion's share.</p>
-              </div>
+            <h3 className="text-2xl font-black text-white mb-3">Terms disclosed on <span className="text-brand">the audit call.</span></h3>
+            <p className="text-slate-400 mb-6">Not on a public pricing page. Every split is scoped to the actual deal shape — size, sourcing, region, compliance surface. Invoices document it, not marketing copy.</p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <GlowButton onClick={() => setPage('audit')} color="brand">
+                <Sparkles size={18} />Run free audit<ArrowRight size={16} />
+              </GlowButton>
+              <GlowButton onClick={() => setPage('managed')} variant="secondary">
+                <Crown size={18} className="text-brand" />Apply for Managed
+              </GlowButton>
             </div>
-            <GlowButton onClick={() => setPage('leads')} color="brand">
-              <Target size={18} />Start Closing — It's Free<ArrowRight size={16} />
-            </GlowButton>
           </motion.div>
         </div>
       </section>
@@ -975,27 +798,27 @@ export default function HomePage() {
         <div className="max-w-4xl mx-auto text-center relative">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}>
             <div className="mb-6"><GoatLogo size={80} /></div>
-            <h2 className="text-4xl lg:text-6xl font-black mb-4">Still Reading? <span className="text-brand">Just Fucking Start.</span></h2>
-            <p className="text-xl text-slate-400 mb-4 max-w-2xl mx-auto">Your competition is paying $14K/yr for half these features while you're about to get everything for free. The math ain't mathing for them. It's mathing hard for you.</p>
+            <h2 className="text-4xl lg:text-6xl font-black mb-4">Find your leak. <span className="text-brand">Prove it in 15 seconds.</span></h2>
+            <p className="text-xl text-slate-400 mb-4 max-w-2xl mx-auto">Built for Gen Z operators, agencies, and founders who know Apollo is too expensive and cold email is a corpse. Run the free audit. See the number. Or apply for Managed and let us run the whole outbound machine for you.</p>
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-slate-500 mb-8">
-              <span>$0 platform fee</span>
+              <span>Free forever</span>
               <span className="text-slate-700">|</span>
-              <span>Keep 88% of every deal you close</span>
+              <span>$0 until money lands</span>
               <span className="text-slate-700">|</span>
-              <span>2-5% betting spreads</span>
+              <span>Instant Stripe Connect payouts</span>
               <span className="text-slate-700">|</span>
-              <span>1-2% crypto transactions</span>
+              <span>TCPA-compliant by default</span>
             </div>
             <div className="flex flex-wrap justify-center gap-4 mb-6">
-              <GlowButton onClick={() => setPage('leads')} color="brand" className="!px-12 !py-5 !text-xl">
-                Start Printing Money <ArrowRight className="inline ml-2" size={22} />
+              <GlowButton onClick={() => setPage('audit')} color="brand" className="!px-12 !py-5 !text-xl">
+                Run the free audit <ArrowRight className="inline ml-2" size={22} />
               </GlowButton>
-              <GlowButton onClick={() => setAiOpen(true)} variant="secondary" className="!px-8 !py-5 !text-xl">
-                <Bot className="inline mr-2" size={22} />Talk to AI
+              <GlowButton onClick={() => setPage('managed')} variant="secondary" className="!px-8 !py-5 !text-xl">
+                <Crown className="inline mr-2" size={22} />See Managed Service
               </GlowButton>
             </div>
             <div className="flex flex-wrap justify-center gap-4 text-xs text-slate-600">
-              <span className="flex items-center gap-1"><Flame size={12} className="text-orange-400" />DEGEN MODE: Shift+D</span>
+              <span className="flex items-center gap-1"><Flame size={12} className="text-orange-400" />Wolf / Chill: Shift+D</span>
               <span className="flex items-center gap-1"><Bot size={12} className="text-brand" />AI Chat: G</span>
               <span className="flex items-center gap-1"><Zap size={12} className="text-cyan-400" />Search: Cmd+K</span>
             </div>
@@ -1009,7 +832,7 @@ export default function HomePage() {
           <div className="flex items-center gap-2">
             <GoatIcon className="w-5 h-5" />
             <span className="font-bold text-slate-400">GOATED Solutions</span>
-            <span>v6.5 — Revenue Intelligence OS</span>
+            <span>v7.1 — Revenue Intelligence OS</span>
           </div>
           <div className="flex gap-6">
             <span className="hover:text-slate-300 transition-colors cursor-pointer">Privacy</span>

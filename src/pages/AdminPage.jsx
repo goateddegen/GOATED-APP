@@ -1,17 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Activity, Server, Database, Cpu, AlertTriangle, CheckCircle2, XCircle,
   RefreshCw, Lock, Wifi, Bot, Globe, Zap, Eye, Settings, BarChart3, LogIn,
   MousePointer, Navigation, Timer, DollarSign, Users, TrendingUp, TrendingDown,
-  Rocket, Terminal, GitBranch, Clock, Radio, Flame, Target, PieChart,
-  ArrowUpRight, ArrowDownRight, Layers, ChevronDown, ChevronUp, ExternalLink,
-  Phone, Mail, Briefcase, Crown, Percent, CreditCard, ToggleLeft, ToggleRight,
-  Key, Hash, Map, Monitor, AlertCircle, Gauge, Wallet, FileText, Download,
-  Filter, Search, Receipt, ArrowDown, ArrowUp, Bitcoin, Banknote, Landmark, ChevronRight
+  Rocket, Clock, Radio, Flame, Target, PieChart,
+  ChevronDown, ChevronUp, ExternalLink,
+  Briefcase, Crown, Percent, CreditCard, ToggleLeft, ToggleRight,
+  Key, Wallet, FileText, Download,
+  Filter, Search, Receipt, ArrowDown, ArrowUp
 } from 'lucide-react';
 import { useStore, fmt } from '../hooks/useStore';
-import WorldMap from '../components/WorldMap';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function formatMs(ms) {
@@ -29,26 +28,6 @@ function formatUptime(startMs) {
   return h > 0 ? `${h}h ${m}m ${sec}s` : m > 0 ? `${m}m ${sec}s` : `${sec}s`;
 }
 
-// ─── Sparkline SVG ──────────────────────────────────────────────────────────
-function Sparkline({ data, width = 80, height = 24, color = '#10b981', filled = false }) {
-  if (!data || data.length < 2) return null;
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const points = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width;
-    const y = height - ((v - min) / range) * (height - 4) - 2;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  });
-  const linePath = `M${points.join(' L')}`;
-  const fillPath = `${linePath} L${width},${height} L0,${height} Z`;
-  return (
-    <svg width={width} height={height} className="inline-block">
-      {filled && <path d={fillPath} fill={color} opacity={0.15} />}
-      <polyline points={points.join(' ')} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 // ─── Status Badge ───────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
@@ -152,14 +131,6 @@ const API_ENDPOINTS = [
   { id: 'fng',        url: 'https://api.alternative.me/fng/?limit=1', label: 'Fear & Greed Index', icon: Zap },
 ];
 
-// ─── Observability Services ─────────────────────────────────────────────────
-const OBS_SERVICES = [
-  { id: 'coingecko', label: 'CoinGecko', icon: Globe, baseLatency: 142, errorRate: 0.12, uptime: 99.94, reqPerHour: 2400 },
-  { id: 'kalshi',    label: 'Kalshi',     icon: Target, baseLatency: 89, errorRate: 0.05, uptime: 99.99, reqPerHour: 1800 },
-  { id: 'polymarket',label: 'Polymarket', icon: PieChart, baseLatency: 112, errorRate: 0.08, uptime: 99.97, reqPerHour: 3200 },
-  { id: 'supabase',  label: 'Supabase',   icon: Database, baseLatency: 34, errorRate: 0.02, uptime: 99.99, reqPerHour: 8500 },
-  { id: 'vercel',    label: 'Vercel Edge', icon: Rocket, baseLatency: 18, errorRate: 0.01, uptime: 99.99, reqPerHour: 12000 },
-];
 
 // ─── Revenue Stats from Leads ────────────────────────────────────────────────
 // PRE-REVENUE: All revenue/pipeline figures are $0 until real transactions flow.
@@ -233,154 +204,10 @@ function RevenueByRegionChart({ regions }) {
   );
 }
 
-// ─── Latency Gauge ──────────────────────────────────────────────────────────
-function LatencyGauge({ value, max = 300, label }) {
-  const pct = Math.min(100, (value / max) * 100);
-  const color = value < 50 ? '#10b981' : value < 150 ? '#f59e0b' : '#ef4444';
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="w-full h-2 bg-white/[0.05] rounded-full overflow-hidden">
-        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, delay: 0.2 }}
-          className="h-full rounded-full" style={{ background: color }} />
-      </div>
-      <span className="text-[11px] font-mono" style={{ color }}>{value}ms</span>
-    </div>
-  );
-}
 
-// ─── Real-Time Activity Feed ─────────────────────────────────────────────────
-function generateActivities(count = 12) {
-  const seed = Math.floor(Date.now() / 60000);
-  const actions = [
-    { tmpl: (n, c, v) => `${n} moved to Qualified — ${c}`, icon: ArrowUpRight, color: 'text-yellow-400' },
-    { tmpl: (n, c, v) => `New lead from LinkedIn — ${c}`, icon: Users, color: 'text-blue-400' },
-    { tmpl: (n, c, v) => `Lead scored — ${c}`, icon: CheckCircle2, color: 'text-emerald-400' },
-    { tmpl: (n, c, v) => `${n} sent proposal — ${c}`, icon: Mail, color: 'text-purple-400' },
-    { tmpl: (n, c, v) => `VoIP call completed — ${n} at ${c}`, icon: Phone, color: 'text-cyan-400' },
-    { tmpl: (n, c, v) => `AI generated close strategy for ${c}`, icon: Bot, color: 'text-orange-400' },
-    { tmpl: (n, c, v) => `${c} re-engaged after 30 days`, icon: RefreshCw, color: 'text-indigo-400' },
-    { tmpl: (n, c, v) => `Lead report generated — ${c}`, icon: BarChart3, color: 'text-pink-400' },
-  ];
-  const names = ['Sarah J.', 'Mike C.', 'Alex W.', 'Jordan T.', 'Chris M.', 'Emily R.', 'David K.', 'Rachel L.', 'Matt B.', 'Nicole P.'];
-  const cos = ['Acme Corp', 'Pipeline HQ', 'FlowState', 'NimbusOps', 'DealForge', 'BrightPath', 'SyncWave', 'MetricFlow', 'StackedCRM', 'LaunchGrid'];
-  const vals = ['$0', '$0', '$0', '$0', '$0', '$0', '$0', '$0', '$0', '$0'];
-  const result = [];
-  let s = seed;
-  for (let i = 0; i < count; i++) {
-    s = ((s * 1103515245 + 12345) & 0x7fffffff);
-    const a = actions[s % actions.length];
-    const n = names[(s >> 4) % names.length];
-    const c = cos[(s >> 8) % cos.length];
-    const v = vals[(s >> 12) % vals.length];
-    const mins = i * 3 + (s % 5);
-    result.push({ text: a.tmpl(n, c, v), icon: a.icon, color: a.color, time: `${mins}m ago` });
-  }
-  return result;
-}
-
-// ─── Generate Mock Sparkline Data ───────────────────────────────────────────
-function generateSparkData(base, variance, count = 20) {
-  const data = [];
-  let val = base;
-  for (let i = 0; i < count; i++) {
-    val += (Math.random() - 0.45) * variance;
-    val = Math.max(base * 0.5, Math.min(base * 1.8, val));
-    data.push(Math.round(val));
-  }
-  return data;
-}
 
 // LaunchPad Application Review — removed
 
-// ─── Deployment Log ──────────────────────────────────────────────────────────
-function DeploymentPanel() {
-  const [deploying, setDeploying] = useState(false);
-  const [deployLog, setDeployLog] = useState([]);
-  const [lastDeploy, setLastDeploy] = useState(null);
-
-  const simulateDeploy = useCallback(() => {
-    setDeploying(true);
-    setDeployLog([]);
-    const steps = [
-      { msg: '$ git push origin master', delay: 0 },
-      { msg: 'Enumerating objects: 47, done.', delay: 400 },
-      { msg: 'Compressing objects: 100% (32/32), done.', delay: 800 },
-      { msg: 'Writing objects: 100% (47/47), 156.2 KiB, done.', delay: 1200 },
-      { msg: '$ vercel --prod', delay: 1600 },
-      { msg: 'Vercel CLI 37.x — goated.solutions', delay: 2000 },
-      { msg: 'Building project...', delay: 2400 },
-      { msg: '$ vite build', delay: 2800 },
-      { msg: 'transforming (142) src/pages/...', delay: 3200 },
-      { msg: 'dist/assets/index-Dq4f2k.js   482.31 kB │ gzip: 148.2 kB', delay: 3600 },
-      { msg: 'Build completed in 4.2s', delay: 4000 },
-      { msg: 'Deploying to production...', delay: 4400 },
-      { msg: '✓ Production: https://goated.solutions [4s]', delay: 5000 },
-    ];
-    steps.forEach(({ msg, delay }) => {
-      setTimeout(() => setDeployLog(prev => [...prev, msg]), delay);
-    });
-    setTimeout(() => { setDeploying(false); setLastDeploy(new Date().toLocaleTimeString()); }, 5500);
-  }, []);
-
-  return (
-    <div className="space-y-3">
-      {/* Deployment Info Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {[
-          { label: 'Version', value: 'v3.2.1', color: 'text-emerald-400' },
-          { label: 'Commit', value: 'a3f0f3f', color: 'text-cyan-400' },
-          { label: 'Last Deploy', value: 'Mar 18, 2026 02:14 PM', color: 'text-purple-400' },
-          { label: 'Build Status', value: 'Passing', color: 'text-emerald-400', dot: true },
-        ].map(d => (
-          <div key={d.label} className="px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-            <div className="text-[10px] text-slate-500 uppercase tracking-wider">{d.label}</div>
-            <div className={`text-[12px] font-medium ${d.color} flex items-center gap-1.5 mt-0.5`}>
-              {d.dot && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
-              {d.value}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">Domain:</span>
-          <span className="text-xs font-mono text-emerald-400">goated.solutions</span>
-          <a href="https://goated.solutions" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-slate-300 transition-colors">
-            <ExternalLink size={11} />
-          </a>
-        </div>
-        <button onClick={simulateDeploy} disabled={deploying}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50">
-          <Rocket size={13} className={deploying ? 'animate-bounce' : ''} /> {deploying ? 'Deploying...' : 'Deploy to Production'}
-        </button>
-      </div>
-      {lastDeploy && <div className="text-[10px] text-slate-500">Last deploy: {lastDeploy}</div>}
-      {deployLog.length > 0 && (
-        <div className="bg-black/50 rounded-lg border border-white/[0.04] p-3 max-h-48 overflow-y-auto font-mono text-[11px] space-y-0.5">
-          {deployLog.map((line, i) => (
-            <div key={i} className={line.startsWith('✓') ? 'text-emerald-400 font-semibold' : line.startsWith('$') ? 'text-cyan-400' : 'text-slate-400'}>
-              {line}
-            </div>
-          ))}
-          {deploying && <div className="text-yellow-400 animate-pulse">▋</div>}
-        </div>
-      )}
-      <div className="grid grid-cols-3 gap-2 text-center">
-        {[
-          { label: 'Framework', value: 'Vite + React', color: 'text-cyan-400' },
-          { label: 'Region', value: 'iad1 (US East)', color: 'text-purple-400' },
-          { label: 'Runtime', value: 'Edge + Serverless', color: 'text-orange-400' },
-        ].map(d => (
-          <div key={d.label} className="px-2 py-2 rounded-lg bg-white/[0.02]">
-            <div className="text-[10px] text-slate-500">{d.label}</div>
-            <div className={`text-[11px] font-medium ${d.color}`}>{d.value}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // ─── Feature Flag Toggle ────────────────────────────────────────────────────
 function FeatureFlag({ label, description, enabled, onToggle }) {
@@ -418,22 +245,6 @@ function AdminAccessDenied() {
   );
 }
 
-// ─── Seeded PRNG for deterministic transaction data ──────────────────────
-function seededRandom(seed) {
-  let s = seed | 0;
-  if (!s) s = 1;
-  return function () {
-    s = (s * 1664525 + 1013904223) & 0x7fffffff;
-    return s / 0x7fffffff;
-  };
-}
-
-// ─── Generate mock transaction log (deterministic, will be replaced by real data) ─
-function generateTransactionLog() {
-  // Returns empty array — these will be populated by real transactions
-  // For now, show the structure with $0 totals
-  return [];
-}
 
 // ─── Master Wallet Section ───────────────────────────────────────────────
 function MasterWalletSection() {
@@ -1107,41 +918,6 @@ export default function AdminPage() {
   });
 
   const stats = useLeadStats();
-  const activities = useMemo(() => generateActivities(12), []);
-
-  // Observability data — deterministic per service, not random
-  const obsData = useMemo(() => {
-    return OBS_SERVICES.map((svc, i) => ({
-      ...svc,
-      latency: svc.baseLatency,
-      sparkData: generateSparkData(svc.reqPerHour, svc.reqPerHour * 0.05),
-      status: 'online',
-    }));
-  }, []);
-
-  // User analytics — PRE-REVENUE: all zeros until real analytics are connected
-  const userAnalytics = useMemo(() => ({
-    dau: 0,
-    wau: 0,
-    mau: 0,
-    dauTrend: generateSparkData(0, 0),
-    wauTrend: generateSparkData(0, 0),
-    mauTrend: generateSparkData(0, 0),
-    funnel: [
-      { stage: 'Visitors', count: 0, pct: 0 },
-      { stage: 'Signups', count: 0, pct: 0 },
-      { stage: 'Active', count: 0, pct: 0 },
-      { stage: 'Paid', count: 0, pct: 0 },
-    ],
-    topPages: [
-      { path: '/dashboard', views: 0, pct: 0 },
-      { path: '/leads', views: 0, pct: 0 },
-      { path: '/market', views: 0, pct: 0 },
-      { path: '/trends', views: 0, pct: 0 },
-      { path: '/wallet', views: 0, pct: 0 },
-      { path: '/admin', views: 0, pct: 0 },
-    ],
-  }), []);
 
   // Auth gate
   if (!isLoggedIn) return <AccessDenied onLogin={() => setAccountModalOpen(true)} />;
@@ -1278,62 +1054,6 @@ export default function AdminPage() {
             <MasterWalletSection />
           </Section>
 
-          {/* Transaction Fee Schedule */}
-          {/* Payment Processing — Stripe/Plaid Master Account */}
-          <Section title="Payment Processing" icon={Landmark} delay={0.015} badge="Master Account">
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-500/15 flex items-center justify-center">
-                      <CreditCard size={16} className="text-indigo-400" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-white">Stripe Connect</div>
-                      <div className="text-[10px] text-slate-500">Card payments, invoicing, payouts</div>
-                    </div>
-                    <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-bold uppercase">Setup Required</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 mb-3">Connect your Stripe account to process card payments, generate invoices, and receive 12% commission payouts automatically.</p>
-                  <button className="px-3 py-2 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-400 rounded-lg text-xs font-medium transition-colors w-full">
-                    Connect Stripe Account
-                  </button>
-                </div>
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-8 h-8 rounded-lg bg-green-500/15 flex items-center justify-center">
-                      <Landmark size={16} className="text-green-400" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-white">Plaid Bank Connect</div>
-                      <div className="text-[10px] text-slate-500">ACH transfers, balance verification</div>
-                    </div>
-                    <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-bold uppercase">Setup Required</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 mb-3">Link your bank account via Plaid for ACH transfers and direct deposit of commission revenue.</p>
-                  <button className="px-3 py-2 bg-green-500/15 hover:bg-green-500/25 border border-green-500/30 text-green-400 rounded-lg text-xs font-medium transition-colors w-full">
-                    Connect Bank Account
-                  </button>
-                </div>
-              </div>
-              <div className="rounded-lg bg-gradient-to-r from-brand/5 to-cyan-500/5 border border-brand/15 p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Shield size={12} className="text-brand" />
-                  <span className="text-[10px] text-brand font-bold uppercase tracking-wider">Revenue Flow</span>
-                </div>
-                <div className="flex items-center gap-2 text-[10px] text-slate-400 flex-wrap">
-                  <span className="px-2 py-1 rounded bg-white/[0.04] text-white font-medium">Deal Closed</span>
-                  <ChevronRight size={10} />
-                  <span className="px-2 py-1 rounded bg-white/[0.04] text-white font-medium">12% Fee Deducted</span>
-                  <ChevronRight size={10} />
-                  <span className="px-2 py-1 rounded bg-emerald-500/15 text-emerald-400 font-medium">Master Account (Stripe/Plaid)</span>
-                  <ChevronRight size={10} />
-                  <span className="px-2 py-1 rounded bg-white/[0.04] text-white font-medium">88% to Closer</span>
-                </div>
-              </div>
-            </div>
-          </Section>
-
           <Section title="Transaction Fee Schedule" icon={Percent} delay={0.02} badge="Revenue Model">
             <TransactionFeeDisplay />
           </Section>
@@ -1413,147 +1133,7 @@ export default function AdminPage() {
         </div>
       </Section>
 
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      {/* 2. OBSERVABILITY PANEL                                               */}
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      <Section title="Observability Panel" icon={Monitor} delay={0.04} badge="Real-time">
-        <div className="space-y-4">
-          {/* Service Status Table */}
-          <div className="space-y-2">
-            {obsData.map((svc, i) => {
-              const SvcIcon = svc.icon;
-              return (
-                <motion.div key={svc.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 + i * 0.04 }}
-                  className="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-colors">
-                  {/* Service Name */}
-                  <div className="flex items-center gap-2.5 w-36 flex-shrink-0">
-                    <SvcIcon size={15} className="text-slate-400" />
-                    <span className="text-sm font-medium">{svc.label}</span>
-                  </div>
-                  {/* Status */}
-                  <StatusBadge status={svc.status === 'online' ? 'online' : 'checking'} />
-                  {/* Latency Gauge */}
-                  <div className="w-28 flex-shrink-0">
-                    <LatencyGauge value={svc.latency} max={300} label="Response" />
-                  </div>
-                  {/* Error Rate */}
-                  <div className="text-center w-16 flex-shrink-0">
-                    <div className="text-[10px] text-slate-500">Errors</div>
-                    <div className={`text-xs font-mono font-medium ${svc.errorRate < 0.1 ? 'text-emerald-400' : 'text-yellow-400'}`}>{svc.errorRate}%</div>
-                  </div>
-                  {/* Uptime */}
-                  <div className="text-center w-16 flex-shrink-0">
-                    <div className="text-[10px] text-slate-500">Uptime</div>
-                    <div className="text-xs font-mono font-medium text-emerald-400">{svc.uptime}%</div>
-                  </div>
-                  {/* Request Volume Sparkline */}
-                  <div className="flex-1 min-w-0 hidden md:block">
-                    <div className="text-[10px] text-slate-500 mb-0.5">{fmt(svc.reqPerHour)} req/hr</div>
-                    <Sparkline data={svc.sparkData} width={120} height={20} color="#3b82f6" filled />
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
 
-          {/* Aggregate Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
-            {[
-              { label: 'Total Requests/hr', value: fmt(obsData.reduce((s, d) => s + d.reqPerHour, 0)), color: 'text-blue-400' },
-              { label: 'Avg Latency', value: `${Math.round(obsData.reduce((s, d) => s + d.latency, 0) / obsData.length)}ms`, color: 'text-cyan-400' },
-              { label: 'Avg Error Rate', value: `${(obsData.reduce((s, d) => s + d.errorRate, 0) / obsData.length).toFixed(2)}%`, color: 'text-emerald-400' },
-              { label: 'Avg Uptime', value: `${(obsData.reduce((s, d) => s + d.uptime, 0) / obsData.length).toFixed(2)}%`, color: 'text-emerald-400' },
-            ].map(s => (
-              <div key={s.label} className="px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] text-center">
-                <div className="text-[10px] text-slate-500 uppercase tracking-wider">{s.label}</div>
-                <div className={`text-base font-bold ${s.color} mt-0.5`}>{s.value}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Section>
-
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      {/* 3. USER ANALYTICS                                                    */}
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      <Section title="User Analytics" icon={Users} delay={0.06} badge="Pre-Revenue">
-        <div className="space-y-5">
-          {/* DAU / WAU / MAU */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {[
-              { label: 'Daily Active Users', value: fmt(userAnalytics.dau), trend: userAnalytics.dauTrend, color: '#10b981', change: 'No Data' },
-              { label: 'Weekly Active Users', value: fmt(userAnalytics.wau), trend: userAnalytics.wauTrend, color: '#3b82f6', change: 'No Data' },
-              { label: 'Monthly Active Users', value: fmt(userAnalytics.mau), trend: userAnalytics.mauTrend, color: '#a855f7', change: 'No Data' },
-            ].map((m, i) => (
-              <motion.div key={m.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}
-                className="px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-wider">{m.label}</span>
-                  <span className="text-[10px] font-medium text-emerald-400">{m.change}</span>
-                </div>
-                <div className="flex items-end justify-between gap-3">
-                  <div className="text-2xl font-bold" style={{ color: m.color }}>{m.value}</div>
-                  <Sparkline data={m.trend} width={100} height={28} color={m.color} filled />
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Conversion Funnel */}
-          <div>
-            <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-3">Conversion Funnel</div>
-            <div className="space-y-2">
-              {userAnalytics.funnel.map((step, i) => {
-                const colors = ['#64748b', '#3b82f6', '#10b981', '#f59e0b'];
-                const width = step.pct;
-                return (
-                  <div key={step.stage} className="flex items-center gap-3">
-                    <span className="text-[11px] text-slate-400 w-20">{step.stage}</span>
-                    <div className="flex-1 h-6 bg-white/[0.03] rounded-lg overflow-hidden relative">
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(3, width)}%` }}
-                        transition={{ delay: 0.15 + i * 0.1, duration: 0.6 }}
-                        className="h-full rounded-lg" style={{ background: colors[i] }} />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-300 font-mono">
-                        {fmt(step.count)} ({step.pct}%)
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Top Pages + Geographic Distribution */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Top Pages */}
-            <div>
-              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Top Pages by Traffic</div>
-              <div className="space-y-1.5">
-                {userAnalytics.topPages.map((pg, i) => (
-                  <div key={pg.path} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.02]">
-                    <span className="text-[10px] text-slate-600 w-4 text-right">{i + 1}.</span>
-                    <span className="text-xs font-mono text-slate-300 flex-1">{pg.path}</span>
-                    <div className="w-24 h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
-                      <div className="h-full rounded-full bg-blue-500/70" style={{ width: `${pg.pct}%` }} />
-                    </div>
-                    <span className="text-[10px] text-slate-500 font-mono w-14 text-right">{fmt(pg.views)}</span>
-                    <span className="text-[10px] text-slate-600 w-10 text-right">{pg.pct}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Geographic Distribution */}
-            <div>
-              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Geographic Distribution</div>
-              <div className="rounded-xl overflow-hidden border border-white/[0.04] bg-black/30" style={{ height: 220 }}>
-                <Suspense fallback={<div className="flex items-center justify-center h-full text-xs text-slate-500">Loading map...</div>}>
-                  <WorldMap />
-                </Suspense>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Section>
 
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* 4. PLATFORM SETTINGS                                                 */}
@@ -1656,8 +1236,17 @@ export default function AdminPage() {
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* 5. DEPLOYMENT STATUS                                                 */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
-      <Section title="Deployment Status" icon={Rocket} delay={0.10} badge="goated.solutions">
-        <DeploymentPanel />
+      <Section title="Deployment Status" icon={Rocket} delay={0.10} badge="Vercel">
+        <div className="px-4 py-5 rounded-xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-between">
+          <div>
+            <div className="text-sm font-medium text-white">Deployments managed via Vercel Dashboard</div>
+            <div className="text-[11px] text-slate-500 mt-0.5">Push to master triggers automatic deployments on Vercel.</div>
+          </div>
+          <a href="https://vercel.com/dashboard" target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.06] rounded-lg text-xs font-medium text-slate-300 transition-colors flex-shrink-0">
+            Open Vercel <ExternalLink size={12} />
+          </a>
+        </div>
       </Section>
 
       {/* ══════════════════════════════════════════════════════════════════════ */}
@@ -1730,25 +1319,11 @@ export default function AdminPage() {
           </div>
         </Section>
 
-        <Section title="Live Activity Feed" icon={Radio} delay={0.06}>
-          <div className="space-y-1.5 max-h-64 overflow-y-auto">
-            {activities.map((a, i) => {
-              const AIcon = a.icon;
-              return (
-                <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                  className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white/[0.02] transition-colors">
-                  <AIcon size={13} className={`${a.color} mt-0.5 flex-shrink-0`} />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[11px] text-slate-300 leading-snug">{a.text}</div>
-                  </div>
-                  <span className="text-[10px] text-slate-600 flex-shrink-0">{a.time}</span>
-                </motion.div>
-              );
-            })}
-          </div>
-          <div className="mt-2 pt-2 border-t border-white/[0.04] flex items-center gap-1.5">
-            <Radio size={10} className="text-emerald-400 animate-pulse" />
-            <span className="text-[10px] text-emerald-400">Live — updates every 60s</span>
+        <Section title="Activity Feed" icon={Radio} delay={0.06}>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <Radio size={24} className="text-slate-600 mb-2" />
+            <p className="text-sm text-slate-500">No activity yet</p>
+            <p className="text-[10px] text-slate-600 mt-1">Real activity will appear here as users interact with the platform.</p>
           </div>
         </Section>
       </div>
