@@ -218,7 +218,7 @@ export default function AuditPage() {
             <div className="flex flex-wrap justify-center gap-6 sm:gap-10 mt-10 text-xs text-slate-600">
               <div className="flex items-center gap-2"><CheckCircle2 size={14} style={{ color: accent }} />No email required</div>
               <div className="flex items-center gap-2"><CheckCircle2 size={14} style={{ color: accent }} />Free forever</div>
-              <div className="flex items-center gap-2"><CheckCircle2 size={14} style={{ color: accent }} />12% only when we close for you</div>
+              <div className="flex items-center gap-2"><CheckCircle2 size={14} style={{ color: accent }} />13% only when we close for you</div>
             </div>
           </div>
         </section>
@@ -291,10 +291,12 @@ export default function AuditPage() {
   const loss = a.revenueLoss || {};
   const leaks = Array.isArray(a.leaks) ? a.leaks : [];
   const upsells = Array.isArray(a.upsellOpportunities) ? a.upsellOpportunities : [];
+  const dimensions = Array.isArray(a.dimensions) ? a.dimensions : [];
+  const outreachAngles = Array.isArray(a.outreachAngles) ? a.outreachAngles : [];
   const lossLow = Number(loss.monthlyLowEstimate) || 0;
   const lossHigh = Number(loss.monthlyHighEstimate) || 0;
   const lossMid = Math.round((lossLow + lossHigh) / 2);
-  const commission12 = Math.round(lossMid * 0.12);
+  const commission13 = Math.round(lossMid * 0.13);
   const annualLoss = Math.round(lossMid * 12);
 
   return (
@@ -348,7 +350,7 @@ export default function AuditPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
               <Stat icon={DollarSign} label="Midpoint / mo"      value={`$${lossMid.toLocaleString()}`} />
               <Stat icon={TrendingUp} label="Annualized impact"  value={`$${annualLoss.toLocaleString()}`} />
-              <Stat icon={Award} label="GOATED commission (12%)" value={`$${commission12.toLocaleString()}`} />
+              <Stat icon={Award} label="GOATED commission (13%)" value={`$${commission13.toLocaleString()}`} />
               <Stat icon={Activity} label="Confidence"            value={`${a.confidenceScore ?? '—'}${a.confidenceScore != null ? '/100' : ''}`} />
             </div>
           </motion.div>
@@ -392,6 +394,65 @@ export default function AuditPage() {
                     </motion.div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Dimension scores — 12-dim audit v2 */}
+          {dimensions.length > 0 && (
+            <div className="mb-10">
+              <div className="text-xs uppercase tracking-widest text-slate-500 mb-3 font-semibold">Business health across every dimension</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {dimensions.map((d, i) => {
+                  const score = Math.max(0, Math.min(100, Number(d.score) || 0));
+                  const scoreColor = score >= 70 ? '#10b981' : score >= 40 ? '#f59e0b' : '#ef4444';
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04 }}
+                      className="rounded-xl border border-white/[0.06] bg-surface-1/40 p-4"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">{d.name || 'Dimension'}</div>
+                        <div className="text-sm font-black" style={{ color: scoreColor }}>{score}</div>
+                      </div>
+                      <div className="h-1 rounded-full bg-white/[0.05] overflow-hidden mb-2">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${score}%`, background: scoreColor }}
+                        />
+                      </div>
+                      {d.reasoning && (
+                        <div className="text-[11px] text-slate-400 leading-relaxed">{d.reasoning}</div>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Outreach angles */}
+          {outreachAngles.length > 0 && (
+            <div className="mb-10">
+              <div className="text-xs uppercase tracking-widest text-slate-500 mb-3 font-semibold">Cold outreach angles (channel-specific)</div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {outreachAngles.map((ang, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.05 + i * 0.05 }}
+                    className="rounded-xl border p-4"
+                    style={{ borderColor: accentBr, background: accentBg }}
+                  >
+                    <div className="text-[10px] uppercase tracking-widest font-black mb-2" style={{ color: accent }}>{ang.channel || `Angle ${i + 1}`}</div>
+                    {ang.hook && <div className="text-sm font-semibold text-white mb-1.5 leading-snug">{ang.hook}</div>}
+                    {ang.script && <div className="text-[12px] text-slate-300 leading-relaxed italic">"{ang.script}"</div>}
+                  </motion.div>
+                ))}
               </div>
             </div>
           )}
@@ -461,7 +522,7 @@ export default function AuditPage() {
                 </div>
                 <div className="text-sm text-slate-300 leading-relaxed">
                   15-minute strategy call with Tarek. We deploy the voice agent, the chatbot, the SMS sequence — whatever this audit identified.
-                  <span className="font-semibold text-white"> $0 upfront for self-serve. 12% when we close revenue.</span>
+                  <span className="font-semibold text-white"> $0 upfront for self-serve. 13% flat when we close revenue.</span>
                 </div>
                 {a.oneLinePitch && (
                   <div className="mt-3 text-xs text-slate-400 italic border-l-2 pl-3" style={{ borderColor: accentBr }}>

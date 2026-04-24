@@ -159,7 +159,7 @@ function useLeadStats() {
     const topRegions = [];
 
     // Commission calculations — $0 pre-revenue
-    const commissionRate = 0.12;
+    const commissionRate = 0.13;
     const totalCommission = 0;
     const avgCommission = 0;
     const pendingCommission = 0;
@@ -592,12 +592,12 @@ function TransactionFeeDisplay() {
             <Briefcase size={16} className="text-emerald-400" />
             <span className="text-sm font-semibold text-white">Deal Commission</span>
           </div>
-          <div className="text-3xl font-bold text-emerald-400 mb-1">12%</div>
-          <p className="text-[11px] text-slate-400">Platform takes 12% on all profit-side transactions</p>
+          <div className="text-3xl font-bold text-emerald-400 mb-1">13%</div>
+          <p className="text-[11px] text-slate-400">Flat 13% on all closed deals (absorbs Stripe fees)</p>
           <div className="mt-3 space-y-1.5">
             <div className="flex items-center justify-between text-[11px]">
               <span className="text-slate-500">All closed deals</span>
-              <span className="text-emerald-400 font-mono font-medium">12%</span>
+              <span className="text-emerald-400 font-mono font-medium">13%</span>
             </div>
             <div className="flex items-center justify-between text-[11px]">
               <span className="text-slate-500">Routed to master account</span>
@@ -872,7 +872,7 @@ function TransactionActivityLog() {
       {/* Transaction Types Legend */}
       <div className="flex flex-wrap gap-3 px-2">
         {[
-          { type: 'deal_closed', icon: Briefcase, label: 'Deal Closed', desc: '12% commission', color: '#10b981' },
+          { type: 'deal_closed', icon: Briefcase, label: 'Deal Closed', desc: '13% commission', color: '#10b981' },
           { type: 'bet_placed', icon: Target, label: 'Bet Placed', desc: '2-5% spread', color: '#f97316' },
           { type: 'bet_won', icon: Crown, label: 'Bet Won', desc: 'Payout processed', color: '#eab308' },
           { type: 'deposit', icon: ArrowDown, label: 'Deposit', desc: '1% fee', color: '#3b82f6' },
@@ -908,12 +908,11 @@ export default function AdminPage() {
   const lastPageRef = useRef(page);
 
   // Platform Settings state
-  const [commissionRate, setCommissionRate] = useState(12);
+  const [commissionRate, setCommissionRate] = useState(13);
   const [withdrawalFee, setWithdrawalFee] = useState(2.50);
   const [featureFlags, setFeatureFlags] = useState({
     degenMode: true,
     predictionMarkets: true,
-    voip: false,
     aiChat: true,
   });
 
@@ -1081,12 +1080,12 @@ export default function AdminPage() {
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* 1. REVENUE ANALYTICS DASHBOARD                                       */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
-      <Section title="Revenue Analytics Dashboard" icon={DollarSign} delay={0.02} badge="12% Commission Model">
+      <Section title="Revenue Analytics Dashboard" icon={DollarSign} delay={0.02} badge="13% Flat Commission">
         <div className="space-y-5">
           {/* Top Revenue KPIs — $0 baseline, grows with real transactions */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
-              { label: 'Platform Revenue', value: '$0.00', sub: '12% commission on closed deals', color: '#10b981', icon: DollarSign },
+              { label: 'Platform Revenue', value: '$0.00', sub: '13% flat on closed deals', color: '#10b981', icon: DollarSign },
               { label: 'Total Deals Closed', value: '0', sub: 'No deals closed yet', color: '#22c55e', icon: CheckCircle2 },
               { label: 'MRR', value: '$0.00', sub: 'Will grow with transactions', color: '#3b82f6', icon: TrendingUp },
               { label: 'Avg Commission', value: '$0.00', sub: 'per closed deal', color: '#a855f7', icon: Percent },
@@ -1157,7 +1156,7 @@ export default function AdminPage() {
                 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
             <div className="flex justify-between text-[10px] text-slate-600 mt-1">
               <span>5%</span>
-              <span>12% (default)</span>
+              <span>13% (default)</span>
               <span>20%</span>
             </div>
           </div>
@@ -1194,7 +1193,6 @@ export default function AdminPage() {
             <div className="space-y-1.5">
               <FeatureFlag label="DEGEN MODE" description="Orange theme with alpha intel features" enabled={featureFlags.degenMode} onToggle={() => toggleFlag('degenMode')} />
               <FeatureFlag label="Prediction Markets" description="Kalshi + Polymarket integrations" enabled={featureFlags.predictionMarkets} onToggle={() => toggleFlag('predictionMarkets')} />
-              <FeatureFlag label="VoIP Calling" description="In-app calling via WebRTC" enabled={featureFlags.voip} onToggle={() => toggleFlag('voip')} />
               <FeatureFlag label="AI Chat" description="Claude-powered strategy assistant" enabled={featureFlags.aiChat} onToggle={() => toggleFlag('aiChat')} />
             </div>
           </div>
@@ -1305,7 +1303,7 @@ export default function AdminPage() {
                 <DollarSign size={14} className="text-emerald-400" />
                 <span className="text-xs font-semibold text-emerald-400">Commission Model</span>
               </div>
-              <span className="text-xs font-bold bg-emerald-500/15 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/30">12% / 15% Partner</span>
+              <span className="text-xs font-bold bg-emerald-500/15 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/30">13% Flat</span>
             </div>
             {/* Top Industries */}
             <div className="pt-2">

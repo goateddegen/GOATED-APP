@@ -4,7 +4,7 @@ import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { useStore } from './hooks/useStore';
 import Sidebar from './components/Sidebar';
-import Ticker from './components/Ticker';
+import NotchBar from './components/NotchBar';
 import SearchModal from './components/SearchModal';
 import KeybindsModal from './components/KeybindsModal';
 import LeadDetail from './components/LeadDetail';
@@ -405,10 +405,10 @@ export default function App() {
         e.preventDefault();
         const store = useStore.getState();
         store.toggleDegenMode();
-        const nowWolf = !store.degenMode;
+        const nowDegen = !store.degenMode;
         clearTimeout(degenToastTimer.current);
-        setDegenToast(nowWolf
-          ? '\u{1F525} WOLF MODE ACTIVE \u2014 Alpha plays, real-time intel, closer OS engaged'
+        setDegenToast(nowDegen
+          ? '\u{1F525} DEGEN MODE ACTIVE \u2014 Alpha plays, real-time intel, closer OS engaged'
           : 'CHILL MODE \u2014 Toned down, same engine');
         degenToastTimer.current = setTimeout(() => setDegenToast(null), 1100);
         return;
@@ -470,12 +470,12 @@ export default function App() {
         Skip to main content
       </a>
       {!isMobile && <CustomCursor />}
-      <Ticker />
+      <NotchBar />
       <Sidebar />
       <main
         id="main-content"
         role="main"
-        className="transition-[margin-left] duration-300 pt-0 sm:pt-9"
+        className="transition-[margin-left] duration-300 pt-0"
         style={{ marginLeft: mainML }}
       >
         <PageErrorBoundary pageKey={detailOpen ? 'lead-detail' : page}>
@@ -516,7 +516,7 @@ export default function App() {
             animation: 'degenFlash 1.1s ease-out forwards',
           }}>
           <span style={{ fontSize: '14px' }}>{degenToast.includes('ACTIVE') ? '🔥' : '🌿'}</span>
-          <span>{degenToast.includes('ACTIVE') ? 'WOLF MODE' : 'CHILL MODE'}</span>
+          <span>{degenToast.includes('ACTIVE') ? 'DEGEN MODE' : 'CHILL MODE'}</span>
         </div>
       )}
       {/* Keyboard shortcut hint — fades out after 10s */}

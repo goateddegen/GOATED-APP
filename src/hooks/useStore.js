@@ -850,6 +850,10 @@ export const useStore = create((set, get) => ({
   keybindsOpen: false,
   setKeybindsOpen: (v) => set({ keybindsOpen: v }),
 
+  // Leads deep-link: TrendsPage / NotchBar can prefill the leads search
+  leadsSearchPrefill: null,
+  setLeadsSearchPrefill: (q) => set({ leadsSearchPrefill: q }),
+
   // AI Overlay
   aiOpen: false,
   setAiOpen: (v) => set({ aiOpen: v }),
@@ -1160,8 +1164,8 @@ export const useStore = create((set, get) => ({
   business: null,
   setBusiness: (b) => set({ business: b }),
 
-  // WOLF MODE (formerly DEGEN) — default ON. Closers, traders, money-makers.
-  // Users can opt into CHILL mode (formerly Sheep) via the toggle.
+  // DEGEN MODE — default ON. Closers, traders, money-makers.
+  // Users can opt into CHILL mode via the toggle.
   // Stored as 'goated_degen' in localStorage for backwards compat.
   degenMode: typeof window !== 'undefined'
     ? (localStorage.getItem('goated_degen') === null ? true : localStorage.getItem('goated_degen') === 'true')

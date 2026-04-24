@@ -55,10 +55,13 @@ export const VERCEL_HOST = 'goated-app-nine.vercel.app';    // current fallback
 
 // ─── Pricing source of truth ────────────────────────────────────────────────
 // Used across HomePage, ManagedPage, AuditPage result CTA.
+// NOTE: 13% flat = 12% net platform + ~1% Stripe fee absorption (2.9%+30¢ avg
+// ≈ 3.2% on $10K deals, netted against 13% = ~9.8% net take).
 export const PRICING = {
   commission: {
-    platformSourced: 12,    // % we take when lead came from GOATED
-    railsOnly: 3,           // % we take when client brings their own lead, uses our rails
+    flat: 13,               // % we take on every closed deal (platform absorbs Stripe fees)
+    platformSourced: 13,    // deprecated alias — all deals are 13% flat now
+    railsOnly: 13,          // deprecated alias — no more tiered rate
   },
   managed: {
     starter: { setup: 5000, retainer: 3000, revShare: 10, label: 'Starter' },

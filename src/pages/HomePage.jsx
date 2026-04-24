@@ -290,9 +290,9 @@ export default function HomePage() {
   ];
 
   const outreachMethods = [
-    { icon: Phone, title: 'VoIP Calling', desc: 'AI-powered dialer with real-time call coaching, sentiment analysis, and auto-transcription. Talk to 10x more prospects. Stop being a little bitch about cold calls.', color: '#10b981' },
-    { icon: MessageSquare, title: 'SMS Sequences', desc: 'Automated SMS campaigns with personalization tokens and AI-optimized send times. Higher open rate than email will ever dream of.', color: '#06b6d4' },
-    { icon: Mic, title: 'Voicemail Drops', desc: 'Pre-recorded voicemail drops that land directly in inbox. 3x response rate vs cold email. While you sleep, your pipeline grows.', color: '#a855f7' },
+    { icon: Phone, title: 'Warm-Dial Playbook', desc: 'We write the scripts + objection maps + dial windows. You bring your own number (OpenPhone, Dialpad, Google Voice) — we route you through our close-flow with real-time AI coaching in-app.', color: '#10b981' },
+    { icon: MessageSquare, title: 'SMS Sequences', desc: 'AI-personalized sequences with send-window optimization. Plug in your own A2P-registered Twilio/OpenPhone number — we generate the copy, track replies, and auto-advance the pipeline.', color: '#06b6d4' },
+    { icon: Mic, title: 'LinkedIn Outreach', desc: 'Connection requests, follow-ups, and reply triggers — all AI-personalized per lead. Wire your own LinkedIn via Unipile. We keep you under daily action caps so your account never gets flagged.', color: '#a855f7' },
     { icon: Headphones, title: 'Call Analysis', desc: 'Real-time transcription, objection detection, and coaching. AI scores every call and tells you exactly how to close harder.', color: '#f59e0b' },
     { icon: Send, title: 'Social DMs', desc: 'Automated LinkedIn and Twitter outreach with personalized messaging at scale. Skip the gatekeeper, go straight to the whale.', color: '#ec4899' },
     { icon: Radio, title: 'Network Signals', desc: 'Real-time job change alerts, funding announcements, and trigger events. Ape into the deal at the perfect moment.', color: '#ef4444' },
@@ -449,7 +449,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══ WOLF MODE — default-on ═══ */}
+      {/* ═══ DEGEN MODE — default-on ═══ */}
+      {/* NOTE: keep this section in sync with Sidebar toggle name and TrendsPage copy */}
       <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
         <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.03) 0%, rgba(239,68,68,0.02) 50%, rgba(0,0,0,0) 100%)' }} />
         <div className="absolute top-10 right-10 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl animate-pulse" />
@@ -470,7 +471,7 @@ export default function HomePage() {
               <div className="flex flex-wrap items-center gap-3 mb-2">
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/15 border border-orange-500/30">
                   <Flame size={16} className="text-orange-400" />
-                  <span className="text-orange-400 text-xs font-black uppercase tracking-widest">WOLF MODE</span>
+                  <span className="text-orange-400 text-xs font-black uppercase tracking-widest">DEGEN MODE</span>
                 </div>
                 <div className="px-3 py-1.5 rounded-full bg-white/[0.02] border border-white/[0.05]">
                   <span className="text-slate-400 text-xs font-mono">Press <kbd className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-bold mx-0.5">Shift+D</kbd> to activate</span>
@@ -594,9 +595,9 @@ export default function HomePage() {
       <section className="px-6 py-16 sm:py-20 bg-surface-1/30">
         <div className="max-w-7xl mx-auto">
           <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <span className="text-yellow-400 text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2"><Phone size={16} />Direct Outreach Suite</span>
+            <span className="text-yellow-400 text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2"><Phone size={16} />Outreach Playbook</span>
             <h2 className="text-3xl lg:text-4xl font-black mt-2 mb-3">Email is Dead. <span className="text-yellow-400">Go Direct.</span></h2>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">VoIP, SMS, voicemail drops, AI coaching — 10x reply rate. Skip the gatekeeper, talk to the whale. Your competition is writing follow-up emails like NPCs.</p>
+            <p className="text-slate-400 text-lg max-w-2xl mx-auto">Scripts, sequences, coaching. You bring your own number + LinkedIn — we run the play. Warm dials, AI-written SMS, LinkedIn triggers. Skip the gatekeeper, talk to the decision-maker.</p>
           </motion.div>
           <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {outreachMethods.map((m, i) => (
@@ -617,7 +618,7 @@ export default function HomePage() {
         <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.02) 0%, rgba(239,68,68,0.02) 50%, rgba(168,85,247,0.02) 100%)' }} />
         <div className="max-w-7xl mx-auto relative">
           <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <span className="text-orange-400 text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2"><Flame size={16} />WOLF MODE ACTIVATED</span>
+            <span className="text-orange-400 text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2"><Flame size={16} />DEGEN MODE ACTIVATED</span>
             <h2 className="text-3xl lg:text-5xl font-black mt-2 mb-3">Ape In. <span className="text-orange-400">Stack Bags. Repeat.</span></h2>
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">Free alpha. Fat bags. Absurd close rates. This is the zero-to-hero play — no monthly drain, pure upside.</p>
           </motion.div>
@@ -626,7 +627,7 @@ export default function HomePage() {
             {[
               { emoji: '\u{1F525}', title: 'Whale Plays Only', desc: 'AI finds the whale deals, you ape in and close them. 500K+ leads scored, ranked, and ready. The bag is sitting right there waiting for you to grab it.', stat: '500K+', label: 'Leads scored' },
               { emoji: '\u{1F9E0}', title: 'Big Brain Alpha', desc: 'Real-time market intelligence from every social platform. Know what\'s pumping before the normies. Front-run the competition like a goddamn psychic.', stat: '< 30s', label: 'Alpha signal delay' },
-              { emoji: '\u{1F4B0}', title: 'Money Printer Go Brr', desc: 'Direct outreach that converts like crazy. VoIP, SMS, voicemail drops — skip the inbox, go direct to the decision maker. Close while your competition writes follow-up emails.', stat: '10x', label: 'Reply rate vs email' },
+              { emoji: '\u{1F4B0}', title: 'Money Printer Go Brr', desc: 'Direct outreach that converts. SMS sequences, LinkedIn triggers, warm-dial scripts — skip the inbox, talk to the decision maker. BYO number, we run the play.', stat: '10x', label: 'Reply rate vs email' },
               { emoji: '\u{1F410}', title: 'GOATED AI Agent', desc: 'Your always-on degen co-pilot. Real-time coaching, research, scripts — like having a senior closer whispering alpha in your ear 24/7. No sleep needed.', stat: '24/7', label: 'Always available' },
               { emoji: '\u{1F4C8}', title: 'Moon Signals', desc: 'Cross-platform sentiment analysis. Instagram, TikTok, crypto Twitter — see the trend before it moons. Ape into the right deal at the right time.', stat: 'LIVE', label: 'Real-time data' },
               { emoji: '\u26A1', title: 'Zero Fee, No Cap', desc: 'Free forever. You keep the bag. We only take a cut when a real deal actually closes — terms get laid out on your first audit call. No subscriptions, no monthly drain, no pricing page games.', stat: '$0', label: 'Monthly cost' },
@@ -742,7 +743,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto mb-10">
             {[
               { icon: DollarSign, title: 'Self-Serve OS', headline: 'Free', desc: 'Full platform access. Audit, AI voice, SMS, LinkedIn, pipeline, scripts. Nothing to pay until you actually close a deal through the stack.', color: '#10b981', cta: { label: 'Start free', page: 'audit' } },
-              { icon: Target, title: 'Commission Model', headline: 'Pay on close', desc: 'Close a deal sourced through GOATED, we take a small cut on settlement. Already have the deal? We can still process it as rails-only. Exact split discussed on the audit call.', color: '#f59e0b', cta: { label: 'Book audit', page: 'audit' } },
+              { icon: Target, title: 'Commission Model', headline: '13% flat on close', desc: 'We only get paid when you close a deal through the stack. Flat 13% on settled revenue — we absorb Stripe fees, dispute reserves, the plumbing. No setup, no seats, no retainer.', color: '#f59e0b', cta: { label: 'Book audit', page: 'audit' } },
               { icon: Crown, title: 'Managed Service', headline: 'Application-only', desc: 'White-glove: we run your outbound end-to-end. Setup + retainer + rev-share. Not open pricing — only for qualified operators. Apply to be let in.', color: '#a855f7', cta: { label: 'Apply', page: 'managed' } },
             ].map((item, i) => (
               <motion.button

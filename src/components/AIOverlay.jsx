@@ -1328,7 +1328,7 @@ export default function AIOverlay() {
   // Initial messages based on mode
   const NORMAL_INTRO = "**GOATED AI** \u2014 revenue terminal.\n\n- Lead search: 250K+ pipeline, ranked\n- Close scripts: per-lead, revenue-loss-first\n- Market data: real-time sentiment + AI alpha\n- Audit: revenue-leak report for any public URL\n- Nav: type \"go to leads\" / \"open wallet\" / \"open audit\"\n\nAsk short, get short. Ask for a breakdown, get numbers.";
 
-  const DEGEN_INTRO = "**WOLF MODE** \u2014 let's print.\n\n- Sniping leads: show me hot deals in [city/industry]\n- Alpha calls: BUY/SELL/HOLD with entry/exit\n- Audit attack: rip a competitor's URL, expose their leak\n- Close now: give me the 3 closest deals + next action\n\nLFG. What's the play?";
+  const DEGEN_INTRO = "**DEGEN MODE** \u2014 let's print.\n\n- Sniping leads: show me hot deals in [city/industry]\n- Alpha calls: BUY/SELL/HOLD with entry/exit\n- Audit attack: rip a competitor's URL, expose their leak\n- Close now: give me the 3 closest deals + next action\n\nLFG. What's the play?";
 
   // Core state
   const [messages, setMessages] = useState([

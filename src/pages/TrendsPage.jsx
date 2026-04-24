@@ -341,22 +341,81 @@ function LiveEventBurst({ position, color, delay = 0 }) {
   );
 }
 
-const LIVE_EVENTS = [
-  { lat: 41.2, lng: -73.5, color: '#3b82f6', delay: 0 },
-  { lat: 52.0, lng: 0.8, color: '#8b5cf6', delay: 0.7 },
-  { lat: 1.8, lng: 104.2, color: '#f97316', delay: 1.4 },
-  { lat: 25.5, lng: 55.8, color: '#10b981', delay: 2.1 },
-  { lat: 37.3, lng: -121.9, color: '#06b6d4', delay: 0.4 },
-  { lat: 22.8, lng: 113.9, color: '#ef4444', delay: 1.8 },
-  { lat: 36.1, lng: 140.2, color: '#10b981', delay: 1.1 },
-  { lat: 38.0, lng: 127.5, color: '#f97316', delay: 2.5 },
-  { lat: -23.1, lng: -46.2, color: '#8b5cf6', delay: 0.9 },
-  { lat: 6.9, lng: 3.8, color: '#3b82f6', delay: 1.6 },
-  { lat: 26.2, lng: -80.5, color: '#f97316', delay: 2.3 },
-  { lat: 47.8, lng: 8.9, color: '#10b981', delay: 0.3 },
-];
+// Region → approx lat/lng map for converting bulletin events into geo-bursts
+const REGION_COORDS = {
+  'NA': [40.71, -74.01],     'US': [40.71, -74.01],    'USA': [40.71, -74.01],
+  'EU': [51.51, -0.13],      'UK': [51.51, -0.13],     'DE': [52.52, 13.40],
+  'Asia': [22.32, 114.17],   'CN': [22.32, 114.17],    'JP': [35.68, 139.69],
+  'KR': [37.57, 126.98],     'SG': [1.35, 103.82],     'HK': [22.32, 114.17],
+  'ME': [25.20, 55.27],      'AE': [25.20, 55.27],
+  'AF': [6.52, 3.38],        'NG': [6.52, 3.38],
+  'SA': [-23.55, -46.63],    'BR': [-23.55, -46.63],
+  'IN': [19.07, 72.87],
+  'CH': [47.37, 8.54],       'Zurich': [47.37, 8.54],
+  'New York': [40.71, -74.01], 'London': [51.51, -0.13],
+  'Singapore': [1.35, 103.82], 'Dubai': [25.20, 55.27],
+  'Hong Kong': [22.32, 114.17], 'Seoul': [37.57, 126.98],
+  'Tokyo': [35.68, 139.69], 'San Francisco': [37.77, -122.42],
+  'Miami': [25.76, -80.19], 'Lagos': [6.52, 3.38],
+  'São Paulo': [-23.55, -46.63], 'Sao Paulo': [-23.55, -46.63],
+  'GLOBAL': [30, 0], 'Global': [30, 0],
+};
 
-function GlobeMesh({ hotspots, selectedHotspot, hoveredHotspot, onSelectHotspot, onHoverHotspot, onUnhoverHotspot, paletteDark }) {
+// Sentiment/tag → burst color
+const EVENT_COLORS = {
+  BULL: '#10b981', 'NEWS+': '#10b981', INFLOW: '#06b6d4', FLOW: '#06b6d4',
+  BEAR: '#ef4444', 'NEWS-': '#ef4444', OUTFLOW: '#f97316',
+  REGIME: '#8b5cf6', ALPHA: '#fb923c', WHALE: '#f59e0b',
+  NEUTRAL: '#64748b', NEWS: '#3b82f6',
+};
+
+// Convert bulletin/news stream → geo-positioned live bursts (dynamic, real data)
+function deriveLiveEvents(bulletin, hotspots, news) {
+  const bursts = [];
+  const seen = new Set();
+
+  // Bulletin events (highest priority — these are real)
+  (bulletin || []).slice(0, 16).forEach((ev, i) => {
+    const coords = REGION_COORDS[ev.region] || REGION_COORDS['GLOBAL'];
+    const key = `${coords[0]},${coords[1]},${i}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const color = EVENT_COLORS[ev.tag] || EVENT_COLORS[(ev.color || 'NEWS').toUpperCase()] || '#06b6d4';
+    bursts.push({
+      lat: coords[0] + (Math.random() - 0.5) * 3, // jitter so overlapping events don't stack
+      lng: coords[1] + (Math.random() - 0.5) * 3,
+      color,
+      delay: (i * 0.3) % 3,
+    });
+  });
+
+  // Fill with hotspot pulses if bulletin is sparse (<8 events)
+  if (bursts.length < 8) {
+    (hotspots || []).slice(0, 8 - bursts.length).forEach((h, i) => {
+      bursts.push({
+        lat: h.lat,
+        lng: h.lng,
+        color: h.sentiment >= 0.65 ? '#10b981' : h.sentiment >= 0.45 ? '#f59e0b' : '#ef4444',
+        delay: (bursts.length + i) * 0.4,
+      });
+    });
+  }
+
+  // News headline pulses — use source region if available, else NA
+  (news || []).slice(0, 4).forEach((n, i) => {
+    const coords = REGION_COORDS[n.region] || REGION_COORDS['NA'];
+    bursts.push({
+      lat: coords[0] + (Math.random() - 0.5) * 2,
+      lng: coords[1] + (Math.random() - 0.5) * 2,
+      color: n.sentiment === 'bullish' ? '#10b981' : n.sentiment === 'bearish' ? '#ef4444' : '#06b6d4',
+      delay: (bursts.length + i) * 0.25,
+    });
+  });
+
+  return bursts.slice(0, 20); // cap at 20 for perf
+}
+
+function GlobeMesh({ hotspots, liveEvents, selectedHotspot, hoveredHotspot, onSelectHotspot, onHoverHotspot, onUnhoverHotspot, paletteDark }) {
   const gRef = useRef();
   // NO AUTO-ROTATE — user-controlled only
 
@@ -365,8 +424,8 @@ function GlobeMesh({ hotspots, selectedHotspot, hoveredHotspot, onSelectHotspot,
       <mesh><sphereGeometry args={[1, 64, 64]} /><meshBasicMaterial color={paletteDark ? '#1a0a05' : '#0a1a12'} transparent opacity={0.98} /></mesh>
       <GeoLines paletteDark={paletteDark} />
       <DataArcs connections={ARC_CONNECTIONS} paletteDark={paletteDark} />
-      {LIVE_EVENTS.map((ev, i) => (
-        <LiveEventBurst key={`ev${i}`} position={toXYZ(ev.lat, ev.lng, 1.018)} color={ev.color} delay={ev.delay} />
+      {(liveEvents || []).map((ev, i) => (
+        <LiveEventBurst key={`ev${i}-${ev.lat.toFixed(1)}-${ev.lng.toFixed(1)}`} position={toXYZ(ev.lat, ev.lng, 1.018)} color={ev.color} delay={ev.delay} />
       ))}
       {/* Granular markers — leads, influencers, ICOs */}
       <GranularMarkers hotspots={hotspots || []} paletteDark={paletteDark} />
@@ -395,7 +454,7 @@ function GlobeMesh({ hotspots, selectedHotspot, hoveredHotspot, onSelectHotspot,
   );
 }
 
-function GlobeScene({ hotspots, selectedHotspot, hoveredHotspot, onSelectHotspot, onHoverHotspot, onUnhoverHotspot, paletteDark }) {
+function GlobeScene({ hotspots, liveEvents, selectedHotspot, hoveredHotspot, onSelectHotspot, onHoverHotspot, onUnhoverHotspot, paletteDark }) {
   const controlsRef = useRef();
   return (
     <Canvas camera={{ position: [0, 0, 2.5], fov: 45 }} style={{ background: 'transparent' }}
@@ -404,6 +463,7 @@ function GlobeScene({ hotspots, selectedHotspot, hoveredHotspot, onSelectHotspot
       <ambientLight intensity={0.5} />
       <GlobeMesh
         hotspots={hotspots}
+        liveEvents={liveEvents}
         selectedHotspot={selectedHotspot}
         hoveredHotspot={hoveredHotspot}
         onSelectHotspot={onSelectHotspot}
@@ -669,7 +729,10 @@ export default function TrendsPage() {
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [rightTab, setRightTab] = useState('alpha');
   const ivRef = useRef(null);
-  const { degenMode, getLeads } = useStore();
+  const degenMode = useStore(s => s.degenMode);
+  const getLeads = useStore(s => s.getLeads);
+  const setPage = useStore(s => s.setPage);
+  const setLeadsSearchPrefill = useStore(s => s.setLeadsSearchPrefill);
   const { regime: rawRegime } = useGoatedAI();
 
   const regime = rawRegime || {
@@ -780,6 +843,12 @@ export default function TrendsPage() {
     return allBulletin.filter(e => e.tag !== 'BEAR' && !(e.tag === 'NEWS-' && e.color === 'red'));
   }, [allBulletin, degenMode]);
 
+  // Dynamic live events on globe — derived from real bulletin + hotspots + news
+  const liveEvents = useMemo(
+    () => deriveLiveEvents(bulletin, enrichedHotspots, data?.news),
+    [bulletin, enrichedHotspots, data?.news]
+  );
+
   // Aggregate sentiment across news + X (synthesized) + price action
   const aggregateSentiment = useMemo(() => {
     if (!data) return null;
@@ -825,6 +894,7 @@ export default function TrendsPage() {
         }>
           <GlobeScene
             hotspots={enrichedHotspots}
+            liveEvents={liveEvents}
             selectedHotspot={selectedHotspot}
             hoveredHotspot={hoveredHotspot}
             onSelectHotspot={setSelectedHotspot}
@@ -857,7 +927,7 @@ export default function TrendsPage() {
           </span>
         </div>
         <div className="text-[10px] text-slate-400">
-          {enrichedHotspots.length} hubs · {plays.length} live plays · {LIVE_EVENTS.length} bursts
+          {enrichedHotspots.length} hubs · {plays.length} live plays · {liveEvents.length} bursts
         </div>
         {lastRefresh && (
           <button
@@ -1029,7 +1099,7 @@ export default function TrendsPage() {
                 );
               })}
               <div className="text-[9px] text-slate-600 text-center pt-2">
-                {degenMode ? 'WOLF MODE — all plays, sorted by greed score' : 'CHILL MODE — vetted plays only, risk-adjusted'}<br />
+                {degenMode ? 'DEGEN MODE — all plays, sorted by greed score' : 'CHILL MODE — vetted plays only, risk-adjusted'}<br />
                 Powered by GOATED AI · NFA — DYOR · Refreshes every 30s
               </div>
             </div>
@@ -1146,12 +1216,52 @@ export default function TrendsPage() {
                 ? `Steady flow. ${selectedHotspot.activity.toLowerCase()} neutral — wait for directional break before sizing up.`
                 : `Cooling. Outflows dominant — avoid long exposure to region-specific narratives. Shorts viable with tight stops.`}
             </div>
-            {selectedHotspot.leadCount > 0 && (
-              <div className="mt-2 pt-2 border-t border-white/[0.05] text-slate-400">
-                <span className={degenMode ? 'text-orange-400' : 'text-brand'}>{selectedHotspot.leadCount}</span> active B2B leads in-region · {selectedHotspot.behaviorIndex}% intent score
-              </div>
-            )}
           </div>
+
+          {/* GOATED Revenue Angle — commission math + deep-link to leads */}
+          {selectedHotspot.leadCount > 0 && (() => {
+            const avgDealValue = 42_000; // median B2B deal size across demo seed
+            const pipeline = selectedHotspot.leadCount * avgDealValue;
+            const commission = Math.round(pipeline * 0.13);
+            const topPlays = (plays || []).slice(0, 2);
+            const fmt = (n) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${Math.round(n / 1000)}K`;
+            return (
+              <div className={`mt-2 bg-gradient-to-br ${degenMode ? 'from-emerald-500/10 border-emerald-500/30' : 'from-cyan-500/10 border-cyan-500/30'} to-transparent border rounded-lg p-2.5`}>
+                <div className="flex items-center gap-1 mb-2">
+                  <Zap size={10} className={degenMode ? 'text-emerald-400' : 'text-cyan-400'} />
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${degenMode ? 'text-emerald-400' : 'text-cyan-400'}`}>Revenue Angle</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 mb-2 text-[10px]">
+                  <div className="bg-white/5 rounded px-1.5 py-1">
+                    <div className="text-slate-600 text-[8px]">LEADS</div>
+                    <div className="text-white font-bold">{selectedHotspot.leadCount}</div>
+                  </div>
+                  <div className="bg-white/5 rounded px-1.5 py-1">
+                    <div className="text-slate-600 text-[8px]">PIPELINE</div>
+                    <div className="text-white font-bold">{fmt(pipeline)}</div>
+                  </div>
+                  <div className="bg-white/5 rounded px-1.5 py-1">
+                    <div className="text-slate-600 text-[8px]">13% CUT</div>
+                    <div className={`font-bold ${degenMode ? 'text-emerald-400' : 'text-cyan-400'}`}>{fmt(commission)}</div>
+                  </div>
+                </div>
+                {topPlays.length > 0 && (
+                  <div className="mb-2 text-[9px] text-slate-500">
+                    Top active plays: <span className="text-slate-300">{topPlays.map(p => p.title || p.name || p.asset).filter(Boolean).join(' · ')}</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    setLeadsSearchPrefill(selectedHotspot.name);
+                    setPage('leads');
+                  }}
+                  className={`w-full text-[10px] font-bold uppercase tracking-wider py-1.5 rounded transition-colors ${degenMode ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40' : 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40'}`}
+                >
+                  Close leads in {selectedHotspot.name} →
+                </button>
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -1168,25 +1278,6 @@ export default function TrendsPage() {
         <span className="text-slate-600">Drag · scroll to zoom · click pillars</span>
       </div>
 
-      {/* Bottom: news ticker */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 bg-black/80 backdrop-blur-md border-t border-white/[0.06] overflow-hidden h-8 flex items-center">
-        <div className="flex items-center gap-6 whitespace-nowrap pl-4" style={{ animation: 'tickerScroll 90s linear infinite', width: 'max-content' }}>
-          {[...(data?.news || []), ...(data?.news || [])].map((n, i) => (
-            <a
-              key={`${n.id}-${i}`}
-              href={n.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-xs hover:text-white transition-colors"
-            >
-              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${n.sentiment === 'bullish' ? 'bg-emerald-400' : n.sentiment === 'bearish' ? 'bg-red-400' : 'bg-slate-500'}`} />
-              <span className="text-slate-300">{n.title}</span>
-              <span className="text-slate-600 text-[10px]">{n.source}</span>
-              <span className="text-slate-700">·</span>
-            </a>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

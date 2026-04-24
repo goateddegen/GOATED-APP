@@ -478,7 +478,7 @@ function CloseCoachRow({ lead, index, colSpan, onCallClick, showToast }) {
               </div>
               <div className="mt-2 flex items-center gap-2 text-xs">
                 <span className="text-slate-500">Commission:</span>
-                <span className="text-brand font-bold">{fmt(Math.round((lead.dealValue || 0) * 0.12))}</span>
+                <span className="text-brand font-bold">{fmt(Math.round((lead.dealValue || 0) * 0.13))}</span>
               </div>
             </div>
 
@@ -600,9 +600,10 @@ export default function LeadsPage({ onSelect }) {
   const [visibleCount, setVisibleCount] = useState(50);
   const sentinelRef = useRef(null);
 
-  // Modals
-  const [voipLead, setVoipLead] = useState(null);
-  const [voipPhone, setVoipPhone] = useState('');
+  // Modals — NOTE: CallModal is a native `tel:` launcher, NOT in-app VoIP.
+  // We intentionally hand off to the user's OS dialer / their own BYO number (OpenPhone, Dialpad, etc).
+  const [callLead, setCallLead] = useState(null);
+  const [callPhone, setCallPhone] = useState('');
   const [scheduleLead, setScheduleLead] = useState(null);
 
   // AI Chat
@@ -660,7 +661,7 @@ export default function LeadsPage({ onSelect }) {
       if (topLeads.length < 5) topLeads.push({ name: l.name, company: l.company, score: l.score, dealValue: l.dealValue, status: l.status, industry: l.industry });
     }
     const avgScore = matchCount > 0 ? Math.round(totalScore / matchCount) : 0;
-    const commission = Math.round(pipeline * 0.12);
+    const commission = Math.round(pipeline * 0.13);
     const quickMsg = understood.length > 0
       ? `Found ${matchCount.toLocaleString()} leads matching your criteria. Total pipeline: ${fmt(pipeline)} (${fmt(commission)} commission potential). Average score: ${avgScore}/100.${matchCount > 0 && topLeads.length > 0 ? ` Top match: ${topLeads[0].name} at ${topLeads[0].company} (${topLeads[0].score}/100, ${fmt(topLeads[0].dealValue)}).` : ''}`
       : matchCount > 0 ? `Found ${matchCount.toLocaleString()} results for "${text}". Try being more specific — mention an industry, role, location, or deal size.` : `No results for "${text}". Try: "SaaS founders in Austin" or "healthcare leads above $20K".`;
@@ -684,6 +685,17 @@ export default function LeadsPage({ onSelect }) {
     setAiFilters(null); setAiUnderstood([]); setSearch(''); setFilterPriority('all'); setFilterStatus('all'); setLeadsPage(0); setVisibleCount(50);
     showToast('Filters cleared');
   }, [setSearch, setFilterPriority, setFilterStatus, setLeadsPage, showToast]);
+
+  // Deep-link: TrendsPage hotspot / NotchBar / Cmd+K can prefill a search, we consume once on mount
+  const leadsSearchPrefill = useStore(s => s.leadsSearchPrefill);
+  const setLeadsSearchPrefill = useStore(s => s.setLeadsSearchPrefill);
+  useEffect(() => {
+    if (!leadsSearchPrefill) return;
+    setAiChatOpen(true);
+    handleAISubmit(leadsSearchPrefill);
+    setLeadsSearchPrefill(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leadsSearchPrefill]);
 
   // Filtered + sorted leads
   const allFilteredLeads = useMemo(() => {
@@ -747,7 +759,7 @@ export default function LeadsPage({ onSelect }) {
   const stats = useMemo(() => {
     const total = activeLeads.length;
     const pipeline = activeLeads.reduce((s, l) => s + (l.dealValue || 0), 0);
-    const commission = Math.round(pipeline * 0.12);
+    const commission = Math.round(pipeline * 0.13);
     const negotiating = activeLeads.filter(l => l.status === 'negotiation').length;
     const hot = activeLeads.filter(l => l.score >= 80).length;
     return { total, pipeline, commission, negotiating, hot };
@@ -760,7 +772,7 @@ export default function LeadsPage({ onSelect }) {
     setVisibleCount(50);
   }, [sortField, sortDirection, setSortField, setSortDirection]);
 
-  const handleCallClick = useCallback((lead, phone) => { setVoipLead(lead); setVoipPhone(phone || ''); }, []);
+  const handleCallClick = useCallback((lead, phone) => { setCallLead(lead); setCallPhone(phone || ''); }, []);
 
   const toggleRow = useCallback((id) => {
     setExpandedRows(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
@@ -775,7 +787,7 @@ export default function LeadsPage({ onSelect }) {
       <Toast message={toastMsg} visible={toastVisible} onDone={() => setToastVisible(false)} />
 
       {/* Modals */}
-      {voipLead && <CallModal lead={voipLead} phone={voipPhone} onClose={() => setVoipLead(null)} showToast={showToast} />}
+      {callLead && <CallModal lead={callLead} phone={callPhone} onClose={() => setCallLead(null)} showToast={showToast} />}
       {scheduleLead && <ScheduleModal lead={scheduleLead} onClose={() => setScheduleLead(null)} showToast={showToast} />}
 
       {/* ── Demo Data Banner ── */}
@@ -793,7 +805,7 @@ export default function LeadsPage({ onSelect }) {
             {degenMode ? <><Flame size={24} className="text-orange-400" /> DEGEN Closer</> : <><Target size={24} className="text-brand" /> Closing Pipeline</>}
           </h1>
           <p className="text-slate-500 text-sm mt-0.5">
-            {totalFiltered.toLocaleString()} leads {aiFilters ? '(filtered)' : ''} &middot; Close deals, earn 12% commission
+            {totalFiltered.toLocaleString()} leads {aiFilters ? '(filtered)' : ''} &middot; Close deals, earn 13% flat commission
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -959,7 +971,7 @@ export default function LeadsPage({ onSelect }) {
                       {/* Deal Value */}
                       <td className="px-3 py-2.5">
                         <div className="font-mono text-sm text-white">{fmt(dv)}</div>
-                        <div className="text-[10px] text-emerald-400/60">{fmt(Math.round(dv * 0.12))} comm.</div>
+                        <div className="text-[10px] text-emerald-400/60">{fmt(Math.round(dv * 0.13))} comm.</div>
                       </td>
 
                       {/* Close % */}

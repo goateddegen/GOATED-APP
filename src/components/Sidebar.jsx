@@ -130,13 +130,13 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* WOLF / CHILL Toggle — Wolf mode is default-on */}
+      {/* DEGEN / CHILL Toggle — Degen mode is default-on */}
       <div className="p-2">
         <button
           onClick={() => {
             const wasOff = !degenMode;
             toggleDegenMode();
-            // Screen shake + confetti when flipping INTO wolf mode
+            // Screen shake + confetti when flipping INTO degen mode
             if (wasOff) {
               const root = document.querySelector('.min-h-screen');
               if (root) {
@@ -146,7 +146,7 @@ export default function Sidebar() {
               setTimeout(() => triggerConfetti(), 200);
             }
           }}
-          aria-label={degenMode ? 'Switch to CHILL mode' : 'Switch to WOLF mode'}
+          aria-label={degenMode ? 'Switch to CHILL mode' : 'Switch to DEGEN mode'}
           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-300 group ${
             degenMode
               ? 'bg-gradient-to-r from-orange-500/20 via-red-500/20 to-yellow-500/20 text-orange-400 border border-orange-500/30'
@@ -156,7 +156,7 @@ export default function Sidebar() {
           <Flame size={18} className={`flex-shrink-0 ${degenMode ? 'text-orange-400 animate-pulse' : 'text-emerald-400'}`} aria-hidden="true" />
           {expanded && (
             <>
-              <span className="flex-1 text-left text-xs font-bold tracking-wider uppercase">{degenMode ? 'WOLF MODE' : 'CHILL MODE'}</span>
+              <span className="flex-1 text-left text-xs font-bold tracking-wider uppercase">{degenMode ? 'DEGEN MODE' : 'CHILL MODE'}</span>
               <div className={`w-8 h-4 rounded-full transition-colors relative ${degenMode ? 'bg-orange-500' : 'bg-emerald-600'}`}>
                 <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${degenMode ? 'translate-x-4' : 'translate-x-0.5'}`} />
               </div>
@@ -168,7 +168,7 @@ export default function Sidebar() {
       {/* Version tag at bottom */}
       {expanded && (
         <div className="px-4 py-2 border-t border-white/[0.03]">
-          <div className="text-[10px] text-slate-600 text-center">{degenMode ? 'v4.0 — WOLF MODE' : 'v4.0 — CHILL MODE'}</div>
+          <div className="text-[10px] text-slate-600 text-center">{degenMode ? 'v7.2 — DEGEN MODE' : 'v7.2 — CHILL MODE'}</div>
         </div>
       )}
     </>
@@ -206,7 +206,7 @@ export default function Sidebar() {
       <aside
         role="navigation"
         aria-label="Main navigation"
-        className="fixed left-0 top-9 bottom-0 glass z-40 transition-[width] duration-300 flex-col hidden md:flex overflow-hidden"
+        className="fixed left-0 top-0 bottom-0 glass z-40 transition-[width] duration-300 flex-col hidden md:flex overflow-hidden"
         style={{ width: sidebar ? 240 : 72, willChange: 'width' }}
       >
         {navContent(sidebar)}

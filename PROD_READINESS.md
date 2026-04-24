@@ -1,9 +1,22 @@
 # GOATED — Production Readiness Tracker
 
-Last updated: 2026-04-23
+Last updated: 2026-04-24 (v7.3)
 Owner: secrdev@gmail.com
 
+## 📚 Related docs
+- **[docs/EXECUTION_PLAN_2026.md](docs/EXECUTION_PLAN_2026.md)** — consolidated 2026 biz + execution plan
+- **[docs/OUTREACH_PLAYBOOK.md](docs/OUTREACH_PLAYBOOK.md)** — outreach tactics, BYO numbers, anti-blacklist, compliance
+
 Single source of truth for what's fake, what's broken, what needs keys, and what needs to be done before this app stops being a demo.
+
+## 💰 Pricing (LOCKED — 2026-04-23)
+
+- **13% flat commission** on every closed deal sourced through the GOATED stack
+- No subscriptions, no seats, no setup fees for self-serve
+- 13% absorbs Stripe processing (2.9% + 30¢ ≈ 3.2% on $10K deals) + dispute/chargeback reserve
+- Net platform take: **~9.8%** after rails/fees
+- Managed Service (application-only): retainer + setup + 10–15% rev-share — negotiated per engagement
+- Single source: `src/lib/config.js` → `PRICING.commission.flat = 13`
 
 ---
 
@@ -15,7 +28,7 @@ Single source of truth for what's fake, what's broken, what needs keys, and what
 | Lead scripts | `src/components/LeadDetail.jsx` | Template scripts (now optionally regeneratable via AI) | ✅ AI regen wired — still needs real Apollo leads to work on real data |
 | Dashboard MRR | `src/pages/DashboardPage.jsx` | Pre-revenue $0 state (honest) | Populate when first Stripe charges land |
 | Ticker | `src/components/Ticker.jsx` | BTC/ETH/SOL prices (real via CoinGecko); hardcoded SOL fallback `$198` | Remove hardcoded fallback, show `—` if API fails |
-| TrendPulse live events | `src/pages/TrendsPage.jsx` | Partially hardcoded `LIVE_EVENTS` array alongside real feeds | Merge real `/api/trends` events into globe hotspots |
+| TrendPulse live events | `src/pages/TrendsPage.jsx` | ✅ shipped v7.3 — `deriveLiveEvents()` maps real bulletin/news to geo-bursts | Now dynamic |
 | AI Overlay intro stats | `src/components/AIOverlay.jsx` | Mentions "250K+ leads" (true for demo PRNG, but we say it's real) | Conditional on `APOLLO_API_KEY` — show actual count |
 | Admin fake activities | `src/pages/AdminPage.jsx` | Some simulated sparklines remain | Replace with real Vercel Analytics + API health checks |
 | Close Guide confidence | `src/components/LeadDetail.jsx` | Now derived from lead score (no fake progress ticks) | ✅ shipped |
