@@ -651,7 +651,7 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
       'trend': 'trends', 'trendpulse': 'trends', 'market': 'trends', 'alpha': 'trends',
       'lead': 'leads', 'pipeline': 'leads',
       'audit': 'audit', 'leak': 'audit', 'revenue audit': 'audit',
-      'managed': 'managed', 'dfy': 'managed', 'done for you': 'managed', 'management': 'managed',
+      'managed': 'leads', 'dfy': 'leads', 'done for you': 'leads', 'management': 'leads',
       'wallet': 'wallet', 'earnings': 'wallet', 'commission': 'wallet', 'payout': 'wallet', 'stripe': 'wallet',
       'admin': 'admin', 'settings': 'admin', 'account': 'admin',
       'home': 'home', 'homepage': 'home', 'landing': 'home',

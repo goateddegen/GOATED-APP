@@ -610,57 +610,7 @@ function TransactionFeeDisplay() {
           </div>
         </div>
 
-        {/* Betting / Prediction Market Spread */}
-        <div className="px-4 py-4 rounded-xl bg-orange-500/[0.04] border border-orange-500/15">
-          <div className="flex items-center gap-2 mb-3">
-            <Target size={16} className="text-orange-400" />
-            <span className="text-sm font-semibold text-white">Betting Spread Fee</span>
-          </div>
-          <div className="text-3xl font-bold text-orange-400 mb-1">2-5%</div>
-          <p className="text-[11px] text-slate-400">Spread taken on prediction market & casino bets</p>
-          <div className="mt-3 space-y-1.5">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-slate-500">Prediction market bets</span>
-              <span className="text-orange-400 font-mono font-medium">2%</span>
-            </div>
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-slate-500">Casino games (house edge)</span>
-              <span className="text-orange-400 font-mono font-medium">3-5%</span>
-            </div>
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-slate-500">Live event betting</span>
-              <span className="text-orange-400 font-mono font-medium">4%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Crypto Transaction Fees */}
-        <div className="px-4 py-4 rounded-xl bg-blue-500/[0.04] border border-blue-500/15">
-          <div className="flex items-center gap-2 mb-3">
-            <CreditCard size={16} className="text-blue-400" />
-            <span className="text-sm font-semibold text-white">Crypto Transaction Fee</span>
-          </div>
-          <div className="text-3xl font-bold text-blue-400 mb-1">1-2%</div>
-          <p className="text-[11px] text-slate-400">Fee on crypto deposits, withdrawals, and swaps</p>
-          <div className="mt-3 space-y-1.5">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-slate-500">Deposits (crypto)</span>
-              <span className="text-blue-400 font-mono font-medium">1%</span>
-            </div>
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-slate-500">Withdrawals (crypto)</span>
-              <span className="text-blue-400 font-mono font-medium">1.5%</span>
-            </div>
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-slate-500">Token swaps</span>
-              <span className="text-blue-400 font-mono font-medium">2%</span>
-            </div>
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-slate-500">Fiat on-ramp / off-ramp</span>
-              <span className="text-blue-400 font-mono font-medium">2.5%</span>
-            </div>
-          </div>
-        </div>
+        {/* Prediction-market & crypto-fee blocks removed v7.5 — refocused on B2B agency. */}
 
         {/* Platform Subscription */}
         <div className="px-4 py-4 rounded-xl bg-purple-500/[0.04] border border-purple-500/15">
@@ -678,12 +628,10 @@ function TransactionFeeDisplay() {
 
       {/* Revenue Summary */}
       <div className="px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-        <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Revenue Collected to Date</div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Revenue Collected to Date · pre-launch</div>
+        <div className="grid grid-cols-2 gap-3">
           {[
-            { label: 'From Deal Commissions', value: '$0.00' },
-            { label: 'From Betting Spread', value: '$0.00' },
-            { label: 'From Crypto Fees', value: '$0.00' },
+            { label: 'B2B Deal Commissions (13%)', value: '$0.00' },
             { label: 'Total Revenue', value: '$0.00', bold: true },
           ].map(s => (
             <div key={s.label} className="text-center">

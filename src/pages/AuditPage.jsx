@@ -261,14 +261,26 @@ export default function AuditPage() {
   // STEP: ERROR
   // ══════════════════════════════════════════════════════════════════════
   if (step === 'error') {
+    const isKeyIssue = err && /api.?key|unauthor|forbidd|no llm|no provider|503|rate.?limit/i.test(String(err));
     return (
       <div className="min-h-screen flex items-center justify-center px-6">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-2xl">
           <div className="w-14 h-14 mx-auto mb-5 rounded-full flex items-center justify-center bg-red-500/10 border border-red-500/30">
             <AlertTriangle size={24} className="text-red-400" />
           </div>
           <div className="text-xl font-bold text-white mb-2">Audit failed</div>
           <div className="text-sm text-slate-400 mb-6">{err}</div>
+          {isKeyIssue && (
+            <div className="text-left bg-black/40 border border-amber-500/20 rounded-xl p-5 mb-6">
+              <div className="text-xs uppercase tracking-widest font-bold text-amber-400 mb-3">Production config needed</div>
+              <p className="text-sm text-slate-300 mb-3">The audit API requires at least one LLM provider env var in Vercel:</p>
+              <ul className="space-y-1.5 text-xs text-slate-400 font-mono mb-3 pl-4 list-disc">
+                <li><span className="text-white">GROQ_API_KEY</span> — Llama 3.3 70B, free tier 30M tokens/mo (recommended primary)</li>
+                <li><span className="text-white">ANTHROPIC_API_KEY</span> — Claude Haiku fallback (recommended secondary)</li>
+              </ul>
+              <p className="text-xs text-slate-500">Set in Vercel → Project → Settings → Environment Variables. Redeploy after save.</p>
+            </div>
+          )}
           <button
             onClick={() => setStep('input')}
             className="rounded-xl px-5 py-2.5 text-sm font-semibold transition"
@@ -512,17 +524,17 @@ export default function AuditPage() {
             </div>
           </details>
 
-          {/* Primary CTA */}
+          {/* Primary CTA — agency-first: book the call OR have us run outreach */}
           <div className="rounded-2xl border p-6 sm:p-8" style={{ borderColor: accentBr, background: accentBg }}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
               <div className="flex-1">
                 <div className="text-xs uppercase tracking-widest mb-2 font-bold" style={{ color: accent }}>Next step</div>
                 <div className="text-xl font-black text-white leading-tight mb-1.5">
-                  Want us to close this pipeline for you?
+                  Want us to plug these leaks for you?
                 </div>
                 <div className="text-sm text-slate-300 leading-relaxed">
-                  15-minute strategy call with Tarek. We deploy the voice agent, the chatbot, the SMS sequence — whatever this audit identified.
-                  <span className="font-semibold text-white"> $0 upfront for self-serve. 13% flat when we close revenue.</span>
+                  We run the missed-call recovery, the cold outreach, the booking flow — the whole engine that turns this audit into actual revenue.
+                  <span className="font-semibold text-white"> No upfront retainer. We get paid when a deal closes.</span>
                 </div>
                 {a.oneLinePitch && (
                   <div className="mt-3 text-xs text-slate-400 italic border-l-2 pl-3" style={{ borderColor: accentBr }}>
@@ -537,13 +549,20 @@ export default function AuditPage() {
                   className="flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-base font-bold transition whitespace-nowrap"
                   style={{ background: accent, color: '#000' }}
                 >
-                  <Phone size={18} /> Book strategy call
+                  <Phone size={18} /> Book a call — let&apos;s close it
                 </a>
                 <button
-                  onClick={() => setPage('managed')}
+                  onClick={copyShare}
                   className="flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold border border-brand/40 bg-brand/10 hover:bg-brand/15 text-brand transition whitespace-nowrap"
                 >
-                  See Managed tiers <ChevronRight size={14} />
+                  {copied ? <CheckCircle2 size={14} /> : <Share2 size={14} />}
+                  {copied ? 'Link copied — send to client' : 'Share this audit'}
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center justify-center gap-2 rounded-xl px-6 py-2 text-xs font-semibold border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 transition whitespace-nowrap"
+                >
+                  Print / save as PDF
                 </button>
               </div>
             </div>

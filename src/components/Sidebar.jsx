@@ -3,15 +3,24 @@ import { Home, LayoutDashboard, Users, TrendingUp, Zap, BarChart3, Target, Walle
 import { useStore } from '../hooks/useStore';
 import { GoatIcon } from './GoatLogo';
 
+// v7.5 — AGENCY-FIRST POSITIONING
+// Primary surface: Audit (the closer) → Leads (internal target lists) → Dashboard (track closes).
+// Hidden but routable (still Cmd+K / direct hash): TrendPulse (T), Wallet (W).
+// TrendPulse will be repositioned to BizPulse (regional industry health) post-revenue.
+// Wallet stays for Stripe Payment Links flow but isn't a primary nav surface in v1.
 const nav = [
   { id: 'home', icon: Home, label: 'Home', key: 'H' },
-  { id: 'audit', icon: Award, label: 'Audit', key: 'U', badge: 'FREE' },
-  { id: 'managed', icon: Crown, label: 'Managed', key: 'M', badge: 'HOT' },
-  { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', key: 'D' },
-  { id: 'trends', icon: TrendingUp, label: 'TrendPulse', key: 'T' },
+  { id: 'audit', icon: Award, label: 'Audit', key: 'U', badge: 'CLOSER' },
   { id: 'leads', icon: Users, label: 'Leads', key: 'L' },
-  { id: 'wallet', icon: Wallet, label: 'Wallet', key: 'W' },
+  { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', key: 'D' },
   { id: 'admin', icon: Shield, label: 'Admin', key: 'X', badge: 'PRO' },
+];
+
+// Hidden routes — accessible via Cmd+K, direct hash, or keybind, but not surfaced in nav.
+// Keep TrendPulse + Wallet operational for power users / future productization.
+const hiddenNav = [
+  { id: 'trends', icon: TrendingUp, label: 'TrendPulse', key: 'T' },
+  { id: 'wallet', icon: Wallet, label: 'Wallet', key: 'W' },
 ];
 
 export default function Sidebar() {

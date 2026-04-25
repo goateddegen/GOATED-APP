@@ -349,12 +349,16 @@ function DashboardContent({ onSelect }) {
   return (
     <div className="p-6 space-y-6">
       {/* ================================================================= */}
-      {/* DEMO MODE BANNER                                                  */}
+      {/* DEMO MODE BANNER — explicit about what activates real data       */}
       {/* ================================================================= */}
       <div className="flex justify-center">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/25 text-amber-300 text-xs font-medium">
-          <BarChart3 size={12} /> Demo Mode &mdash; showing sample data
-        </span>
+        <div
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs font-medium max-w-2xl"
+          title="Set APOLLO_API_KEY (leads) + Stripe Connect (revenue) + Supabase (users) in Vercel env to flip to real data. See docs/EXECUTION_PLAN_2026.md."
+        >
+          <BarChart3 size={12} className="shrink-0" />
+          <span>Demo data. Real flip on: <span className="text-white font-mono">APOLLO_API_KEY</span> + Stripe Connect + Supabase.</span>
+        </div>
       </div>
 
       {/* ================================================================= */}

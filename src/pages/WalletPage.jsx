@@ -6,7 +6,7 @@ import {
   Building2, DollarSign, Zap, Clock, TrendingUp, FileText,
   CheckCircle2, Banknote, Receipt, BarChart3, ArrowRight, Info,
 } from 'lucide-react';
-import { CONTACT_EMAIL, calLink, CAL_EVENT_DISCOVERY } from '../lib/config';
+import { CONTACT_EMAIL } from '../lib/config';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const fmtUsd = (amount) =>
@@ -335,9 +335,9 @@ export default function WalletPage() {
                       <CreditCard className="w-8 h-8 text-[#635bff]" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-white mb-1">Connect your Stripe Express account</h3>
+                      <h3 className="text-lg font-semibold text-white mb-1">Connect your Stripe account</h3>
                       <p className="text-sm text-zinc-400 max-w-md mx-auto">
-                        Every closed deal routes through GOATED via Stripe Connect. Application Fees auto-split to the platform. Your cut lands in your bank — same day on eligible accounts.
+                        v1: we use <span className="text-white font-semibold">Stripe Payment Links</span> for clean invoicing. Send a link, client pays, money lands in your account. Auto-split commissions arrive in v2 once volume justifies the Connect rails.
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-3 justify-center">
@@ -358,17 +358,9 @@ export default function WalletPage() {
                           </>
                         )}
                       </button>
-                      <a
-                        href={calLink(CAL_EVENT_DISCOVERY)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 text-zinc-300 font-semibold text-sm hover:bg-white/10 border border-white/10 transition-colors"
-                      >
-                        Book 15-min onboarding <ArrowRight className="w-4 h-4" />
-                      </a>
                     </div>
                     <p className="text-xs text-zinc-600 max-w-md mx-auto">
-                      We never touch the money. Stripe holds it, auto-splits the platform fee, and pays the rest to your Stripe Express account.
+                      Self-serve only. No onboarding calls — if your account&apos;s legit and the deal&apos;s real, Stripe verifies you in 2 minutes. We never touch the money.
                     </p>
                   </motion.div>
                 ) : isPending ? (
@@ -548,41 +540,9 @@ export default function WalletPage() {
           </div>
         </motion.div>
 
-        {/* ── Rails-Only section ─────────────────────────────────────────── */}
-        <motion.div variants={fadeInUp} custom={2}>
-          <div className="bg-surface-1 border border-white/5 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/5 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-                <FileText className="w-4 h-4 text-cyan-400" />
-              </div>
-              <div>
-                <h2 className="text-sm font-semibold text-white">Rails-only invoicing</h2>
-                <p className="text-xs text-zinc-500">You brought the deal — we just run it through clean rails.</p>
-              </div>
-            </div>
-            <div className="p-6">
-              <p className="text-sm text-zinc-400 mb-4 leading-relaxed max-w-3xl">
-                If GOATED didn&apos;t source the deal, you can still route it through our Stripe Connect rails for legally-clean invoicing and same-day payouts. Lower platform split, different terms — scoped on your audit call, not advertised publicly.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <a
-                  href={calLink(CAL_EVENT_DISCOVERY)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 font-semibold text-sm hover:bg-cyan-500/25 transition-colors"
-                >
-                  <Clock className="w-4 h-4" /> Book 15-min scoping call
-                </a>
-                <a
-                  href={`mailto:${CONTACT_EMAIL}?subject=Rails-only%20invoicing%20inquiry`}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 text-zinc-300 border border-white/10 font-semibold text-sm hover:bg-white/10 transition-colors"
-                >
-                  Email {CONTACT_EMAIL}
-                </a>
-              </div>
-            </div>
-          </div>
-        </motion.div>
+        {/* Rails-only section removed v7.4 — self-serve commission model only.
+            If a user brings their own deal outside our lead-gen stack, they route it themselves.
+            Contact: support email for edge cases. No booking calls. */}
 
         {/* ── Security footer ───────────────────────────────────────────── */}
         <motion.div variants={fadeInUp} custom={3}>

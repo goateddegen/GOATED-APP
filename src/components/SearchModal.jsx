@@ -37,9 +37,8 @@ function stripTokens(text) {
 const PAGES = [
   { id: 'home', name: 'Home', hint: 'Landing page' },
   { id: 'audit', name: 'Audit', hint: 'Run a free revenue-loss audit' },
-  { id: 'managed', name: 'Managed Service', hint: 'Application-only DFY' },
   { id: 'dashboard', name: 'Dashboard', hint: 'Pipeline + revenue' },
-  { id: 'leads', name: 'Leads', hint: '250K+ prospects' },
+  { id: 'leads', name: 'Leads', hint: 'B2B prospects (demo until APOLLO_API_KEY)' },
   { id: 'trends', name: 'TrendPulse', hint: 'Live global alpha' },
   { id: 'wallet', name: 'Wallet', hint: 'Commission & payouts' },
   { id: 'admin', name: 'Admin', hint: 'System health' },

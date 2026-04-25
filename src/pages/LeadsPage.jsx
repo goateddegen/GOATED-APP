@@ -319,13 +319,16 @@ function parseAIPrompt(prompt) {
   return { filters, understood };
 }
 
+// v7.5 — Agency-first targeting. Chips lead with brick-and-mortar verticals
+// where missed-call → lost revenue is the cleanest pitch. Online-biz chips kept
+// as secondary because we still take inbound from SaaS founders if they DM.
 const PRESET_PROMPTS = [
-  { label: 'Quick Wins', prompt: 'Show me quick wins ready to close with high scores', icon: Flame },
+  { label: 'Hot to close', prompt: 'Show me quick wins ready to close with high scores', icon: Flame },
+  { label: 'Home services', prompt: 'Healthcare and Construction leads with high deal value above $10K', icon: Target },
+  { label: 'Healthcare', prompt: 'Healthcare and dental practices with owner or director title', icon: Target },
+  { label: 'Local owners', prompt: 'Owner or founder titles with deal value above $8500', icon: Crown },
   { label: 'Whales', prompt: 'Show me whale enterprise deals above $50K', icon: DollarSign },
-  { label: 'SaaS Founders', prompt: 'SaaS founders and CEOs with surging momentum', icon: Crown },
-  { label: 'Healthcare', prompt: 'Healthcare leads in negotiation', icon: Target },
-  { label: 'Fintech NYC', prompt: 'Fintech leads in New York', icon: Building2 },
-  { label: 'Ghosted', prompt: 'Show unresponsive leads that ghosted us', icon: UserSearch },
+  { label: 'Fresh signal', prompt: 'Newest leads with surging momentum', icon: UserSearch },
 ];
 
 // ---------------------------------------------------------------------------
@@ -783,7 +786,14 @@ export default function LeadsPage({ onSelect }) {
   const handleSelectLead = useCallback((lead) => { if (onSelect) onSelect(lead); }, [onSelect]);
 
   return (
-    <div className="p-4 sm:p-6 max-w-[1600px] mx-auto">
+    <div
+      className={`p-4 sm:p-6 max-w-[1600px] mx-auto ${degenMode ? 'leads-degen' : 'leads-chill'}`}
+      data-degen={degenMode ? 'true' : 'false'}
+      style={degenMode ? {
+        // Subtle accent wash so degen tone bleeds onto the page (not just header)
+        backgroundImage: 'radial-gradient(ellipse 80% 40% at 50% 0%, rgba(249,115,22,0.04), transparent 70%)',
+      } : undefined}
+    >
       <Toast message={toastMsg} visible={toastVisible} onDone={() => setToastVisible(false)} />
 
       {/* Modals */}
@@ -791,10 +801,10 @@ export default function LeadsPage({ onSelect }) {
       {scheduleLead && <ScheduleModal lead={scheduleLead} onClose={() => setScheduleLead(null)} showToast={showToast} />}
 
       {/* ── Demo Data Banner ── */}
-      <div className="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-3">
-        <AlertTriangle size={16} className="text-amber-400 flex-shrink-0" />
-        <span className="text-sm text-amber-300/90">
-          <span className="font-semibold">Demo Data</span> — These leads are algorithmically generated for demonstration. Connect your API to load real prospects.
+      <div className={`mb-4 px-4 py-2.5 rounded-xl flex items-center gap-3 border ${degenMode ? 'bg-orange-500/10 border-orange-500/25' : 'bg-amber-500/10 border-amber-500/20'}`}>
+        <AlertTriangle size={16} className={degenMode ? 'text-orange-400 flex-shrink-0' : 'text-amber-400 flex-shrink-0'} />
+        <span className={`text-sm ${degenMode ? 'text-orange-200/90' : 'text-amber-300/90'}`}>
+          <span className="font-semibold">Demo Data</span> &mdash; algorithmically generated for internal targeting. Wire <span className="font-mono text-white">APOLLO_API_KEY</span> to flip to live scrape.
         </span>
       </div>
 

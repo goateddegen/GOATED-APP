@@ -4,7 +4,7 @@ import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { useStore } from './hooks/useStore';
 import Sidebar from './components/Sidebar';
-import NotchBar from './components/NotchBar';
+// NotchBar removed v7.4 — conflicted with AI overlay. AI overlay is the one AI surface.
 import SearchModal from './components/SearchModal';
 import KeybindsModal from './components/KeybindsModal';
 import LeadDetail from './components/LeadDetail';
@@ -25,8 +25,8 @@ const WalletPage = React.memo(lazy(() => import('./pages/WalletPage')));
 const AdminPage = React.memo(lazy(() => import('./pages/AdminPage')));
 // Public lead magnet — Revenue Loss Auditor. No login. Shareable at /#/for/{slug}
 const AuditPage = React.memo(lazy(() => import('./pages/AuditPage')));
-// Managed Service page — the money page. Tiers, deposit CTA, Cal.com embed.
-const ManagedPage = React.memo(lazy(() => import('./pages/ManagedPage')));
+// ManagedPage removed v7.4 — "managed" is just the top B2B tier, not a separate product.
+// Enterprise sell moved into HomePage hero + Leads page CTA. No booking calls surface.
 // BuilderPage, WhopPage, LaunchPadPage removed
 // CasinoPage removed — fake bets/P&L, will rethink tied to TrendPulse later
 // CommsPage and FinderPage removed — outreach built into leads side
@@ -323,7 +323,8 @@ export default function App() {
       if (/^#\/(for\/|audit)/i.test(h)) {
         setPage('audit');
       } else if (/^#\/managed/i.test(h)) {
-        setPage('managed');
+        // Managed consolidated into B2B leads v7.4
+        setPage('leads');
       }
     };
     resolveHash();
@@ -390,7 +391,7 @@ export default function App() {
       // If keybinds modal is open, handle navigation keys then close
       if (state.keybindsOpen) {
         e.preventDefault();
-        const keybindNav = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', m: 'managed', u: 'audit' };
+        const keybindNav = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', u: 'audit' };
         const target = keybindNav[key];
         setKeybindsOpen(false);
         if (target) { navTo(target); }
@@ -419,7 +420,7 @@ export default function App() {
 
       // Navigation map — single lookup
       // Debounce same-key rapid presses (200ms) to reduce CSR overhead on low-memory devices
-      const navMap = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', m: 'managed', u: 'audit' };
+      const navMap = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', u: 'audit' };
       const navTarget = navMap[key];
       if (navTarget) {
         const now = Date.now();
@@ -454,7 +455,8 @@ export default function App() {
       case 'wallet': return <WalletPage />;
       case 'admin': return <AdminPage />;
       case 'audit': return <AuditPage />;
-      case 'managed': return <ManagedPage />;
+      // managed consolidated into leads v7.4 — enterprise is just top B2B tier
+      case 'managed': return <LeadsPage onSelect={selectLead} />;
       // builder and whop removed — don't help users close deals
       // LaunchPad removed
       // casino removed
@@ -470,7 +472,6 @@ export default function App() {
         Skip to main content
       </a>
       {!isMobile && <CustomCursor />}
-      <NotchBar />
       <Sidebar />
       <main
         id="main-content"

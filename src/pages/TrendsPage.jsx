@@ -921,13 +921,19 @@ export default function TrendsPage() {
           <span className="text-xs font-bold text-white tracking-wider">
             {degenMode ? 'DEGEN RADAR' : 'ALPHA RADAR'}
           </span>
-          <span className={`flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${degenMode ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'}`}>
-            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${degenMode ? 'bg-orange-400' : 'bg-emerald-400'}`} />
-            LIVE
+          <span
+            className={`flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${data ? (degenMode ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30') : 'bg-amber-500/20 text-amber-400 border-amber-500/30'}`}
+            title={data ? 'CoinGecko + CryptoCompare + Fear&Greed — real data, 30s refresh' : 'Waiting on /api/sentiment'}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${data ? (degenMode ? 'bg-orange-400' : 'bg-emerald-400') : 'bg-amber-400'}`} />
+            {data ? 'LIVE' : 'LOADING'}
           </span>
         </div>
         <div className="text-[10px] text-slate-400">
           {enrichedHotspots.length} hubs · {plays.length} live plays · {liveEvents.length} bursts
+        </div>
+        <div className="text-[9px] text-slate-600 mt-0.5" title="Real: CoinGecko prices, CryptoCompare news, Fear & Greed. Derived: regional hotspots, AI plays, geo bursts.">
+          src: CoinGecko · CryptoCompare · F&amp;G · AI-derived
         </div>
         {lastRefresh && (
           <button

@@ -1,227 +1,256 @@
-# GOATED — 2026 Execution Plan (Consolidated)
-**Version:** v7.3 · **Locked date:** 2026-04-24 · **Owner:** secrdev@gmail.com
+# GOATED — Execution Plan (v7.5, agency-first)
 
-> One living doc for what we're building, why, how we close, and what's left before we take money.
-> Replaces scattered strategy docs for operational decision-making. Strategy docs (`GTM_STRATEGY.md`, `100K_MRR_MASTERPLAN.md`, `VIRAL_GROWTH_PLAN.md`) remain as historical reference.
-
----
-
-## 1. The pitch (30 sec)
-
-> "GOATED is an AI sales engine for B2B founders. We bring you high-intent leads, run your outreach through your own number and email, and only charge **13% flat on closed revenue**. No subscription. No setup fee. We eat when you eat."
-
-**Core product:** AI-curated lead intelligence + done-with-you outreach + closing tools (scripts, coach, deal tracking).
-**Secondary surface:** TrendPulse — real-time alpha radar (markets, sentiment, geo-flows) that links directly to B2B lead clusters in the same region. Every alpha insight surfaces a revenue angle.
+**Status:** April 24, 2026. Pivot locked.
+**Operator:** Tarek Ali (solo)
+**North-star metric:** Cash collected by **June 13, 2026** (50 days)
+**Realistic target:** **$20–40K collected** (cash, not pipeline)
+**Stretch:** $50K if 1–2 whale closes hit early
 
 ---
 
-## 2. Commission is locked at 13% flat
+## 1. Strategic call (LOCKED)
 
-- 13% of **closed revenue** sourced through the GOATED stack.
-- Single source of truth: `src/lib/config.js` → `PRICING.commission.flat = 13`
-- After Stripe rails (~3.2%) + dispute reserve (~0.5%) → net take **≈ 9.8%**.
-- Benchmarks: Belkins ~15%, Martal ~15%, Operatix ~18–20%, CIENCE ~$6k/mo flat. We're the cheapest pure-performance B2B sales infra.
-- Rationale for flat (not tiered): simpler sell, no negotiation surface, customer math is one click. Earlier tiered "12% platform + 3% rails" rejected.
-- Managed Service tier (for $100k+ ACV enterprise): retainer + setup + 10–15% rev-share, **negotiated case-by-case**. Not in self-serve path.
+**GOATED is a B2B agency that uses its own software as leverage.** Not a SaaS company.
 
----
-
-## 3. ICP (who we close first)
-
-**Tier 1 — land first 25 customers here:**
-- B2B SaaS founders, $500k–$5M ARR, US/CA, team < 20
-- Crypto-adjacent B2B infra (wallets, analytics, compliance) — aligns with our TrendPulse surface
-- Agencies / fractional CMO shops managing < 10 clients
-- Sales-led early-stage startups not yet on Apollo/ZoomInfo
-
-**Why these segments:**
-- They have revenue to pay commission on closed deals
-- They haven't built in-house SDR teams yet
-- Their ICPs are in GOATED's lead graph (tech, finance, ops)
-- They tolerate a "commission on results" model (vs enterprise demanding predictable opex)
-
-**Out of scope year 1:** pure B2C, healthcare regulated verticals, government, non-English-first, <$20k ACV deals.
+| Question                              | Answer                                                                                   |
+| ------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Are we a SaaS?                        | **No.** SaaS-as-a-product re-attempt comes after $30K+ MRR through services.             |
+| Are we publicly marketing the app?    | **No.** Deployed to Vercel, used as live demo on sales calls, not posted on social.      |
+| Who is the buyer?                     | Brick-and-mortar SMBs where missed phone calls = lost revenue.                           |
+| What's the offer?                     | Free audit → "we run the leak-recovery engine" → $2.5–8.5K setup + monthly retainer.     |
+| Are we charging upfront retainers?    | Yes — small setup fee ($1–3K) + monthly retainer ($2.5–6K). Plus 13% commission on close.|
+| Are we doing commission-only?         | **No.** Commission-only converts at 5%. Setup-fee deals convert at 30%+ and screen tire-kickers. |
+| What channels?                        | **Phone > SMS > email > LinkedIn**. Lead with dial. LinkedIn skipped for SMB owners.     |
+| Where do prospects come from?         | Google Maps + Yelp + Apollo free tier + ListKit. Geo-scraped, filtered by ICP.           |
+| Who calls them?                       | Tarek personally for first 50 calls. AI voice agent assists once warm.                   |
 
 ---
 
-## 4. Product readiness — what's real, what's demo
+## 2. Money math — what closes get us to $30–40K?
 
-| Surface | Status | Real data? | Notes |
-|---------|--------|-----------|-------|
-| Lead DB | 🟥 Demo | PRNG 250K | Flip to Apollo on `APOLLO_API_KEY` set |
-| Lead scripts | 🟧 Templates + AI regen | Works on real data once lead DB is live |
-| Dashboard MRR | ✅ Honest pre-revenue $0 | Populate on first Stripe charge |
-| AI chat (`/api/chat`) | ✅ Live | Claude Haiku + Groq fallback |
-| GOATED AI engine (`/api/goated-ai`) | ✅ Live | RSI/MACD/Bollinger, real market data |
-| Audit (`/api/audit`) | ✅ Live | Full 12-dim + outreachAngles rendered |
-| TrendPulse globe | ✅ Live | Dynamic events from `/api/sentiment` + bulletin |
-| TrendPulse hotspot card | ✅ Live | Commission math + deep-link to regional leads |
-| NotchBar (top) | ✅ Live | BTC/ETH/SOL + hot lead + commission rotation |
-| Cmd+K AI search | ✅ Live | Hybrid: instant local filter + `/api/chat` on Enter |
-| Audit page | ✅ Live | 13% math, dimensions, outreach angles |
-| Stripe Connect | 🟥 Not configured | Need `STRIPE_SECRET_KEY` + `STRIPE_CONNECT_CLIENT_ID` |
-| Supabase auth | 🟥 Not configured | Need `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` |
-| Apollo lead feed | 🟥 Not configured | Need `APOLLO_API_KEY` |
-| Groq LLM | 🟥 Not configured | Need `GROQ_API_KEY` (free tier up to 30M tokens/mo) |
+### Deal shape (target)
 
-**Critical-path before taking money:** Supabase (auth) + Stripe Connect (payout) + Apollo (real leads) + Groq (reduce Claude cost).
+```
+Setup fee:        $1,500–3,000  (one-time, charged on signup)
+Monthly retainer: $2,500–5,000  (recurring, 3-month minimum)
+Commission:       13% on revenue we generate (net of platform fees)
+```
 
----
+**Total deal first-month value: $4,000–8,000 cash collected.**
 
-## 5. Tech architecture highlights
+### Path-to-$30K math
 
-- **Frontend:** React 18 + Vite 5.4 + Tailwind + Zustand + Framer Motion + Three.js / R3F
-- **Backend:** 11 Vercel serverless functions (Hobby plan, 12 cap)
-- **AI routing:** Claude Sonnet 4.6 (heavy reasoning) · Haiku 3.5 (fast chat) · Groq Llama 3.3 70B (cheap bulk)
-- **Data sources:** CoinGecko · CryptoCompare · Fear & Greed · Kalshi · Polymarket · Apollo (pending)
-- **Security:** Per-endpoint CORS whitelist, rate limits on AI endpoints, input validation, CSP + HSTS headers
-- **Dialer:** **Zero in-app VoIP**. Native `tel:` launcher — users BYO (OpenPhone, Dialpad, iPlum). Detailed in `OUTREACH_PLAYBOOK.md`.
+| Scenario       | Clients | Avg deal-1 value | First-month cash | Plausibility   |
+| -------------- | ------- | ---------------- | ---------------- | -------------- |
+| Conservative   | 5       | $4,500           | **$22,500**      | 100% — 1/wk    |
+| Base case      | 7       | $5,000           | **$35,000**      | 80% — possible |
+| Stretch        | 10      | $5,500           | **$55,000**      | 30% — whale-luck |
+| Whale-driven   | 3 + 1 whale ($15K MRR) | mixed | **$30,000+**     | 25% — PI law / solar |
+
+**Assumed close rate: 25%** (industry standard for SMB cold outbound with strong audit hook = 15-30%).
+**Required calls booked → close rate of 25%:** 4 booked calls per close → **20–28 booked calls in 50 days** = ~3-5/week.
+**Required dials per booked call:** 30 connects → 1 booked call. **600–900 dials over 50 days.** ~15–20/day.
+
+This is doable solo. Hard. Not luck.
 
 ---
 
-## 6. Outreach strategy (condensed — see `OUTREACH_PLAYBOOK.md` for full detail)
+## 3. Target verticals (ranked, brick-and-mortar first)
 
-### Channel mix (2026, B2B cold)
-| Channel | Weight | Use case |
-|---------|--------|----------|
-| LinkedIn | 35% | Founder-to-founder, referral-pattern |
-| Email | 30% | Scale + compounding replies |
-| Cold call | 20% | Decision-makers with published lines |
-| SMS | 10% | Follow-up after first touch only |
-| Physical mail | 5% | $100k+ ACV whales only |
+### Tier S — best ICP fit
+1. **HVAC / plumbing / electrical** ($3–8K/mo retainer easy, missed-call story is GOATED's thing)
+2. **Med spas / aesthetics clinics** ($2–5K/mo, instagram-fluent owners, will try anything for leads)
+3. **Roofing / solar / home improvement** ($5–15K/mo, ticket sizes $20K+, one close pays the year)
+4. **Dental / chiropractic / med practices** ($2–5K/mo, $3–8K case values, ROI math is obvious)
 
-### Stack (what we actually use)
-- **OpenPhone** — $19/user, 3 DIDs per number (NYC, SF, LA area codes), iMessage-compatible, A2P 10DLC built-in.
-- **Sales Navigator** — $79/user, connection + InMail + search.
-- **Smartlead / Instantly** — domain warmup + sequence sending.
-- **Dedicated sending domain** (e.g. `goated-reach.com`) — protects `goated.solutions` reputation.
-- **Cal.com** — booking embed, already wired into app.
+### Tier A — secondary
+5. **Auto body / collision / repair shops**
+6. **Pest control / cleaning services**
+7. **Personal injury law firms** (high $$ but sophisticated — skip without warm intro)
+8. **Real estate teams** (flake rate kills it; only target team leads, not solo agents)
 
-### Anti-blacklist pillars
-1. Never call/SMS from personal numbers (carriers + Hiya/YouMail/Truecaller flag instantly).
-2. A2P 10DLC brand + campaign registration before any commercial SMS (~$14 + 1-2 wks).
-3. Local-presence dialing (area-code matched DIDs) for 2-4× pickup.
-4. Gradual warmup (10/day → 50/day → 100/day over 3 weeks per number).
-5. STIR/SHAKEN attestation A via verified business CNAM.
-6. Separate sending domain for email; SPF/DKIM/DMARC all authenticated.
-7. LinkedIn: manual only, 80 connects/week cap, no automation (auto-detection + bans are real in 2026).
+### Tier B — opportunistic only (don't outbound, take inbound)
+9. SaaS founders ($1–10M ARR seeking outbound help) — they DM us, we close them
+10. E-commerce DTC brands
 
-### 14-day sequence per lead (field-tested)
-Day 0: LinkedIn connect with personalized note. → Day 1: Email #1. → Day 3: Email #2 (bump). → Day 5: Call #1 + VM. → Day 7: SMS follow-up. → Day 8: LinkedIn follow-up. → Day 10: Call #2. → Day 12: Breakup email. → Day 14: Move to 30/60/90 nurture.
-
-### Expected conversion (per rep/mo, 500 qualified touches)
-- LinkedIn accept: 30-40%
-- Email reply: 3-5%
-- Call pickup: 15-25%
-- Meetings booked: 3-5% of total
-- Meeting → closed: 15-25%
-- **Net: 500 touches → 15-25 meetings → 3-6 closed deals/mo**
-
-At 13% × $42k avg deal × 4.5 closes = **~$24.5k MRR per ramped rep**.
+### Tier C — avoid
+- **Reputation-sensitive verticals**: Big tech, VC-backed startups, Fortune 500 (where Tarek's name might appear in a Google search)
+- **Volume-low margin verticals**: Restaurants, retail, single-location food service (CAC > LTV math fails)
 
 ---
 
-## 7. Revenue plan (conservative)
+## 4. The offer (canonical pitch)
 
-| Month | Customers | Avg deals/customer/mo | Avg deal | GMV | 13% take | Platform cost | Net |
-|-------|-----------|-----------------------|----------|-----|----------|---------------|-----|
-| M1 (May 2026) | 3 | 1 | $40k | $120k | $15.6k | $1.2k | $14.4k |
-| M3 | 12 | 1.5 | $42k | $756k | $98k | $5k | $93k |
-| M6 | 40 | 2 | $45k | $3.6M | $468k | $15k | $453k |
-| M12 | 120 | 2.5 | $50k | $15M | $1.95M | $50k | $1.9M |
+> "I noticed [Company]'s website is missing about 12-18 calls/week. Each one is worth roughly $X based on your job size. That's $Y/month walking out the door. I built a system that auto-calls every missed lead within 60 seconds, books them into your calendar, and texts a follow-up. **$1,500 to set it up, $2,500/month after, no contracts. I'll prove ROI in 30 days or refund the setup.** Wanna see the audit I already ran on your business?"
 
-Assumptions:
-- Churn 5% / mo steady-state. Higher in M1-M3 as we filter ICP.
-- CAC for founder-led month 0-6 ≈ $0 (cold outbound). From hire 1 onwards ≈ $800/customer.
-- LTV at $45k GMV × 2 deals × 12 mo × 13% = $140k. LTV:CAC > 150× during founder-led phase.
+This is the entire pitch. Don't deviate. Don't add bullet points. Don't pitch features. **Pitch the recovered phone calls.**
 
 ---
 
-## 8. Operational checklist — pre-launch
+## 5. The integration stack — what's wired vs. what's needed
 
-**This week:**
-- [ ] Namecheap DNS contact verification (domain suspended — user action)
-- [ ] Supabase project created, auth enabled, env vars in Vercel
-- [ ] Stripe Connect Express account, onboarding flow live
-- [ ] Apollo.io API key (starter $49/mo plan)
-- [ ] Groq API key (free tier)
-- [ ] OpenPhone account + 3 DIDs (NYC, SF, LA)
-- [ ] A2P 10DLC registration submitted (3-14 day wait)
-- [ ] Second sending domain purchased + DNS'd (goated-reach.com)
-- [ ] Sales Navigator seat
+### Working today (no env keys needed)
+- `/api/audit` — live URL crawl + LLM analysis (needs `GROQ_API_KEY` OR `ANTHROPIC_API_KEY`)
+- `/api/sentiment` — CoinGecko + CryptoCompare + Fear&Greed (free public APIs)
+- `/api/chat` — Claude Haiku for AI overlay (needs `ANTHROPIC_API_KEY`)
+- `/api/goated-ai` — RSI/MACD/Bollinger engine (no external dep)
+- Lead engine — 250K seeded PRNG demo data (works, used internally for ICP browsing)
+- 3D Globe — works via Three.js (data-aware, no external dep)
+- Phantom wallet (Solana) — read-only address parsing, works
 
-**Next 2 weeks:**
-- [ ] Domain warmup starts (50 → 500 emails over 4 weeks)
-- [ ] Phone warmup starts (10/day → 50/day over 3 weeks per DID)
-- [ ] First 10 paying customers closed (beta-price = 13% same as public)
-- [ ] First Stripe payout verified end-to-end
-- [ ] Vercel analytics + Plausible public analytics wired
+### Needs env vars in Vercel before Monday
+```
+# REQUIRED (free or cheap)
+ANTHROPIC_API_KEY     — Claude Haiku/Sonnet for AI chat + audit fallback
+GROQ_API_KEY          — Llama 3.3 70B for audit primary (free 30M tokens/mo)
 
-**Before we 10x the user base:**
-- [ ] End-to-end monitoring: Sentry for FE, LogSnag or similar for backend events
-- [ ] On-call rotation (right now: founder = on-call 24/7)
-- [ ] Rate-limit review per endpoint (esp `/api/chat`, `/api/goated-ai`, `/api/audit`)
-- [ ] Backup data model + disaster recovery for Supabase
-- [ ] Security audit (CSP, HSTS, CORS whitelist, rate limits — current state good, just needs pen-test)
-- [ ] SOC2-lite checklist if pursuing enterprise tier
+# RECOMMENDED for v1 close-engine
+STRIPE_SECRET_KEY     — Stripe API key for Payment Links + Connect
+STRIPE_WEBHOOK_SECRET — to capture payment_intent.succeeded events
+SUPABASE_URL          — auth + persistence layer
+SUPABASE_ANON_KEY     — for client SDK
+SUPABASE_SERVICE_KEY  — for server-side webhook handlers
 
----
+# OPTIONAL (productizes scaling, not blocking for first $30K)
+APOLLO_API_KEY        — replaces seeded leads with real prospect search
+NEWSAPI_KEY           — adds business news to TrendPulse repurposing
+RESEND_API_KEY        — programmatic email send (for follow-up sequences)
+```
 
-## 9. What we will NOT do
+**Cost to wire all of the above: ~$0–50/mo for first 3 months** (Groq free, Anthropic $5 trial, Stripe transaction-based, Supabase free tier, Apollo free tier 50 emails/day).
 
-- In-app VoIP/dialer in year 1 (dodge 10DLC brand risk, carrier agreements, E911)
-- Subscriptions / platform fees / setup fees for self-serve (13% flat is the whole model)
-- Purchased lead lists from raw dumps — only API-sourced or manually qualified
-- Ringless voicemail / auto-dial / AI voice outbound — reputational & regulatory risk year 1
-- Crypto payments for commissions — Stripe USD only until we hit volume & compliance maturity
-- Support Windows of Slack / Intercom 24/7 — docs + async email + weekly office hours only
+### Future, not for v1
+- Twilio (real SMS sending) — use Google Voice + Phone app for now
+- Cal.com Pro ($12/mo) — free tier works for 50/mo bookings
+- ListKit ($199/mo) — only when manual list building becomes the bottleneck
 
 ---
 
-## 10. Risks + mitigation
+## 6. The 50-day plan (April 24 → June 13)
 
-| Risk | Impact | Mitigation |
-|------|--------|-----------|
-| Apollo rate-limits our lead pulls | HIGH | Self-host Postgres snapshot + nightly delta refresh |
-| Claude API cost blows up | HIGH | Route 70% of traffic to Groq Llama 3.3 70B (free tier), Claude for premium only |
-| Carrier SMS filtering kills our A2P | HIGH | Strict 10DLC compliance, monitor spam scores weekly, rotate DIDs |
-| Customer disputes commission math | MED | Immutable audit log per closed deal, Stripe Connect auto-splits |
-| Vercel serverless 12-function cap | MED | Currently 11/12. `_api-disabled/` folder for inactive routes. |
-| DNS / domain suspended | Blocking | User action: Namecheap contact verification email |
-| Founder burnout / single point of failure | HIGH | Hire 1 ops/SDR in M3; document everything in `/docs` |
+### Week 1 (Apr 24-30) — INFRA + FIRST 5 CALLS
+- [ ] Day 1: Pick first ICP vertical. Lock it. **Recommended: HVAC in 3 nearby metros** (highest deal size + cleanest pitch fit)
+- [ ] Day 1: Set up 3× Google Voice numbers across 3 Gmail accounts → 3 area codes
+- [ ] Day 1-2: Buy/scrape 500 prospects in vertical+metro (ListKit free trial, Apollo free tier, Google Maps scrape via PhantomBuster free trial)
+- [ ] Day 2: Wire `GROQ_API_KEY` + `ANTHROPIC_API_KEY` in Vercel. Verify `/audit` works on 5 random URLs.
+- [ ] Day 2: Wire `STRIPE_SECRET_KEY`. Create one Payment Link template ($1,500 setup + recurring $2,500/mo).
+- [ ] Day 3-4: Run audit on top 50 prospects. Email each their audit PDF. Cold call same day.
+- [ ] Day 5-7: Daily — 25 dials, 30 SMS follow-ups, 50 emails. Goal: book 5 calls.
 
----
+### Week 2 (May 1-7) — FIRST CLOSE
+- [ ] 5 sales calls. Demo audit live on each call. Show the leaks. Ask: "ready to plug them?"
+- [ ] Aim: **1 close by Friday May 7.** Card on file. Stripe Payment Link sent on the call.
+- [ ] If no close: rerun the offer math with the prospect — likely the price tier was wrong. Adjust $.
 
-## 11. 47-day sprint → first $10k MRR
+### Week 3-4 (May 8-21) — DELIVER + DOUBLE
+- [ ] Deliver: missed-call recovery system (use GOATED's voice agent + Twilio + their phone tree)
+- [ ] Track: phone calls recovered, deals booked, revenue won
+- [ ] Outbound continues: 25/day dials. Goal: 2-3 more closes by May 21.
+- [ ] First testimonial captured by May 18.
 
-**Days 1-7: Stack setup**
-Supabase + Stripe + Apollo + OpenPhone + domain warmup begins. DNS verified. Brand 10DLC submitted.
+### Week 5-6 (May 22-Jun 4) — SCALE
+- [ ] Use the testimonial in cold outreach. Conversion ~2x.
+- [ ] Goal: hit 5-7 retained clients by Jun 4. ~$15-25K cash collected.
+- [ ] Decide: hire first VA for prospect list-building? ($5/hr Filipino VA frees 2hrs/day for dials)
 
-**Days 8-21: Cold outbound ignition**
-80 LinkedIn connects/day → 20/day responses → 10/day meetings booked by week 2. Founder runs all calls.
-
-**Days 22-35: First closes**
-3-5 deals closed, avg $40k GMV. First commissions through Stripe Connect. Iterate scripts based on dispositions logged in GOATED.
-
-**Days 36-47: Systemize**
-Document what's working. Hire first SDR. Start doubling outbound volume. Hit **10 active paying customers, ~$15k commission MRR, $120k GMV** by day 47.
-
----
-
-## 12. Feedback loops
-
-- **Daily**: outbound dispositions logged in GOATED, reviewed by founder + AI
-- **Weekly**: pipeline review, script rotation, number health checks
-- **Monthly**: cohort retention, channel ROI, ICP refinement
-- **Quarterly**: commission rate review (only direction is flat or lower, never up — the promise)
+### Week 7 (Jun 5-13) — CLOSE BIG
+- [ ] Last sprint. Goal 8-10 total clients by Jun 13. **$25-40K cash collected.**
+- [ ] Optional: stretch close on 1 PI law firm or solar dealer ($10-15K MRR ticket).
+- [ ] Decision point: keep going solo or onboard 1 commission-only closer?
 
 ---
 
-## Related docs
-- `docs/OUTREACH_PLAYBOOK.md` — full operational playbook (scripts, compliance, cadence)
-- `PROD_READINESS.md` — live prod-readiness tracker, what's broken now
-- `docs/GTM_STRATEGY.md` — historical strategy doc (pre-pivot)
-- `docs/100K_MRR_MASTERPLAN.md` — year-1 MRR model (legacy)
-- `src/lib/config.js` — commission + fee source of truth
+## 7. Anti-failure modes
 
-**Disagreements with this doc are resolved by: (1) `src/lib/config.js` for pricing, (2) this doc for execution, (3) `OUTREACH_PLAYBOOK.md` for channel tactics.**
+### Failure mode A: "Nobody's picking up"
+- **Diagnosis**: Wrong ICP, wrong time, wrong number
+- **Fix**: Call between 10am-12pm and 1-4pm local. Skip Mondays/Fridays. Never call weekends. Use local-area-code virtual numbers (the dial-back rate from a 415 number to a 415 prospect is 4x higher than a 1-800).
+
+### Failure mode B: "They're picking up but not booking"
+- **Diagnosis**: Pitch is too long or too feature-heavy
+- **Fix**: Get to "missed calls = $X/month lost" in 15 seconds. If they engage, send the audit PDF on the spot. Book or hang up.
+
+### Failure mode C: "They book but don't close on the call"
+- **Diagnosis**: Pricing/commitment friction or weak audit narrative
+- **Fix**: Audit must show ≥$5K/month in identified leakage to support a $2,500/mo pitch. If audit doesn't, the prospect isn't qualified. Dump them. Move on.
+
+### Failure mode D: "First client churned in month 2"
+- **Diagnosis**: Over-promised on call, under-delivered in execution
+- **Fix**: Setup phase must include weekly check-in calls. Show them the recovered-call dashboard. Make wins visible.
+
+### Failure mode E: "Tarek burns out"
+- **Diagnosis**: 25 dials/day is exhausting. Solo founder fatigue.
+- **Fix**: Set strict 4-hour calling block (e.g., 10am-2pm). Outside that, no dials. Use afternoons for delivery, audits, follow-ups. Take Saturdays off completely.
+
+---
+
+## 8. Why this beats the SaaS path right now
+
+| Metric                       | SaaS path                      | Agency path                |
+| ---------------------------- | ------------------------------ | -------------------------- |
+| Time to first $1 of revenue  | 60-180 days (signup → upgrade) | 7-14 days (call → close)   |
+| Time to $30K cash            | 12-24 months                   | 50 days (this plan)        |
+| Capital required             | $5-15K (ads, SEO, content)     | $200-500 (numbers + lists) |
+| Reputation requirement       | High (LinkedIn, founder brand) | Low (anonymous brand)      |
+| Tarek's reputation exposure  | High (his cancellation matters)| Low (SMB owners don't know)|
+| Skill match (sales-heavy)    | Mid (needs marketing skill)    | High (Tarek's actual edge) |
+| Failure mode                 | Slow death (no revenue, churn) | Visible day 5 (can pivot)  |
+
+**Agency wins on every dimension that matters in the next 60 days.**
+
+The SaaS becomes the obvious next step *after* the agency is paying bills. Every agency client is a real-world QA tester for the eventual SaaS product. They'll be the first 10 paid users.
+
+---
+
+## 9. Budget (50 days)
+
+```
+Google Voice (3 numbers, free)            $0
+ListKit free trial → $99 if needed      $99
+Apollo free tier (50/day) → $99 backup  $99
+Cal.com (free tier)                       $0
+Stripe (transactional, 2.9%+30¢)          $0 (paid by clients)
+Domain (already own goated.solutions)     $0
+Vercel (existing free tier)               $0
+Anthropic API (~$50 for 50 days of audits)$50
+Groq API (free tier)                      $0
+Supabase (free tier)                      $0
+1 VA at $5/hr × 10hrs/wk × 6wks         $300
+─────────────────────────────────────────────
+Total budget:                            $548
+```
+
+**Required cash on hand to execute: < $600.**
+**Expected gross from 5 closes in 50 days: $20K-30K.**
+**Net margin: ~95% (no fulfillment cost beyond Tarek's time).**
+
+---
+
+## 10. What we're NOT doing (DELETED scope)
+
+- ❌ Public product launch / Product Hunt / TechCrunch outreach
+- ❌ LinkedIn personal-brand content (Tarek's name is reputation-locked there)
+- ❌ Paid ads (Meta, Google, LinkedIn) — no capital, low ROI
+- ❌ VC fundraising
+- ❌ Hiring full-time anyone
+- ❌ Building new product features (audit + leads engine + AI overlay = enough)
+- ❌ Crypto/casino/prediction market features (orphaned, hidden in admin)
+- ❌ TrendPulse marketing (hidden from primary nav, kept as visual prop)
+
+---
+
+## 11. Definition of done — June 13, 2026
+
+✅ **5+ retained clients paying $2.5K+/mo**
+✅ **$20K+ cash in Stripe**
+✅ **2+ written testimonials**
+✅ **Audit page rendered for ≥100 unique URLs**
+✅ **Tarek not back on a job board**
+
+If any 4 of 5 hit, this plan worked. Move to scale phase.
+If only 2 of 5 hit, diagnose: was it pitch, list, or delivery? Adjust and run another 30 days.
+If 0 of 5 hit, we missed the read on the market and the plan needs surgery.
+
+---
+
+*Last updated: 2026-04-24 · Replaces v7.3 plan that assumed SaaS-first.*

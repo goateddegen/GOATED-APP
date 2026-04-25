@@ -330,11 +330,6 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative" style={{ zIndex: 1 }}>
           <motion.div variants={fadeUp}>
             <div className="flex flex-wrap items-center gap-3 mb-6">
-              <motion.div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand/10 border border-brand/20 text-brand text-sm" whileHover={{ scale: 1.05 }}>
-                <Zap size={16} />
-                <span className="font-medium">Gen Z Business OS — built for the ones who actually close</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
-              </motion.div>
               <motion.div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-slate-400 text-xs" whileHover={{ scale: 1.05 }}>
                 <Phone size={12} />
                 <span className="font-semibold">Voice · SMS · LinkedIn · Zero Email</span>
@@ -355,7 +350,7 @@ export default function HomePage() {
             </h1>
 
             <p className="text-lg sm:text-xl text-slate-400 max-w-lg mb-4 leading-relaxed">
-              Drop your URL. We crawl it, find the leaks, and price the fix in 15 seconds. <span className="text-white font-semibold">Then our AI voice agent calls every dormant lead, missed buyer, and no-show</span> — while you run the business.
+              Probably <span className="text-white font-semibold">the greatest thing that&apos;s ever happened to small business.</span> We&apos;re serious. Drop your URL, we crawl it, surface every leak, price the fix — then we run the outreach until the phone rings. <span className="text-white font-semibold">Pay only when a deal actually closes.</span> Anything less would be criminal.
             </p>
             <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500 mb-8">
               <span className="flex items-center gap-1.5"><Shield size={14} className="text-brand" />Free forever</span>
@@ -740,11 +735,10 @@ export default function HomePage() {
           </motion.div>
 
           {/* Outcome tracks — no $$$ exposed */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto mb-10">
             {[
               { icon: DollarSign, title: 'Self-Serve OS', headline: 'Free', desc: 'Full platform access. Audit, AI voice, SMS, LinkedIn, pipeline, scripts. Nothing to pay until you actually close a deal through the stack.', color: '#10b981', cta: { label: 'Start free', page: 'audit' } },
               { icon: Target, title: 'Commission Model', headline: '13% flat on close', desc: 'We only get paid when you close a deal through the stack. Flat 13% on settled revenue — we absorb Stripe fees, dispute reserves, the plumbing. No setup, no seats, no retainer.', color: '#f59e0b', cta: { label: 'Book audit', page: 'audit' } },
-              { icon: Crown, title: 'Managed Service', headline: 'Application-only', desc: 'White-glove: we run your outbound end-to-end. Setup + retainer + rev-share. Not open pricing — only for qualified operators. Apply to be let in.', color: '#a855f7', cta: { label: 'Apply', page: 'managed' } },
             ].map((item, i) => (
               <motion.button
                 key={i}
@@ -783,8 +777,8 @@ export default function HomePage() {
               <GlowButton onClick={() => setPage('audit')} color="brand">
                 <Sparkles size={18} />Run free audit<ArrowRight size={16} />
               </GlowButton>
-              <GlowButton onClick={() => setPage('managed')} variant="secondary">
-                <Crown size={18} className="text-brand" />Apply for Managed
+              <GlowButton onClick={() => setPage('leads')} variant="secondary">
+                <Target size={18} className="text-brand" />Explore the platform
               </GlowButton>
             </div>
           </motion.div>
@@ -800,7 +794,7 @@ export default function HomePage() {
           <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}>
             <div className="mb-6"><GoatLogo size={80} /></div>
             <h2 className="text-4xl lg:text-6xl font-black mb-4">Find your leak. <span className="text-brand">Prove it in 15 seconds.</span></h2>
-            <p className="text-xl text-slate-400 mb-4 max-w-2xl mx-auto">Built for Gen Z operators, agencies, and founders who know Apollo is too expensive and cold email is a corpse. Run the free audit. See the number. Or apply for Managed and let us run the whole outbound machine for you.</p>
+            <p className="text-xl text-slate-400 mb-4 max-w-2xl mx-auto">Look — Apollo is overpriced, cold email died three cycles ago, and SDR agencies charge $8K/mo to send the same template twice. We just built the fix. Ours only bills you when <span className="text-white font-semibold">cash lands in your account.</span> Try not to feel too lucky.</p>
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-slate-500 mb-8">
               <span>Free forever</span>
               <span className="text-slate-700">|</span>
@@ -814,8 +808,8 @@ export default function HomePage() {
               <GlowButton onClick={() => setPage('audit')} color="brand" className="!px-12 !py-5 !text-xl">
                 Run the free audit <ArrowRight className="inline ml-2" size={22} />
               </GlowButton>
-              <GlowButton onClick={() => setPage('managed')} variant="secondary" className="!px-8 !py-5 !text-xl">
-                <Crown className="inline mr-2" size={22} />See Managed Service
+              <GlowButton onClick={() => setPage('leads')} variant="secondary" className="!px-8 !py-5 !text-xl">
+                <Target className="inline mr-2" size={22} />See the leads engine
               </GlowButton>
             </div>
             <div className="flex flex-wrap justify-center gap-4 text-xs text-slate-600">

@@ -280,21 +280,35 @@ export default function AccountModal() {
                   </button>
                 )}
 
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-3 mb-6">
-                  <div className="bg-surface-2 rounded-lg p-3 text-center">
-                    <div className="text-lg font-bold text-brand">2.5K</div>
-                    <div className="text-[10px] text-slate-500">Leads</div>
-                  </div>
-                  <div className="bg-surface-2 rounded-lg p-3 text-center">
-                    <div className="text-lg font-bold text-purple-400">$42K</div>
-                    <div className="text-[10px] text-slate-500">Revenue</div>
-                  </div>
-                  <div className="bg-surface-2 rounded-lg p-3 text-center">
-                    <div className="text-lg font-bold text-cyan-400">89%</div>
-                    <div className="text-[10px] text-slate-500">Win Rate</div>
-                  </div>
-                </div>
+                {/* Stats — real, computed (no static dummy numbers v7.5) */}
+                {(() => {
+                  let leadCount = 0, closedRevenue = 0, winRate = 0;
+                  try {
+                    const all = useStore.getState().getLeads ? useStore.getState().getLeads() : [];
+                    leadCount = all.length;
+                    const closed = all.filter(l => l.status === 'closed' || l.status === 'won');
+                    closedRevenue = closed.reduce((s, l) => s + (Number(l.dealValue) || 0), 0);
+                    const finalized = all.filter(l => ['closed', 'won', 'lost'].includes(l.status));
+                    winRate = finalized.length ? Math.round((closed.length / finalized.length) * 100) : 0;
+                  } catch { /* falls through to zeros */ }
+                  const fmtK = (n) => n >= 1000 ? `${(n/1000).toFixed(n>=10000?0:1)}K` : `${n}`;
+                  return (
+                    <div className="grid grid-cols-3 gap-3 mb-6">
+                      <div className="bg-surface-2 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-brand">{fmtK(leadCount)}</div>
+                        <div className="text-[10px] text-slate-500">Leads in pipeline</div>
+                      </div>
+                      <div className="bg-surface-2 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-purple-400">${fmtK(closedRevenue)}</div>
+                        <div className="text-[10px] text-slate-500">Closed revenue</div>
+                      </div>
+                      <div className="bg-surface-2 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-cyan-400">{winRate}%</div>
+                        <div className="text-[10px] text-slate-500">Win rate</div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Logout */}
                 <button onClick={handleLogout}
