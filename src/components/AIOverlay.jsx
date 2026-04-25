@@ -8,7 +8,7 @@ import {
   MessageSquare, Sparkles, LayoutDashboard, ExternalLink, Phone, UserSearch,
   Trophy, Flame, DollarSign, Clock, Activity, Shield, ClipboardList, FileText,
   Brain, Newspaper, BookOpen, Crosshair,
-  Bell, Copy, Eye, AlertTriangle
+  Bell, Copy, Eye, AlertTriangle, Award
 } from 'lucide-react';
 import { useStore, fmt } from '../hooks/useStore';
 import { GoatIcon } from './GoatLogo';
@@ -382,18 +382,12 @@ const FEATURE_LINKS = {
   trendpulse: { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
   sentiment:  { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
   market:     { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
-  markets:    { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
-  prediction: { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
-  crypto:     { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
+  // v7.5 — markets/prediction/crypto/solana/casino keywords removed; B2B agency only
+  audit:      { page: 'audit',     label: 'Audit',      icon: Award },
+  leak:       { page: 'audit',     label: 'Audit',      icon: Award },
   wallet:     { page: 'wallet',    label: 'Wallet',     icon: Wallet },
-  solana:     { page: 'wallet',    label: 'Wallet',     icon: Wallet },
   dashboard:  { page: 'dashboard', label: 'Dashboard',  icon: BarChart3 },
   admin:      { page: 'admin',     label: 'Admin',      icon: LayoutDashboard },
-  gamble:     { page: 'casino',    label: 'Casino',     icon: Flame },
-  betting:    { page: 'casino',    label: 'Casino',     icon: Flame },
-  casino:     { page: 'casino',    label: 'Casino',     icon: Flame },
-  roulette:   { page: 'casino',    label: 'Casino',     icon: Flame },
-  games:      { page: 'casino',    label: 'Casino',     icon: Flame },
 };
 
 // Snap modes removed — AI overlay is always right panel
@@ -429,12 +423,6 @@ const PAGE_PROMPTS = {
     { label: 'Competitor landscape', icon: Target },
     { label: 'Emerging opportunities', icon: Lightbulb },
     { label: 'Investment signals', icon: Zap },
-  ],
-  casino: [
-    { label: 'Best odds right now', icon: Flame },
-    { label: 'My betting history', icon: Clock },
-    { label: 'High EV plays', icon: Zap },
-    { label: 'Risk analysis', icon: Shield },
   ],
   admin: [
     { label: 'System health overview', icon: BarChart3 },
@@ -1114,9 +1102,9 @@ const ORB_CONTEXT = {
   leads: { badge: 'hot leads', modeLabel: 'Lead Intel Mode', icon: Target },
   trends: { badge: 'new signals', modeLabel: 'Alpha Scanner', icon: TrendingUp },
   dashboard: { badge: null, modeLabel: 'Pipeline Overview', icon: BarChart3 },
-  casino: { badge: null, modeLabel: 'Degen Casino', icon: Flame },
   market: { badge: null, modeLabel: 'Market Analysis', icon: Globe },
   home: { badge: null, modeLabel: 'Revenue Agent', icon: Sparkles },
+  audit: { badge: null, modeLabel: 'Revenue Auditor', icon: Award },
   wallet: { badge: null, modeLabel: 'Wallet Intel', icon: Wallet },
   admin: { badge: null, modeLabel: 'Admin Console', icon: Shield },
 };
@@ -1137,11 +1125,6 @@ const PROACTIVE_SUGGESTIONS = {
     'Revenue is trending up — keep the momentum',
     'Weekly target: 2 more closes to hit goal',
   ],
-  casino: [
-    'Degen alert: high EV play detected',
-    'Your betting edge is +12% this session',
-    'Best odds shifted on 3 markets',
-  ],
 };
 
 const DEGEN_PROACTIVE_SUGGESTIONS = {
@@ -1159,11 +1142,6 @@ const DEGEN_PROACTIVE_SUGGESTIONS = {
     '3 deals need your attention — don\'t be paper hands on these bags',
     'Revenue pumping — keep the momentum, king. LFG',
     '2 more closes to hit weekly target — diamond hands mode activated',
-  ],
-  casino: [
-    'Giga-brain EV play just dropped — send it',
-    'You\'re up +12% this session — absolute degen alpha',
-    'Odds shifting on 3 markets — whale money moving in',
   ],
 };
 
@@ -1265,8 +1243,8 @@ const CONTEXT_TIPS = {
   leads: "I found 3 high-probability leads ready to close",
   trends: "BTC sentiment shifted bullish \u2014 see alpha plays",
   dashboard: "Your pipeline is empty \u2014 let me find leads",
-  casino: "Try Price Prediction \u2014 most popular game",
-  home: "Welcome. Wolf mode is on \u2014 Shift+D to flip to Chill.",
+  audit: "Drop a URL and I'll find the leak",
+  home: "Welcome. Degen mode is on \u2014 Shift+D to flip to Chill.",
 };
 
 // ─── CLOSE COACH STEPS ────────────────────────────────────────────────
@@ -1698,7 +1676,7 @@ export default function AIOverlay() {
           const navMatch = data.content.match(/\[NAVIGATE:(\w+)\]/);
           if (navMatch) {
             const navPage = navMatch[1];
-            if (['leads', 'trends', 'dashboard', 'casino', 'wallet', 'admin'].includes(navPage)) {
+            if (['leads', 'trends', 'dashboard', 'wallet', 'admin', 'audit'].includes(navPage)) {
               setPage(navPage);
               window.scrollTo(0, 0);
             }
@@ -1804,7 +1782,7 @@ export default function AIOverlay() {
           .then(data => {
             if (!data.fallback && data.content) {
               const navM = data.content.match(/\[NAVIGATE:(\w+)\]/);
-              if (navM && ['leads','trends','dashboard','casino','wallet','admin'].includes(navM[1])) {
+              if (navM && ['leads','trends','dashboard','wallet','admin','audit'].includes(navM[1])) {
                 setPage(navM[1]);
                 window.scrollTo(0, 0);
               }

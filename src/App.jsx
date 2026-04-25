@@ -25,6 +25,9 @@ const WalletPage = React.memo(lazy(() => import('./pages/WalletPage')));
 const AdminPage = React.memo(lazy(() => import('./pages/AdminPage')));
 // Public lead magnet — Revenue Loss Auditor. No login. Shareable at /#/for/{slug}
 const AuditPage = React.memo(lazy(() => import('./pages/AuditPage')));
+// v7.5 cover page — shown until VITE_LAUNCH_READY === 'true' is set in env vars.
+// Eagerly imported (not lazy) so it shows instantly with no loading flash.
+import ComingSoonPage from './pages/ComingSoonPage';
 // ManagedPage removed v7.4 — "managed" is just the top B2B tier, not a separate product.
 // Enterprise sell moved into HomePage hero + Leads page CTA. No booking calls surface.
 // BuilderPage, WhopPage, LaunchPadPage removed
@@ -244,6 +247,7 @@ export default function App() {
   const onboardingComplete = useStore(s => s.onboardingComplete);
   const setUser = useStore(s => s.setUser);
   const setIsLoggedIn = useStore(s => s.setIsLoggedIn);
+  const isLoggedIn = useStore(s => s.isLoggedIn);
   const setUserPlan = useStore(s => s.setUserPlan);
   const degenMode = useStore(s => s.degenMode);
   const [degenToast, setDegenToast] = useState(null);
@@ -444,26 +448,57 @@ export default function App() {
   const selectLead = useCallback((l) => { setPreviousPage(page); setSelectedLead(l); setDetailOpen(true); }, [page, setPreviousPage, setSelectedLead, setDetailOpen]);
   const mainML = isMobile ? 0 : (sidebar ? 240 : 72);
 
+  // v7.5 — Routes that require login (sensitive: leads, financials, internal tooling).
+  // home + audit stay public (audit is the lead magnet).
+  const PROTECTED_PAGES = new Set(['leads', 'dashboard', 'wallet', 'admin', 'trends', 'market', 'managed']);
+
+  // Lightweight auth gate — when launch-ready and visitor isn't logged in,
+  // gently redirect them to homepage and pop the AccountModal.
+  const requireAuth = (renderFn) => {
+    if (isLoggedIn) return renderFn();
+    // Defer state updates to next tick to avoid React render-time setState.
+    setTimeout(() => { setAccountModalOpen(true); setPage('home'); }, 0);
+    return <HomePage />;
+  };
+
   // No useMemo — prevents stale renders & black screen during rapid page switching
   const renderPage = () => {
+    if (PROTECTED_PAGES.has(page)) {
+      switch (page) {
+        case 'dashboard': return requireAuth(() => <DashboardPage onSelect={selectLead} />);
+        case 'leads':     return requireAuth(() => <LeadsPage onSelect={selectLead} />);
+        case 'trends':    return requireAuth(() => <TrendsPage />);
+        case 'market':    return requireAuth(() => <TrendsPage />);
+        case 'wallet':    return requireAuth(() => <WalletPage />);
+        case 'admin':     return requireAuth(() => <AdminPage />);
+        case 'managed':   return requireAuth(() => <LeadsPage onSelect={selectLead} />);
+      }
+    }
     switch (page) {
-      case 'home': return <HomePage />;
-      case 'dashboard': return <DashboardPage onSelect={selectLead} />;
-      case 'leads': return <LeadsPage onSelect={selectLead} />;
-      case 'trends': return <TrendsPage />;
-      case 'market': return <TrendsPage />; // legacy route — C key now maps to trends
-      case 'wallet': return <WalletPage />;
-      case 'admin': return <AdminPage />;
+      case 'home':  return <HomePage />;
       case 'audit': return <AuditPage />;
-      // managed consolidated into leads v7.4 — enterprise is just top B2B tier
-      case 'managed': return <LeadsPage onSelect={selectLead} />;
-      // builder and whop removed — don't help users close deals
-      // LaunchPad removed
-      // casino removed
-      // comms and finder removed
-      default: return <HomePage />;
+      default:      return <HomePage />;
     }
   };
+
+  // ───────────────────────────────────────────────────────────────────────
+  // v7.5 LAUNCH GATE — show ComingSoonPage until VITE_LAUNCH_READY === 'true'
+  // -----------------------------------------------------------------------
+  // The full app codebase still ships in the bundle (so previews/audits work
+  // for operator/admin), but the public surface is hidden behind the cover.
+  // To bypass locally for preview, set localStorage.goated_operator_preview = '1'.
+  // To go live in production, set VITE_LAUNCH_READY=true in Vercel env vars.
+  // ───────────────────────────────────────────────────────────────────────
+  const launchReady = (import.meta.env.VITE_LAUNCH_READY === 'true');
+  const operatorPreview = (typeof window !== 'undefined' &&
+    (localStorage.getItem('goated_operator_preview') === '1' ||
+     window.location.hash.toLowerCase().includes('preview=1')));
+  // Audit page is always public (lead magnet). Cover only blocks the rest.
+  const isAuditRoute = (typeof window !== 'undefined' &&
+    /^#\/(for\/|audit)/i.test(window.location.hash || ''));
+  if (!launchReady && !operatorPreview && !isAuditRoute) {
+    return <ComingSoonPage />;
+  }
 
   return (
     <div className={`min-h-screen bg-surface-0 text-slate-100 font-sans noise-overlay ${degenMode ? 'degen-mode' : ''}`}>

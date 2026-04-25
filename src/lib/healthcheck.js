@@ -6,9 +6,12 @@
 // Can be triggered from the Admin page or programmatically.
 // =============================================================================
 
+// v7.5 — Kalshi + Polymarket removed (predictions, irrelevant to B2B agency).
+// Frees 2 serverless function slots for Stripe + Supabase webhook handlers.
 const API_ENDPOINTS = [
-  { id: 'chat',         url: '/api/chat',         label: 'AI Chat',           method: 'GET' },
-  { id: 'goated-ai',    url: '/api/goated-ai',    label: 'GOATED AI Engine',  method: 'GET' },
+  { id: 'audit',        url: '/api/audit',         label: 'Revenue Audit',     method: 'GET' },
+  { id: 'chat',         url: '/api/chat',          label: 'AI Chat',           method: 'GET' },
+  { id: 'goated-ai',    url: '/api/goated-ai',     label: 'GOATED AI Engine',  method: 'GET' },
   { id: 'leads',        url: '/api/leads',         label: 'Leads API',         method: 'GET' },
   { id: 'market-data',  url: '/api/market-data',   label: 'Market Data',       method: 'GET' },
   { id: 'sentiment',    url: '/api/sentiment',     label: 'Sentiment API',     method: 'GET' },
@@ -16,8 +19,6 @@ const API_ENDPOINTS = [
   { id: 'dashboard',    url: '/api/dashboard',     label: 'Dashboard API',     method: 'GET' },
   { id: 'plays',        url: '/api/plays',         label: 'Plays API',         method: 'GET' },
   { id: 'intelligence', url: '/api/intelligence',  label: 'Intelligence API',  method: 'GET' },
-  { id: 'kalshi',       url: '/api/kalshi',        label: 'Kalshi API',        method: 'GET' },
-  { id: 'polymarket',   url: '/api/polymarket',    label: 'Polymarket API',    method: 'GET' },
 ];
 
 const PING_TIMEOUT_MS = 8000;
