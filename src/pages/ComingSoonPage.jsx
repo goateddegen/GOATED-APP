@@ -16,8 +16,30 @@
 // or by appending ?preview=1 to the URL hash.
 // =============================================================================
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import GoatLogo from '../components/GoatLogo';
+
+// Pick a goat-head pixel size from the viewport. GoatLogo's wrapper applies
+// width/height inline (numeric `size` prop), so we drive it imperatively
+// rather than via CSS clamp — keeps the SVG perfectly square at every breakpoint.
+function useResponsiveGoatSize() {
+  const compute = () => {
+    if (typeof window === 'undefined') return 280;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    // Cap by both width AND height so it never crowds the title vertically.
+    const byWidth = Math.min(360, Math.max(200, w * 0.32));
+    const byHeight = h * 0.36;
+    return Math.round(Math.min(byWidth, byHeight));
+  };
+  const [size, setSize] = useState(compute);
+  useEffect(() => {
+    const onResize = () => setSize(compute());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return size;
+}
 
 // ─── Degen palette (matches DEGEN MODE in useStore) ─────────────────────────
 // All warm: red → orange → amber. No green anywhere.
@@ -128,14 +150,15 @@ function DegenParticles() {
 function GoatedTitle() {
   return (
     <h1
-      className="relative font-black tracking-tighter select-none m-0"
+      className="relative font-black tracking-tighter select-none m-0 mx-auto whitespace-nowrap"
       style={{
-        // Smaller max + tighter clamp curve so it never overruns its container.
-        // Padding-block + line-height: 1.15 prevents background-clip:text from
-        // chopping the top/bottom of the glyphs (the previous clipping bug).
-        fontSize: 'clamp(3rem, 12vw, 10rem)',
+        // Tighter clamp + max-width 100% so it never overruns the viewport.
+        // line-height 1.15 + padding-block prevents background-clip:text from
+        // chopping the top/bottom of the glyphs.
+        fontSize: 'clamp(2.75rem, 11vw, 9rem)',
         lineHeight: 1.15,
-        padding: '0.06em 0.04em',
+        padding: '0.08em 0.06em',
+        maxWidth: '100%',
         backgroundImage:
           'linear-gradient(120deg, #ef4444 0%, #f87171 18%, #f97316 38%, #fbbf24 58%, #f97316 78%, #ef4444 100%)',
         backgroundSize: '300% 100%',
@@ -155,9 +178,11 @@ function GoatedTitle() {
 
 // ─── Coming Soon page ──────────────────────────────────────────────────────
 export default function ComingSoonPage() {
+  const goatSize = useResponsiveGoatSize();
+
   return (
     <div
-      className="relative min-h-screen w-full overflow-hidden bg-black flex items-center justify-center px-6"
+      className="relative min-h-screen w-full overflow-hidden bg-black flex items-center justify-center px-4 sm:px-6 py-10"
       style={{ cursor: 'crosshair' }}
     >
       {/* Inline keyframes — kept local so this file is self-contained. */}
@@ -191,28 +216,24 @@ export default function ComingSoonPage() {
       {/* Particle layer */}
       <DegenParticles />
 
-      {/* Centerpiece — oversized goat + tight wordmark + tiny subtext */}
-      <div className="relative z-10 flex flex-col items-center gap-2 text-center max-w-2xl">
+      {/* Centerpiece — goat → wordmark → subtext, all dead-center, no overlap */}
+      <div className="relative z-10 flex flex-col items-center justify-center text-center w-full max-w-[min(92vw,640px)] min-w-0">
         {/*
-          Bigger 3D goat. clamp(220px, 30vw, 380px) → scales gracefully on
-          mobile while dominating on desktop. Negative margin pulls the
-          wordmark in tight underneath without losing breathing room.
+          3D goat — size driven by viewport via useResponsiveGoatSize().
+          flex-shrink-0 prevents the row from collapsing, mb-2 gives a clean
+          gap into the wordmark with no overlap.
         */}
-        <div
-          className="select-none"
-          style={{
-            width: 'clamp(220px, 30vw, 380px)',
-            height: 'clamp(220px, 30vw, 380px)',
-            marginBottom: '-1.25rem',
-          }}
-        >
-          <GoatLogo size={380} className="w-full h-full" />
+        <div className="flex-shrink-0 mb-2 sm:mb-3">
+          <GoatLogo size={goatSize} />
         </div>
 
-        <GoatedTitle />
+        {/* min-width:0 lets the wordmark shrink rather than overflow on narrow viewports */}
+        <div className="w-full min-w-0 flex flex-col items-center">
+          <GoatedTitle />
+        </div>
 
         {/* Tiny subtext — no CTA, no form, no marketing */}
-        <p className="mt-1 text-[11px] sm:text-xs text-slate-400/80 max-w-md leading-relaxed font-medium tracking-wide">
+        <p className="mt-3 sm:mt-4 text-[11px] sm:text-xs text-slate-400/80 max-w-md leading-relaxed font-medium tracking-wide px-2">
           Probably the greatest thing that&apos;s ever happened to small business.
           <span className="block text-[10px] text-slate-600 mt-1.5 font-normal">
             Private. Application-only. We&apos;re paid when you close.
