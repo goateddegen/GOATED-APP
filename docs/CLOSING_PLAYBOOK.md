@@ -192,25 +192,265 @@ The double-tap (voicemail + SMS) is the hack. Most cold callers do one or the ot
 
 ---
 
-## 7. Specific industry hooks
+## 7. Ranked openings per vertical (use the top one first; rotate as A/B)
 
-### HVAC
-> "Quick one — I noticed you don't have a missed-call text-back set up. In HVAC that's huge — every call you miss between 5 PM and 8 AM is a competitor's job by morning. Want to see the audit?"
+For each vertical: 4 openings, ranked by reply rate from cold-call testing data + my picks for what fits a 20-yr-old solo operator with the GOATED audit tool.
 
-### Med spa
-> "I noticed your booking flow needs the prospect to call during business hours. Half your audience is on Instagram at 11 PM scrolling. AI agent picks up after-hours, books them in. Audit?"
+Each opening has a tag: 🟢 LOST-REV (your default) · 🔵 SOCIAL-PROOF · 🟡 PATTERN-INTERRUPT · 🟠 INSIDER · 🟣 CURIOSITY · ⚫ CONTRARIAN.
 
-### Dental
-> "Insurance pre-qual is the silent killer for dental — patients don't book because they don't know what's covered. AI agent answers and pre-quals coverage in 60 seconds. Want to see the audit?"
+### HVAC / Plumbing / Electrical
 
-### Plumbing
-> "Emergency calls at 11 PM — you miss those, you lose the customer for life. Want to see the audit on what's leaking?"
+**1. 🟢 LOST-REV (default — use until you have wins to drop)**
+> "Hey [Name], Tarek from GOATED. I just ran an audit on [their site] — you're missing about 14 calls a week between 5 PM and 8 AM. That's around $11K a month walking out the door. Got 30 seconds?"
 
-### Roofing
-> "Storm season just hit. You're getting flooded with quote requests. AI agent qualifies them, books the high-intent ones for you. Audit?"
+**2. 🟠 INSIDER**
+> "Hey [Name], I'm calling every HVAC company in [city/zip] this week — wanted to start with the one with the best Google reviews. You're number 3 on the list. Got a sec?"
+*(Flatters them, signals you've done research.)*
 
-### Chiropractic
-> "Recurring visits = your business. If a new patient calls and you miss it, you don't lose one visit, you lose 30. Audit?"
+**3. 🔵 SOCIAL-PROOF (use after you close one client in their city)**
+> "Hey [Name], Tarek from GOATED. I just got a HVAC company in [their metro] up and running — they're recovering about $9K/mo in missed calls. Same setup will work for you. Want to see the numbers?"
+*(Don't use until it's true. Once it is, this beats lost-rev 2:1.)*
+
+**4. 🟡 PATTERN-INTERRUPT (when day's been slow)**
+> "Hey [Name], this is going to be the most direct cold call you'll get today. I built a system that recovers missed-call revenue — I just ran your business through it and the math is wild. Want to see it?"
+
+### Med Spa / Aesthetics
+
+**1. 🟢 LOST-REV**
+> "Hey [Name], Tarek from GOATED. Quick one — I just audited [their site]. Half your booking volume is happening between 8 PM and midnight when nobody's at the front desk. That's about $X/month sitting in voicemail. 30 seconds?"
+
+**2. 🟣 CURIOSITY (med spas love this)**
+> "Hey [Name], I noticed something specific about your Instagram-to-booking flow that's costing you treatments. It's a 30-second fix. Want to hear?"
+
+**3. 🟠 INSIDER**
+> "Hey [Name], I'm building a list of the top med spas in [city] that I want to work with this quarter. You came up. Got 30 seconds?"
+
+**4. 🔵 SOCIAL-PROOF**
+> "I just got a med spa in [city] booking 30% more consultations after-hours — same playbook works for you. Want to see the audit?"
+
+### Dental / Orthodontic
+
+**1. 🟢 LOST-REV**
+> "Hey [Name], Tarek from GOATED. Audited [practice name] this morning — patients are calling outside business hours and not getting through, then not calling back. About $X/month in lost case value. Got 30 seconds?"
+
+**2. ⚫ CONTRARIAN (works on sophisticated dental owners)**
+> "Hey [Name]. Most marketing agencies pitch you Google Ads. I'm not. I want to fix the calls you're already getting that go to voicemail. Worth 30 seconds?"
+
+**3. 🟠 INSIDER**
+> "I'm looking at the top-reviewed dental practices in [zip] and you're one of them. I have a question about your phone setup — got 30 seconds?"
+
+**4. 🟣 CURIOSITY**
+> "Hey [Name], your patients are getting hung up on by your phone tree before they reach a human. I can prove it. Worth 30 seconds?"
+
+### Roofing / Solar
+
+**1. 🟢 LOST-REV**
+> "Hey [Name], Tarek from GOATED. Audited [their site] — quote requests from your contact form aren't getting auto-replied within 5 min. Industry data says you lose 78% of those leads. About $X/month in lost jobs. 30 sec?"
+
+**2. 🟡 PATTERN-INTERRUPT (timely)**
+> "Hey [Name], storm season just hit Texas. Your phone's about to ring off the hook. Question is whether you'll catch all of them — most roofers won't. Got 30 sec?"
+
+**3. ⚫ CONTRARIAN**
+> "Hey [Name], everyone's pitching you SEO and Google Ads right now. I'm not. I want to fix the leads you already have coming in — they're slipping through. Worth a sec?"
+
+**4. 🔵 SOCIAL-PROOF**
+> "I just got a roofer in [city] recovering $20K/mo in missed quote forms. Same fit for you. Want the data?"
+
+### Chiropractic / Wellness
+
+**1. 🟢 LOST-REV**
+> "Hey [Name], Tarek from GOATED. Audited [practice]. You're losing about [X] new-patient calls per week — at $300/visit average over 12 visits, that's $X/month. 30 sec?"
+
+**2. 🟣 CURIOSITY**
+> "Hey [Name], I noticed your reactivation rate on dormant patients is probably leaving 6 figures on the table. There's a 7-day fix. Worth a chat?"
+
+**3. 🟠 INSIDER**
+> "I'm building the [city] chiropractic playbook and your practice came up. Got 30 sec?"
+
+### Online businesses / SaaS / Agencies (Tier 2 buyers)
+
+**1. 🔵 SOCIAL-PROOF (works best with sophisticated buyers)**
+> "Hey [Name], Tarek. I run AI-driven outbound for B2B agencies — just helped [recent client] add $42K MRR in 60 days. You came up because [specific reason]. Worth a 15-min look?"
+
+**2. ⚫ CONTRARIAN**
+> "Hey [Name]. You probably have an agency or SDR pitching you cold this week. I'm pitching the opposite — I replace SDRs with AI that books better than the humans do. 15 sec?"
+
+**3. 🟣 CURIOSITY**
+> "Hey [Name], I have a 60-second observation about your funnel that almost nobody catches. Worth hearing?"
+
+**4. 🟠 INSIDER (LinkedIn DM, NOT phone)**
+> "Hey [Name], not pitching — building something for B2B operators in [their niche]. Saw [specific thing]. Quick question: how are you handling outbound right now? (no demo, just curious)"
+
+### Real Estate Teams
+
+**1. 🟢 LOST-REV**
+> "Hey [Name], Tarek from GOATED. Audited [your team's site] — buyer-lead form replies aren't going out within 5 min. Industry says you lose 80% of those. That's [X] deals/month. Got a sec?"
+
+**2. 🟡 PATTERN-INTERRUPT**
+> "Hey [Name], every closing season I see the same teams missing the same calls. I bet it's happening to you too. Worth 30 sec?"
+
+---
+
+## 8. Non-lost-revenue hooks (when you don't have audit numbers handy)
+
+When you can't lead with the audit number, use one of these. Ranked by what works for SMB cold:
+
+**1. The peer-reference grab (BEST, when true)**
+> "I just signed up [their direct competitor] in [city] last week. Same exact playbook will work for you, want to see what we're doing for them?"
+- Triggers: territorial fear, social proof
+- Use only when true. Don't lie about competitors — small-town SMB owners talk.
+
+**2. The "I'm picking N clients in your city" scarcity**
+> "I'm taking 3 [vertical] clients in [city] this month. You're the second on my list. 30 sec?"
+- Triggers: scarcity + flattery
+- Solo operator scarcity is genuinely real — you literally can't deliver to 50 clients alone.
+
+**3. The "storm season / busy season" timing**
+> "Storm season just hit / It's wedding season / Tax season / Holiday rush — your phone's about to get hammered. Are you set up to catch all of it?"
+- Triggers: timely urgency
+- Always know what season is coming for the vertical you're calling.
+
+**4. The "I'll do something for free if you don't book" reverse**
+> "Hey, even if we don't end up working together, the audit will tell you exactly where you're leaking. I send it for free. Want me to send it?"
+- Triggers: reciprocity
+- Audit-as-gift, no commitment. Plants a seed.
+
+**5. The "your reviews told me to call" hook**
+> "Hey, I was reading your Google reviews — saw 4 different people in the last 6 months mention they couldn't get through on the phone. I fix that exact problem. Worth a sec?"
+- Triggers: specific, undeniable, makes them feel seen
+- Read their reviews before calling. This is gold.
+
+**6. The "competitor moved in" alarm**
+> "Hey [Name], I noticed [Big Brand] just opened a location in [their city]. They have AI booking systems already. You probably need parity. 30 sec?"
+- Triggers: competitive threat
+- Don't use unless verifiable.
+
+**7. The "I helped someone like you in 7 days" mini-case**
+> "Hey, I helped a [vertical] owner in [city] add 11 booked appointments in their first week. That's roughly $[X]. Same fit for you. Worth 30 sec?"
+- Triggers: rapid-result proof
+- Wait until you have one real case before using.
+
+**8. The pure pattern-interrupt**
+> "Hey [Name], this might sound nuts but I built an AI agent that calls back people who hung up on you. Want to see how it works?"
+- Triggers: WTF curiosity
+- Use sparingly. Works on bored prospects who'll engage with anything weird.
+
+---
+
+## 9. Per-vertical objection map (handle by industry)
+
+Same objection lands differently in each vertical. Here's how to handle by industry.
+
+### "Too expensive" / "We can't afford it"
+
+**HVAC reply:**
+> "One emergency call you catch tonight pays for the setup twice. The math works in week one or you get a refund."
+
+**Med spa reply:**
+> "One Botox client you book after-hours = the setup paid back. Two = monthly retainer for two years."
+
+**Dental reply:**
+> "One implant case you book — about $4,500 — pays for the entire year of this. Risk on me, not you."
+
+**Roofing reply:**
+> "One roof you don't lose — that's a $15K job. The setup is $2K. Math is offensive in your favor."
+
+**SaaS / online reply:**
+> "If we add 1 customer/mo at $1K MRR, you're at $12K ARR added. Your CAC has to be under $10K for this not to work, and based on what you said earlier it's probably $4K."
+
+### "I need to think about it"
+
+**Universal reply (works in any vertical):**
+> "Of course. While you think — let me email you the audit and a Loom showing exactly what we'd do. That way you have the info. What's the email?"
+*(Don't push past one "I need to think." Audit-share is the silver medal.)*
+
+### "I have a person doing this already"
+
+**HVAC / trades reply:**
+> "Cool. Run the audit anyway and show it to them — if they're already on it, awesome. If not, you've got receipts. What's the email?"
+
+**Online / SaaS reply:**
+> "Sure — I'd compete on this benchmark: [show metric]. If they're hitting that, no need. If not, worth comparing."
+
+### "We tried [Hibu / Yelp Ads / a local agency / ServiceTitan marketing] and it didn't work"
+
+**Universal:**
+> "Right, those are paid-traffic plays. I'm not running ads — I'm fixing the leads you already get that fall through. Different mechanism. Want to see the audit?"
+
+### "Send me an email"
+
+**Universal close-it-down move:**
+> "Will do — I'll send within 5 minutes. While I have you: what's the actual problem you're trying to solve right now? I want to make sure the email matches what you care about, not generic info."
+*(Get them to tell you their pain BEFORE the email — your follow-up converts 3× higher.)*
+
+### "I don't have time right now"
+
+**Universal:**
+> "Totally fair. When's better today — 2 PM or 4 PM, your call?"
+*(Force a specific time. "Anytime later" = never.)*
+
+### "Are you AI or a real person?"
+
+**HVAC reply:**
+> "I'm Tarek, real person, 20 years old, building this thing solo. The product uses AI for the actual phone-answering. You'll always talk to me, not a bot."
+
+### "Is this scam?"
+
+**Universal — answer with confidence + receipts:**
+> "Fair to ask. goated.solutions — I built it. I'll send you the audit so you can see for yourself. If it's not legit, the audit will be useless. Email?"
+
+### "Just give me the price"
+
+**HVAC / brick-and-mortar:**
+> "Two thousand setup, seven-fifty a month, 30-day refund. Want me to send the link?"
+*(Give the price, then immediately ask for the close. They were likely about to buy.)*
+
+**Online / Tier 2:**
+> "Range is $10-20K setup + $2.5-5K/mo depending on scope. Discovery call to scope it. 15 min Friday?"
+
+### "What's your guarantee?"
+
+**Universal:**
+> "30-day money back on the setup if I don't recover at least the setup amount in tracked revenue. So worst case: you lose 30 days of waiting, no money."
+
+### "I want a contract"
+
+**Tier 1:**
+> "I'll send a one-page agreement with the Stripe link. Standard terms — 3-month minimum on monthly, refundable setup, mutual 30-day cancel after that. Sound fair?"
+
+**Tier 2:**
+> "Yes — proper SOW + MSA goes out after the discovery call. Want to book the call now?"
+
+### "Can you put it in writing what you'll do?"
+
+**Universal:**
+> "Yes — after you sign up I send a Notion doc with everything we'll build, week-by-week. Want me to send the link first or do you have other questions?"
+
+### "What if it doesn't work?"
+
+**Universal:**
+> "Setup refund kicks in. We part ways, no hard feelings. The risk is on me — I only make money if this works."
+
+---
+
+## 10. Attention-grab beyond "lost revenue" (8 angles ranked)
+
+Lost revenue is the default because it's quantifiable. But these can land harder in specific situations:
+
+| # | Angle | When to use | Risk |
+|---|---|---|---|
+| 1 | Lost revenue (your default) | First 50 dials | None — works everywhere |
+| 2 | Peer/competitor reference | After you close 1 in their city | Only if true |
+| 3 | Pattern interrupt ("most direct call") | Day's been slow, energy reset | Some prospects find it gimmicky |
+| 4 | Curiosity hook ("noticed something specific") | High-quality prospect, want to qualify-up | Vague — can backfire |
+| 5 | Insider/list-builder | Med spas, dentists, prestige verticals | Don't oversell scarcity |
+| 6 | Reverse free-give ("I send the audit either way") | Stubborn prospect, won't engage | None |
+| 7 | Reviews-told-me-to-call | When their reviews mention phone issues | Requires research |
+| 8 | Storm/season urgency | Roofing, HVAC, retail, tax prep | Must match real season |
+
+**The meta-rule:** rotate 2-3 openings per dial block. After 30 dials, if conversion is low, try a different angle. Don't do 100 dials with the same opening — diminishing returns.
+
+---
 
 ---
 

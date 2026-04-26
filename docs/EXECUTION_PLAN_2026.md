@@ -246,6 +246,37 @@ Total budget:                            $548
 
 ---
 
+## 9.5. Upsell architecture (the LTV multiplier)
+
+Tier 1 base ($2K + $750/mo) is the door-opener. The compounding plays sit in `docs/UPSELL_CATALOG.md` — 17 ranked modules, each with implementation steps + cost-to-build.
+
+**Standard sequencing:**
+1. **Day 0-14**: Land + deliver Tier 1 base (voice agent + SMS + booking + monthly report)
+2. **Day 15-28**: Show first recovered-revenue numbers
+3. **Day 30 check-in call**: Pitch ONE upsell module that matches their stated friction
+4. **Day 60-90**: Compound 2-3 modules → $2-3K extra/mo per client
+
+**Where the $30-40K June goal can compound from:**
+- 5 Tier 1 base × $2,750 month-1 = $13,750
+- 2 of those 5 add #6 review automation by month 2 = +$3,000 setup + $600/mo
+- 1 of those 5 adds #8 SMS reactivation = +$1,500
+- 1 Tier 2 close × $12,500 month-1 = $12,500
+- That Tier 2 client adds #11 custom AI agent in month 2 = +$5,000-10,000
+
+**Realistic compounded total by Jun 13: $35-50K cash collected.**
+
+**The big custom plays** (only for Tier 2 / Growth Engine deposits >$10K):
+- #11 Custom industry-specific AI agent (HVAC estimator, dental insurance pre-qual, roofing damage AI, etc.)
+- #16 AI-powered SDR replacement (full outbound stack, $8-15K setup + $2.5-5K/mo)
+- #17 Computer vision for inspection/quoting (roof/auto/HVAC visual AI)
+- #14 Programmatic SEO landing pages (multi-location, e-com)
+
+These are 3-5 week build projects. Stack 1 of these on top of the Tier 2 base = $50-80K first-month deals.
+
+See `docs/UPSELL_CATALOG.md` for full implementation specs on every module.
+
+---
+
 ## 10. What we're NOT doing (DELETED scope)
 
 - ❌ Public product launch / Product Hunt / TechCrunch outreach

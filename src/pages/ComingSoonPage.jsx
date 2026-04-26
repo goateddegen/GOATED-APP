@@ -146,18 +146,20 @@ function DegenParticles() {
   );
 }
 
-// ─── GOATED wordmark — Unbounded display font, red→orange→amber gradient ───
+// ─── GOATED wordmark — Unbounded display, dialed back for readability ──────
 function GoatedTitle() {
   return (
     <h1
       className="relative select-none m-0 mx-auto whitespace-nowrap"
       style={{
-        // Unbounded — wide geometric display, free Google Font. Distinctive
-        // shape (won't read as another generic crypto/secr-style wordmark).
+        // Unbounded 700 (was 800) + slightly looser letter-spacing reads
+        // less "futuristic crypto" and more "premium business". Still
+        // distinct, but doesn't shout. Falls back to Space Grotesk if
+        // Unbounded fails to load — both are wide enough to hold the
+        // gradient sweep without looking generic.
         fontFamily: '"Unbounded", "Space Grotesk", system-ui, sans-serif',
-        fontWeight: 800,
-        fontStretch: '100%',
-        letterSpacing: '-0.02em',
+        fontWeight: 700,
+        letterSpacing: '0',
         fontSize: 'clamp(2.5rem, 10.5vw, 8.5rem)',
         lineHeight: 1.18,
         padding: '0.1em 0.08em',
