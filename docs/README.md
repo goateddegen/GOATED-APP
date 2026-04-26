@@ -13,8 +13,9 @@ This is the live index of all current documentation. Read top-to-bottom for full
 | # | Doc | Read time | Priority |
 |---|---|---|---|
 | 1 | [`EXECUTION_PLAN_2026.md`](./EXECUTION_PLAN_2026.md) | 10 min | **Read first** — strategic foundation, agency-first pivot |
-| 2 | [`WEEKEND_TO_MONDAY.md`](./WEEKEND_TO_MONDAY.md) | 10 min | Saturday infra → Sunday script → Monday kill day |
-| 3 | [`WEEK_1_TACTICAL.md`](./WEEK_1_TACTICAL.md) | 15 min | Hour-by-hour schedule for Mon-Fri |
+| 2 | [`MONDAY_LAUNCH_CHECKLIST.md`](./MONDAY_LAUNCH_CHECKLIST.md) | 15 min | **Read Saturday morning** — master action list (integrations + opsec + sales prep + contingencies) |
+| 3 | [`WEEKEND_TO_MONDAY.md`](./WEEKEND_TO_MONDAY.md) | 10 min | Saturday infra → Sunday script → Monday kill day |
+| 4 | [`WEEK_1_TACTICAL.md`](./WEEK_1_TACTICAL.md) | 15 min | Hour-by-hour schedule for Mon-Fri |
 
 ---
 
@@ -27,6 +28,7 @@ This is the live index of all current documentation. Read top-to-bottom for full
 | [`CLOSING_PLAYBOOK.md`](./CLOSING_PLAYBOOK.md) | Memorized opening, objection handling, close mechanics |
 | [`OBJECTIONS_BY_VERTICAL.md`](./OBJECTIONS_BY_VERTICAL.md) | Vertical-specific objection responses |
 | [`CHEAT_SHEETS.md`](./CHEAT_SHEETS.md) | 18 print-ready one-pagers (pre-dial, voicemail, SMS, decision tree) |
+| [`TEMPLATES.md`](./TEMPLATES.md) | 26 pre-built email + SMS + voicemail + Loom scripts |
 | [`UPSELL_CATALOG.md`](./UPSELL_CATALOG.md) | 35 modules to upsell at Day 30 |
 
 ---
@@ -51,11 +53,12 @@ This is the live index of all current documentation. Read top-to-bottom for full
 
 ---
 
-## ⚙️ Technical
+## ⚙️ Technical & legal
 
 | Doc | Use |
 |---|---|
 | [`INTEGRATIONS.md`](./INTEGRATIONS.md) | Production integrations, env vars, setup commands |
+| [`COMPLIANCE_BASICS.md`](./COMPLIANCE_BASICS.md) | TCPA, A2P 10DLC SMS, recording consent, CAN-SPAM, HIPAA |
 
 ---
 
@@ -67,15 +70,19 @@ This is the live index of all current documentation. Read top-to-bottom for full
 
 ## 🗓️ Reading schedule
 
+### Saturday morning (1 doc, 15 min)
+1. MONDAY_LAUNCH_CHECKLIST — pulls every action item into one place
+
 ### Sunday before Monday launch (90 min total)
 1. WEEKEND_TO_MONDAY (10 min) — final infra check
 2. WEEK_1_TACTICAL (15 min) — internalize the schedule
 3. CLOSING_PLAYBOOK (15 min) — opening + creed memorized
 4. OUTREACH_OPENINGS_RANKED §1-3 (10 min) — pick TWO openings
 5. OBJECTIONS_BY_VERTICAL for top vertical (10 min)
-6. CHEAT_SHEETS (15 min) — print + pin
-7. CLOSER'S CREED out loud (5 min)
-8. Sleep
+6. TEMPLATES (5 min) — save key templates to phone Notes
+7. CHEAT_SHEETS (15 min) — print + pin
+8. CLOSER'S CREED out loud (5 min)
+9. Sleep
 
 ### First Saturday of every month
 - Re-read EXECUTION_PLAN_2026 §1-3
