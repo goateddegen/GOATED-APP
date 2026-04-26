@@ -12,7 +12,12 @@
 >
 > Use **Google Voice** with 3 area-code-matched numbers for first 50 dials.
 > Lead every conversation with the **lost revenue number** from a pre-run GOATED audit.
-> Pitch is one sentence: *"You're missing X calls a week worth $Y/mo. I plug the leak. $1.5K setup, $2.5K/mo, 30-day refund."*
+> Pitch is one sentence (Tier 1 / Local Engine):
+> *"You're missing X calls a week worth $Y/mo. I plug the leak. **$2K setup, $750/mo**, 30-day refund."*
+>
+> Tier 2 (Growth Engine, online biz / agencies): **$10–20K setup + $2.5–5K/mo** + optional 10–20% rev share. Don't pitch on first call — book a discovery call instead.
+>
+> See **`docs/CLOSING_PLAYBOOK.md`** for the full dial script, objection map, and post-close onboarding sprint.
 
 ---
 

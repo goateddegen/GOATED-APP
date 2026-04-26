@@ -28,15 +28,29 @@
 
 ## 2. Money math — what closes get us to $30–40K?
 
-### Deal shape (target)
+### Deal shape (target) — TWO TIERS, v7.5.4
 
+**Tier 1 — Local Engine** (brick & mortar, primary outbound target)
 ```
-Setup fee:        $1,500–3,000  (one-time, charged on signup)
-Monthly retainer: $2,500–5,000  (recurring, 3-month minimum)
-Commission:       13% on revenue we generate (net of platform fees)
+Setup fee:        $2,000  (one-time, refundable in 30 days)
+Monthly retainer: $750    (recurring, 3-month minimum)
+M1 cash:          $2,750
+M6 cash total:    $6,500
+M12 cash total:   $11,000
 ```
 
-**Total deal first-month value: $4,000–8,000 cash collected.**
+**Tier 2 — Growth Engine** (online biz, $1M+ SMB, agencies, consultancies)
+```
+Setup fee:        $10,000–20,000  (one-time)
+Monthly retainer: $2,500–5,000    (recurring, 6-month minimum)
+Rev share:        Optional 10–20% on attributed revenue
+M1 cash:          $12,500–$25,000
+M6 cash total:    $25K–$50K
+```
+
+**Why deposit > retainer:** the prior model had monthly retainer ≈ deposit, which is structurally wrong. Big deposit = commitment filter (kills tire-kickers). Sticky-cheap retainer = hard to cancel = long LTV. Compounds favorably for both sides.
+
+**Commission:** 13% flat on attributed closed revenue still applies — that's the Stripe-rails take, separate from setup/retainer.
 
 ### Path-to-$30K math
 

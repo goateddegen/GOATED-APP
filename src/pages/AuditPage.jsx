@@ -534,7 +534,16 @@ export default function AuditPage() {
                 </div>
                 <div className="text-sm text-slate-300 leading-relaxed">
                   We run the missed-call recovery, the cold outreach, the booking flow — the whole engine that turns this audit into actual revenue.
-                  <span className="font-semibold text-white"> No upfront retainer. We get paid when a deal closes.</span>
+                </div>
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                  <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
+                    <div className="text-emerald-400 font-bold mb-0.5">Local Engine</div>
+                    <div className="text-slate-400">$2,000 setup + $750/mo · 30-day refund</div>
+                  </div>
+                  <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+                    <div className="text-amber-400 font-bold mb-0.5">Growth Engine</div>
+                    <div className="text-slate-400">$10–20K setup + $2.5–5K/mo · application</div>
+                  </div>
                 </div>
                 {a.oneLinePitch && (
                   <div className="mt-3 text-xs text-slate-400 italic border-l-2 pl-3" style={{ borderColor: accentBr }}>

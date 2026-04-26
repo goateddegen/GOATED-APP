@@ -734,11 +734,11 @@ export default function HomePage() {
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">We don&apos;t show the hand on a public page. Every deal is scoped on the audit call, and the split is set at the transaction level — disclosed on the invoice, not the marketing site.</p>
           </motion.div>
 
-          {/* Outcome tracks — no $$$ exposed */}
+          {/* Outcome tracks — Local Engine vs Growth Engine */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto mb-10">
             {[
-              { icon: DollarSign, title: 'Self-Serve OS', headline: 'Free', desc: 'Full platform access. Audit, AI voice, SMS, LinkedIn, pipeline, scripts. Nothing to pay until you actually close a deal through the stack.', color: '#10b981', cta: { label: 'Start free', page: 'audit' } },
-              { icon: Target, title: 'Commission Model', headline: '13% flat on close', desc: 'We only get paid when you close a deal through the stack. Flat 13% on settled revenue — we absorb Stripe fees, dispute reserves, the plumbing. No setup, no seats, no retainer.', color: '#f59e0b', cta: { label: 'Book audit', page: 'audit' } },
+              { icon: Target,    title: 'Local Engine',  headline: '$2K + $750/mo', desc: 'For HVAC, dental, med spas, plumbing, roofing — anyone who loses revenue when the phone goes unanswered. AI agent answers in 60 sec, books, follows up. Setup pays for itself inside month one or we refund.', color: '#10b981', cta: { label: 'Run free audit', page: 'audit' } },
+              { icon: DollarSign, title: 'Growth Engine', headline: '$10–20K + $2.5–5K/mo', desc: 'For online businesses, agencies, $1M+ SMBs. Full audit + outbound SDR + voice agent + custom build. Optional rev share on attributed revenue. Application-only — we limit slots.', color: '#f59e0b', cta: { label: 'Apply', page: 'audit' } },
             ].map((item, i) => (
               <motion.button
                 key={i}

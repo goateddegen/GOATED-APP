@@ -319,16 +319,16 @@ function parseAIPrompt(prompt) {
   return { filters, understood };
 }
 
-// v7.5 — Agency-first targeting. Chips lead with brick-and-mortar verticals
-// where missed-call → lost revenue is the cleanest pitch. Online-biz chips kept
-// as secondary because we still take inbound from SaaS founders if they DM.
+// v7.5.4 — Two-tier targeting:
+//   Local Engine (Tier 1): brick & mortar, deal $5-25K, deposit $2K + $750/mo
+//   Growth Engine (Tier 2): online/agency/SMB, deal $25K+, deposit $10-20K + $2.5-5K/mo
 const PRESET_PROMPTS = [
-  { label: 'Hot to close', prompt: 'Show me quick wins ready to close with high scores', icon: Flame },
-  { label: 'Home services', prompt: 'Healthcare and Construction leads with high deal value above $10K', icon: Target },
-  { label: 'Healthcare', prompt: 'Healthcare and dental practices with owner or director title', icon: Target },
-  { label: 'Local owners', prompt: 'Owner or founder titles with deal value above $8500', icon: Crown },
-  { label: 'Whales', prompt: 'Show me whale enterprise deals above $50K', icon: DollarSign },
-  { label: 'Fresh signal', prompt: 'Newest leads with surging momentum', icon: UserSearch },
+  { label: 'Hot to close',   prompt: 'Show me quick wins ready to close with high scores', icon: Flame },
+  { label: 'Tier 1 · Local', prompt: 'Healthcare and Construction with deal value $5K to $25K and owner title',  icon: Target },
+  { label: 'Tier 2 · Growth',prompt: 'SaaS or MarTech founders with deal value above $25K and surging momentum', icon: Crown },
+  { label: 'Home services',  prompt: 'Construction, Healthcare or Logistics with deal value above $10K',         icon: Target },
+  { label: 'Whales',         prompt: 'Show me whale enterprise deals above $50K',                                 icon: DollarSign },
+  { label: 'Fresh signal',   prompt: 'Newest leads with surging momentum',                                        icon: UserSearch },
 ];
 
 // ---------------------------------------------------------------------------

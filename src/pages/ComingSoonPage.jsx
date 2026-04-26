@@ -146,18 +146,21 @@ function DegenParticles() {
   );
 }
 
-// ─── GOATED wordmark — red→orange→amber gradient sweep, no clipping ────────
+// ─── GOATED wordmark — Unbounded display font, red→orange→amber gradient ───
 function GoatedTitle() {
   return (
     <h1
-      className="relative font-black tracking-tighter select-none m-0 mx-auto whitespace-nowrap"
+      className="relative select-none m-0 mx-auto whitespace-nowrap"
       style={{
-        // Tighter clamp + max-width 100% so it never overruns the viewport.
-        // line-height 1.15 + padding-block prevents background-clip:text from
-        // chopping the top/bottom of the glyphs.
-        fontSize: 'clamp(2.75rem, 11vw, 9rem)',
-        lineHeight: 1.15,
-        padding: '0.08em 0.06em',
+        // Unbounded — wide geometric display, free Google Font. Distinctive
+        // shape (won't read as another generic crypto/secr-style wordmark).
+        fontFamily: '"Unbounded", "Space Grotesk", system-ui, sans-serif',
+        fontWeight: 800,
+        fontStretch: '100%',
+        letterSpacing: '-0.02em',
+        fontSize: 'clamp(2.5rem, 10.5vw, 8.5rem)',
+        lineHeight: 1.18,
+        padding: '0.1em 0.08em',
         maxWidth: '100%',
         backgroundImage:
           'linear-gradient(120deg, #ef4444 0%, #f87171 18%, #f97316 38%, #fbbf24 58%, #f97316 78%, #ef4444 100%)',
@@ -233,7 +236,14 @@ export default function ComingSoonPage() {
         </div>
 
         {/* Tiny subtext — no CTA, no form, no marketing */}
-        <p className="mt-3 sm:mt-4 text-[11px] sm:text-xs text-slate-400/80 max-w-md leading-relaxed font-medium tracking-wide px-2">
+        <p
+          className="mt-3 sm:mt-4 text-[11px] sm:text-xs text-slate-400/80 max-w-md leading-relaxed px-2"
+          style={{
+            fontFamily: '"Space Grotesk", "Inter", system-ui, sans-serif',
+            fontWeight: 500,
+            letterSpacing: '0.01em',
+          }}
+        >
           Probably the greatest thing that&apos;s ever happened to small business.
           <span className="block text-[10px] text-slate-600 mt-1.5 font-normal">
             Private. Application-only. We&apos;re paid when you close.
@@ -242,7 +252,10 @@ export default function ComingSoonPage() {
       </div>
 
       {/* Tiny status pip, bottom-center */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 text-[9px] text-slate-700 font-mono tracking-widest uppercase">
+      <div
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 text-[9px] text-slate-700 tracking-widest uppercase"
+        style={{ fontFamily: '"Space Grotesk", monospace' }}
+      >
         <span className="w-1 h-1 rounded-full bg-orange-400 animate-pulse" />
         <span>v7.5 · private · access by application</span>
       </div>

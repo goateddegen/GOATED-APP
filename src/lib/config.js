@@ -54,22 +54,73 @@ export const CANONICAL_HOST = 'goated.solutions';          // once Namecheap ver
 export const VERCEL_HOST = 'goated-app-nine.vercel.app';    // current fallback
 
 // ─── Pricing source of truth ────────────────────────────────────────────────
-// Used across HomePage, ManagedPage, AuditPage result CTA.
-// NOTE: 13% flat = 12% net platform + ~1% Stripe fee absorption (2.9%+30¢ avg
-// ≈ 3.2% on $10K deals, netted against 13% = ~9.8% net take).
+// v7.5.4 — Two-tier model: Local Engine (brick & mortar) + Growth Engine (online/SMB).
+// Deposit > monthly retainer (fixes the prior "retainer ≈ deposit" problem).
+// Deposit is the commitment filter; sticky-cheap retainer drives long LTV.
+//
+// Tier 1 — Local Engine: brick-and-mortar (HVAC, dental, med spa, chiro, plumbing)
+//   $2,000 setup + $750/mo retainer. M1 = $2,750. M6 = $6,500. M12 = $11,000.
+//
+// Tier 2 — Growth Engine: online biz, consultancies, agencies, larger SMB
+//   $10,000-$20,000 setup + $2,500-$5,000/mo retainer + optional 10-20% rev share.
+//   M1 = $12,500-$25K. M12 = $40-$80K.
+//
+// 13% flat commission still applies on attributed closed deal revenue (not retainers).
 export const PRICING = {
   commission: {
-    flat: 13,               // % we take on every closed deal (platform absorbs Stripe fees)
-    platformSourced: 13,    // deprecated alias — all deals are 13% flat now
-    railsOnly: 13,          // deprecated alias — no more tiered rate
+    flat: 13,
+    platformSourced: 13,
+    railsOnly: 13,
   },
+  // PRIMARY model (tier-based, agency-first)
+  tiers: {
+    local: {
+      label: 'Local Engine',
+      target: 'Brick & mortar (HVAC, dental, med spa, chiro, plumbing, roofing)',
+      setup: 2000,
+      retainer: 750,
+      revShare: 0,
+      minMonths: 3,
+      includes: [
+        'Missed-call recovery (AI voice agent answers in <60 sec)',
+        'SMS auto-text-back on missed calls + after-hours',
+        'Calendar booking integration',
+        'Monthly recovered-revenue report',
+      ],
+      closeCycle: '1-3 calls',
+      idealClose: '$2,750 first-month cash',
+    },
+    growth: {
+      label: 'Growth Engine',
+      target: 'Online biz, agencies, consultancies, $1M+ SMB',
+      setupMin: 10000,
+      setupMax: 20000,
+      retainerMin: 2500,
+      retainerMax: 5000,
+      revShareMin: 10,
+      revShareMax: 20,
+      minMonths: 6,
+      includes: [
+        'Full revenue audit + custom roadmap',
+        'AI voice agent + outbound SDR campaign',
+        'Multi-channel outreach (cold call + SMS + email)',
+        'Custom CRM/integration build',
+        'Weekly performance review',
+        'Optional 10-20% rev share on attributed revenue',
+      ],
+      closeCycle: '2-4 calls',
+      idealClose: '$12,500-$25K first-month cash',
+    },
+  },
+  // LEGACY managed shape — kept temporarily for any UI still reading old keys.
+  // New code reads PRICING.tiers.* instead.
   managed: {
-    starter: { setup: 5000, retainer: 3000, revShare: 10, label: 'Starter' },
-    pro:     { setup: 8000, retainer: 4000, revShare: 12, label: 'Pro',     recommended: true },
-    elite:   { setup: 8500, retainer: 5000, revShare: 15, label: 'Elite'   },
+    starter: { setup: 2000,  retainer: 750,  revShare: 0,  label: 'Local Engine' },
+    pro:     { setup: 10000, retainer: 2500, revShare: 10, label: 'Growth Engine', recommended: true },
+    elite:   { setup: 20000, retainer: 5000, revShare: 20, label: 'Growth Elite' },
   },
   productized: {
-    growthAudit: 1500,      // contingency plan fallback
+    growthAudit: 1500,
     smsReactivation: 1500,
     chatbotEmbedSetup: 2000, chatbotEmbedMonthly: 500,
     reviewAutoSetup: 1500,  reviewAutoMonthly: 300,
