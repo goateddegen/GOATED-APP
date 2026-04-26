@@ -29,6 +29,18 @@ VITE_LAUNCH_READY=true
 
 **Local preview without flipping live:** open browser console on the cover page and run `localStorage.setItem('goated_operator_preview','1')` then refresh. (Or append `?preview=1` to the hash.)
 
+### What the cover page shows (v7.5.2)
+
+- Oversized 3D goat head with cursor tracking — the only interactive element
+- "GOATED" wordmark with red→orange→amber animated gradient (degen palette)
+- Tiny subtext: "Probably the greatest thing that's ever happened to small business."
+- Two soft halos (red top-left, orange bottom-right) breathing on different cycles
+- 70 drift particles tinted on the same warm gradient
+- Footer pip: `v7.5 · private · access by application`
+- **No email capture, no CTA, no marketing copy.** Pure aesthetic gate.
+
+The audit route (`/#/audit` and `/#/for/{slug}`) **stays public even before launch flag flips** — it's the lead magnet you send prospects directly. They see the audit, you don't have to expose the rest of the app.
+
 ---
 
 ## 1. AI providers (the audit + chat brain)

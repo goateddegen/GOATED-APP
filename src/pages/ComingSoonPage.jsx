@@ -1,25 +1,37 @@
 // =============================================================================
-// GOATED — Coming Soon cover page
+// GOATED — Coming Soon cover page (v7.5.2 — degen palette)
 // -----------------------------------------------------------------------------
 // Full-screen gate that hides the entire app until the operator flips
 // VITE_LAUNCH_READY=true in Vercel env vars.
 //
-// Until then visitors see:
-//   - 3D goat head with cursor tracking (existing GoatLogo component)
-//   - "GOATED" gradient text animating between red and green
-//   - Background particles in matching gradient colors
-//   - Email capture (optional, stored in localStorage for now — wire to
-//     Supabase when launch ready)
+// Visual:
+//   - Oversized 3D goat head (cursor tracking via existing GoatLogo)
+//   - "GOATED" wordmark with red→orange→amber gradient sweep (degen palette)
+//   - Drift particles tinted along the same gradient
+//   - Halo pulses (red top-left, orange bottom-right)
+//   - Tiny subtext line, no CTA, no email capture, no marketing
 //
-// The full app codebase still ships in the bundle but routes 404 publicly.
-// Operator can preview by setting VITE_LAUNCH_READY=true locally.
+// The full app codebase still ships in the bundle but routes are gated.
+// Operator can preview by setting localStorage.goated_operator_preview='1'
+// or by appending ?preview=1 to the URL hash.
 // =============================================================================
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import GoatLogo from '../components/GoatLogo';
 
-// ─── Animated particles canvas ──────────────────────────────────────────────
-function GradientParticles() {
+// ─── Degen palette (matches DEGEN MODE in useStore) ─────────────────────────
+// All warm: red → orange → amber. No green anywhere.
+const PALETTE = {
+  red:    [239, 68, 68],   // #ef4444
+  redLt:  [248, 113, 113], // #f87171
+  orange: [249, 115, 22],  // #f97316
+  orangeLt:[251, 146, 60], // #fb923c
+  amber:  [245, 158, 11],  // #f59e0b
+  amberLt:[251, 191, 36],  // #fbbf24
+};
+
+// ─── Animated particles canvas (red/orange/amber only) ─────────────────────
+function DegenParticles() {
   const canvasRef = useRef(null);
   const rafRef = useRef(null);
   const particlesRef = useRef([]);
@@ -34,19 +46,19 @@ function GradientParticles() {
       canvas.height = window.innerHeight * window.devicePixelRatio;
       canvas.style.width = `${window.innerWidth}px`;
       canvas.style.height = `${window.innerHeight}px`;
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
     };
     resize();
     window.addEventListener('resize', resize);
 
-    // Init 60 particles drifting upward
-    particlesRef.current = Array.from({ length: 60 }, () => ({
+    // 70 particles drifting upward at varying speeds
+    particlesRef.current = Array.from({ length: 70 }, () => ({
       x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight + window.innerHeight, // start below screen
-      r: Math.random() * 3 + 1,
-      vx: (Math.random() - 0.5) * 0.3,
+      y: Math.random() * window.innerHeight + window.innerHeight,
+      r: Math.random() * 3 + 0.8,
+      vx: (Math.random() - 0.5) * 0.25,
       vy: -(Math.random() * 0.7 + 0.2),
-      hue: Math.random(), // 0-1, used to pick from red↔green gradient
+      hue: Math.random(), // 0..1, particle's phase offset on the warm sweep
       life: Math.random(),
     }));
 
@@ -60,20 +72,30 @@ function GradientParticles() {
         p.y += p.vy;
         p.life += 0.005;
 
-        // Reset particle when it drifts off the top
         if (p.y < -10) {
           p.y = window.innerHeight + 10;
           p.x = Math.random() * window.innerWidth;
           p.life = 0;
         }
 
-        // Color interpolates between red (#ef4444) and green (#10b981) over time
-        // Phase shifts by particle.hue so particles stagger their colors
+        // Color sweeps red → orange → amber → orange → red on a sine, offset by p.hue
         const phase = (Math.sin(t + p.hue * Math.PI * 2) + 1) / 2; // 0..1
-        const r = Math.round(239 * (1 - phase) + 16 * phase);   // 239 → 16
-        const g = Math.round(68 * (1 - phase) + 185 * phase);   // 68  → 185
-        const b = Math.round(68 * (1 - phase) + 129 * phase);   // 68  → 129
-        const alpha = Math.min(1, p.life) * 0.6;
+        // Pick between three warm anchors: red (0), orange (0.5), amber (1)
+        let r, g, b;
+        if (phase < 0.5) {
+          // red → orange
+          const k = phase * 2;
+          r = Math.round(PALETTE.red[0] * (1 - k) + PALETTE.orange[0] * k);
+          g = Math.round(PALETTE.red[1] * (1 - k) + PALETTE.orange[1] * k);
+          b = Math.round(PALETTE.red[2] * (1 - k) + PALETTE.orange[2] * k);
+        } else {
+          // orange → amber
+          const k = (phase - 0.5) * 2;
+          r = Math.round(PALETTE.orange[0] * (1 - k) + PALETTE.amber[0] * k);
+          g = Math.round(PALETTE.orange[1] * (1 - k) + PALETTE.amber[1] * k);
+          b = Math.round(PALETTE.orange[2] * (1 - k) + PALETTE.amber[2] * k);
+        }
+        const alpha = Math.min(1, p.life) * 0.55;
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
@@ -83,7 +105,6 @@ function GradientParticles() {
         ctx.fill();
       }
       ctx.shadowBlur = 0;
-
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -103,22 +124,27 @@ function GradientParticles() {
   );
 }
 
-// ─── Animated gradient text ─────────────────────────────────────────────────
-// Pure CSS — uses a moving linear-gradient as background-clip on the text.
+// ─── GOATED wordmark — red→orange→amber gradient sweep, no clipping ────────
 function GoatedTitle() {
   return (
     <h1
-      className="relative font-black tracking-tighter leading-none select-none"
+      className="relative font-black tracking-tighter select-none m-0"
       style={{
-        fontSize: 'clamp(4rem, 16vw, 14rem)',
+        // Smaller max + tighter clamp curve so it never overruns its container.
+        // Padding-block + line-height: 1.15 prevents background-clip:text from
+        // chopping the top/bottom of the glyphs (the previous clipping bug).
+        fontSize: 'clamp(3rem, 12vw, 10rem)',
+        lineHeight: 1.15,
+        padding: '0.06em 0.04em',
         backgroundImage:
-          'linear-gradient(120deg, #ef4444 0%, #f87171 18%, #10b981 50%, #34d399 70%, #ef4444 100%)',
+          'linear-gradient(120deg, #ef4444 0%, #f87171 18%, #f97316 38%, #fbbf24 58%, #f97316 78%, #ef4444 100%)',
         backgroundSize: '300% 100%',
         WebkitBackgroundClip: 'text',
         backgroundClip: 'text',
         color: 'transparent',
         WebkitTextFillColor: 'transparent',
-        filter: 'drop-shadow(0 0 36px rgba(16,185,129,0.18)) drop-shadow(0 0 64px rgba(239,68,68,0.12))',
+        filter:
+          'drop-shadow(0 0 36px rgba(249,115,22,0.22)) drop-shadow(0 0 72px rgba(239,68,68,0.14))',
         animation: 'goatedGradientShift 8s ease-in-out infinite',
       }}
     >
@@ -127,65 +153,7 @@ function GoatedTitle() {
   );
 }
 
-// ─── Email capture (waitlist, localStorage for now) ─────────────────────────
-function WaitlistCapture() {
-  const [email, setEmail] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState('');
-
-  const submit = (e) => {
-    e.preventDefault();
-    setError('');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('That doesn’t look like a valid email.');
-      return;
-    }
-    try {
-      const list = JSON.parse(localStorage.getItem('goated_waitlist') || '[]');
-      if (!list.includes(email)) list.push(email);
-      localStorage.setItem('goated_waitlist', JSON.stringify(list));
-    } catch { /* ignore */ }
-    setSubmitted(true);
-  };
-
-  if (submitted) {
-    return (
-      <div className="text-center text-sm text-emerald-300/90 font-medium">
-        You’re on the list. We’ll ping you when we open access.
-      </div>
-    );
-  }
-
-  return (
-    <form onSubmit={submit} className="w-full max-w-md mx-auto">
-      <div className="flex gap-2 rounded-2xl border border-white/[0.08] bg-black/40 backdrop-blur-md p-1.5">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="founder@yourcompany.com"
-          className="flex-1 bg-transparent outline-none px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500"
-        />
-        <button
-          type="submit"
-          className="px-5 py-2.5 rounded-xl text-sm font-bold text-black transition"
-          style={{
-            background:
-              'linear-gradient(120deg, #10b981 0%, #34d399 50%, #ef4444 100%)',
-          }}
-        >
-          Get access
-        </button>
-      </div>
-      {error && <div className="mt-2 text-xs text-red-400 text-center">{error}</div>}
-      <div className="mt-3 text-[11px] text-slate-600 text-center">
-        Private beta. Self-serve when we open. No marketing email spam ever.
-      </div>
-    </form>
-  );
-}
-
-// ─── Coming Soon page ───────────────────────────────────────────────────────
+// ─── Coming Soon page ──────────────────────────────────────────────────────
 export default function ComingSoonPage() {
   return (
     <div
@@ -204,7 +172,7 @@ export default function ComingSoonPage() {
         }
       `}</style>
 
-      {/* Radial halos (top-left red, bottom-right green) */}
+      {/* Halos (top-left red, bottom-right orange — degen warmth) */}
       <div
         className="absolute -top-40 -left-40 w-[40vw] h-[40vw] rounded-full blur-[120px] pointer-events-none"
         style={{
@@ -215,55 +183,48 @@ export default function ComingSoonPage() {
       <div
         className="absolute -bottom-40 -right-40 w-[45vw] h-[45vw] rounded-full blur-[140px] pointer-events-none"
         style={{
-          background: 'radial-gradient(circle, rgba(16,185,129,0.32), transparent 70%)',
+          background: 'radial-gradient(circle, rgba(249,115,22,0.32), transparent 70%)',
           animation: 'goatedHaloPulse 9s ease-in-out infinite reverse',
         }}
       />
 
       {/* Particle layer */}
-      <GradientParticles />
+      <DegenParticles />
 
-      {/* Centerpiece */}
-      <div className="relative z-10 flex flex-col items-center gap-10 text-center max-w-2xl">
-        {/* 3D goat head with cursor tracking — existing component */}
-        <div className="-mb-2">
-          <GoatLogo size={200} />
+      {/* Centerpiece — oversized goat + tight wordmark + tiny subtext */}
+      <div className="relative z-10 flex flex-col items-center gap-2 text-center max-w-2xl">
+        {/*
+          Bigger 3D goat. clamp(220px, 30vw, 380px) → scales gracefully on
+          mobile while dominating on desktop. Negative margin pulls the
+          wordmark in tight underneath without losing breathing room.
+        */}
+        <div
+          className="select-none"
+          style={{
+            width: 'clamp(220px, 30vw, 380px)',
+            height: 'clamp(220px, 30vw, 380px)',
+            marginBottom: '-1.25rem',
+          }}
+        >
+          <GoatLogo size={380} className="w-full h-full" />
         </div>
 
         <GoatedTitle />
 
-        <p className="text-base sm:text-lg text-slate-300/90 max-w-xl leading-relaxed font-medium">
-          The greatest thing that’s ever happened to small business is on the way.
-          <br />
-          <span className="text-slate-500 text-sm font-normal">
-            Private beta. Application-only. No upfront. We&apos;re paid when you close.
+        {/* Tiny subtext — no CTA, no form, no marketing */}
+        <p className="mt-1 text-[11px] sm:text-xs text-slate-400/80 max-w-md leading-relaxed font-medium tracking-wide">
+          Probably the greatest thing that&apos;s ever happened to small business.
+          <span className="block text-[10px] text-slate-600 mt-1.5 font-normal">
+            Private. Application-only. We&apos;re paid when you close.
           </span>
         </p>
-
-        <WaitlistCapture />
-
-        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] text-slate-600 mt-2">
-          <span className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Live
-          </span>
-          <span className="text-slate-800">|</span>
-          <span>Opening in waves — SMB operators first</span>
-          <span className="text-slate-800">|</span>
-          <span>13% only when we close</span>
-        </div>
       </div>
 
-      {/* Bottom-left footer */}
-      <div className="absolute bottom-4 left-4 z-10 text-[10px] text-slate-700 font-mono">
-        v7.5 · private · access by application
+      {/* Tiny status pip, bottom-center */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 text-[9px] text-slate-700 font-mono tracking-widest uppercase">
+        <span className="w-1 h-1 rounded-full bg-orange-400 animate-pulse" />
+        <span>v7.5 · private · access by application</span>
       </div>
-      {/* Bottom-right operator hint (only shown when localStorage flag is set) */}
-      {typeof window !== 'undefined' && localStorage.getItem('goated_operator_preview') === '1' && (
-        <div className="absolute bottom-4 right-4 z-10 text-[10px] text-slate-600 font-mono">
-          operator preview · set VITE_LAUNCH_READY=true to ship
-        </div>
-      )}
     </div>
   );
 }

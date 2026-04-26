@@ -96,7 +96,13 @@ This is the entire pitch. Don't deviate. Don't add bullet points. Don't pitch fe
 - `/api/goated-ai` — RSI/MACD/Bollinger engine (no external dep)
 - Lead engine — 250K seeded PRNG demo data (works, used internally for ICP browsing)
 - 3D Globe — works via Three.js (data-aware, no external dep)
-- Phantom wallet (Solana) — read-only address parsing, works
+
+### v7.5.1 cover page + auth wall
+- `src/pages/ComingSoonPage.jsx` — visitors see this until `VITE_LAUNCH_READY=true`
+- v7.5.2: oversized 3D goat with cursor tracking, red/orange/amber gradient
+  GOATED wordmark, drift particles, no email capture, tiny subtext only
+- App.jsx auth wall — leads/dashboard/wallet/admin/trends require login when
+  launch flag is on. Audit + Home stay public.
 
 ### Needs env vars in Vercel before Monday
 ```
