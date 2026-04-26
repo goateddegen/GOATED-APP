@@ -335,4 +335,387 @@ This is a $4,500 deposit + $1,000/mo close — built from their own words. They 
 
 ---
 
-*Catalog version 1 · 2026-04-24 · Add new modules as you build them.*
+## 🟠 NEW CUSTOM MODULES (added v2 — 2026-04-25)
+
+These are the modules you can quote on calls when prospects ask "what else?". Each one is implementable solo with the GOATED tech stack already in repo. Use the deposit threshold to qualify the prospect — don't pitch a $25K custom build to a $750/mo prospect.
+
+---
+
+### 14. AI Receptionist (24/7 phone replacement) 🟠 CUSTOM
+**What:** Replaces the human receptionist entirely for after-hours, lunch hours, and overflow. Handles intake, booking, FAQs, payment collection, and transfers urgent calls.
+**Who:** Practices/shops with $2M+ revenue who can't justify a 24/7 human receptionist.
+**You charge:** $5,000 setup + $1,500/mo (vs hiring a human at $40K/yr).
+**Costs you:** VAPI premium voice ($0.09/min) + Twilio HIPAA-eligible ($150/mo if healthcare) + Cal.com Enterprise.
+**Time to deliver:** 5-7 days.
+**Deposit threshold:** $5K+ deal.
+**How to implement:**
+1. Map ALL inbound call categories (new patient, existing patient, billing, urgent, etc.)
+2. Build intent router: VAPI assistant per category with handoff logic
+3. Knowledge base: FAQ bank trained on their intake forms + service menu
+4. Calendar integration: Cal.com webhook for booking
+5. Payment: Stripe Payment Link generation for cash-pay procedures
+6. Transfer logic: urgent calls route to owner's mobile via Twilio
+7. SMS summary: every call → text summary to office manager next morning
+
+---
+
+### 15. Review Generation Engine 🟡 UPSELL
+**What:** Automated 5-star review request engine. Texts every closed-job customer at the optimal moment (4-24 hr post-job) asking for a Google review with a one-click link.
+**Who:** Any business with Google Business Profile presence.
+**You charge:** $500 setup + $300/mo. OR bundled into Tier 2.
+**Costs you:** Twilio SMS ($0.0079/msg) + GMB API access (free).
+**Time to deliver:** 2-4 hours.
+**How to implement:**
+1. Hook into their CRM/PMS to detect "job completed" event (or import CSV weekly)
+2. Twilio scheduled SMS at +6 hours post-completion
+3. SMS contains shortened Google review link with pre-filled rating
+4. Handle replies: 1-3 stars → route to owner ("save the relationship"), 4-5 stars → route to public Google
+5. Weekly summary: how many sent, replied, posted
+
+**Math sell:** "You'll add ~10-15 5-star reviews per month. In 6 months you go from 80 reviews to 150+ → top of local search."
+
+---
+
+### 16. Booking AI / Scheduling Assistant 🟡 UPSELL
+**What:** AI parses natural language ("can I come in next Tuesday around 2?") and books directly into your calendar. Works on website, SMS, and voice.
+**Who:** Service businesses with complex availability.
+**You charge:** $1,500 setup + $500/mo.
+**Costs you:** Claude Haiku API (~$5/mo per client) + Cal.com.
+**Time to deliver:** 1-2 days.
+**How to implement:**
+1. Cal.com event types: configure all bookable services + durations + technicians
+2. Claude Haiku as parser: convert natural language to ISO date/time + service ID
+3. Confirmation flow: AI confirms, books, sends calendar invite
+4. Reschedule/cancel: handle via SMS reply
+5. Double-booking prevention: Cal.com handles this natively
+
+---
+
+### 17. GMB / Local SEO Auto-Poster 🟡 UPSELL
+**What:** Posts to Google Business Profile 3x/week with AI-generated content tied to their business — recent jobs, seasonal tips, before/after photos, offers.
+**Who:** Local service businesses with weak GMB presence.
+**You charge:** $500 setup + $400/mo.
+**Costs you:** Claude Haiku for content (~$3/mo) + GMB API + your Sunday content batch (1 hr/wk per client).
+**Time to deliver:** 1 day.
+**How to implement:**
+1. GMB API access (OAuth their Google account)
+2. Content templates per vertical: 12 prompt templates
+3. Claude Haiku generates 3 posts/week against templates
+4. Image: pull from their existing photos OR generate via DALL·E ($0.04/img)
+5. Schedule via GMB API
+6. Monthly performance report: views, clicks, calls from posts
+
+---
+
+### 18. AI Email Nurture Sequences 🟡 UPSELL
+**What:** Personalized email sequences for every new lead, broken down by where they came from and what they wanted.
+**Who:** Practices with $500K+ revenue and a leaky form-fill funnel.
+**You charge:** $1,000 setup + $400/mo.
+**Costs you:** Resend ($20/mo) or Customer.io ($150/mo) + Claude for personalization.
+**Time to deliver:** 2-3 days.
+**How to implement:**
+1. Map their lead sources (form, GMB, paid ads)
+2. Build 5-email sequences per source with Claude personalization tokens
+3. CRM integration: hook to their existing system OR use a basic Airtable
+4. A/B test subject lines (Resend supports natively)
+5. Monthly report: opens, clicks, conversions
+
+---
+
+### 19. AI Call Transcription + Insights 🟡 UPSELL
+**What:** Records every inbound + outbound call, transcribes, and summarizes. Owner gets a weekly email: "Here are the 3 themes your customers brought up this week."
+**Who:** Owners who want operational intelligence.
+**You charge:** $750 setup + $300/mo.
+**Costs you:** Twilio call recording ($0.0025/min) + Whisper API ($0.006/min) + Claude summary.
+**Time to deliver:** 1 day.
+**How to implement:**
+1. Twilio recording on all calls
+2. Webhook → Whisper transcription → S3 storage
+3. Claude weekly job: pull last 7 days transcripts → output 3 themes + 5 specific quotes
+4. Email to owner Monday morning
+5. Searchable archive UI (built on existing GOATED stack)
+
+---
+
+### 20. Reactivation Campaign (one-time, big-cash) 🟠 CUSTOM
+**What:** Mine their dormant customer list (lapsed 6+ months) and run a personalized AI outreach campaign — voice, SMS, email.
+**Who:** Any business with 500+ dormant customers.
+**You charge:** $3,000 setup + 15% of recovered revenue (no monthly).
+**Costs you:** VAPI calls + Twilio SMS + Claude personalization. ~$0.50 per dormant contact.
+**Time to deliver:** 5 days.
+**How to implement:**
+1. Pull their CRM/PMS export — filter to lapsed 6-18 months
+2. Segment: by service, by spend tier, by cancellation reason
+3. Build per-segment personalized scripts
+4. Launch: 3-day rolling cadence (email day 1, SMS day 2, voicemail drop day 3)
+5. Hot replies → book on owner's calendar
+6. Report at day 14: revenue recovered
+
+**Math sell:** "If you have 800 dormant customers and 5% reactivate at $300 LTV, that's $12K. We take 15%. You net $10K from a list you weren't using."
+
+---
+
+### 21. Predictive Maintenance AI (HVAC/Plumbing specific) 🟠 CUSTOM
+**What:** AI calls customers 6-12 months after install/repair to schedule preventive maintenance. Generates recurring revenue from one-time customers.
+**Who:** HVAC, plumbing, water heater installers, garage door, pool service.
+**You charge:** $3,500 setup + $750/mo + 10% rev share on booked maintenance.
+**Costs you:** VAPI + your time scripting per service-line.
+**Time to deliver:** 3-4 days.
+**How to implement:**
+1. Pull historical install/repair data with dates + customer info
+2. Build trigger: "6 months from install date" event
+3. VAPI agent: "Hi, this is [Name] from [Shop] — your AC was installed 6 months ago, want to schedule the seasonal tune-up?"
+4. Booking + payment via Stripe
+5. Monthly report: how many maintenance jobs created vs baseline
+
+---
+
+### 22. Insurance Verification Bot (dental/med spa) 🟠 CUSTOM
+**What:** AI calls insurance companies to verify benefits before appointments. Saves front desk 10-15 hr/week.
+**Who:** Any healthcare practice with insurance billing.
+**You charge:** $4,000 setup + $1,000/mo.
+**Costs you:** VAPI premium + lots of testing. Insurance phone trees are gnarly.
+**Time to deliver:** 7-10 days (this one is harder).
+**How to implement:**
+1. Map top 10 insurers' phone trees per practice
+2. Build VAPI agent that navigates each tree
+3. Outputs: deductible, copay, max benefit, approved procedures
+4. Posts to PMS or internal Sheet for office manager
+5. Daily batch: pulls tomorrow's appointments, runs verification overnight
+
+---
+
+### 23. Photo-AI Estimator (Roofing/Solar) 🟠 CUSTOM
+**What:** Homeowner uploads photo of roof → AI gives a rough estimate → books inspection.
+**Who:** Roofing, solar, exterior painting, fence builders.
+**You charge:** $5,000 setup + $1,200/mo.
+**Costs you:** Claude Vision API + your dev time.
+**Time to deliver:** 7-10 days.
+**How to implement:**
+1. Embed photo upload widget on their website
+2. Claude Vision: estimate sq ft, condition, material
+3. Pricing model: their per-sq-ft rates
+4. Output: estimated range + "book free inspection" CTA
+5. Lead routes to owner's phone with photos attached
+
+---
+
+### 24. Owner Copilot (Slack/SMS bot for the owner) 🟠 CUSTOM
+**What:** Slack or SMS bot that the owner can ask anything about their business. "How many jobs did we do this week?" "Which tech is best?" "What's our top complaint?"
+**Who:** Owners who text/Slack constantly and want a CFO-in-their-pocket.
+**You charge:** $4,000 setup + $1,000/mo.
+**Costs you:** Claude Sonnet (~$30-80/mo per client) + integrations to their data sources.
+**Time to deliver:** 5-7 days.
+**How to implement:**
+1. Connect to their data sources: PMS, QuickBooks, Stripe, GMB, calendar
+2. Build RAG layer: vectorize their data weekly
+3. Claude with tool use: query the right source per question
+4. Slack app OR SMS via Twilio
+5. Daily 8 AM digest: top 3 metrics
+
+---
+
+### 25. Voice Cloning of Owner 🟡 UPSELL
+**What:** Clone the owner's voice and use it for personalized voicemails to prospects.
+**Who:** Solo owner-operators with a memorable voice and brand.
+**You charge:** $750 setup + $200/mo.
+**Costs you:** ElevenLabs ($22/mo for voice cloning) + your scripting.
+**Time to deliver:** 1 day.
+**How to implement:**
+1. Owner records 5 min of audio (ElevenLabs needs a sample)
+2. Train clone (auto)
+3. Generate voicemails per prospect with name + company + specific hook
+4. Twilio voicemail drop (no ringing)
+5. Track: response rate, callback rate
+
+---
+
+### 26. AI-Generated Social/Video Ads 🟠 CUSTOM
+**What:** Monthly batch of 4 AI-generated short-form video ads for the business. YouTube Shorts, TikTok, Instagram Reels, Facebook.
+**Who:** Marketing-aware owners, $1M+ revenue.
+**You charge:** $2,500 setup + $1,500/mo (4 ads).
+**Costs you:** Sora / Runway / Pika ($60-150/mo) + Claude scripts + your editing.
+**Time to deliver:** 5 days for first batch.
+**How to implement:**
+1. Brand audit: tone, brand colors, CTA preferences
+2. Claude generates 4 scripts/month
+3. AI video gen: generate 4 ads at 15-30 sec
+4. Owner approves
+5. Publish to YouTube Shorts + push assets to client for their other channels
+
+---
+
+### 27. Reputation Management Agent (auto-respond to reviews) 🟡 UPSELL
+**What:** AI auto-responds to every Google/Yelp review. 5-star = thank you. 1-3 star = empathetic, route to owner.
+**Who:** Any business getting 5+ reviews/week.
+**You charge:** $500 setup + $300/mo.
+**Costs you:** GMB API + Claude.
+**Time to deliver:** 1 day.
+**How to implement:**
+1. Webhook: GMB new review event
+2. Claude generates response based on review text + sentiment
+3. 4-5 star: post immediately
+4. 1-3 star: hold for owner approval (60 min) before posting
+
+---
+
+### 28. Competitor Monitoring Agent 🟡 UPSELL
+**What:** Weekly report: what your competitors are charging, what new offers they're running, what reviews they're getting.
+**Who:** Owners obsessed with competitive position.
+**You charge:** $500 setup + $400/mo.
+**Costs you:** Web scraping (your time) + Claude summary.
+**Time to deliver:** 2-3 days for first competitor list.
+**How to implement:**
+1. Identify 5 local competitors per client
+2. Scrape their website + GMB + Yelp weekly
+3. Diff against last week's snapshot
+4. Claude summary: "Competitor X added a new $99 tune-up offer. Competitor Y got 12 new reviews."
+5. Email Friday morning
+
+---
+
+### 29. Custom Mobile App 🟠 CUSTOM (largest deals)
+**What:** Branded customer-facing mobile app: book service, track visit, pay invoice, see history.
+**Who:** Multi-location operators, franchise candidates, $5M+ revenue.
+**You charge:** $15,000-25,000 setup + $2,500/mo.
+**Costs you:** React Native dev (your time) + Apple/Google dev accounts ($99 + $25) + push notification service.
+**Time to deliver:** 6-8 weeks.
+**Deposit threshold:** $15K minimum.
+**How to implement:**
+1. Design sprint: wireframes + brand
+2. React Native app (you already have RN-friendly stack)
+3. Backend: extend existing GOATED API
+4. Auth: their existing customer DB OR build new
+5. Submit to App Store + Google Play
+6. Push notifications for appointments, promotions
+
+---
+
+### 30. Custom POS Integration 🟠 CUSTOM
+**What:** Hook the AI stack into their POS (Square, Clover, ServiceTitan) for unified data + automation.
+**Who:** Any business with a POS not yet integrated with their other tools.
+**You charge:** $5,000-15,000 setup + $1,000/mo (depends on POS).
+**Costs you:** Their POS API access + your dev time.
+**Time to deliver:** 2-4 weeks per POS.
+**How to implement:**
+1. Per-POS adapter (write once per platform, reuse)
+2. Pull: transactions, customer list, products
+3. Push: bookings, customer updates
+4. Claude reasoning layer: detect upsell opportunities, churn signals
+
+---
+
+### 31. Custom AI Agent Trained on Their Data (RAG) 🟠 CUSTOM
+**What:** A private AI agent that knows their entire knowledge base: SOPs, training docs, customer history, FAQs.
+**Who:** Practices/shops with mature operations and 10+ employees.
+**You charge:** $7,500 setup + $1,500/mo.
+**Costs you:** Vector DB (Pinecone $20/mo) + Claude + your scripting.
+**Time to deliver:** 1-2 weeks.
+**How to implement:**
+1. Audit all their docs: SOPs, training, FAQs, customer-facing scripts
+2. Vectorize via OpenAI embeddings (cheap) or Voyage
+3. Slack/web/SMS interface
+4. Use cases: train new hires, answer customer questions, look up old SOPs
+
+---
+
+### 32. Multi-Location Brain (franchise-tier) 🟠 CUSTOM
+**What:** A unified AI that runs across all of a franchise's or multi-location operator's locations. Cross-location reporting, pricing optimization, demand forecasting.
+**Who:** Operators with 3+ locations.
+**You charge:** $25,000-50,000 setup + $5,000/mo.
+**Costs you:** Substantial data plumbing + Claude orchestration.
+**Time to deliver:** 4-8 weeks.
+**Deposit threshold:** $25K+.
+**How to implement:**
+1. Centralize data from all locations (POS, calendar, GMB)
+2. Build dashboard with location-level + roll-up views
+3. AI reports: "Location A is underperforming on X — here's why"
+4. Routing: new leads route to best-fit location based on capacity + proximity
+5. Pricing optimization: suggest dynamic pricing per location
+
+---
+
+### 33. Onboarding Done-For-You 🟡 UPSELL
+**What:** White-glove onboarding for any new tech they're adopting (a new PMS, a new payments platform, etc.).
+**Who:** Owners who hate setup.
+**You charge:** $2,500 flat per project.
+**Costs you:** Your time, ~10-15 hours.
+**Time to deliver:** 1-2 weeks.
+**How to implement:**
+1. Discovery: what are they switching to/from?
+2. Migration plan: data export, mapping, training
+3. Train staff (1-hr Loom + 1-hr live)
+4. Stand by for 30 days post-launch
+
+---
+
+### 34. Owner-Coaching Subscription 🟡 UPSELL
+**What:** Monthly 1:1 strategy call with owner. Review their dashboard, plan next 30 days.
+**Who:** Owners who want a thinking partner.
+**You charge:** $750/mo.
+**Costs you:** 1 hr of your time per client per month.
+**Time to deliver:** Immediate.
+**How to implement:**
+1. Cal.com booking link
+2. Pre-call: pull their last 30 days from your dashboard
+3. 60-min Zoom: review wins, identify next move, accountability
+4. Follow-up email with 3 action items
+
+**Margin sell to yourself:** at $750/hr equivalent, this is the highest-margin line item in the catalog. 5 of these = $3,750/mo for 5 hrs/week.
+
+---
+
+### 35. AI Software Build (custom-coded for them) 🟠 CUSTOM
+**What:** Custom-built software (web app, internal tool) using GOATED's full tech stack: React, Three.js, Claude, Supabase, etc.
+**Who:** Operators who want their own branded internal tooling — typically multi-location, $5M+, or franchise.
+**You charge:** $25,000-100,000 setup + $5,000-15,000/mo SaaS license.
+**Costs you:** Your dev time + infrastructure.
+**Time to deliver:** 6-16 weeks.
+**Deposit threshold:** $25K+.
+**How to implement:**
+1. Use GOATED app as starter kit (you've already built 80% of the patterns)
+2. Customize for their workflow
+3. Deploy on their domain or your white-label
+4. Maintain + iterate on retainer
+
+**This is your highest-leverage upsell.** Reuse 80% of GOATED's existing code per project.
+
+---
+
+## Decision tree: which upsell to pitch on Day 30 check-in
+
+```
+Did they complain about reviews? → #15 Review Generation
+Did they complain about no-shows? → already in Tier 1
+Did they say "I have a list of old customers I should call"? → #20 Reactivation
+Did they say "my front desk is overwhelmed"? → #14 AI Receptionist OR #22 Insurance Verification
+Did they say "I want to grow but don't know what's working"? → #34 Owner-Coaching
+Did they say "I have multiple locations"? → #32 Multi-Location Brain
+Did they say "I want my own app"? → #29 Custom App
+Did they ask about marketing/ads? → #26 AI-Generated Ads OR #17 GMB Auto-Poster
+Did they say "I have weird software no one else uses"? → #30 Custom POS Integration
+Did they say "I just need help running my business"? → #24 Owner Copilot + #34 Coaching combo
+```
+
+---
+
+## Revenue stacking math (the compounding play)
+
+Year-1 single-client realistic max:
+
+| Module | Setup | Monthly | Setup × | Monthly × |
+|---|---|---|---|---|
+| Tier 1 base | $2,000 | $750 | 1 | 12 |
+| #15 Review gen | $500 | $300 | 1 | 11 |
+| #17 GMB poster | $500 | $400 | 1 | 10 |
+| #20 Reactivation | $3,000 | $0 (one-time) | 1 | 0 |
+| #34 Coaching | $0 | $750 | 0 | 9 |
+| **Total** | **$6,000** | **$2,200/mo** | | **$24,300/yr recurring + $3,000 one-time** |
+
+**Per-client annual value: ~$33,000** if you upsell well.
+
+10 clients at this depth = **$330K ARR**. With ~$50K of cost. **$280K net margin.**
+
+---
+
+*Catalog version 2 · 2026-04-25 · 35 modules. Add new ones as you ship them.*

@@ -304,4 +304,24 @@ If 0 of 5 hit, we missed the read on the market and the plan needs surgery.
 
 ---
 
-*Last updated: 2026-04-24 · Replaces v7.3 plan that assumed SaaS-first.*
+## 12. Companion docs (read before Monday)
+
+The execution plan is the strategy. These docs are the tactics:
+
+| Doc | Purpose | When to read |
+|---|---|---|
+| `WEEKEND_TO_MONDAY.md` | Sat infra → Sun script → Mon kill day | Sat AM |
+| `WEEK_1_TACTICAL.md` | Mon-Fri hour-by-hour schedule | Sun PM |
+| `CLOSING_PLAYBOOK.md` | Opening, objections, close, follow-up | Memorize Sat-Sun |
+| `OUTREACH_OPENINGS_RANKED.md` | 10 openings ranked + per-vertical | Sun PM |
+| `OBJECTIONS_BY_VERTICAL.md` | Vertical-specific objection handling | Sun PM |
+| `OUTREACH_PLAYBOOK.md` | Lead-gen pipeline, list building | Sat |
+| `UPSELL_CATALOG.md` | 35 modules to upsell at Day 30 | After 1st close |
+| `CHEAT_SHEETS.md` | Print + pin as desk reference | Mon AM |
+| `SCALE_PLAYBOOK.md` | Phases 0 → $1M MRR | First Sat of quarter |
+| `DELUSIONAL.md` | Swing-for-fences alt paths | First Sat of quarter |
+| `INVESTOR_PITCH.md` | If/when raising Q3+ | When asked |
+
+---
+
+*Last updated: 2026-04-25 · v7.5.6 · Agency-first plan with full tactical companion docs.*
