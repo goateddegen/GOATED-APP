@@ -248,7 +248,7 @@ export default function ComingSoonPage() {
         >
           Probably the greatest thing that&apos;s ever happened to small business.
           <span className="block text-[10px] text-slate-600 mt-1.5 font-normal">
-            Private. Application-only. We&apos;re paid when you close.
+            AI for local service businesses. Private. By application. Texas-built.
           </span>
         </p>
       </div>
@@ -259,7 +259,7 @@ export default function ComingSoonPage() {
         style={{ fontFamily: '"Space Grotesk", monospace' }}
       >
         <span className="w-1 h-1 rounded-full bg-orange-400 animate-pulse" />
-        <span>v7.5 · private · access by application</span>
+        <span>v7.5.6 · private · access by application</span>
       </div>
     </div>
   );

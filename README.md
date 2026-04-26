@@ -1,79 +1,98 @@
 # GOATED Solutions
 
-**AI-powered B2B sales intelligence platform that helps closers find, qualify, and close high-value deals.**
+**AI agency for local service businesses. We capture the calls and bookings they're losing — using AI voice agents, SMS automation, and custom integrations.**
 
-GOATED combines real-time market intelligence, AI-driven lead scoring, and closing automation into a single platform built for revenue generation.
+GOATED helps HVAC shops, dental practices, plumbing companies, med spas, roofing contractors, and other local service SMBs reclaim revenue they're leaking on missed calls, no-show appointments, and dormant customer lists. Two-tier productized service backed by a custom-built AI stack.
 
-## What It Does
+---
 
-GOATED solves the core problem for B2B closers: finding the right leads, knowing exactly what to say, and closing faster. The platform generates revenue through a 12% commission on every deal closed through the platform — zero upfront cost to users.
+## What We Do
 
-### Core Features
+Most local service businesses miss 30-60% of inbound calls. Each missed call is a $200-1,500 lost job. We deploy AI to answer those calls in <60 seconds, book appointments, follow up via SMS, generate Google reviews, and revive dormant customer lists.
 
-| Feature | Description |
-|---------|-------------|
-| **Lead Intelligence** | 500K+ scored B2B leads with AI enrichment, close probability scoring, pain point mapping, and multi-channel outreach scripts |
-| **GOATED AI** | Sales copilot powered by Claude that generates personalized cold call scripts, email sequences, SMS campaigns, objection handling, and closing strategies |
-| **TrendPulse** | Real-time market intelligence — crypto sentiment, sector rotation signals, prediction market data from Polymarket & Kalshi, and actionable alpha plays |
-| **Close Coach** | Step-by-step deal coaching with real-time commission tracking, pipeline health monitoring, and proactive follow-up suggestions |
-| **Dashboard** | Pipeline analytics, revenue forecasting, deal velocity tracking, and KPI monitoring |
-| **Wallet** | Solana/USDC integration, commission tracking, Stripe Connect for payments, Plaid for bank connections |
-| **Casino** | Prediction market betting with GOAT token economy — price predictions, event outcomes, and portfolio challenges |
+### Two tiers
 
-### Revenue Model
+| Tier | Setup | Monthly | Target |
+|------|-------|---------|--------|
+| **Local Engine** | $2,000 | $750 | Solo + small SMBs |
+| **Growth Engine** | $10K-20K | $2.5K-5K + opt rev share | $2M+ revenue SMBs |
 
-- **$0 platform fee** — completely free to use
-- **12% commission** on every deal closed through the platform
-- Users keep 88% of every deal they close
-- Prediction market spreads: 2-5% on betting volume
-- Future: Pro tier at $29/mo, Enterprise custom pricing
+Both tiers include a **30-day money-back guarantee.** Real risk reversal — if it doesn't work, you don't pay.
+
+### Core capabilities
+
+| Module | What it does |
+|--------|--------------|
+| **AI Voice Agent** | Picks up missed calls, qualifies leads, books appointments, texts owner a transcript |
+| **SMS Auto-Text-Back** | Every missed call triggers a 30-second follow-up text |
+| **Review Engine** | Auto-requests Google reviews from happy customers at the optimal moment |
+| **Reactivation Campaigns** | Mines dormant customer lists for recoverable revenue |
+| **GMB Optimization** | AI-generated posts to Google Business Profile 3×/week |
+| **Custom AI Builds** | Multi-location brain, custom RAG agents, owner copilots, photo-based estimators |
+
+Full module catalog: [`docs/UPSELL_CATALOG.md`](./docs/UPSELL_CATALOG.md) (35 modules with implementation specs).
+
+---
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 18 + Vite + Tailwind CSS |
-| State | Zustand (single store, 58KB+) |
-| Animation | Framer Motion + CSS keyframes |
-| 3D | Three.js + React Three Fiber (SentimentGlobe) |
-| Auth | Supabase (Google, GitHub OAuth) |
-| Payments | Stripe Connect + Plaid Bank Connect |
-| Wallet | Phantom (Solana) |
-| AI Chat | Claude Sonnet 4.6 via Anthropic API |
-| AI Engine | Custom GOATED AI v2 (RSI, MACD, Bollinger, regime detection) |
-| Backend | Vercel Serverless Functions (11 endpoints) |
-| Analytics | Vercel Analytics + Speed Insights |
-| Hosting | Vercel (Hobby plan) |
+| State | Zustand |
+| Animation | Framer Motion |
+| 3D | Three.js + React Three Fiber |
+| Voice AI | VAPI (with Bland AI / Retell as alternatives) |
+| SMS / Phone | Twilio (HIPAA-eligible tier for healthcare) |
+| Calendar | Cal.com |
+| Auth | Supabase |
+| Payments | Stripe Payment Links + Stripe Connect (later) |
+| AI Reasoning | Claude (Anthropic API) — Haiku for high-volume, Sonnet for premium |
+| Custom AI Engine | GOATED AI v2 (`/api/goated-ai.js`) — RSI, MACD, Bollinger, regime detection |
+| Backend | Vercel Serverless Functions (11 endpoints, max 12 on Hobby) |
+| Hosting | Vercel |
+| Domain | goated-app-nine.vercel.app |
 
-## Architecture
+---
+
+## Repository Structure
 
 ```
 goated-app/
-├── api/                    # Vercel serverless functions
+├── api/                    # Vercel serverless functions (11 endpoints)
 │   ├── chat.js             # Claude-powered AI chat
-│   ├── goated-ai.js        # Custom AI engine (technical analysis)
-│   ├── intelligence.js     # Market intelligence API
-│   ├── leads.js            # Apollo.io lead aggregation
-│   └── ...                 # 11 total endpoints
+│   ├── goated-ai.js        # Custom AI engine
+│   ├── intelligence.js     # Market/prospect intelligence
+│   ├── leads.js            # Lead aggregation
+│   └── ...
 ├── src/
-│   ├── components/
-│   │   ├── AIOverlay.jsx   # AI chat panel + signal engine
-│   │   ├── LeadDetail.jsx  # Individual lead deep-dive
-│   │   ├── Sidebar.jsx     # Navigation
-│   │   └── ...
-│   ├── hooks/
-│   │   ├── useStore.js     # Zustand store (leads, auth, UI state)
-│   │   └── useGoatedAI.js  # AI engine hook
+│   ├── components/         # React components
+│   ├── hooks/              # Zustand store + custom hooks
 │   ├── pages/
-│   │   ├── LeadsPage.jsx   # Lead table + filtering
+│   │   ├── HomePage.jsx
+│   │   ├── AuditPage.jsx   # Free public audit funnel (lead-gen front door)
+│   │   ├── LeadsPage.jsx
 │   │   ├── DashboardPage.jsx
-│   │   ├── TrendsPage.jsx  # Market intelligence
-│   │   ├── WalletPage.jsx
 │   │   └── ...
 │   └── lib/
-│       └── supabase.js     # Auth, realtime, cloud sync
-└── docs/                   # Business strategy docs
+│       ├── config.js       # PRICING.tiers (Tier 1 + Tier 2)
+│       └── supabase.js
+├── docs/                   # Business strategy + tactical playbooks
+│   ├── EXECUTION_PLAN_2026.md
+│   ├── SCALE_PLAYBOOK.md
+│   ├── CLOSING_PLAYBOOK.md
+│   ├── UPSELL_CATALOG.md   # 35 modules
+│   ├── OUTREACH_PLAYBOOK.md
+│   ├── OPSEC_PLAYBOOK.md
+│   ├── LIFESTYLE_AND_FINANCE.md
+│   ├── FINANCIAL_GROWTH_STRATEGY.md
+│   └── README.md           # Doc index
+└── README.md (this file)
 ```
+
+Full doc index: [`docs/README.md`](./docs/README.md)
+
+---
 
 ## Quick Start
 
@@ -83,7 +102,7 @@ npm install
 
 # Set up environment variables
 cp .env.example .env.local
-# Add: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, ANTHROPIC_API_KEY
+# See INTEGRATIONS.md for required keys
 
 # Run development server
 npm run dev
@@ -92,45 +111,48 @@ npm run dev
 npm run build
 ```
 
-## Key Metrics (Target)
+---
 
-| Metric | Current | Target (90 days) |
-|--------|---------|-------------------|
-| Active Users | ~20 | 500 |
-| MRR | $0 | $250K |
-| Avg Deal Size | — | $15-20K |
-| Commission/Deal | — | $1,800-$2,400 |
-| Deals Closed/Month | — | 100+ |
+## Key Targets (Phase 0 → Phase 1)
 
-## How Users Make Money
+| Metric | Phase 0 (now) | Phase 1 (12 mo) |
+|--------|---------------|------------------|
+| Active clients | 0 | 30 mixed |
+| MRR | $0 | $30K |
+| Cumulative cash | $0 | $200-400K |
+| Team size | 1 (Tarek) | 2-3 (Tarek + VA + closer) |
+| Avg deal LTV | — | $20-90K (24 mo retention) |
+| Gross margin | — | 90%+ |
 
-**Fastest path to $8-25K:**
-1. Sign up (free, 30 seconds)
-2. Browse AI-scored leads filtered by industry, location, deal size
-3. Use GOATED AI to generate personalized outreach (call scripts, emails, SMS)
-4. Close the deal using AI coaching and objection handling
-5. Collect 88% commission via Stripe/Plaid
-
-**Average time to first close:** Target 2-4 weeks
-
-## Security
-
-- CORS: Per-endpoint origin whitelist (no wildcards)
-- Rate limiting: Sliding window per IP on all API endpoints
-- Input sanitization: HTML/script stripping on all user inputs
-- CSP headers, HSTS, X-Frame-Options DENY
-- No secrets in client bundle
-
-## Production
-
-- **URL:** https://goated-app-nine.vercel.app
-- **Deployment:** Push to `main` branch triggers auto-deploy on Vercel
-- **Constraints:** Vercel Hobby plan — max 12 serverless functions (currently 11)
-
-## License
-
-Proprietary. All rights reserved.
+Path to $1M MRR mapped in [`docs/SCALE_PLAYBOOK.md`](./docs/SCALE_PLAYBOOK.md).
 
 ---
 
-Built by GOATED Solutions. Making closers money since 2024.
+## Security & Compliance
+
+- **CORS:** per-endpoint origin whitelist (no wildcards)
+- **Rate limiting:** sliding window per IP on all endpoints
+- **Input validation:** HTML/script stripping, length limits
+- **CSP headers, HSTS, X-Frame-Options DENY**
+- **No secrets in client bundle**
+- **HIPAA:** Twilio HIPAA-eligible tier available for healthcare deployments; BAAs on file
+- **A2P 10DLC:** registered for SMS compliance
+
+---
+
+## Production
+
+- **Live URL:** https://goated-app-nine.vercel.app
+- **Deployment:** push to `master` → auto-deploy on Vercel
+- **Constraints:** Vercel Hobby plan — max 12 serverless functions (currently 11)
+- **Status:** private launch (cover gate via `VITE_LAUNCH_READY=false`); flip to `true` when going live
+
+---
+
+## License
+
+Proprietary. All rights reserved. © 2026 GOATED Solutions LLC.
+
+---
+
+*Built in Texas. Bootstrapped. Brand-first. The brand speaks — the founder dials.*

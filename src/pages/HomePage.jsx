@@ -272,13 +272,13 @@ export default function HomePage() {
   }, []);
 
   const features = [
-    { icon: Users, title: 'Lead Intelligence', desc: '500K+ AI-scored leads with deep enrichment — buying signals, pain points, closing scripts, and company intel. This is your goddamn goldmine.', page: 'leads', color: '#10b981', stats: '500K+ leads' },
-    { icon: TrendingUp, title: 'Trend Pulse', desc: 'Real-time global market intelligence with 3D visualization. See what\'s pumping before the herd. Alpha on tap.', page: 'trends', color: '#06b6d4', stats: 'Real-time' },
-    { icon: Phone, title: 'AI Voice Agent', desc: 'Vapi-powered outbound. Your AI rep dials every dormant lead, missed buyer, and high-intent visitor with a TrendPulse-tailored script. Books meetings to your calendar. Skip email — email is dead.', page: 'leads', color: '#f59e0b', stats: 'Voice + SMS + LinkedIn' },
-    { icon: Bot, title: 'TrendPulse', desc: 'Per-target intelligence engine. Scrapes your prospect\'s website, socials, and public signals — outputs a personalized revenue-loss briefing in 15 seconds. Makes every cold call land like you\'ve been studying them for weeks.', color: '#a855f7', action: () => setAiOpen(true), stats: 'Per-target AI' },
-    { icon: Globe, title: 'Account Intelligence', desc: 'Live site crawl, tech-stack detection, funding + hiring signals, buyer density per region. Know which accounts to hit, in what order, and what angle opens the door.', page: 'trends', color: '#ef4444', stats: 'Live-crawled' },
-    { icon: Award, title: 'Revenue Loss Auditor', desc: 'Free, public, shareable. Enter a brand URL — we estimate their leaking pipeline in seconds. Every audit is a warm outbound call waiting to happen.', page: 'audit', color: '#10b981', stats: 'Free forever' },
-    { icon: Wallet, title: 'Stripe Connect', desc: 'Every closed deal routes through your Stripe Express. Same-day / instant payouts. No pooled wallets, no crypto, no bullshit. You get paid like a grown-up.', page: 'wallet', color: '#06b6d4', stats: 'Instant payouts' },
+    { icon: Phone, title: 'AI Voice Agent', desc: 'Picks up missed calls in under 60 seconds. Qualifies the lead, books the appointment, texts you a transcript. Industry-tuned for HVAC, dental, plumbing, med spas. Live in 14 days.', page: 'leads', color: '#f59e0b', stats: 'Sub-60s pickup' },
+    { icon: Award, title: 'Revenue Audit', desc: 'Free, public, shareable. Enter your URL — in 15 seconds we show how much call/booking revenue you\'re leaking. Ammunition for the call. Funnel for the close.', page: 'audit', color: '#10b981', stats: 'Free' },
+    { icon: Bot, title: 'SMS Auto-Text-Back', desc: 'Every missed call triggers a 30-second follow-up text. Two-way conversation routed to your phone. Recovers 30-50% of missed call revenue automatically.', color: '#a855f7', action: () => setAiOpen(true), stats: 'Auto-recovery' },
+    { icon: Users, title: 'Reactivation Campaigns', desc: 'Mine your dormant customer list — anyone who hasn\'t been in for 6+ months. AI-personalized outreach across voice, SMS, email. We take 15% of recovered revenue, no monthly retainer.', page: 'leads', color: '#10b981', stats: 'Performance-only' },
+    { icon: TrendingUp, title: 'Review Engine', desc: 'Auto-requests Google reviews from happy customers at the optimal moment (4-24 hr post-job). Adds 10-15 five-star reviews per month. Tops local search in 6 months.', page: 'trends', color: '#06b6d4', stats: '+15 reviews/mo' },
+    { icon: Globe, title: 'Custom AI Builds', desc: 'For $10K+ deposits: AI receptionist OS, multi-location brain, custom RAG agents trained on your data, owner copilot in Slack/SMS. Built on the GOATED stack.', page: 'trends', color: '#ef4444', stats: 'Custom scope' },
+    { icon: Wallet, title: '30-Day Refund', desc: 'Real risk-reversal. If we don\'t deliver measurable results in 30 days, every dollar back. No long-term contracts, no setup retention. Aligns our incentives with yours.', page: 'wallet', color: '#06b6d4', stats: 'Money-back' },
     { icon: BarChart3, title: 'Command Center', desc: 'Pipeline + activations + commission split + TCPA compliance logs. One dashboard. Daily close-rate, weekly revenue. Zero noise.', page: 'dashboard', color: '#8b5cf6', stats: 'One view' },
   ];
 
@@ -543,13 +543,13 @@ export default function HomePage() {
             <button onClick={() => setPage('leads')} className="text-left p-6 rounded-2xl bg-black/40 border border-brand/20 hover:border-brand/50 transition-all duration-300 group hover:-translate-y-1">
               <div className="flex items-center gap-2 mb-2"><Target size={16} className="text-brand" /><span className="text-[10px] font-black uppercase tracking-widest text-brand">Pillar 02</span></div>
               <div className="text-2xl font-black text-brand mb-1">CLOSER OS</div>
-              <div className="text-sm text-slate-400 leading-snug">500K scored targets. AI scripts, objection handling, real-time coaching. Skip the inbox — go straight to the close.</div>
+              <div className="text-sm text-slate-400 leading-snug">Per-vertical playbooks for HVAC, dental, plumbing, med spa, roofing, chiro. Scripts, objection handlers, audit ammunition. Built for solo dialers and small agency teams.</div>
               <div className="text-[11px] text-emerald-300/70 mt-3 flex items-center gap-1 group-hover:translate-x-1 transition-transform">Open pipeline <ArrowRight size={12} /></div>
             </button>
             <button onClick={() => setPage('wallet')} className="text-left p-6 rounded-2xl bg-black/40 border border-cyan-400/20 hover:border-cyan-400/50 transition-all duration-300 group hover:-translate-y-1">
               <div className="flex items-center gap-2 mb-2"><Wallet size={16} className="text-cyan-400" /><span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">Pillar 03</span></div>
-              <div className="text-2xl font-black text-cyan-400 mb-1">STRIPE CONNECT</div>
-              <div className="text-sm text-slate-400 leading-snug">Every closed deal routes through your Stripe Express account. Same day to your bank. No pooled wallets, no crypto, no monthly drain — $0 until the money actually lands.</div>
+              <div className="text-2xl font-black text-cyan-400 mb-1">STRIPE PAYMENTS</div>
+              <div className="text-sm text-slate-400 leading-snug">Every deposit and retainer collected via Stripe Payment Links. Funds in your bank in 2 days. No long-term contracts. Tier 1: $2K + $750/mo. Tier 2: $10-20K + $2.5-5K/mo.</div>
               <div className="text-[11px] text-cyan-300/70 mt-3 flex items-center gap-1 group-hover:translate-x-1 transition-transform">See payouts <ArrowRight size={12} /></div>
             </button>
           </StaggeredCards>
@@ -613,19 +613,19 @@ export default function HomePage() {
         <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.02) 0%, rgba(239,68,68,0.02) 50%, rgba(168,85,247,0.02) 100%)' }} />
         <div className="max-w-7xl mx-auto relative">
           <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <span className="text-orange-400 text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2"><Flame size={16} />DEGEN MODE ACTIVATED</span>
-            <h2 className="text-3xl lg:text-5xl font-black mt-2 mb-3">Ape In. <span className="text-orange-400">Stack Bags. Repeat.</span></h2>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">Free alpha. Fat bags. Absurd close rates. This is the zero-to-hero play — no monthly drain, pure upside.</p>
+            <span className="text-orange-400 text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2"><Flame size={16} />WHY GOATED WINS</span>
+            <h2 className="text-3xl lg:text-5xl font-black mt-2 mb-3">Built For Owners. <span className="text-orange-400">Not Vendors.</span></h2>
+            <p className="text-slate-400 text-lg max-w-2xl mx-auto">Most AI agencies sell vapor. We deliver in 14 days, guarantee results in 30, and align our incentives with yours. Texas-built, owner-operated, brand-first.</p>
           </motion.div>
 
           <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
             {[
-              { emoji: '\u{1F525}', title: 'Whale Plays Only', desc: 'AI finds the whale deals, you ape in and close them. 500K+ leads scored, ranked, and ready. The bag is sitting right there waiting for you to grab it.', stat: '500K+', label: 'Leads scored' },
-              { emoji: '\u{1F9E0}', title: 'Big Brain Alpha', desc: 'Real-time market intelligence from every social platform. Know what\'s pumping before the normies. Front-run the competition like a goddamn psychic.', stat: '< 30s', label: 'Alpha signal delay' },
-              { emoji: '\u{1F4B0}', title: 'Money Printer Go Brr', desc: 'Direct outreach that converts. SMS sequences, LinkedIn triggers, warm-dial scripts — skip the inbox, talk to the decision maker. BYO number, we run the play.', stat: '10x', label: 'Reply rate vs email' },
-              { emoji: '\u{1F410}', title: 'GOATED AI Agent', desc: 'Your always-on degen co-pilot. Real-time coaching, research, scripts — like having a senior closer whispering alpha in your ear 24/7. No sleep needed.', stat: '24/7', label: 'Always available' },
-              { emoji: '\u{1F4C8}', title: 'Moon Signals', desc: 'Cross-platform sentiment analysis. Instagram, TikTok, crypto Twitter — see the trend before it moons. Ape into the right deal at the right time.', stat: 'LIVE', label: 'Real-time data' },
-              { emoji: '\u26A1', title: 'Zero Fee, No Cap', desc: 'Free forever. You keep the bag. We only take a cut when a real deal actually closes — terms get laid out on your first audit call. No subscriptions, no monthly drain, no pricing page games.', stat: '$0', label: 'Monthly cost' },
+              { emoji: '\u{1F4DE}', title: 'Sub-60s Pickup', desc: 'AI answers your missed calls in under 60 seconds. Customer hears a natural voice, gets qualified, books appointment. Owner gets a transcript. No more voicemail black hole.', stat: '<60s', label: 'AI pickup time' },
+              { emoji: '\u{1F4B5}', title: '14-Day Deploy', desc: 'Most AI agencies promise the moon and ship in 6 months. We deliver Tier 1 in 14 days — voice agent live, SMS automation running, review engine seeded. ROI before the next bill.', stat: '14d', label: 'To live' },
+              { emoji: '\u{1F4DD}', title: '30-Day Refund', desc: 'No long-term contracts. If we don\'t deliver measurable results in 30 days, every dollar back. Real risk-reversal. We only stay paid if we keep performing.', stat: '30d', label: 'Money-back' },
+              { emoji: '\u{1F4CA}', title: 'Vertical Playbooks', desc: 'HVAC, dental, plumbing, med spa, roofing, chiro. Each has a tailored voice script, objection handlers, integration patterns. We don\'t generalize. We specialize.', stat: '6+', label: 'Verticals deep' },
+              { emoji: '\u{1F4C8}', title: 'Compounding Wins', desc: 'Tier 1 captures the calls. Day 30 upsell adds review engine, GMB, reactivation. Day 90 owner copilot. Average client grows from $750/mo to $2,200/mo by month 6.', stat: '3x', label: 'Revenue/client by m6' },
+              { emoji: '\u26A1', title: 'Owner-Operated', desc: 'Texas-built. Bootstrapped. Single founder dialing 100x/day. The brand speaks. We deliver what other agencies promise. No fluff, no LinkedIn theater, no monthly drain.', stat: '0%', label: 'VC funded' },
             ].map((item, i) => (
               <div key={i} className="bg-black/40 backdrop-blur rounded-xl p-6 border border-white/[0.03] group hover:border-orange-500/20 transition-all duration-300 relative overflow-hidden hover:-translate-y-1">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(249,115,22,0.05) 0%, transparent 70%)' }} />
