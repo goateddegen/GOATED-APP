@@ -58,6 +58,8 @@ This is the live index of all current documentation. Read top-to-bottom for full
 | Doc | Use |
 |---|---|
 | [`INTEGRATIONS.md`](./INTEGRATIONS.md) | Production integrations, env vars, setup commands |
+| [`VAPI_VERTICAL_PROMPTS.md`](./VAPI_VERTICAL_PROMPTS.md) | Copy-paste system prompts for HVAC/dental/plumbing/med spa/roofing/chiro |
+| [`LIST_BUILDING_QUERIES.md`](./LIST_BUILDING_QUERIES.md) | Apify queries per metro × vertical, filtering rules, top-30 selection |
 | [`COMPLIANCE_BASICS.md`](./COMPLIANCE_BASICS.md) | TCPA, A2P 10DLC SMS, recording consent, CAN-SPAM, HIPAA |
 
 ---
