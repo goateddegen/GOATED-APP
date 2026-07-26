@@ -160,19 +160,27 @@ function GoatedTitle() {
         fontFamily: '"Unbounded", "Space Grotesk", system-ui, sans-serif',
         fontWeight: 700,
         letterSpacing: '0',
-        fontSize: 'clamp(2.5rem, 10.5vw, 8.5rem)',
+        // SIZING CONTRACT — do not raise the max without redoing this maths.
+        // "GOATED" in Unbounded 700 measures 5.26em wide; with the 0.14em
+        // padding either side the box needs 5.54em total.
+        // The centrepiece container is max-w-[min(92vw,640px)], so:
+        //   • desktop  → 640px available ÷ 5.54 = 115px max font. 7rem = 112px ✓
+        //   • narrow   → 92vw available ÷ 5.54 = 16.6vw max. 10.5vw ✓
+        // At 8.5rem the box was 753px inside a 640px container — it overflowed
+        // by 113px, and because mx-auto resolves margin-left to 0 when there's
+        // no free space, the whole overhang went right: the wordmark looked
+        // off-centre and pushed the page sideways.
+        fontSize: 'clamp(2.5rem, 10.5vw, 7rem)',
         lineHeight: 1.18,
-        // Generous horizontal padding: background-clip:text paints the gradient
-        // only inside the element box, so a glyph's right side bearing needs
-        // room or it renders unfilled (the "D" was showing as "I").
+        // background-clip:text paints the gradient only inside the element box,
+        // so the last glyph's right side bearing needs room or it renders
+        // unfilled (the "D" was showing as "I").
         padding: '0.1em 0.14em',
-        // The box must be at least as wide as the nowrap text. As a flex item in
-        // a `min-w-0` column it was being squeezed narrower than its content, so
-        // the last glyph fell outside the painted area. max-content pins the box
-        // to the text; the clamp() above already keeps it inside the viewport
-        // (~49vw at the top end), so no max-width cap is needed.
+        // max-content keeps the box as wide as the nowrap text (no clipping);
+        // max-width:100% is a backstop against overflow if the font ever
+        // changes. Per the maths above it should never actually bind.
         width: 'max-content',
-        maxWidth: 'none',
+        maxWidth: '100%',
         backgroundImage:
           'linear-gradient(120deg, #ef4444 0%, #f87171 18%, #f97316 38%, #fbbf24 58%, #f97316 78%, #ef4444 100%)',
         backgroundSize: '300% 100%',
