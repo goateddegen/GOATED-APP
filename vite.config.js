@@ -16,9 +16,17 @@ export default defineConfig(({ mode }) => {
       sourcemap: false,
       rollupOptions: {
         output: {
+          // @react-three/* read React's internals at module-evaluation time, so
+          // they MUST live in the same chunk as react/react-dom. Splitting them
+          // into the `three` chunk crashed the production bundle on load —
+          // `three` is imported by the entry and evaluates before `vendor`, so
+          // React was still undefined ("Cannot read properties of undefined
+          // (reading '__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED')").
+          // Bare `three` has no React dependency, so it stays split out — it's
+          // ~950KB and only needed by the globe.
           manualChunks: {
-            three: ['three', '@react-three/fiber', '@react-three/drei'],
-            vendor: ['react', 'react-dom', 'framer-motion', 'zustand'],
+            three: ['three'],
+            vendor: ['react', 'react-dom', '@react-three/fiber', '@react-three/drei', 'framer-motion', 'zustand'],
           }
         }
       }
