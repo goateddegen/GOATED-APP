@@ -162,8 +162,17 @@ function GoatedTitle() {
         letterSpacing: '0',
         fontSize: 'clamp(2.5rem, 10.5vw, 8.5rem)',
         lineHeight: 1.18,
-        padding: '0.1em 0.08em',
-        maxWidth: '100%',
+        // Generous horizontal padding: background-clip:text paints the gradient
+        // only inside the element box, so a glyph's right side bearing needs
+        // room or it renders unfilled (the "D" was showing as "I").
+        padding: '0.1em 0.14em',
+        // The box must be at least as wide as the nowrap text. As a flex item in
+        // a `min-w-0` column it was being squeezed narrower than its content, so
+        // the last glyph fell outside the painted area. max-content pins the box
+        // to the text; the clamp() above already keeps it inside the viewport
+        // (~49vw at the top end), so no max-width cap is needed.
+        width: 'max-content',
+        maxWidth: 'none',
         backgroundImage:
           'linear-gradient(120deg, #ef4444 0%, #f87171 18%, #f97316 38%, #fbbf24 58%, #f97316 78%, #ef4444 100%)',
         backgroundSize: '300% 100%',
