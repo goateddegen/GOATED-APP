@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Search, Home, Users, X, ArrowUp, ArrowDown, CornerDownLeft, Sparkles, Bot, Loader2, ArrowRight } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
+import { isPageEnabled } from '../lib/config';
 
 // Natural-language markers — if the query has these, we surface "Ask AI" first.
 const NL_MARKERS = /\b(show|find|list|top|best|which|how many|compare|above|below|over|under|in .* industry|score |this week|this month|closing|hottest|coldest|biggest|smallest|what is|who is)\b|\?/i;
@@ -34,15 +35,14 @@ function stripTokens(text) {
   return text.replace(/\[NAVIGATE:[a-z-]+\]/gi, '').replace(/\[LEAD_CARD:[^\]]+\]/gi, '').replace(/\*\*([^*]+)\*\*/g, '$1').trim();
 }
 
+// Filtered through isPageEnabled so disabled pages never appear as a result.
 const PAGES = [
   { id: 'home', name: 'Home', hint: 'Landing page' },
   { id: 'audit', name: 'Audit', hint: 'Run a free revenue-loss audit' },
   { id: 'dashboard', name: 'Dashboard', hint: 'Pipeline + revenue' },
-  { id: 'leads', name: 'Leads', hint: 'B2B prospects (demo until APOLLO_API_KEY)' },
-  { id: 'trends', name: 'TrendPulse', hint: 'Live global alpha' },
-  { id: 'wallet', name: 'Wallet', hint: 'Commission & payouts' },
+  { id: 'leads', name: 'Leads', hint: 'Live B2B company prospecting' },
   { id: 'admin', name: 'Admin', hint: 'System health' },
-];
+].filter(p => isPageEnabled(p.id));
 
 export default function SearchModal() {
   const setSearchOpen = useStore(s => s.setSearchOpen);

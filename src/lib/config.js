@@ -127,6 +127,28 @@ export const PRICING = {
   },
 };
 
+// ─── Routing: which pages are actually reachable ────────────────────────────
+// Single source of truth. Every navigation surface (sidebar, keybinds, Cmd+K
+// search, AI overlay auto-navigate, hash router) reads from here, so a page can
+// never be reachable through one door after being closed on another.
+//
+// NAV_PAGES  — surfaced in the sidebar and reachable by every means.
+// DISABLED_PAGES — code is retained and still builds, but the page is NOT
+//   reachable: no keybind, no search result, no AI navigation, no hash. Move an
+//   id from DISABLED_PAGES back into NAV_PAGES (and add it to the Sidebar nav
+//   array) to bring it back online.
+//
+// TrendPulse + Wallet are parked here: TrendPulse ships crypto-market data that
+// doesn't match the agency positioning, and Wallet depends on Stripe Connect
+// endpoints that aren't built yet.
+export const NAV_PAGES = ['home', 'audit', 'leads', 'dashboard', 'admin'];
+export const DISABLED_PAGES = ['trends', 'market', 'wallet', 'managed', 'casino', 'launchpad'];
+
+export const isPageEnabled = (id) => NAV_PAGES.includes(id);
+
+// Keybind → page. Only enabled pages get a binding.
+export const PAGE_KEYBINDS = { h: 'home', u: 'audit', l: 'leads', d: 'dashboard', x: 'admin' };
+
 // ─── Feature flags (flip without redeploying UI logic) ──────────────────────
 export const FLAGS = {
   auditPaid: false,          // toggle the free audit to paid ($49)

@@ -6,7 +6,7 @@ import {
   Phone, Mail, FileText, Brain, AlertTriangle, Users,
   ArrowRight, ShieldCheck,
 } from 'lucide-react';
-import { useStore, fmt } from '../hooks/useStore';
+import { useStore, fmt, computePipelineAnalytics } from '../hooks/useStore';
 
 // ============================================================================
 // DASHBOARD -- Pipeline Health & Revenue Intelligence
@@ -69,7 +69,12 @@ function usePlatformStats() {
   useEffect(() => {
     const compute = () => {
       const state = useStore.getState();
-      const leads = state.getLeads();
+      // Mirror the page's source of truth: live records when we have them.
+      const isLive = state.dataMode === 'live' && state.liveLeads.length > 0;
+      // Don't force-generate the synthetic pool while a live fetch is in flight —
+      // otherwise the ticker shows 25,000 fake leads for a beat before correcting.
+      if (!isLive && state.isLoadingLeads) return;
+      const leads = isLive ? state.liveLeads : state.getLeads();
       const hot = leads.filter(l => l.conversionProbability >= 70).length;
       const active = leads.filter(l => ['qualified', 'proposal', 'negotiation'].includes(l.status)).length;
       setStats(prev => ({
@@ -80,8 +85,12 @@ function usePlatformStats() {
       }));
     };
     compute();
+    // Recompute the moment live data lands, not on the next 30s tick.
+    const unsub = useStore.subscribe((s, prev) => {
+      if (s.liveLeads !== prev.liveLeads || s.dataMode !== prev.dataMode) compute();
+    });
     const iv = setInterval(() => { if (!document.hidden) compute(); }, 30_000);
-    return () => clearInterval(iv);
+    return () => { clearInterval(iv); unsub(); };
   }, []);
 
   return stats;
@@ -254,8 +263,25 @@ function DashboardContent({ onSelect }) {
   }, [degenMode]);
 
   // ── Lead / Pipeline Data ──
-  const leads = useMemo(() => useStore.getState().getLeads(), []);
-  const analytics = useMemo(() => useStore.getState().getPipelineAnalytics(), []);
+  // Prefer live Apollo records; only fall back to the synthetic pool when the
+  // API returned nothing, so the headline pipeline figure reflects reality.
+  const fetchLiveLeads = useStore(s => s.fetchLiveLeads);
+  const liveLeads = useStore(s => s.liveLeads);
+  const dataMode = useStore(s => s.dataMode);
+  useEffect(() => { fetchLiveLeads(); }, [fetchLiveLeads]);
+  const isLive = dataMode === 'live' && liveLeads.length > 0;
+
+  const leads = useMemo(
+    () => (isLive ? liveLeads : useStore.getState().getLeads()),
+    [isLive, liveLeads],
+  );
+  // Analytics must be derived from the SAME array as `leads` — otherwise the
+  // banner claims live data while the pipeline total still reflects the
+  // synthetic pool.
+  const analytics = useMemo(
+    () => (isLive ? computePipelineAnalytics(liveLeads) : useStore.getState().getPipelineAnalytics()),
+    [isLive, liveLeads],
+  );
 
   // ── Revenue Intelligence computed from real store data ──
   const revenueIntel = useMemo(() => {
@@ -353,11 +379,21 @@ function DashboardContent({ onSelect }) {
       {/* ================================================================= */}
       <div className="flex justify-center">
         <div
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs font-medium max-w-2xl"
-          title="Set APOLLO_API_KEY (leads) + Stripe Connect (revenue) + Supabase (users) in Vercel env to flip to real data. See docs/EXECUTION_PLAN_2026.md."
+          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium max-w-2xl ${
+            isLive
+              ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300'
+              : 'bg-amber-500/10 border-amber-500/25 text-amber-300'
+          }`}
+          title={isLive
+            ? 'Lead records are live from Apollo.io. Revenue figures stay $0 until Stripe Connect is wired.'
+            : 'Set APOLLO_API_KEY (leads) + Stripe Connect (revenue) + Supabase (users) to flip to real data.'}
         >
           <BarChart3 size={12} className="shrink-0" />
-          <span>Demo data. Real flip on: <span className="text-white font-mono">APOLLO_API_KEY</span> + Stripe Connect + Supabase.</span>
+          {isLive ? (
+            <span>Leads live from Apollo. Revenue still needs <span className="text-white font-mono">Stripe Connect</span> + <span className="text-white font-mono">Supabase</span>.</span>
+          ) : (
+            <span>Sample data &mdash; figures below are generated, not real. Needs <span className="text-white font-mono">APOLLO_API_KEY</span> + Stripe Connect + Supabase.</span>
+          )}
         </div>
       </div>
 

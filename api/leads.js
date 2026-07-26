@@ -44,82 +44,170 @@ const getCorsHeaders = (req) => ({
 let apolloCache = { data: null, timestamp: 0, key: '' };
 const APOLLO_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Apollo's person-level endpoints (mixed_people/search, people/match) are gated
+// behind a paid plan and return 403 even with a master key. organizations/search
+// and organizations/enrich ARE available on Free, and company-level records are
+// what an agency targeting local businesses actually prospects against anyway.
+// If the account is later upgraded, set APOLLO_PEOPLE_ENABLED=true to re-enable
+// contact-level enrichment on top of these company records.
+const APOLLO_ORG_SEARCH_URL = 'https://api.apollo.io/api/v1/organizations/search';
+
 /**
- * Transform an Apollo person record into our standard lead format.
+ * Score a company from real Apollo signals — no randomness.
+ * Higher = better fit for a done-for-you revenue/automation engagement.
  */
-function transformApolloLead(person, index) {
+function scoreApolloOrg(org) {
+  let score = 30;
+  const emp = org.estimated_num_employees || 0;
+  const rev = org.organization_revenue || 0;
+
+  // Headcount sweet spot: big enough to have budget, small enough to have no ops team.
+  if (emp >= 10 && emp <= 200) score += 22;
+  else if (emp > 200 && emp <= 1000) score += 12;
+  else if (emp >= 5) score += 6;
+
+  // Revenue signal
+  if (rev >= 10_000_000) score += 18;
+  else if (rev >= 1_000_000) score += 14;
+  else if (rev > 0) score += 7;
+
+  // Reachability — a lead you cannot contact is not a lead.
+  if (org.sanitized_phone || org.primary_phone?.number || org.phone) score += 10;
+  if (org.website_url || org.primary_domain) score += 5;
+  if (org.linkedin_url) score += 4;
+
+  // Growth = budget is moving.
+  const growth = org.organization_headcount_twelve_month_growth;
+  if (typeof growth === 'number') {
+    if (growth > 0.2) score += 10;
+    else if (growth > 0) score += 5;
+    else if (growth < -0.15) score -= 6;
+  }
+
+  // Apollo's own buyer-intent signal
+  if (org.show_intent && org.intent_strength) score += 8;
+
+  return Math.max(1, Math.min(99, Math.round(score)));
+}
+
+/** Real buying signals derived from the record — empty if the data isn't there. */
+function apolloBuyingSignals(org) {
+  const out = [];
+  const growth = org.organization_headcount_twelve_month_growth;
+  if (typeof growth === 'number' && growth > 0.15) out.push(`Headcount up ${Math.round(growth * 100)}% in 12mo`);
+  if (org.founded_year && new Date().getFullYear() - org.founded_year <= 5) out.push(`Founded ${org.founded_year} — early growth stage`);
+  if (org.show_intent && org.intent_strength) out.push(`Apollo intent signal: ${org.intent_strength}`);
+  if (org.retail_location_count > 1) out.push(`${org.retail_location_count} physical locations`);
+  if (!org.linkedin_url) out.push('No LinkedIn presence — weak digital footprint');
+  return out;
+}
+
+/**
+ * Transform an Apollo ORGANIZATION record into our standard lead format.
+ * Every field is either straight from Apollo or computed from Apollo values —
+ * nothing is invented. Missing data stays null so the UI can show it as missing.
+ */
+function transformApolloOrg(org, index) {
+  const score = scoreApolloOrg(org);
+  const emp = org.estimated_num_employees || null;
+  const rev = org.organization_revenue || null;
+  const location = [org.city, org.state].filter(Boolean).join(', ') || org.country || org.raw_address || null;
+  const phone = org.sanitized_phone || org.primary_phone?.number || org.phone || null;
+  const industry = org.industry || org.industries?.[0] || 'Unknown';
+
+  // Deal value modelled off the published Local/Growth tiers, not a random number.
+  const dealValue = emp && emp > 200 ? 12500 : emp && emp >= 20 ? 2750 : 2000;
+  const priority = score >= 75 ? 'critical' : score >= 60 ? 'high' : score >= 45 ? 'medium' : 'low';
+
   return {
     id: index + 1,
-    name: person.name || `${person.first_name} ${person.last_name}`,
-    email: person.email || `${(person.first_name || '').toLowerCase()}@${(person.organization?.primary_domain || 'unknown.com')}`,
-    phone: person.phone_numbers?.[0]?.sanitized_number || person.organization?.phone || null,
-    company: person.organization?.name || 'Unknown',
-    title: person.title || 'Unknown',
-    industry: person.organization?.industry || 'Unknown',
-    priority: person.email_status === 'verified' ? 'high' : 'medium',
+    // Free-plan Apollo is company-level: the record IS the business, not a person.
+    name: org.name || 'Unknown',
+    company: org.name || 'Unknown',
+    contactName: null,
+    title: null,
+    email: null,
+    phone,
+    industry,
+    priority,
     status: 'new',
-    score: Math.min(99, Math.floor((person.organization?.estimated_num_employees || 10) / 5 + Math.random() * 40 + 40)),
-    dealValue: Math.floor((person.organization?.estimated_num_employees || 10) * 200 + Math.random() * 20000),
-    employees: person.organization?.estimated_num_employees || null,
-    revenue: null,
-    location: person.city || person.state || person.country || 'Unknown',
-    website: person.organization?.website_url || person.organization?.primary_domain || null,
-    linkedin_url: person.linkedin_url || null,
-    momentum: 'new',
+    score,
+    value: dealValue,
+    dealValue,
+    employees: emp,
+    revenue: rev,
+    revenueFormatted: org.organization_revenue_printed || null,
+    location,
+    address: org.raw_address || null,
+    website: org.website_url || (org.primary_domain ? `https://${org.primary_domain}` : null),
+    domain: org.primary_domain || null,
+    linkedin_url: org.linkedin_url || null,
+    logo: org.logo_url || null,
+    foundedYear: org.founded_year || null,
+    momentum: org.organization_headcount_twelve_month_growth > 0.1 ? 'rising'
+      : org.organization_headcount_twelve_month_growth < -0.1 ? 'declining' : 'stable',
     painPoints: [],
-    techStack: (person.organization?.current_technologies || []).slice(0, 5).join(', ') || 'Unknown',
-    buyingSignals: [],
+    techStack: null,
+    keywords: (org.keywords || []).slice(0, 12),
+    buyingSignals: apolloBuyingSignals(org),
     lead_source: 'Apollo',
     deal_stage: 'Discovery',
-    tags: [person.email_status === 'verified' ? 'verified-email' : 'unverified'],
+    tags: [phone ? 'has-phone' : 'no-phone', org.linkedin_url ? 'has-linkedin' : 'no-linkedin'],
     created_at: new Date().toISOString(),
-    last_activity: new Date().toISOString(),
+    last_activity: null,
+    lastContact: null,
+    conversionProbability: calcConversionProbability(score, priority, 'new', dealValue, emp || 0),
+    bestMethod: phone ? 'Cold Call' : org.linkedin_url ? 'LinkedIn DM' : 'Cold Email',
+    decisionTimeline: calcDecisionTimeline(priority, 'new', dealValue),
+    ranking: calcRanking(score, priority, 'new', dealValue, emp || 0, rev || 0, industry),
+    // Honest provenance so the UI never claims contact data it doesn't have.
+    contactAvailable: false,
     _source: 'apollo',
-    _apolloId: person.id,
+    _apolloId: org.id,
   };
 }
 
 /**
- * Fetch leads from Apollo.io People Search API.
+ * Fetch company leads from Apollo.io Organization Search API.
  * Returns { leads, total, source: 'apollo' } on success,
  * or { error, fallback: true } on failure.
  */
-async function fetchApolloLeads({ page, limit, search, industry, status, priority, minScore }) {
-  const cacheKey = JSON.stringify({ page, limit, search, industry, status, priority, minScore });
+async function fetchApolloLeads({ page, limit, search, industry, location, minEmployees, maxEmployees }) {
+  const cacheKey = JSON.stringify({ page, limit, search, industry, location, minEmployees, maxEmployees });
   const now = Date.now();
 
-  // Return cached data if still fresh and the query matches
   if (apolloCache.data && apolloCache.key === cacheKey && (now - apolloCache.timestamp) < APOLLO_CACHE_TTL) {
     return { ...apolloCache.data, cached: true };
   }
 
   const apiKey = process.env.APOLLO_API_KEY;
+  if (!apiKey) return { error: 'APOLLO_API_KEY not set', fallback: true };
 
-  // Build q_keywords from search + industry
-  let keywords = search || undefined;
-  if (industry) {
-    keywords = keywords ? `${keywords} ${industry}` : industry;
-  }
+  // Apollo caps per_page at 100 for org search.
+  const perPage = Math.min(Math.max(limit, 1), 100);
 
-  const body = {
-    api_key: apiKey,
-    q_organization_domains: '',
-    page,
-    per_page: limit,
-    person_titles: ['CEO', 'Founder', 'Owner', 'VP Sales', 'Head of Marketing', 'CTO', 'COO'],
-    person_locations: ['United States'],
-    organization_num_employees_ranges: ['1,50', '51,200', '201,500'],
-    q_keywords: keywords,
-  };
+  const body = { page, per_page: perPage };
+
+  // Keyword tags drive the vertical (hvac, dental, roofing, med spa...).
+  const tags = [search, industry].filter(Boolean).map(s => String(s).toLowerCase().trim());
+  if (tags.length) body.q_organization_keyword_tags = tags;
+
+  if (location) body.organization_locations = [location];
+
+  // Employee-range filter uses Apollo's "min,max" string format.
+  const lo = Number(minEmployees) || 1;
+  const hi = Number(maxEmployees) || 500;
+  body.organization_num_employees_ranges = [`${lo},${hi}`];
 
   try {
-    const response = await fetch('https://api.apollo.io/api/v1/mixed_people/search', {
+    const response = await fetch(APOLLO_ORG_SEARCH_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Api-Key': apiKey,
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!response.ok) {
@@ -128,20 +216,22 @@ async function fetchApolloLeads({ page, limit, search, industry, status, priorit
       return {
         error: `Apollo API returned ${response.status}`,
         statusCode: response.status,
+        detail: errText.slice(0, 300),
         fallback: true,
       };
     }
 
     const data = await response.json();
-    const people = data.people || data.contacts || [];
-    const total = data.pagination?.total_entries || people.length;
-    const leads = people.map((person, idx) => transformApolloLead(person, (page - 1) * limit + idx));
+    const orgs = data.organizations || data.accounts || [];
+    if (!orgs.length) {
+      return { error: 'Apollo returned no organizations for this query', fallback: true };
+    }
+
+    const total = data.pagination?.total_entries || orgs.length;
+    const leads = orgs.map((org, idx) => transformApolloOrg(org, (page - 1) * perPage + idx));
 
     const result = { leads, total, source: 'apollo', cached: false };
-
-    // Store in cache
     apolloCache = { data: result, timestamp: now, key: cacheKey };
-
     return result;
   } catch (err) {
     console.error(`[GOATED] Apollo API fetch failed: ${err.message}`);
@@ -520,6 +610,9 @@ export default async function handler(req, res) {
       minScore: rawMinScore = '0',
       source: forceSource = '',
       pool: rawPool = '5000',
+      location = '',
+      minEmployees = '',
+      maxEmployees = '',
     } = req.query;
 
     const page = Math.max(parseInt(rawPage, 10) || 1, 1);
@@ -538,36 +631,54 @@ export default async function handler(req, res) {
     const hasApolloKey = !!process.env.APOLLO_API_KEY;
     const useApollo = forceSource === 'apollo' || (hasApolloKey && forceSource !== 'generated');
 
+    let apolloError = null;
+
     if (useApollo && hasApolloKey) {
-      const apolloResult = await fetchApolloLeads({ page, limit, search, industry, status, priority, minScore });
+      const apolloResult = await fetchApolloLeads({ page, limit, search, industry, location, minEmployees, maxEmployees });
 
       if (!apolloResult.fallback && apolloResult.leads) {
+        let apolloLeads = apolloResult.leads;
+        // Apollo can't filter on our computed score, so apply it here.
+        if (minScore > 0) apolloLeads = apolloLeads.filter(l => l.score >= minScore);
+        if (priority) apolloLeads = apolloLeads.filter(l => l.priority === priority.toLowerCase());
+
+        const pipelineValue = apolloLeads.reduce((s, l) => s + (l.dealValue || 0), 0);
+        const withPhone = apolloLeads.filter(l => l.phone).length;
+
         return res.status(200).json({
-          leads: apolloResult.leads,
+          leads: apolloLeads,
           total: apolloResult.total,
           page,
           limit,
           totalPages: Math.max(1, Math.ceil(apolloResult.total / limit)),
           sort: sortField,
           order: sortOrder,
-          filters: { search: search || null, industry: industry || null, status: status || null, priority: priority || null, minScore: minScore || null },
+          filters: { search: search || null, industry: industry || null, location: location || null, status: status || null, priority: priority || null, minScore: minScore || null },
           summary: {
             totalLeads: apolloResult.total,
-            pipelineValue: apolloResult.leads.reduce((s, l) => s + (l.dealValue || 0), 0),
-            pipelineFormatted: fmt(apolloResult.leads.reduce((s, l) => s + (l.dealValue || 0), 0)),
-            avgScore: Math.round(apolloResult.leads.reduce((s, l) => s + (l.score || 0), 0) / (apolloResult.leads.length || 1)),
-            topIndustry: apolloResult.leads[0]?.industry || 'Unknown',
+            returned: apolloLeads.length,
+            pipelineValue,
+            pipelineFormatted: fmt(pipelineValue),
+            avgScore: Math.round(apolloLeads.reduce((s, l) => s + (l.score || 0), 0) / (apolloLeads.length || 1)),
+            topIndustry: apolloLeads[0]?.industry || 'Unknown',
+            reachableByPhone: withPhone,
+            avgDealSize: Math.round(pipelineValue / (apolloLeads.length || 1)),
           },
           _meta: {
             generatedAt: new Date().toISOString(),
             dataType: 'apollo-live',
             cached: apolloResult.cached || false,
-            source: 'apollo.io',
+            source: 'apollo.io/organizations/search',
+            granularity: 'company',
+            // Honest about the plan limitation rather than faking contacts.
+            contactDataAvailable: false,
+            contactDataNote: 'Apollo Free plan exposes company records only. Person-level contacts (name/email/direct dial) require a paid Apollo plan.',
           },
         });
       }
-      // Apollo failed — fall through to generated data
-      console.warn('[GOATED] Apollo failed, falling back to generated data:', apolloResult.error);
+      // Apollo failed — fall through to generated data, but surface why.
+      apolloError = apolloResult.error || 'unknown Apollo error';
+      console.warn('[GOATED] Apollo failed, falling back to generated data:', apolloError, apolloResult.detail || '');
     }
 
     // -------------------------------------------------------------------
@@ -704,10 +815,17 @@ export default async function handler(req, res) {
       _meta: {
         generatedAt: new Date().toISOString(),
         dataType: hasApolloKey ? 'generated-fallback' : 'generated',
+        // Explicit flag the UI must respect — these records are synthetic.
+        isSyntheticData: true,
         cached: true,
         totalInPool: poolSize,
         apolloAvailable: hasApolloKey,
-        note: hasApolloKey ? 'Apollo key detected but using generated data (pass ?source=apollo to use)' : 'Set APOLLO_API_KEY env var for live Apollo.io data',
+        apolloError,
+        note: apolloError
+          ? `Synthetic data. Apollo call failed: ${apolloError}`
+          : hasApolloKey
+            ? 'Synthetic data. Apollo key present — pass ?source=apollo with a search/industry/location to pull live companies.'
+            : 'Synthetic data. Set APOLLO_API_KEY for live Apollo.io company data.',
       },
     });
   } catch (error) {

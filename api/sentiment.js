@@ -59,8 +59,8 @@ async function fetchTrendingCoins() {
   try {
     const r = await fetch('https://api.coingecko.com/api/v3/search/trending', { signal: AbortSignal.timeout(5000) });
     const d = await r.json();
-    return d.coins?.map(c => c.item) || [];
-  } catch { return null; }
+    return Array.isArray(d?.coins) ? d.coins.map(c => c.item) : [];
+  } catch { return []; }
 }
 
 async function fetchGlobalData() {
@@ -74,16 +74,19 @@ async function fetchGlobalData() {
 async function fetchTopCoins() {
   try {
     const r = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=true&price_change_percentage=1h,24h,7d', { signal: AbortSignal.timeout(8000) });
-    return await r.json();
-  } catch { return null; }
+    const d = await r.json();
+    // CoinGecko returns { status: { error_code: 429 } } when rate-limited — not an array.
+    return Array.isArray(d) ? d : [];
+  } catch { return []; }
 }
 
 async function fetchCryptoNews() {
   try {
     const r = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN&sortOrder=popular', { signal: AbortSignal.timeout(5000) });
     const d = await r.json();
-    return d.Data?.slice(0, 20) || [];
-  } catch { return null; }
+    // CryptoCompare now 401s without a key and returns { Response: "Error" }.
+    return Array.isArray(d?.Data) ? d.Data.slice(0, 20) : [];
+  } catch { return []; }
 }
 
 async function fetchPolymarketData() {

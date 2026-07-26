@@ -253,8 +253,9 @@ export default async function handler(req, res) {
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return res.status(200).json({ fallback: true, requestId });
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!apiKey && !groqKey) {
+    return res.status(200).json({ fallback: true, requestId, reason: 'no_llm_key' });
   }
 
   try {
@@ -454,38 +455,87 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
       : (isOutreachIntent || isClosingIntent) ? 600
       : 180; // ~135 words — enforce brevity rule
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: maxTokens,
-        temperature: activeMode.temperature,
-        system: systemPrompt,
-        messages: contextMessages.map(m => ({
-          role: m.role,
-          content: m.content,
-        })),
-      }),
-    });
+    const chatMessages = contextMessages.map(m => ({ role: m.role, content: m.content }));
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error(`[${requestId}] Anthropic API error:`, error);
-      return res.status(200).json({ fallback: true, requestId });
+    // Two live providers, tried in order. Anthropic first for quality; Groq is a
+    // real second engine (not a canned template) so an Anthropic outage, rate
+    // limit, or exhausted credit balance never silently degrades the product to
+    // static text. Only if BOTH are unavailable do we signal fallback.
+    let rawContent = null;
+    let llmUsed = null;
+    const providerErrors = [];
+
+    if (apiKey) {
+      try {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: maxTokens,
+            temperature: activeMode.temperature,
+            system: systemPrompt,
+            messages: chatMessages,
+          }),
+          signal: AbortSignal.timeout(30000),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          rawContent = data.content?.[0]?.text || null;
+          llmUsed = 'anthropic:claude-sonnet-4-6';
+        } else {
+          providerErrors.push(`anthropic ${response.status}: ${(await response.text()).slice(0, 200)}`);
+        }
+      } catch (e) {
+        providerErrors.push(`anthropic threw: ${e.message}`);
+      }
     }
 
-    const data = await response.json();
-    const rawContent = data.content[0]?.text || 'No response generated.';
+    if (!rawContent && groqKey) {
+      try {
+        const gr = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${groqKey}`,
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            max_tokens: maxTokens,
+            temperature: activeMode.temperature,
+            messages: [{ role: 'system', content: systemPrompt }, ...chatMessages],
+          }),
+          signal: AbortSignal.timeout(30000),
+        });
+
+        if (gr.ok) {
+          const gd = await gr.json();
+          rawContent = gd.choices?.[0]?.message?.content || null;
+          llmUsed = 'groq:llama-3.3-70b-versatile';
+        } else {
+          providerErrors.push(`groq ${gr.status}: ${(await gr.text()).slice(0, 200)}`);
+        }
+      } catch (e) {
+        providerErrors.push(`groq threw: ${e.message}`);
+      }
+    }
+
+    if (!rawContent) {
+      console.error(`[${requestId}] All LLM providers failed:`, providerErrors.join(' | '));
+      return res.status(200).json({ fallback: true, requestId, providerErrors });
+    }
+
     const safeContent = sanitizeOutput(rawContent);
 
     return res.status(200).json({
       content: safeContent,
       fallback: false,
+      llm: llmUsed,
       requestId,
       responseMode: responseMode || 'default',
     });

@@ -713,11 +713,13 @@ export default async function handler(req, res) {
         fetch('https://api.coingecko.com/api/v3/global', { signal: AbortSignal.timeout(5000) }).then(r => r.json()),
       ]);
 
-      const coins = marketsRes.status === 'fulfilled' ? marketsRes.value : [];
-      const fng = fngRes.status === 'fulfilled' ? fngRes.value.data : [];
-      const news = newsRes.status === 'fulfilled' ? (newsRes.value.Data || []).slice(0, 25) : [];
-      const trending = trendingRes.status === 'fulfilled' ? trendingRes.value : null;
-      const globalData = globalRes.status === 'fulfilled' ? globalRes.value.data : null;
+      // NB: a rate-limited/erroring upstream still resolves — it just returns an
+      // error object instead of the expected array. Shape-check, don't trust status.
+      const coins = Array.isArray(marketsRes.value) ? marketsRes.value : [];
+      const fng = Array.isArray(fngRes.value?.data) ? fngRes.value.data : [];
+      const news = Array.isArray(newsRes.value?.Data) ? newsRes.value.Data.slice(0, 25) : [];
+      const trending = Array.isArray(trendingRes.value?.coins) ? trendingRes.value : null;
+      const globalData = globalRes.value?.data ?? null;
 
       const result = runFullAnalysis({ coins, news, fearGreed: fng, globalData, trending });
       cache.data = result;

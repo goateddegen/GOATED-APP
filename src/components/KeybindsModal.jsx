@@ -1,19 +1,18 @@
 import React from 'react';
-import { Keyboard, X, Home, LayoutDashboard, Users, TrendingUp, BarChart3, Wallet, Bot, Search, Eye, Shield, Rocket, User, Dice5, Flame, Crown, Award } from 'lucide-react';
+import { Keyboard, X, Home, LayoutDashboard, Users, Bot, Search, Eye, Shield, User, Flame, Award } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 
 const sections = [
   {
     title: 'Navigation',
     desc: 'Jump to any page instantly',
+    // Mirrors PAGE_KEYBINDS in lib/config.js. Disabled pages (TrendPulse T/C,
+    // Wallet W, Managed M) have no binding and are deliberately not listed.
     keys: [
       { key: 'H', label: 'Home', icon: Home, color: '#10b981' },
       { key: 'U', label: 'Audit', icon: Award, color: '#22d3ee' },
-      { key: 'M', label: 'Managed Service', icon: Crown, color: '#facc15' },
-      { key: 'D', label: 'Dashboard', icon: LayoutDashboard, color: '#06b6d4' },
-      { key: 'T/C', label: 'TrendPulse', icon: TrendingUp, color: '#a855f7' },
       { key: 'L', label: 'Leads', icon: Users, color: '#f59e0b' },
-      { key: 'W', label: 'Wallet', icon: Wallet, color: '#3b82f6' },
+      { key: 'D', label: 'Dashboard', icon: LayoutDashboard, color: '#06b6d4' },
       { key: 'X', label: 'Admin', icon: Shield, color: '#ef4444' },
     ]
   },

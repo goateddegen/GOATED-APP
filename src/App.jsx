@@ -13,6 +13,7 @@ const AIOverlay = lazy(() => import('./components/AIOverlay'));
 import AccountModal from './components/AccountModal';
 import Onboarding from './components/Onboarding';
 import { onAuthStateChange, trackPerformance, trackPageView, startAutoSync, stopAutoSync, loadUserDataFromCloud } from './lib/supabase';
+import { PAGE_KEYBINDS, isPageEnabled } from './lib/config';
 
 // Lazy-loaded pages wrapped in React.memo to reduce CSR overhead on re-renders
 const HomePage = React.memo(lazy(() => import('./pages/HomePage')));
@@ -395,8 +396,7 @@ export default function App() {
       // If keybinds modal is open, handle navigation keys then close
       if (state.keybindsOpen) {
         e.preventDefault();
-        const keybindNav = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', u: 'audit' };
-        const target = keybindNav[key];
+        const target = PAGE_KEYBINDS[key];
         setKeybindsOpen(false);
         if (target) { navTo(target); }
         else if (key === 'g') { setAiOpen(true); }
@@ -422,10 +422,10 @@ export default function App() {
       // Skip if modifier keys are held (except Escape/Cmd+K handled above)
       if (hasModifier) return;
 
-      // Navigation map — single lookup
+      // Navigation map — single lookup, sourced from config so disabled pages
+      // (TrendPulse, Wallet) have no binding at all rather than a silent one.
       // Debounce same-key rapid presses (200ms) to reduce CSR overhead on low-memory devices
-      const navMap = { h: 'home', d: 'dashboard', l: 'leads', t: 'trends', c: 'trends', w: 'wallet', x: 'admin', u: 'audit' };
-      const navTarget = navMap[key];
+      const navTarget = PAGE_KEYBINDS[key];
       if (navTarget) {
         const now = Date.now();
         if (key === lastNavKeyRef.current && now - lastNavRef.current < 200) return;
@@ -463,15 +463,15 @@ export default function App() {
 
   // No useMemo — prevents stale renders & black screen during rapid page switching
   const renderPage = () => {
+    // Final gate: anything not in NAV_PAGES renders Home, no matter how the
+    // store got set (stale persisted state, hash, programmatic setPage).
+    if (!isPageEnabled(page)) return <HomePage />;
+
     if (PROTECTED_PAGES.has(page)) {
       switch (page) {
         case 'dashboard': return requireAuth(() => <DashboardPage onSelect={selectLead} />);
         case 'leads':     return requireAuth(() => <LeadsPage onSelect={selectLead} />);
-        case 'trends':    return requireAuth(() => <TrendsPage />);
-        case 'market':    return requireAuth(() => <TrendsPage />);
-        case 'wallet':    return requireAuth(() => <WalletPage />);
         case 'admin':     return requireAuth(() => <AdminPage />);
-        case 'managed':   return requireAuth(() => <LeadsPage onSelect={selectLead} />);
       }
     }
     switch (page) {

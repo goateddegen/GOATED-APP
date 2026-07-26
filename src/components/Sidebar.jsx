@@ -16,12 +16,10 @@ const nav = [
   { id: 'admin', icon: Shield, label: 'Admin', key: 'X', badge: 'PRO' },
 ];
 
-// Hidden routes — accessible via Cmd+K, direct hash, or keybind, but not surfaced in nav.
-// Keep TrendPulse + Wallet operational for power users / future productization.
-const hiddenNav = [
-  { id: 'trends', icon: TrendingUp, label: 'TrendPulse', key: 'T' },
-  { id: 'wallet', icon: Wallet, label: 'Wallet', key: 'W' },
-];
+// TrendPulse + Wallet are fully disabled for launch — see DISABLED_PAGES in
+// lib/config.js. They are unreachable by nav, keybind, Cmd+K, AI navigation, and
+// deep link. To bring one back: add its id to NAV_PAGES, give it a key in
+// PAGE_KEYBINDS, restore its case in App.jsx renderPage, and add an entry here.
 
 export default function Sidebar() {
   const page = useStore(s => s.page);

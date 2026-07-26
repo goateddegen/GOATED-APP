@@ -6,7 +6,7 @@ import {
   Linkedin, Clock, Flame, Brain, MessageSquare, Bot, Wand2, Filter,
   Target, Star, Eye, Copy, X, Activity, CheckCircle,
   Crown, PhoneCall, CalendarClock, Timer, UserSearch, Table2,
-  ExternalLink, MapPin, Crosshair, AlertTriangle,
+  ExternalLink, MapPin, Crosshair, AlertTriangle, Radio,
 } from 'lucide-react';
 import { useStore, fmt, priorities, statuses, industries } from '../hooks/useStore';
 
@@ -591,9 +591,27 @@ export default function LeadsPage({ onSelect }) {
   const getLeads = useStore(s => s.getLeads);
   const degenMode = useStore(s => s.degenMode);
 
+  const fetchLiveLeads = useStore(s => s.fetchLiveLeads);
+  const liveLeads = useStore(s => s.liveLeads);
+  const dataMode = useStore(s => s.dataMode);
+  const isLoadingLeads = useStore(s => s.isLoadingLeads);
+  const leadsError = useStore(s => s.leadsError);
+
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, []);
-  useEffect(() => { if (!allLeads) getLeads(); }, [allLeads, getLeads]);
-  const activeLeads = allLeads || [];
+
+  // Pull real company records from /api/leads (Apollo) on mount. The synthetic
+  // pool is only generated if that call fails, so the page shows live data by
+  // default instead of 250K invented rows.
+  useEffect(() => { fetchLiveLeads(); }, [fetchLiveLeads]);
+
+  const isLive = dataMode === 'live' && liveLeads.length > 0;
+
+  // Only pay the cost of generating the synthetic pool when we actually need it.
+  useEffect(() => {
+    if (!isLive && !isLoadingLeads && !allLeads) getLeads();
+  }, [isLive, isLoadingLeads, allLeads, getLeads]);
+
+  const activeLeads = isLive ? liveLeads : (allLeads || []);
 
   // Core state
   const [expandedRows, setExpandedRows] = useState(new Set());
@@ -800,13 +818,29 @@ export default function LeadsPage({ onSelect }) {
       {callLead && <CallModal lead={callLead} phone={callPhone} onClose={() => setCallLead(null)} showToast={showToast} />}
       {scheduleLead && <ScheduleModal lead={scheduleLead} onClose={() => setScheduleLead(null)} showToast={showToast} />}
 
-      {/* ── Demo Data Banner ── */}
-      <div className={`mb-4 px-4 py-2.5 rounded-xl flex items-center gap-3 border ${degenMode ? 'bg-orange-500/10 border-orange-500/25' : 'bg-amber-500/10 border-amber-500/20'}`}>
-        <AlertTriangle size={16} className={degenMode ? 'text-orange-400 flex-shrink-0' : 'text-amber-400 flex-shrink-0'} />
-        <span className={`text-sm ${degenMode ? 'text-orange-200/90' : 'text-amber-300/90'}`}>
-          <span className="font-semibold">Demo Data</span> &mdash; algorithmically generated for internal targeting. Wire <span className="font-mono text-white">APOLLO_API_KEY</span> to flip to live scrape.
-        </span>
-      </div>
+      {/* ── Data provenance banner — reflects the ACTUAL source in use ── */}
+      {isLive ? (
+        <div className="mb-4 px-4 py-2.5 rounded-xl flex items-center gap-3 border bg-emerald-500/10 border-emerald-500/25">
+          <Radio size={16} className="text-emerald-400 flex-shrink-0" />
+          <span className="text-sm text-emerald-200/90">
+            <span className="font-semibold">Live data</span> &mdash; real companies from Apollo.io.
+            Company-level records only: names, sites, phones and headcount are real; individual
+            contacts require a paid Apollo plan.
+          </span>
+        </div>
+      ) : (
+        <div className={`mb-4 px-4 py-2.5 rounded-xl flex items-center gap-3 border ${degenMode ? 'bg-orange-500/10 border-orange-500/25' : 'bg-amber-500/10 border-amber-500/20'}`}>
+          <AlertTriangle size={16} className={degenMode ? 'text-orange-400 flex-shrink-0' : 'text-amber-400 flex-shrink-0'} />
+          <span className={`text-sm ${degenMode ? 'text-orange-200/90' : 'text-amber-300/90'}`}>
+            <span className="font-semibold">Sample data &mdash; not real companies.</span>{' '}
+            {isLoadingLeads
+              ? 'Loading live results…'
+              : leadsError
+                ? `Live lookup failed (${leadsError}). Every name, number and dollar figure below is generated.`
+                : 'Every name, number and dollar figure below is generated. Search a vertical to pull live companies.'}
+          </span>
+        </div>
+      )}
 
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">

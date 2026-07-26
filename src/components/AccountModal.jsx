@@ -7,6 +7,46 @@ import { signIn, signUp, signInWithGoogle, signInWithGithub, signOut, supabase }
 // Admin emails — checked server-side via Supabase roles, not passwords in client
 const ADMIN_EMAILS = ['secrdev@gmail.com', 'admin@goated.solutions'];
 
+// ─── Local-only credential handling ─────────────────────────────────────────
+// When VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are unset there is no auth
+// server, so the app keeps a browser-local account list purely so the UI is
+// usable. Passwords are PBKDF2-hashed (never stored in plaintext) — but this is
+// NOT real authentication: it is per-browser, offline, and trivially bypassable
+// from devtools. Configure Supabase before exposing anything that matters.
+const PBKDF2_ITERS = 210_000;
+
+const toHex = (buf) => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+
+async function hashPassword(password, saltHex) {
+  const salt = saltHex
+    ? Uint8Array.from(saltHex.match(/.{2}/g).map(h => parseInt(h, 16)))
+    : crypto.getRandomValues(new Uint8Array(16));
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits'],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERS, hash: 'SHA-256' },
+    keyMaterial, 256,
+  );
+  return { hash: toHex(bits), salt: toHex(salt) };
+}
+
+// Constant-time-ish comparison so a local attacker can't time their way in.
+function safeEqual(a = '', b = '') {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+if (!supabase && typeof window !== 'undefined') {
+  console.warn(
+    '[GOATED] Supabase is not configured — running with browser-local accounts. ' +
+    'Sessions do not sync across devices and page protection is cosmetic. ' +
+    'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY for real auth.',
+  );
+}
+
 const plans = [
   {
     id: 'free',
@@ -52,8 +92,10 @@ export default function AccountModal() {
 
   const finalizeUser = (userData) => {
     const isAdmin = ADMIN_EMAILS.includes(userData.email?.toLowerCase());
+    // Never let credential material reach the session object / localStorage.
+    const { password: _pw, passwordHash: _ph, salt: _s, ...safeData } = userData;
     const u = {
-      ...userData,
+      ...safeData,
       isAdmin,
       plan: isAdmin ? 'enterprise' : (userData.plan || 'free'),
       avatar: userData.avatar || userData.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U',
@@ -86,11 +128,17 @@ export default function AccountModal() {
       }
     }
 
-    // Fallback to localStorage when Supabase not configured
+    // Fallback to browser-local accounts when Supabase isn't configured.
     const storedUsers = JSON.parse(localStorage.getItem('goated_users') || '[]');
-    const found = storedUsers.find(u => u.email === email && u.password === password);
+    const found = storedUsers.find(u => u.email === email);
+    if (!found?.passwordHash || !found?.salt) {
+      setLoading(false);
+      setError('Invalid email or password');
+      return;
+    }
+    const { hash } = await hashPassword(password, found.salt);
     setLoading(false);
-    if (!found) { setError('Invalid email or password'); return; }
+    if (!safeEqual(hash, found.passwordHash)) { setError('Invalid email or password'); return; }
     finalizeUser(found);
   };
 
@@ -112,10 +160,12 @@ export default function AccountModal() {
       }
     }
 
-    // Fallback to localStorage
+    // Fallback to browser-local accounts. Store a PBKDF2 hash + salt, never the
+    // password itself.
     const storedUsers = JSON.parse(localStorage.getItem('goated_users') || '[]');
     if (storedUsers.find(u => u.email === email)) { setError('Email already registered'); setLoading(false); return; }
-    const newUser = { name, email, password, plan: 'free', createdAt: new Date().toISOString() };
+    const { hash, salt } = await hashPassword(password);
+    const newUser = { name, email, passwordHash: hash, salt, plan: 'free', createdAt: new Date().toISOString() };
     storedUsers.push(newUser);
     localStorage.setItem('goated_users', JSON.stringify(storedUsers));
     setLoading(false);

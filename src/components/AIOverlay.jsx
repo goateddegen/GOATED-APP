@@ -13,6 +13,7 @@ import {
 import { useStore, fmt } from '../hooks/useStore';
 import { GoatIcon } from './GoatLogo';
 import { notify, requestNotifPermission, getNotifPermission } from '../utils/notifications';
+import { isPageEnabled } from '../lib/config';
 
 // ─── STREAMING TEXT HOOK ──────────────────────────────────────────────
 // Reveals text word-by-word for a streaming feel, even when the response arrives all at once
@@ -1676,7 +1677,7 @@ export default function AIOverlay() {
           const navMatch = data.content.match(/\[NAVIGATE:(\w+)\]/);
           if (navMatch) {
             const navPage = navMatch[1];
-            if (['leads', 'trends', 'dashboard', 'wallet', 'admin', 'audit'].includes(navPage)) {
+            if (isPageEnabled(navPage)) {
               setPage(navPage);
               window.scrollTo(0, 0);
             }
@@ -1700,9 +1701,7 @@ export default function AIOverlay() {
     const lower = msg.toLowerCase();
     const PAGE_INTENTS = {
       leads: /\b(lead|prospect|pipeline|find.*(?:in|at|from)|show.*(?:lead|company|deal)|search.*(?:lead|company)|close|outreach)\b/,
-      trends: /\b(trend|market|crypto|btc|eth|sol|sentiment|chart|price|trading|alpha)\b/,
       dashboard: /\b(dashboard|stats|analytics|kpi|overview|performance)\b/,
-      wallet: /\b(wallet|balance|commission|earning|payment|payout|invoic)\b/,
     };
     for (const [page, regex] of Object.entries(PAGE_INTENTS)) {
       if (regex.test(lower) && currentPage !== page) {
@@ -1782,7 +1781,7 @@ export default function AIOverlay() {
           .then(data => {
             if (!data.fallback && data.content) {
               const navM = data.content.match(/\[NAVIGATE:(\w+)\]/);
-              if (navM && ['leads','trends','dashboard','wallet','admin','audit'].includes(navM[1])) {
+              if (navM && isPageEnabled(navM[1])) {
                 setPage(navM[1]);
                 window.scrollTo(0, 0);
               }
