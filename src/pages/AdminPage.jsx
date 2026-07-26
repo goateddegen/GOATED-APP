@@ -1149,12 +1149,18 @@ export default function AdminPage() {
           <div>
             <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">API Key Management</div>
             <div className="space-y-1.5">
+              {/*
+                ONLY client-safe keys belong here. A VITE_-prefixed variable is
+                inlined into the browser bundle and readable by every visitor,
+                so secrets (Anthropic, Apollo, Groq, Vapi private, Supabase
+                secret) must never use that prefix — they live server-side and
+                are reported by /api/health instead, not from import.meta.env.
+              */}
               {[
-                { label: 'Anthropic API Key', key: 'VITE_ANTHROPIC_API_KEY', prefix: 'sk-ant-' },
-                { label: 'Supabase Anon Key', key: 'VITE_SUPABASE_ANON_KEY', prefix: 'eyJhbGc' },
-                { label: 'Stripe Public Key', key: 'VITE_STRIPE_PUBLIC_KEY', prefix: 'pk_live_' },
-                { label: 'CoinGecko API Key', key: 'VITE_COINGECKO_API_KEY', prefix: 'CG-' },
-                { label: 'Apollo.io API Key', key: 'VITE_APOLLO_API_KEY', prefix: 'apollo-' },
+                { label: 'Supabase Publishable Key', key: 'VITE_SUPABASE_PUBLISHABLE_KEY', prefix: 'sb_publishable_' },
+                { label: 'Supabase URL', key: 'VITE_SUPABASE_URL', prefix: 'https://' },
+                { label: 'Stripe Publishable Key', key: 'VITE_STRIPE_PUBLISHABLE_KEY', prefix: 'pk_live_' },
+                { label: 'Vapi Public Key', key: 'VITE_VAPI_PUBLIC_KEY', prefix: 'vapi-pub-' },
               ].map(apiKey => {
                 const isSet = !!import.meta.env[apiKey.key];
                 return (

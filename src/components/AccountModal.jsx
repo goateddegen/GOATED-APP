@@ -7,43 +7,24 @@ import { signIn, signUp, signInWithGoogle, signInWithGithub, signOut, supabase }
 // Admin emails — checked server-side via Supabase roles, not passwords in client
 const ADMIN_EMAILS = ['secrdev@gmail.com', 'admin@goated.solutions'];
 
-// ─── Local-only credential handling ─────────────────────────────────────────
-// When VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are unset there is no auth
-// server, so the app keeps a browser-local account list purely so the UI is
-// usable. Passwords are PBKDF2-hashed (never stored in plaintext) — but this is
-// NOT real authentication: it is per-browser, offline, and trivially bypassable
-// from devtools. Configure Supabase before exposing anything that matters.
-const PBKDF2_ITERS = 210_000;
+// ─── Auth policy ────────────────────────────────────────────────────────────
+// Supabase Auth is the ONLY account system. There is deliberately no
+// browser-local fallback: a second, offline account store meant accounts could
+// exist on one device and nowhere else, silently diverging from the real user
+// table whenever Supabase was unreachable. If auth is down, the app says so
+// rather than inventing a session that no backend recognises.
+const AUTH_UNAVAILABLE =
+  'Accounts are temporarily unavailable. Please try again in a moment.';
 
-const toHex = (buf) => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
-
-async function hashPassword(password, saltHex) {
-  const salt = saltHex
-    ? Uint8Array.from(saltHex.match(/.{2}/g).map(h => parseInt(h, 16)))
-    : crypto.getRandomValues(new Uint8Array(16));
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits'],
-  );
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERS, hash: 'SHA-256' },
-    keyMaterial, 256,
-  );
-  return { hash: toHex(bits), salt: toHex(salt) };
-}
-
-// Constant-time-ish comparison so a local attacker can't time their way in.
-function safeEqual(a = '', b = '') {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
+// One-time cleanup: drop credentials written by the retired local-account path.
+if (typeof window !== 'undefined' && localStorage.getItem('goated_users')) {
+  localStorage.removeItem('goated_users');
 }
 
 if (!supabase && typeof window !== 'undefined') {
-  console.warn(
-    '[GOATED] Supabase is not configured — running with browser-local accounts. ' +
-    'Sessions do not sync across devices and page protection is cosmetic. ' +
-    'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY for real auth.',
+  console.error(
+    '[GOATED] Supabase is not configured — sign-in and sign-up are disabled. ' +
+    'Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.',
   );
 }
 
@@ -85,6 +66,8 @@ export default function AccountModal() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  // Non-error status (e.g. "confirm your email") — shown in green, not red.
+  const [notice, setNotice] = useState('');
   const [showPlans, setShowPlans] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -110,36 +93,30 @@ export default function AccountModal() {
     e.preventDefault();
     setError('');
     if (!email || !password) { setError('Please fill in all fields'); return; }
+    if (!supabase) { setError(AUTH_UNAVAILABLE); return; }
     setLoading(true);
 
-    // Try Supabase auth first
-    if (supabase) {
-      const { data, error: authErr } = await signIn(email, password);
-      setLoading(false);
-      if (authErr) { setError(authErr.message); return; }
-      if (data?.user) {
-        finalizeUser({
-          id: data.user.id,
-          email: data.user.email,
-          name: data.user.user_metadata?.full_name || email.split('@')[0],
-          provider: 'email',
-        });
-        return;
-      }
-    }
+    const { data, error: authErr } = await signIn(email, password);
+    setLoading(false);
+    if (authErr) { setError(authErr.message); return; }
 
-    // Fallback to browser-local accounts when Supabase isn't configured.
-    const storedUsers = JSON.parse(localStorage.getItem('goated_users') || '[]');
-    const found = storedUsers.find(u => u.email === email);
-    if (!found?.passwordHash || !found?.salt) {
-      setLoading(false);
-      setError('Invalid email or password');
+    // A user without a session is not logged in. Supabase returns this when the
+    // address still needs confirming — treating it as success would hand out a
+    // UI session with no JWT, so every RLS-protected query would fail silently.
+    if (data?.user && !data?.session) {
+      setError('Confirm your email address before signing in. Check your inbox.');
       return;
     }
-    const { hash } = await hashPassword(password, found.salt);
-    setLoading(false);
-    if (!safeEqual(hash, found.passwordHash)) { setError('Invalid email or password'); return; }
-    finalizeUser(found);
+    if (data?.session?.user) {
+      finalizeUser({
+        id: data.session.user.id,
+        email: data.session.user.email,
+        name: data.session.user.user_metadata?.full_name || email.split('@')[0],
+        provider: 'email',
+      });
+      return;
+    }
+    setError('Sign-in failed. Please try again.');
   };
 
   const handleRegister = async (e) => {
@@ -147,29 +124,26 @@ export default function AccountModal() {
     setError('');
     if (!name || !email || !password) { setError('Please fill in all fields'); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters'); return; }
+    if (!supabase) { setError(AUTH_UNAVAILABLE); return; }
     setLoading(true);
 
-    // Try Supabase auth first
-    if (supabase) {
-      const { data, error: authErr } = await signUp(email, password, { full_name: name });
-      setLoading(false);
-      if (authErr) { setError(authErr.message); return; }
-      if (data?.user) {
-        finalizeUser({ id: data.user.id, email, name, provider: 'email' });
-        return;
-      }
-    }
-
-    // Fallback to browser-local accounts. Store a PBKDF2 hash + salt, never the
-    // password itself.
-    const storedUsers = JSON.parse(localStorage.getItem('goated_users') || '[]');
-    if (storedUsers.find(u => u.email === email)) { setError('Email already registered'); setLoading(false); return; }
-    const { hash, salt } = await hashPassword(password);
-    const newUser = { name, email, passwordHash: hash, salt, plan: 'free', createdAt: new Date().toISOString() };
-    storedUsers.push(newUser);
-    localStorage.setItem('goated_users', JSON.stringify(storedUsers));
+    const { data, error: authErr } = await signUp(email, password, { full_name: name });
     setLoading(false);
-    finalizeUser(newUser);
+    if (authErr) { setError(authErr.message); return; }
+
+    // Project requires email confirmation: a user row exists but no session was
+    // issued. Say so rather than faking a logged-in state with no JWT.
+    if (data?.user && !data?.session) {
+      setNotice(`Account created. We sent a confirmation link to ${email} — click it, then sign in.`);
+      setTab('login');
+      setPassword('');
+      return;
+    }
+    if (data?.session?.user) {
+      finalizeUser({ id: data.session.user.id, email, name, provider: 'email' });
+      return;
+    }
+    setError('Sign-up failed. Please try again.');
   };
 
   const handleOAuth = async (provider) => {
@@ -192,13 +166,13 @@ export default function AccountModal() {
   };
 
   const handleUpgrade = (planId) => {
+    // NOTE: this only changes the local view of the plan. It is not a purchase
+    // and grants nothing server-side — real entitlement has to come from Stripe
+    // via a webhook writing to Supabase, which isn't built yet.
     const updatedUser = { ...user, plan: planId };
     setUser(updatedUser);
     setUserPlan(planId);
     localStorage.setItem('goated_current_user', JSON.stringify(updatedUser));
-    const storedUsers = JSON.parse(localStorage.getItem('goated_users') || '[]');
-    const idx = storedUsers.findIndex(u => u.email === user.email);
-    if (idx !== -1) { storedUsers[idx] = updatedUser; localStorage.setItem('goated_users', JSON.stringify(storedUsers)); }
     setShowPlans(false);
   };
 
@@ -298,7 +272,9 @@ export default function AccountModal() {
                       </button>
                       <button className="text-xs py-2 px-3 rounded-lg bg-surface-2 hover:bg-surface-3 text-slate-300 transition-colors text-left">
                         <div className="font-medium">Users</div>
-                        <div className="text-[10px] text-slate-500">{(() => { try { return JSON.parse(localStorage.getItem('goated_users') || '[]').length; } catch { return 0; } })()} registered</div>
+                        {/* The real count lives in Supabase auth.users and needs
+                            the service key, so it can't be read from the browser. */}
+                        <div className="text-[10px] text-slate-500">Manage in Supabase</div>
                       </button>
                       <button className="text-xs py-2 px-3 rounded-lg bg-surface-2 hover:bg-surface-3 text-slate-300 transition-colors text-left">
                         <div className="font-medium">API Keys</div>
@@ -373,11 +349,11 @@ export default function AccountModal() {
           <div className="p-6">
             {/* Tabs */}
             <div className="flex bg-surface-2 rounded-lg p-1 mb-6">
-              <button onClick={() => { setTab('login'); setError(''); }}
+              <button onClick={() => { setTab('login'); setError(''); setNotice(''); }}
                 className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${tab === 'login' ? 'bg-brand text-black' : 'text-slate-400 hover:text-white'}`}>
                 Login
               </button>
-              <button onClick={() => { setTab('register'); setError(''); }}
+              <button onClick={() => { setTab('register'); setError(''); setNotice(''); }}
                 className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${tab === 'register' ? 'bg-brand text-black' : 'text-slate-400 hover:text-white'}`}>
                 Register
               </button>
@@ -418,6 +394,12 @@ export default function AccountModal() {
                     {error}
                   </motion.div>
                 )}
+                {notice && !error && (
+                  <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    className="text-xs text-emerald-400 bg-emerald-500/10 rounded-lg px-3 py-2">
+                    {notice}
+                  </motion.div>
+                )}
               </AnimatePresence>
 
               <button type="submit" disabled={loading}
@@ -449,7 +431,7 @@ export default function AccountModal() {
 
             <p className="text-center text-xs text-slate-500 mt-4">
               {tab === 'login' ? "Don't have an account? " : 'Already have an account? '}
-              <button onClick={() => { setTab(tab === 'login' ? 'register' : 'login'); setError(''); }}
+              <button onClick={() => { setTab(tab === 'login' ? 'register' : 'login'); setError(''); setNotice(''); }}
                 className="text-brand hover:underline">
                 {tab === 'login' ? 'Register' : 'Login'}
               </button>

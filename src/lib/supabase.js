@@ -1,7 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+// Supabase's newer `sb_publishable_...` keys replace the legacy `anon` JWT.
+// Accept either so the app works before and after a project migrates. Both are
+// passed straight through as the `apikey` header, so no format handling needed.
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  '';
+
+// Fail loudly on a half-configured project — a URL with no key (or vice versa)
+// silently disables auth, cloud sync, and the waitlist, which is exactly the
+// kind of thing that only gets noticed after launch.
+if ((supabaseUrl && !supabaseAnonKey) || (!supabaseUrl && supabaseAnonKey)) {
+  console.error(
+    '[GOATED] Supabase is half-configured: ' +
+    `VITE_SUPABASE_URL is ${supabaseUrl ? 'set' : 'MISSING'}, ` +
+    `publishable/anon key is ${supabaseAnonKey ? 'set' : 'MISSING'}. ` +
+    'Both are required — running with browser-local accounts instead.',
+  );
+}
 
 export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey, {
