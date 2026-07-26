@@ -1,3 +1,4 @@
+import { callLLM } from './_lib/llm.js';
 // =============================================================================
 // GOATED Solutions - Live Plays & Playbook API
 // =============================================================================
@@ -22,20 +23,10 @@
 // light randomisation on liveActivity timestamps to simulate real-time feed.
 // =============================================================================
 
-async function callClaude(systemPrompt, userMessage, maxTokens = 500) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return null;
-  try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: maxTokens, system: systemPrompt, messages: [{ role: 'user', content: userMessage }] }),
-    });
-    if (!r.ok) return null;
-    const d = await r.json();
-    return d.content?.[0]?.text || null;
-  } catch { return null; }
-}
+// Delegates to the shared two-provider caller so this endpoint survives an
+// Anthropic outage or exhausted balance instead of silently returning null.
+const callClaude = (systemPrompt, userMessage, maxTokens = 500) =>
+  callLLM(systemPrompt, userMessage, maxTokens);
 
 const ALLOWED_ORIGINS = [process.env.CORS_ORIGIN || 'https://goated.solutions', 'http://localhost:5173', 'http://localhost:5174'];
 function getCorsOrigin(req) {

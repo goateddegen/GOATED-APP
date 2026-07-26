@@ -503,7 +503,7 @@ async function callClaude(prompt, apiKey) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
-      model: 'claude-3-5-haiku-20241022',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 4000,
       system: 'You are GOATED AI. Return strict JSON matching the schema in the user prompt. No markdown, no prose outside the JSON. Begin your response directly with { and end with }.',
       messages: [{ role: 'user', content: prompt }],
