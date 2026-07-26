@@ -1,6 +1,7 @@
 import React from 'react';
 import { Home, LayoutDashboard, Users, TrendingUp, Zap, BarChart3, Target, Wallet, Bot, Keyboard, Search, ChevronLeft, ChevronRight, Menu, X, Sparkles, User, Shield, Flame, Rocket, Dice5, Award, Crown } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
+import { isPageEnabled } from '../lib/config';
 import { GoatIcon } from './GoatLogo';
 
 // v7.5 — AGENCY-FIRST POSITIONING
@@ -13,6 +14,8 @@ const nav = [
   { id: 'audit', icon: Award, label: 'Audit', key: 'U', badge: 'CLOSER' },
   { id: 'leads', icon: Users, label: 'Leads', key: 'L' },
   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', key: 'D' },
+  // Operator-only — filtered out below for everyone else. Dashboard is the
+  // highest surface a normal user sees.
   { id: 'admin', icon: Shield, label: 'Admin', key: 'X', badge: 'PRO' },
 ];
 
@@ -67,7 +70,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="p-2 flex-1 overflow-y-auto" aria-label="Main navigation">
-        {nav.map(n => (
+        {nav.filter(n => isPageEnabled(n.id, user)).map(n => (
           <button
             key={n.id}
             onClick={() => { useStore.getState().setDetailOpen(false); setPage(n.id); setMobileMenu(false); window.scrollTo(0, 0); }}

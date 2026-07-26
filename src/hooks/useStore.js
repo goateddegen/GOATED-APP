@@ -835,10 +835,10 @@ export const useStore = create((set, get) => ({
   // Navigation
   page: 'home',
   setPage: (page) => {
-    // Hard gate: disabled pages (TrendPulse, Wallet) are unreachable from every
-    // caller — keybinds, search, AI overlay, deep links. Redirect to home rather
-    // than no-op so the user never lands on a blank screen.
-    const target = isPageEnabled(page) ? page : 'home';
+    // Hard gate: disabled pages (TrendPulse, Wallet) and admin-only pages are
+    // unreachable from every caller — keybinds, search, AI overlay, deep links.
+    // Redirect rather than no-op so the user never lands on a blank screen.
+    const target = isPageEnabled(page, get().user) ? page : 'home';
     // Close any open modals/detail views to prevent stale renders
     const current = get().page;
     if (current === target) return; // No-op if already on that page

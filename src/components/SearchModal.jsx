@@ -35,14 +35,15 @@ function stripTokens(text) {
   return text.replace(/\[NAVIGATE:[a-z-]+\]/gi, '').replace(/\[LEAD_CARD:[^\]]+\]/gi, '').replace(/\*\*([^*]+)\*\*/g, '$1').trim();
 }
 
-// Filtered through isPageEnabled so disabled pages never appear as a result.
-const PAGES = [
+// Filtered per-user at render time (see `pages` below) so disabled pages never
+// appear as a result — and Admin never appears for a non-operator.
+const ALL_PAGES = [
   { id: 'home', name: 'Home', hint: 'Landing page' },
   { id: 'audit', name: 'Audit', hint: 'Run a free revenue-loss audit' },
   { id: 'dashboard', name: 'Dashboard', hint: 'Pipeline + revenue' },
   { id: 'leads', name: 'Leads', hint: 'Live B2B company prospecting' },
   { id: 'admin', name: 'Admin', hint: 'System health' },
-].filter(p => isPageEnabled(p.id));
+];
 
 export default function SearchModal() {
   const setSearchOpen = useStore(s => s.setSearchOpen);
@@ -53,6 +54,7 @@ export default function SearchModal() {
   const setDetailOpen = useStore(s => s.setDetailOpen);
   const degenMode = useStore(s => s.degenMode);
   const page = useStore(s => s.page);
+  const user = useStore(s => s.user);
 
   const [q, setQ] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
@@ -79,7 +81,7 @@ export default function SearchModal() {
         (l.title || '').toLowerCase().includes(query)
       )
       .slice(0, 8);
-    const pageMatches = PAGES.filter(p =>
+    const pageMatches = ALL_PAGES.filter(p => isPageEnabled(p.id, user)).filter(p =>
       p.name.toLowerCase().includes(query) || p.hint.toLowerCase().includes(query)
     );
     const actionMatches = [
@@ -96,7 +98,7 @@ export default function SearchModal() {
     const aiSuggest = nlHit || (longQuery && noLocalMatch) || noLocalMatch;
 
     return { leads: leadMatches, pages: pageMatches, actions: actionMatches, aiSuggest };
-  }, [q, leads, degenMode]);
+  }, [q, leads, degenMode, user]);
 
   // Build flat result list. "Ask AI" is first if aiSuggest; otherwise appended.
   const flatResults = useMemo(() => {
@@ -172,12 +174,13 @@ export default function SearchModal() {
           return;
         }
       }
-      if (intent.page) {
+      // Never let an AI-proposed link jump to a disabled or admin-only page.
+      if (intent.page && isPageEnabled(intent.page, user)) {
         setPage(intent.page);
         setSearchOpen(false);
       }
     }
-  }, [setPage, setSelectedLead, setDetailOpen, setSearchOpen, askAI, leads]);
+  }, [setPage, setSelectedLead, setDetailOpen, setSearchOpen, askAI, leads, user]);
 
   const onKeyDown = useCallback((e) => {
     if (e.key === 'ArrowDown') {

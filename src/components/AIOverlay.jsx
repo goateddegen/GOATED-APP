@@ -121,42 +121,11 @@ function useSignalEngine(leads, currentPage) {
       });
     }
 
-    // Market signals
-    const cryptos = [
-      { name: 'BTC', price: '97,420', change: (2 + Math.random() * 4).toFixed(1), level: '100K' },
-      { name: 'SOL', price: '198.50', change: (1 + Math.random() * 6).toFixed(1), level: '200' },
-      { name: 'ETH', price: '3,840', change: (1 + Math.random() * 5).toFixed(1), level: '4,000' },
-    ];
-    const crypto = cryptos[Math.floor(Math.random() * cryptos.length)];
-    const direction = Math.random() > 0.4 ? 'up' : 'down';
-    pool.push({
-      category: 'MARKET',
-      title: `${crypto.name} ${direction} ${crypto.change}%`,
-      description: `${direction === 'up' ? 'Momentum shift detected' : 'Pullback in progress'} — ${crypto.name} ${direction === 'up' ? 'approaching' : 'retreating from'} $${crypto.level} resistance.`,
-      action: { label: 'See Analysis', type: 'navigate', page: 'trends' },
-    });
-    pool.push({
-      category: 'MARKET',
-      title: `Sector rotation signal`,
-      description: `${['AI/ML', 'SaaS', 'Fintech', 'Healthcare', 'E-Commerce'][Math.floor(Math.random() * 5)]} sector showing ${Math.random() > 0.5 ? 'bullish' : 'bearish'} divergence on 4H timeframe.`,
-      action: { label: 'See Analysis', type: 'navigate', page: 'trends' },
-    });
-
-    // Alpha signals
-    const alphaPlays = [
-      { title: 'Long ETH/BTC ratio divergence', desc: 'ETH/BTC ratio at 6-month low with bullish divergence on RSI. Mean reversion play.' },
-      { title: 'SOL DeFi TVL breakout', desc: 'SOL DeFi TVL up 18% this week. Leading indicator for price action.' },
-      { title: 'Prediction market edge found', desc: 'Kalshi BTC >$100K by June priced at 42% — GOATED AI estimates 68%. +26% alpha.' },
-      { title: 'Macro divergence play', desc: 'DXY weakening while crypto holds. Historical correlation suggests 15% upside in 2 weeks.' },
-      { title: 'Smart money accumulation', desc: 'Whale wallets adding BTC for 5th consecutive day. On-chain signal bullish.' },
-    ];
-    const alpha = alphaPlays[Math.floor(Math.random() * alphaPlays.length)];
-    pool.push({
-      category: 'ALPHA',
-      title: alpha.title,
-      description: alpha.desc,
-      action: { label: 'Copy Trade', type: 'copy', text: `ALPHA PLAY: ${alpha.title}\n${alpha.desc}` },
-    });
+    // Crypto MARKET + ALPHA signals removed.
+    // They were fabricated (hardcoded BTC/SOL/ETH prices with Math.random()
+    // deltas presented as live intel), off-brand for a B2B agency product, and
+    // their only action linked to the disabled TrendPulse page. The remaining
+    // signals below are all derived from real lead records.
 
     // Closing signals
     if (negotiating.length > 0) {
@@ -378,15 +347,11 @@ const FEATURE_LINKS = {
   leads:      { page: 'leads',     label: 'Leads',      icon: Users },
   lead:       { page: 'leads',     label: 'Leads',      icon: Users },
   pipeline:   { page: 'leads',     label: 'Pipeline',   icon: Users },
-  trends:     { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
-  trend:      { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
-  trendpulse: { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
-  sentiment:  { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
-  market:     { page: 'trends',    label: 'TrendPulse', icon: TrendingUp },
+  // TrendPulse + Wallet entries removed — those pages are disabled, so linking
+  // to them produced dead ends. See DISABLED_PAGES in lib/config.js.
   // v7.5 — markets/prediction/crypto/solana/casino keywords removed; B2B agency only
   audit:      { page: 'audit',     label: 'Audit',      icon: Award },
   leak:       { page: 'audit',     label: 'Audit',      icon: Award },
-  wallet:     { page: 'wallet',    label: 'Wallet',     icon: Wallet },
   dashboard:  { page: 'dashboard', label: 'Dashboard',  icon: BarChart3 },
   admin:      { page: 'admin',     label: 'Admin',      icon: LayoutDashboard },
 };
@@ -636,13 +601,13 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
   const isLeadSearch = lower.includes('lead') && /(?: in | above | below | over | under | industry | score | \$)/i.test(lower);
   if (isNavVerb && !isLeadSearch) {
     const navMap = {
+      // Only pages that are actually reachable. Keywords for TrendPulse,
+      // Wallet and Admin are deliberately absent so the assistant never offers
+      // a route a user can't take.
       'dashboard': 'dashboard', 'dash': 'dashboard',
-      'trend': 'trends', 'trendpulse': 'trends', 'market': 'trends', 'alpha': 'trends',
       'lead': 'leads', 'pipeline': 'leads',
       'audit': 'audit', 'leak': 'audit', 'revenue audit': 'audit',
       'managed': 'leads', 'dfy': 'leads', 'done for you': 'leads', 'management': 'leads',
-      'wallet': 'wallet', 'earnings': 'wallet', 'commission': 'wallet', 'payout': 'wallet', 'stripe': 'wallet',
-      'admin': 'admin', 'settings': 'admin', 'account': 'admin',
       'home': 'home', 'homepage': 'home', 'landing': 'home',
     };
     for (const [keyword, page] of Object.entries(navMap)) {
@@ -1677,7 +1642,7 @@ export default function AIOverlay() {
           const navMatch = data.content.match(/\[NAVIGATE:(\w+)\]/);
           if (navMatch) {
             const navPage = navMatch[1];
-            if (isPageEnabled(navPage)) {
+            if (isPageEnabled(navPage, user)) {
               setPage(navPage);
               window.scrollTo(0, 0);
             }
@@ -1781,7 +1746,7 @@ export default function AIOverlay() {
           .then(data => {
             if (!data.fallback && data.content) {
               const navM = data.content.match(/\[NAVIGATE:(\w+)\]/);
-              if (navM && isPageEnabled(navM[1])) {
+              if (navM && isPageEnabled(navM[1], user)) {
                 setPage(navM[1]);
                 window.scrollTo(0, 0);
               }

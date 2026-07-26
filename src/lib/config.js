@@ -144,9 +144,36 @@ export const PRICING = {
 export const NAV_PAGES = ['home', 'audit', 'leads', 'dashboard', 'admin'];
 export const DISABLED_PAGES = ['trends', 'market', 'wallet', 'managed', 'casino', 'launchpad'];
 
-export const isPageEnabled = (id) => NAV_PAGES.includes(id);
+// ─── Admin access ───────────────────────────────────────────────────────────
+// Pages only the operator may reach. Everyone else gets Dashboard as their
+// highest surface — Admin is hidden from nav, unbound from its keybind, absent
+// from search, and refused by the router.
+//
+// NOTE: this is UI gating, not a security boundary. The Admin page is client
+// rendered, so a determined visitor can still read the bundle. Anything that
+// must actually be protected has to be enforced server-side (Supabase RLS on
+// the row, or a service-key-only API route) — not by hiding a nav item.
+export const ADMIN_PAGES = ['admin'];
+export const ADMIN_EMAILS = ['devfudkupradio@gmail.com'];
 
-// Keybind → page. Only enabled pages get a binding.
+export const isAdminEmail = (email) =>
+  !!email && ADMIN_EMAILS.includes(String(email).trim().toLowerCase());
+
+export const isAdminPage = (id) => ADMIN_PAGES.includes(id);
+
+/**
+ * Can this user reach this page?
+ * @param {string} id   page id
+ * @param {object|null} user  the signed-in user, or null
+ */
+export const isPageEnabled = (id, user) => {
+  if (!NAV_PAGES.includes(id)) return false;
+  if (isAdminPage(id)) return isAdminEmail(user?.email);
+  return true;
+};
+
+// Keybind → page. Only enabled pages get a binding; `x` additionally requires
+// an admin session, enforced by isPageEnabled at every call site.
 export const PAGE_KEYBINDS = { h: 'home', u: 'audit', l: 'leads', d: 'dashboard', x: 'admin' };
 
 // ─── Feature flags (flip without redeploying UI logic) ──────────────────────

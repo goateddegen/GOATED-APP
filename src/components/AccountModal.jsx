@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, User, Mail, Lock, Crown, Sparkles, Check, LogOut, ChevronRight, Shield, Zap } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { signIn, signUp, signInWithGoogle, signInWithGithub, signOut, supabase } from '../lib/supabase';
+import { isAdminEmail } from '../lib/config';
 
-// Admin emails — checked server-side via Supabase roles, not passwords in client
-const ADMIN_EMAILS = ['secrdev@gmail.com', 'admin@goated.solutions'];
+// Admin identity comes from lib/config.js so nav, keybinds, search, the router
+// and this modal can never disagree about who is an operator.
 
 // ─── Auth policy ────────────────────────────────────────────────────────────
 // Supabase Auth is the ONLY account system. There is deliberately no
@@ -74,7 +75,7 @@ export default function AccountModal() {
   if (!accountModalOpen) return null;
 
   const finalizeUser = (userData) => {
-    const isAdmin = ADMIN_EMAILS.includes(userData.email?.toLowerCase());
+    const isAdmin = isAdminEmail(userData.email);
     // Never let credential material reach the session object / localStorage.
     const { password: _pw, passwordHash: _ph, salt: _s, ...safeData } = userData;
     const u = {

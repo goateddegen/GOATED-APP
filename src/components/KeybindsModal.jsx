@@ -1,6 +1,7 @@
 import React from 'react';
 import { Keyboard, X, Home, LayoutDashboard, Users, Bot, Search, Eye, Shield, User, Flame, Award } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
+import { isPageEnabled } from '../lib/config';
 
 const sections = [
   {
@@ -13,7 +14,7 @@ const sections = [
       { key: 'U', label: 'Audit', icon: Award, color: '#22d3ee' },
       { key: 'L', label: 'Leads', icon: Users, color: '#f59e0b' },
       { key: 'D', label: 'Dashboard', icon: LayoutDashboard, color: '#06b6d4' },
-      { key: 'X', label: 'Admin', icon: Shield, color: '#ef4444' },
+      { key: 'X', label: 'Admin', icon: Shield, color: '#ef4444', page: 'admin' },
     ]
   },
   {
@@ -33,6 +34,9 @@ const sections = [
 
 export default function KeybindsModal() {
   const { setKeybindsOpen } = useStore();
+  const user = useStore(s => s.user);
+  // Don't advertise a shortcut the user isn't allowed to use.
+  const visible = (k) => !k.page || isPageEnabled(k.page, user);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setKeybindsOpen(false)} />
@@ -55,7 +59,7 @@ export default function KeybindsModal() {
                 <p className="text-xs text-slate-500">{section.desc}</p>
               </div>
               <div className="grid grid-cols-2 gap-1.5">
-                {section.keys.map(({ key, label, icon: Icon, color }) => (
+                {section.keys.filter(visible).map(({ key, label, icon: Icon, color }) => (
                   <div key={key} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-white/[0.03] transition-colors group">
                     <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: `${color}12` }}>
                       <Icon size={14} style={{ color }} />

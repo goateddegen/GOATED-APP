@@ -249,6 +249,7 @@ export default function App() {
   const setUser = useStore(s => s.setUser);
   const setIsLoggedIn = useStore(s => s.setIsLoggedIn);
   const isLoggedIn = useStore(s => s.isLoggedIn);
+  const user = useStore(s => s.user);
   const setUserPlan = useStore(s => s.setUserPlan);
   const degenMode = useStore(s => s.degenMode);
   const [degenToast, setDegenToast] = useState(null);
@@ -397,6 +398,8 @@ export default function App() {
       if (state.keybindsOpen) {
         e.preventDefault();
         const target = PAGE_KEYBINDS[key];
+        // Admin keybind is inert without an admin session.
+        if (target && !isPageEnabled(target, useStore.getState().user)) { setKeybindsOpen(false); return; }
         setKeybindsOpen(false);
         if (target) { navTo(target); }
         else if (key === 'g') { setAiOpen(true); }
@@ -426,7 +429,7 @@ export default function App() {
       // (TrendPulse, Wallet) have no binding at all rather than a silent one.
       // Debounce same-key rapid presses (200ms) to reduce CSR overhead on low-memory devices
       const navTarget = PAGE_KEYBINDS[key];
-      if (navTarget) {
+      if (navTarget && isPageEnabled(navTarget, useStore.getState().user)) {
         const now = Date.now();
         if (key === lastNavKeyRef.current && now - lastNavRef.current < 200) return;
         lastNavKeyRef.current = key;
@@ -463,9 +466,10 @@ export default function App() {
 
   // No useMemo — prevents stale renders & black screen during rapid page switching
   const renderPage = () => {
-    // Final gate: anything not in NAV_PAGES renders Home, no matter how the
-    // store got set (stale persisted state, hash, programmatic setPage).
-    if (!isPageEnabled(page)) return <HomePage />;
+    // Final gate: anything not in NAV_PAGES — or an admin page without an admin
+    // session — renders Home, no matter how the store got set (stale persisted
+    // state, hash, programmatic setPage, a session that lost admin rights).
+    if (!isPageEnabled(page, user)) return <HomePage />;
 
     if (PROTECTED_PAGES.has(page)) {
       switch (page) {
