@@ -135,6 +135,19 @@ create index if not exists leads_score_idx    on public.leads (score desc);
 create index if not exists leads_industry_idx on public.leads (industry);
 create index if not exists leads_status_idx   on public.leads (status);
 
+-- Upsert target for /api/leads, so re-running a search refreshes each company
+-- instead of duplicating it.
+--
+-- Deliberately NOT a partial index. `ON CONFLICT` can only infer a partial index
+-- when the statement repeats the index predicate, and PostgREST's `on_conflict=`
+-- parameter cannot express one — a `where external_id is not null` variant fails
+-- with 42P10 "no unique or exclusion constraint matching the ON CONFLICT
+-- specification". A plain unique index is also harmless here: Postgres treats
+-- NULLs as distinct, so rows with no external_id never collide.
+drop index if exists leads_owner_external_idx;
+create unique index if not exists leads_owner_external_key
+  on public.leads (owner_id, external_id);
+
 alter table public.leads enable row level security;
 
 drop policy if exists "leads_own_rows" on public.leads;
