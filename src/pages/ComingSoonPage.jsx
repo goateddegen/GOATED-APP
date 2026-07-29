@@ -16,6 +16,7 @@
 // or by appending ?preview=1 to the URL hash.
 // =============================================================================
 
+import { signInWithGoogle } from '../lib/supabase';
 import React, { useEffect, useRef, useState } from 'react';
 import GoatLogo from '../components/GoatLogo';
 
@@ -201,6 +202,8 @@ function GoatedTitle() {
 // ─── Coming Soon page ──────────────────────────────────────────────────────
 export default function ComingSoonPage() {
   const goatSize = useResponsiveGoatSize();
+  const [signingIn, setSigningIn] = React.useState(false);
+  const [signinError, setSigninError] = React.useState('');
 
   return (
     <div
@@ -272,11 +275,42 @@ export default function ComingSoonPage() {
 
       {/* Tiny status pip, bottom-center */}
       <div
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 text-[9px] text-slate-700 tracking-widest uppercase"
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-[9px] text-slate-700 tracking-widest uppercase"
         style={{ fontFamily: '"Space Grotesk", monospace' }}
       >
-        <span className="w-1 h-1 rounded-full bg-orange-400 animate-pulse" />
-        <span>v7.5.6 · private · access by application</span>
+        <div className="flex items-center gap-2">
+          <span className="w-1 h-1 rounded-full bg-orange-400 animate-pulse" />
+          <span>v7.5.6 · private · access by application</span>
+        </div>
+
+        {/*
+          Operator entry point. Without this the cover page is a dead end for the
+          operator too: App.jsx lets a signed-in user through, but there was
+          nowhere to sign in from. Calls Google directly rather than opening
+          AccountModal, because the cover renders as an early return before the
+          modal layer exists.
+
+          Safe to expose publicly — the Google OAuth app is in Testing mode, so
+          only addresses on the test-user list can complete a sign-in.
+        */}
+        <button
+          onClick={async () => {
+            setSigninError('');
+            setSigningIn(true);
+            const { error } = await signInWithGoogle();
+            if (error) { setSigningIn(false); setSigninError(error.message); }
+            // On success the browser leaves for Google; no need to reset state.
+          }}
+          disabled={signingIn}
+          className="mt-1 text-[9px] tracking-widest uppercase text-slate-600 hover:text-orange-400 transition-colors disabled:opacity-50"
+        >
+          {signingIn ? 'redirecting…' : 'operator sign-in'}
+        </button>
+        {signinError && (
+          <span className="normal-case tracking-normal text-[10px] text-red-400/80 max-w-xs text-center">
+            {signinError}
+          </span>
+        )}
       </div>
     </div>
   );

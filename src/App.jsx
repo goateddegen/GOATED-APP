@@ -12,8 +12,8 @@ import LeadDetail from './components/LeadDetail';
 const AIOverlay = lazy(() => import('./components/AIOverlay'));
 import AccountModal from './components/AccountModal';
 import Onboarding from './components/Onboarding';
-import { onAuthStateChange, trackPerformance, trackPageView, startAutoSync, stopAutoSync, loadUserDataFromCloud } from './lib/supabase';
-import { PAGE_KEYBINDS, isPageEnabled } from './lib/config';
+import { onAuthStateChange, trackPerformance, trackPageView, startAutoSync, stopAutoSync, loadUserDataFromCloud, supabase } from './lib/supabase';
+import { PAGE_KEYBINDS, isPageEnabled, isAdminEmail } from './lib/config';
 
 // Lazy-loaded pages wrapped in React.memo to reduce CSR overhead on re-renders
 const HomePage = React.memo(lazy(() => import('./pages/HomePage')));
@@ -256,6 +256,10 @@ export default function App() {
   const degenToastTimer = useRef(null);
   const isMobile = useIsMobile();
   const [showKeyHint, setShowKeyHint] = useState(true);
+  // False until Supabase has told us whether a session exists. requireAuth must
+  // not bounce anyone before this flips, or a signed-in user gets the login
+  // modal thrown at them on every page load.
+  const [authChecked, setAuthChecked] = useState(!supabase);
 
   // Scroll to top on ANY view change — page nav, detail open/close, etc.
   useEffect(() => {
@@ -283,33 +287,55 @@ export default function App() {
     }
 
     // Listen for Supabase auth state changes (OAuth callbacks, token refresh, etc.)
+    //
+    // INITIAL_SESSION is essential and was missing: supabase-js fires that — not
+    // SIGNED_IN — when it rehydrates an existing session on page load, including
+    // when it picks the tokens out of the URL after an OAuth redirect. Handling
+    // only SIGNED_IN meant a returning user's session was never adopted from
+    // Supabase and we fell back to whatever localStorage happened to hold.
+    const adopt = (session) => {
+      const su = session.user;
+      const admin = isAdminEmail(su.email);
+      const u = {
+        id: su.id,
+        email: su.email,
+        name: su.user_metadata?.full_name || su.email?.split('@')[0],
+        avatar: su.user_metadata?.avatar_url,
+        // Match AccountModal.finalizeUser so the two entry points agree.
+        isAdmin: admin,
+        plan: admin ? 'enterprise' : 'free',
+        provider: su.app_metadata?.provider || 'email',
+      };
+      setUser(u);
+      setIsLoggedIn(true);
+      setUserPlan(u.plan);
+      localStorage.setItem('goated_current_user', JSON.stringify(u));
+      loadUserDataFromCloud(su.id).then(() => startAutoSync(su.id));
+    };
+
     const { data } = onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        const u = {
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-          avatar: session.user.user_metadata?.avatar_url,
-          plan: 'free',
-          provider: session.user.app_metadata?.provider || 'email',
-        };
-        setUser(u);
-        setIsLoggedIn(true);
-        localStorage.setItem('goated_current_user', JSON.stringify(u));
-        // Cloud sync: load settings then start auto-sync
-        loadUserDataFromCloud(session.user.id).then(() => startAutoSync(session.user.id));
+      if (session?.user && ['SIGNED_IN', 'INITIAL_SESSION', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)) {
+        adopt(session);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsLoggedIn(false);
         localStorage.removeItem('goated_current_user');
         stopAutoSync();
       }
+      // Whatever the outcome, we now know the answer — release the auth gate.
+      // INITIAL_SESSION fires even with no session, so this always runs.
+      setAuthChecked(true);
     });
+
+    // Belt and braces: if the listener never fires (Supabase unconfigured, or a
+    // network stall), don't leave protected pages hanging forever.
+    const authTimeout = setTimeout(() => setAuthChecked(true), 3000);
 
     // Performance monitoring (Web Vitals)
     const perfObserver = trackPerformance();
 
     return () => {
+      clearTimeout(authTimeout);
       data?.subscription?.unsubscribe();
       perfObserver?.disconnect();
       stopAutoSync();
@@ -459,6 +485,10 @@ export default function App() {
   // gently redirect them to homepage and pop the AccountModal.
   const requireAuth = (renderFn) => {
     if (isLoggedIn) return renderFn();
+    // Session state isn't known yet. Wait rather than assume "logged out" —
+    // otherwise a signed-in user gets bounced to Home with the login modal on
+    // every single page load, before Supabase has had a chance to rehydrate.
+    if (!authChecked) return <LoadingFallback />;
     // Defer state updates to next tick to avoid React render-time setState.
     setTimeout(() => { setAccountModalOpen(true); setPage('home'); }, 0);
     return <HomePage />;
@@ -500,7 +530,17 @@ export default function App() {
   // Audit page is always public (lead magnet). Cover only blocks the rest.
   const isAuditRoute = (typeof window !== 'undefined' &&
     /^#\/(for\/|audit)/i.test(window.location.hash || ''));
-  if (!launchReady && !operatorPreview && !isAuditRoute) {
+
+  // A signed-in user is never shown the cover page. Reaching a session means
+  // Google authenticated them AND — while the OAuth app is in Testing mode —
+  // that they're on the test-user allow list. That's a stronger gate than an
+  // env var, and it means the cover can stay up for the public while the
+  // operator uses the real app in production. Without this, signing in
+  // succeeded and then dumped you straight back onto the cover.
+  const isMidOAuthRedirect = (typeof window !== 'undefined' &&
+    /access_token=|code=/.test(window.location.hash || window.location.search || ''));
+
+  if (!launchReady && !isLoggedIn && !isMidOAuthRedirect && !operatorPreview && !isAuditRoute) {
     return <ComingSoonPage />;
   }
 
