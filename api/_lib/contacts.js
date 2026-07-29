@@ -19,7 +19,14 @@
 // This module is NOT a serverless function (underscore prefix = excluded).
 // =============================================================================
 
-const UA = 'Mozilla/5.0 (compatible; GOATEDBot/1.0; +https://goated.solutions)';
+// A real browser UA. Verified difference: from a datacenter IP (Vercel), a
+// self-identifying bot string gets refused instantly by WAFs that serve the same
+// page fine to a residential IP — bluefrogfranchise.com was reachable locally and
+// "unreachable" in production with the bot UA. Some sites will still block
+// datacenter ranges whatever the UA; extractContacts reports that honestly via
+// `reason` rather than pretending the business published nothing.
+const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
+  + '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 /** Pages most likely to name a human, in priority order. */
 const CONTACT_PATHS = ['', '/contact', '/contact-us', '/about', '/about-us', '/team', '/our-team', '/staff'];
