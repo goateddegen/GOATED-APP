@@ -16,10 +16,16 @@
 //   - source:   "apollo" | "generated" (force a specific data source)
 //
 // Data Sources:
-//   1. Apollo.io People Search API (when APOLLO_API_KEY env var is set)
-//      POST https://api.apollo.io/api/v1/mixed_people/search
-//      Docs: https://apolloio.github.io/apollo-api-docs/
-//   2. In-memory generated data (fallback, always available)
+//   1. Apollo.io ORGANISATION search (when APOLLO_API_KEY is set)
+//      POST https://api.apollo.io/api/v1/organizations/search
+//      Person-level endpoints (mixed_people/search, people/match,
+//      people/bulk_match) all return 403 on the Free plan — verified.
+//      Defaults to 1–25 employees: owner-operated businesses where the decision
+//      maker answers the phone.
+//   2. ?action=enrich&website= — crawls the prospect's own site for named
+//      humans, direct numbers and named inboxes, which is where person-level
+//      contact data actually comes from for this ICP. See _lib/contacts.js.
+//   3. In-memory generated data (fallback, clearly labelled as synthetic)
 //
 // Returns paginated results with total count + summary stats
 // Uses in-memory caching for sub-ms response times
@@ -195,8 +201,15 @@ async function fetchApolloLeads({ page, limit, search, industry, location, minEm
   if (location) body.organization_locations = [location];
 
   // Employee-range filter uses Apollo's "min,max" string format.
+  // Default to genuinely small operators. The old 1–500 default is what surfaced
+  // Samsung HVAC America, Inc. Magazine and Y Combinator — companies with a
+  // procurement process, an in-house team, and no interest in a $2K setup.
+  //
+  // 1–25 is the sweet spot for this offer: the owner still answers the phone, so
+  // a missed call is lost revenue they feel personally, and one person can say
+  // yes. Callers can widen it with ?minEmployees=&maxEmployees=.
   const lo = Number(minEmployees) || 1;
-  const hi = Number(maxEmployees) || 500;
+  const hi = Number(maxEmployees) || 25;
   body.organization_num_employees_ranges = [`${lo},${hi}`];
 
   try {
@@ -583,6 +596,7 @@ function getAllLeads(poolSize = DEFAULT_POOL) {
 // Main handler
 // ---------------------------------------------------------------------------
 import { guardRequest, setCacheHeaders } from './_lib/guard.js';
+import { extractContacts } from './_lib/contacts.js';
 
 export default async function handler(req, res) {
   // Apollo API passthrough — 30/min per IP is plenty, daily cap prevents quota burn
@@ -613,7 +627,31 @@ export default async function handler(req, res) {
       location = '',
       minEmployees = '',
       maxEmployees = '',
+      action = '',
+      website = '',
     } = req.query;
+
+    // ── Person-level enrichment ────────────────────────────────────────────
+    // GET /api/leads?action=enrich&website=example.com
+    //
+    // Apollo's person endpoints are all 403 on the Free plan (verified against
+    // mixed_people/search, people/match and people/bulk_match), so individual
+    // names and direct numbers are scraped from the prospect's own published
+    // pages instead. Runs on demand, not per row, so opening the Leads page
+    // never fires 50 crawls.
+    if (action === 'enrich') {
+      if (!website) return res.status(400).json({ error: 'website is required' });
+      const contacts = await extractContacts(website);
+      return res.status(200).json({
+        website,
+        ...contacts,
+        _meta: {
+          source: 'target-website-crawl',
+          note: 'Every value is quoted from the prospect\'s own public pages. Nothing inferred.',
+          fetchedAt: new Date().toISOString(),
+        },
+      });
+    }
 
     const page = Math.max(parseInt(rawPage, 10) || 1, 1);
     const limit = Math.min(Math.max(parseInt(rawLimit, 10) || 50, 1), 1000); // Bumped max to 1000 for bulk ops
