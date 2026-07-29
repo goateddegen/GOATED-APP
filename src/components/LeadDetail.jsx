@@ -9,6 +9,7 @@ import {
   MapPin, Linkedin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight,
 } from 'lucide-react';
 import { useStore, fmt, enrichLead } from '../hooks/useStore';
+import { buildCallSheet } from '../lib/outreach';
 
 // ─── Color Maps ────────────────────────────────────────────────────────────────
 const priorityColors = {
@@ -678,26 +679,48 @@ export default function LeadDetail() {
   // Use enriched version for all field access below (but keep `lead` reference for store ops)
   const el = enrichedLead || lead;
 
-  // Safe defaults for fields that API/Apollo leads may be missing
+  // Safe defaults for fields that API/Apollo leads may be missing.
+  //
+  // NOTE ON ORDERING: safeObjections used to be declared above safePainPoints
+  // while referencing it, which is a temporal dead zone. Apollo records carry no
+  // `objections`, so the fallback array evaluated and threw
+  // "Cannot access 'safePainPoints' before initialization" — crashing this whole
+  // component for every live lead. Declare dependencies first.
   const dv = el.dealValue || el.value || 10000;
+
+  // Real, business-specific call sheet derived from the record. The previous
+  // fallbacks were generic B2B-SaaS filler ("Core CRM", "Email automation",
+  // "Pipeline acceleration") that meant nothing to an HVAC contractor.
+  const sheet = buildCallSheet(el);
+
+  const safePainPoints = (el.painPoints && el.painPoints.length)
+    ? el.painPoints
+    : sheet.gaps.map(g => g.label);
+
   const safeCallScript = el.callScript || {
-    opener: `Hi ${(lead.name || '').split(' ')[0]}, I came across ${lead.company || 'your company'} and wanted to connect.`,
-    discovery: ['What are your current growth challenges?', 'How are you handling lead management today?'],
-    pitch: `We help companies like ${lead.company || 'yours'} accelerate their pipeline and close deals faster.`,
-    close: 'Would it make sense to schedule a quick call to explore this further?',
-    valueProps: ['Pipeline acceleration', 'Automated lead scoring', 'Revenue intelligence'],
+    opener: sheet.opener,
+    discovery: sheet.discovery,
+    pitch: sheet.pitch,
+    close: sheet.close,
+    valueProps: sheet.talkingPoints,
   };
+
+  // Packages come from the tier this business actually qualifies for, priced
+  // off PRICING rather than a percentage of an invented deal value.
   const safePackages = el.packages || [
-    { name: 'Starter', price: Math.round(dv * 0.01), features: ['Core CRM', 'Email automation', 'Basic reporting'], recommended: false },
-    { name: 'Growth', price: Math.round(dv * 0.025), features: ['Core CRM', 'Email automation', 'Advanced reporting', 'AI lead scoring', 'Custom integrations'], recommended: true },
-    { name: 'Enterprise', price: Math.round(dv * 0.05), features: ['Everything in Growth', 'Dedicated CSM', 'Custom API', 'SLA guarantees', 'White-glove onboarding'], recommended: false },
+    {
+      name: 'Local Engine', price: 2000, monthly: 750,
+      features: ['AI receptionist answers in <60s', 'SMS auto-text-back on missed calls', 'Calendar booking', 'Monthly recovered-revenue report'],
+      recommended: sheet.tier.id !== 'growth',
+    },
+    {
+      name: 'Growth Engine', price: 10000, monthly: 2500,
+      features: ['Everything in Local Engine', 'Outbound SDR campaign', 'Multi-channel outreach', 'Custom CRM integration', 'Weekly performance review'],
+      recommended: sheet.tier.id === 'growth',
+    },
   ];
-  const safeObjections = el.objections || [
-    { objection: 'Budget constraints', response: `You're already spending ${fmt(Math.round(dv * 0.15))}/mo on this problem — you're just spending it on lost revenue instead of a solution. Our fix costs a fraction of what ${(safePainPoints[0] || 'inaction').toLowerCase()} is costing you. 30-day pilot, zero risk — if we don't prove the ROI, you walk away.` },
-    { objection: 'Already have a solution', response: `If your current solution was working, ${(safePainPoints[0] || 'this problem').toLowerCase()} wouldn't still be costing ${lead.company} ${fmt(Math.round(dv * 0.15))}/mo. We've displaced ${lead.competitorUsing || 'incumbents'} at 3 similar ${lead.industry} companies this quarter. Let's run a side-by-side — if your current tool wins, I'll tell you myself.` },
-    { objection: 'Need to involve more people', response: `Smart move. Here's what usually gets buy-in: show them the ${fmt(Math.round(dv * 0.15 * 12))}/yr revenue leak from ${(safePainPoints[0] || 'current gaps').toLowerCase()} and the ${fmt(Math.round(dv * 0.15 * 3))} recovered in the first quarter. I can prep a stakeholder deck with those numbers — who else needs to see this?` },
-  ];
-  const safePainPoints = el.painPoints || lead.painPoints || ['Scaling challenges', 'Revenue growth', 'Operational efficiency'];
+
+  const safeObjections = el.objections || sheet.objections;
   const firstName = (lead.name || '').split(' ')[0] || 'there';
   const painPoint1 = (safePainPoints[0] || 'scaling challenges').toLowerCase();
   const painPoint2 = (safePainPoints[1] || 'revenue growth').toLowerCase();

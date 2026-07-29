@@ -9,6 +9,7 @@ import {
   ExternalLink, MapPin, Crosshair, AlertTriangle, Radio,
 } from 'lucide-react';
 import { useStore, fmt, priorities, statuses, industries } from '../hooks/useStore';
+import { buildOutreachStrategy, deriveGaps, recommendTier } from '../lib/outreach';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -112,104 +113,6 @@ function getCloseStrategy(lead, prob) {
   if (prob >= 50) return { label: 'Nurture to Close', color: 'amber', steps: ['Address remaining objections', 'Share relevant case study', 'Offer pilot/trial to reduce risk'] };
   if (prob >= 25) return { label: 'Build Trust', color: 'orange', steps: ['Send personalized value analysis', 'Schedule discovery call', 'Share free resource'] };
   return { label: 'Long Nurture', color: 'red', steps: ['Add to drip campaign', 'Engage on LinkedIn', 'Check back in 30-60 days'] };
-}
-
-// ─── Per-business outreach strategy ─────────────────────────────────────────
-// Derived from the record's ACTUAL signals rather than a fixed template. The
-// old version greeted a company as a person ("Hi Titus" for Titus HVAC) and
-// said the same thing to a 4-person plumber and a 300-person manufacturer.
-//
-// Everything below keys off fields Apollo really returns: headcount, revenue,
-// web/LinkedIn presence, 12-month growth, intent, keywords, founding year.
-// If a signal is missing we say less rather than inventing it.
-
-/** Concrete gaps we can name on the call, straight from the record. */
-function deriveGaps(lead) {
-  const gaps = [];
-  if (!lead.website && !lead.domain) {
-    gaps.push({ key: 'no-site', label: 'No website on file', angle: 'They are invisible to search — every lead comes from referral or luck.' });
-  }
-  if (!lead.linkedin_url) {
-    gaps.push({ key: 'no-linkedin', label: 'No LinkedIn presence', angle: 'No employer brand — hiring and credibility both suffer.' });
-  }
-  if (!lead.phone) {
-    gaps.push({ key: 'no-phone', label: 'No published phone', angle: 'If we cannot find a number quickly, neither can their customers.' });
-  }
-  const growth = lead.momentum;
-  if (growth === 'declining') {
-    gaps.push({ key: 'shrinking', label: 'Headcount shrinking', angle: 'Doing more with fewer people — automation lands well right now.' });
-  } else if (growth === 'rising') {
-    gaps.push({ key: 'growing', label: 'Headcount growing', angle: 'Growing fast; intake is usually the first thing to break.' });
-  }
-  if (lead.foundedYear && new Date().getFullYear() - lead.foundedYear <= 5) {
-    gaps.push({ key: 'young', label: `Founded ${lead.foundedYear}`, angle: 'Young business still building repeatable lead flow.' });
-  }
-  return gaps;
-}
-
-/** Which tier to pitch, from headcount and revenue — mirrors PRICING.tiers. */
-function recommendTier(lead) {
-  const emp = lead.employees || 0;
-  const rev = lead.revenue || 0;
-  if (emp > 200 || rev >= 10_000_000) {
-    return { id: 'growth', label: 'Growth Engine', price: '$10–20K setup + $2.5–5K/mo',
-      why: `${emp ? `${emp} staff` : 'Larger org'}${rev ? ` · ${lead.revenueFormatted || ''} revenue` : ''} — multi-location or high call volume.` };
-  }
-  if (emp >= 10 || rev >= 1_000_000) {
-    return { id: 'local', label: 'Local Engine', price: '$2,000 setup + $750/mo',
-      why: `${emp ? `${emp} staff` : 'SMB'} — classic missed-call recovery profile.` };
-  }
-  return { id: 'starter', label: 'Local Engine (starter)', price: '$2,000 setup + $750/mo',
-    why: 'Very small team — owner likely answers the phone themselves. Lead with time saved, not headcount.' };
-}
-
-/**
- * Build a channel-by-channel plan for this specific business.
- * Email is intentionally absent — outreach is phone-first and manual for now.
- */
-function buildOutreachStrategy(lead) {
-  const biz = lead.company || lead.name || 'this business';
-  const industry = lead.industry && lead.industry !== 'Unknown' ? lead.industry : null;
-  const where = lead.location ? ` in ${lead.location}` : '';
-  const gaps = deriveGaps(lead);
-  const tier = recommendTier(lead);
-  const lead_gap = gaps[0];
-
-  // Channel priority follows what contact data actually exists.
-  const channels = [];
-  if (lead.phone) channels.push('call');
-  channels.push('sms');
-  if (lead.linkedin_url) channels.push('linkedin');
-
-  const hook = lead_gap
-    ? lead_gap.angle
-    : `${industry ? `${industry} operators${where}` : `Businesses${where}`} usually leak most revenue on calls nobody picks up.`;
-
-  return {
-    business: biz,
-    tier,
-    gaps,
-    primaryChannel: channels[0],
-    channels,
-    // Opening line for a live call — addressed to whoever answers, not a
-    // fabricated first name.
-    call: `Hi, is the owner or manager around? — I'm calling about ${biz}. ${hook} `
-      + `We set up an AI receptionist that answers in under 60 seconds and books the job. `
-      + `Worth two minutes?`,
-    sms: `Hi — reaching out about ${biz}. ${hook} `
-      + `We can have missed calls answered and booked automatically within 14 days. Want the details?`,
-    linkedin: lead.linkedin_url
-      ? `Hi — I work with ${industry ? `${industry} businesses` : 'local service businesses'}${where}. `
-        + `${hook} Happy to share what we did for similar operators. Worth a conversation?`
-      : null,
-    // What to actually say once they engage.
-    talkingPoints: [
-      lead.employees ? `Team of ${lead.employees} — ask who covers the phone after hours.` : 'Ask how calls are handled after hours.',
-      lead.revenueFormatted ? `Revenue around ${lead.revenueFormatted} — size the leak against that.` : 'Ask their average job value to size the leak.',
-      ...gaps.slice(0, 2).map(g => g.angle),
-      `Pitch: ${tier.label} — ${tier.price}.`,
-    ].filter(Boolean),
-  };
 }
 
 function getContactIntel(lead, index) {
