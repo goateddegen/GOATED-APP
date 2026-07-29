@@ -6,29 +6,11 @@
 // from here, so the whole app moves when one value lands.
 // =============================================================================
 
-// ─── Cal.com booking links ──────────────────────────────────────────────────
-// Signup:  https://app.cal.com/settings/developer/api-keys
-// Update these once your event types are live.
-export const CAL_USERNAME = 'tarekali'; // set to your Cal.com username
-export const CAL_EVENT_DISCOVERY = 'discovery-15'; // 15-min intro call slug
-export const CAL_EVENT_AUDIT_WALKTHROUGH = 'audit-walkthrough-30'; // 30-min post-audit
-export const CAL_EVENT_MANAGED = 'managed-audit-45'; // 45-min managed service qualification
-
-export const calLink = (slug) => `https://cal.com/${CAL_USERNAME}/${slug}`;
-export const CAL_DISCOVERY_URL = calLink(CAL_EVENT_DISCOVERY);
-export const CAL_AUDIT_URL = calLink(CAL_EVENT_AUDIT_WALKTHROUGH);
-export const CAL_MANAGED_URL = calLink(CAL_EVENT_MANAGED);
-
-// Embed helper (can be passed a brand + source URL)
-export const calEmbedUrl = (slug, opts = {}) => {
-  const params = new URLSearchParams();
-  if (opts.brand) params.set('name', opts.brand);
-  if (opts.email) params.set('email', opts.email);
-  if (opts.notes) params.set('notes', opts.notes);
-  if (opts.source) params.set('source', opts.source);
-  const q = params.toString();
-  return `https://cal.com/${CAL_USERNAME}/${slug}?embed=true${q ? `&${q}` : ''}`;
-};
+// ─── Booking ────────────────────────────────────────────────────────────────
+// Cal.com removed: the account (cal.com/tarekali) never existed, so every
+// "book a call" CTA was a 404 — on the audit page, which is the main
+// conversion surface. Direct contact is used instead until a real scheduler is
+// connected. To reintroduce one, add its URL here and swap the audit CTA back.
 
 // ─── Stripe Payment Links (manual fallback until Connect is fully wired) ────
 // Create here:  https://dashboard.stripe.com/payment-links
@@ -47,7 +29,18 @@ export const STRIPE_PAYMENT_LINKS = {
 // ─── Contact + Support ──────────────────────────────────────────────────────
 export const CONTACT_EMAIL = 'secrdev@gmail.com';
 export const SUPPORT_EMAIL = 'secrdev@gmail.com';
-export const CAL_FALLBACK_MAILTO = `mailto:${CONTACT_EMAIL}?subject=GOATED%20Managed%20Service%20%E2%80%94%20Discovery%20Call`;
+
+/** Prefilled enquiry mailto, carrying the audited site so context isn't lost. */
+export const contactMailto = ({ subject, url, business } = {}) => {
+  const subj = subject || 'GOATED — audit follow-up';
+  const lines = [
+    business ? `Business: ${business}` : null,
+    url ? `Site audited: ${url}` : null,
+    '',
+    'Interested in a walkthrough of the findings.',
+  ].filter(Boolean);
+  return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(lines.join('\n'))}`;
+};
 
 // ─── Domain + canonical URLs ────────────────────────────────────────────────
 export const CANONICAL_HOST = 'goated.solutions';          // once Namecheap verification clears

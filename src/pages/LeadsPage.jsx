@@ -114,13 +114,101 @@ function getCloseStrategy(lead, prob) {
   return { label: 'Long Nurture', color: 'red', steps: ['Add to drip campaign', 'Engage on LinkedIn', 'Check back in 30-60 days'] };
 }
 
-function getOutreachTemplates(lead) {
-  const firstName = (lead.name || 'Unknown').split(' ')[0];
+// ─── Per-business outreach strategy ─────────────────────────────────────────
+// Derived from the record's ACTUAL signals rather than a fixed template. The
+// old version greeted a company as a person ("Hi Titus" for Titus HVAC) and
+// said the same thing to a 4-person plumber and a 300-person manufacturer.
+//
+// Everything below keys off fields Apollo really returns: headcount, revenue,
+// web/LinkedIn presence, 12-month growth, intent, keywords, founding year.
+// If a signal is missing we say less rather than inventing it.
+
+/** Concrete gaps we can name on the call, straight from the record. */
+function deriveGaps(lead) {
+  const gaps = [];
+  if (!lead.website && !lead.domain) {
+    gaps.push({ key: 'no-site', label: 'No website on file', angle: 'They are invisible to search — every lead comes from referral or luck.' });
+  }
+  if (!lead.linkedin_url) {
+    gaps.push({ key: 'no-linkedin', label: 'No LinkedIn presence', angle: 'No employer brand — hiring and credibility both suffer.' });
+  }
+  if (!lead.phone) {
+    gaps.push({ key: 'no-phone', label: 'No published phone', angle: 'If we cannot find a number quickly, neither can their customers.' });
+  }
+  const growth = lead.momentum;
+  if (growth === 'declining') {
+    gaps.push({ key: 'shrinking', label: 'Headcount shrinking', angle: 'Doing more with fewer people — automation lands well right now.' });
+  } else if (growth === 'rising') {
+    gaps.push({ key: 'growing', label: 'Headcount growing', angle: 'Growing fast; intake is usually the first thing to break.' });
+  }
+  if (lead.foundedYear && new Date().getFullYear() - lead.foundedYear <= 5) {
+    gaps.push({ key: 'young', label: `Founded ${lead.foundedYear}`, angle: 'Young business still building repeatable lead flow.' });
+  }
+  return gaps;
+}
+
+/** Which tier to pitch, from headcount and revenue — mirrors PRICING.tiers. */
+function recommendTier(lead) {
+  const emp = lead.employees || 0;
+  const rev = lead.revenue || 0;
+  if (emp > 200 || rev >= 10_000_000) {
+    return { id: 'growth', label: 'Growth Engine', price: '$10–20K setup + $2.5–5K/mo',
+      why: `${emp ? `${emp} staff` : 'Larger org'}${rev ? ` · ${lead.revenueFormatted || ''} revenue` : ''} — multi-location or high call volume.` };
+  }
+  if (emp >= 10 || rev >= 1_000_000) {
+    return { id: 'local', label: 'Local Engine', price: '$2,000 setup + $750/mo',
+      why: `${emp ? `${emp} staff` : 'SMB'} — classic missed-call recovery profile.` };
+  }
+  return { id: 'starter', label: 'Local Engine (starter)', price: '$2,000 setup + $750/mo',
+    why: 'Very small team — owner likely answers the phone themselves. Lead with time saved, not headcount.' };
+}
+
+/**
+ * Build a channel-by-channel plan for this specific business.
+ * Email is intentionally absent — outreach is phone-first and manual for now.
+ */
+function buildOutreachStrategy(lead) {
+  const biz = lead.company || lead.name || 'this business';
+  const industry = lead.industry && lead.industry !== 'Unknown' ? lead.industry : null;
+  const where = lead.location ? ` in ${lead.location}` : '';
+  const gaps = deriveGaps(lead);
+  const tier = recommendTier(lead);
+  const lead_gap = gaps[0];
+
+  // Channel priority follows what contact data actually exists.
+  const channels = [];
+  if (lead.phone) channels.push('call');
+  channels.push('sms');
+  if (lead.linkedin_url) channels.push('linkedin');
+
+  const hook = lead_gap
+    ? lead_gap.angle
+    : `${industry ? `${industry} operators${where}` : `Businesses${where}`} usually leak most revenue on calls nobody picks up.`;
+
   return {
-    email: { subject: `Quick question about ${lead.company}'s growth`, body: `Hi ${firstName},\n\nI noticed ${lead.company} is doing great things in ${lead.industry}. I work with similar ${lead.industry} companies to unlock hidden revenue through AI-powered outreach and intelligence.\n\nWould you be open to a quick 15-min call this week?\n\nBest,\nyour closer` },
-    linkedin: `Hi ${firstName}, I came across ${lead.company} and was impressed by your work in ${lead.industry}. I help companies like yours unlock hidden revenue. Would love to connect.`,
-    sms: `Hi ${firstName}, this is your closer from GOATED. I have insights on how ${lead.company} could capture more revenue in ${lead.industry}. Worth a quick chat? Reply YES.`,
-    call: `Hi ${firstName}, this is your closer. I work with companies in ${lead.industry} and noticed opportunities for ${lead.company} to capture additional revenue. Do you have a few minutes?`,
+    business: biz,
+    tier,
+    gaps,
+    primaryChannel: channels[0],
+    channels,
+    // Opening line for a live call — addressed to whoever answers, not a
+    // fabricated first name.
+    call: `Hi, is the owner or manager around? — I'm calling about ${biz}. ${hook} `
+      + `We set up an AI receptionist that answers in under 60 seconds and books the job. `
+      + `Worth two minutes?`,
+    sms: `Hi — reaching out about ${biz}. ${hook} `
+      + `We can have missed calls answered and booked automatically within 14 days. Want the details?`,
+    linkedin: lead.linkedin_url
+      ? `Hi — I work with ${industry ? `${industry} businesses` : 'local service businesses'}${where}. `
+        + `${hook} Happy to share what we did for similar operators. Worth a conversation?`
+      : null,
+    // What to actually say once they engage.
+    talkingPoints: [
+      lead.employees ? `Team of ${lead.employees} — ask who covers the phone after hours.` : 'Ask how calls are handled after hours.',
+      lead.revenueFormatted ? `Revenue around ${lead.revenueFormatted} — size the leak against that.` : 'Ask their average job value to size the leak.',
+      ...gaps.slice(0, 2).map(g => g.angle),
+      `Pitch: ${tier.label} — ${tier.price}.`,
+    ].filter(Boolean),
   };
 }
 
@@ -448,7 +536,7 @@ function CloseCoachRow({ lead, index, colSpan, onCallClick, showToast }) {
   const prob = getCloseProbability(lead, index);
   const strategy = getCloseStrategy(lead, prob);
   const painPoints = getLeadPainPoints(lead);
-  const templates = getOutreachTemplates(lead);
+  const outreach = buildOutreachStrategy(lead);
   const intel = getContactIntel(lead, index);
   const [activeOutreach, setActiveOutreach] = useState(null);
 
@@ -491,19 +579,50 @@ function CloseCoachRow({ lead, index, colSpan, onCallClick, showToast }) {
                 <Send size={14} className="text-cyan-400" />
                 <span className="text-xs font-bold text-white uppercase tracking-wider">Quick Outreach</span>
               </div>
+
+              {/* Recommended package, sized from this business's own headcount
+                  and revenue rather than a fixed pitch. */}
+              <div className="mb-3 rounded-lg border border-brand/25 bg-brand/[0.07] px-3 py-2.5">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-[10px] uppercase tracking-wider text-brand font-bold">Recommended</span>
+                  <span className="text-[10px] font-mono text-slate-400">{outreach.tier.price}</span>
+                </div>
+                <div className="text-sm font-bold text-white">{outreach.tier.label}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">{outreach.tier.why}</div>
+              </div>
+
+              {/* Gaps we can actually name on the call — each one comes from a
+                  field on the record, not a generic industry list. */}
+              {outreach.gaps.length > 0 && (
+                <div className="mb-3 space-y-1">
+                  <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Angles for this business</div>
+                  {outreach.gaps.slice(0, 3).map(g => (
+                    <div key={g.key} className="flex items-start gap-2 text-[11px] text-slate-300">
+                      <span className="mt-1 w-1 h-1 rounded-full bg-amber-400 flex-shrink-0" />
+                      <span><span className="text-amber-400 font-medium">{g.label}</span> — {g.angle}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="space-y-2 mb-3">
                 <button onClick={() => intel.phone ? onCallClick(lead, intel.phone) : showToast('Connect Apollo.io API key to enrich contact data')}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors text-left">
                   <Phone size={13} /> {intel.phone ? 'Call Now · Direct line' : 'Enrich to unlock phone'}
                 </button>
-                <button onClick={() => setActiveOutreach(activeOutreach === 'email' ? null : 'email')}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs font-medium text-purple-400 hover:bg-purple-500/20 transition-colors text-left">
-                  <Mail size={13} /> Email Template
+                {/* Email intentionally absent — outreach is phone-first and
+                    manual. Apollo's free plan returns no person-level address
+                    anyway, so an email button would have been mailto:null. */}
+                <button onClick={() => setActiveOutreach(activeOutreach === 'call' ? null : 'call')}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs font-medium text-cyan-400 hover:bg-cyan-500/20 transition-colors text-left">
+                  <MessageSquare size={13} /> Call Opener
                 </button>
-                <button onClick={() => setActiveOutreach(activeOutreach === 'linkedin' ? null : 'linkedin')}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs font-medium text-blue-400 hover:bg-blue-500/20 transition-colors text-left">
-                  <Linkedin size={13} /> LinkedIn Message
-                </button>
+                {lead.linkedin_url && (
+                  <button onClick={() => setActiveOutreach(activeOutreach === 'linkedin' ? null : 'linkedin')}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs font-medium text-blue-400 hover:bg-blue-500/20 transition-colors text-left">
+                    <Linkedin size={13} /> LinkedIn Message
+                  </button>
+                )}
                 <button onClick={() => setActiveOutreach(activeOutreach === 'sms' ? null : 'sms')}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs font-medium text-amber-400 hover:bg-amber-500/20 transition-colors text-left">
                   <MessageSquare size={13} /> SMS Template
@@ -511,18 +630,18 @@ function CloseCoachRow({ lead, index, colSpan, onCallClick, showToast }) {
               </div>
               {activeOutreach && (
                 <div className="bg-surface-2 rounded-lg p-3 border border-white/[0.04]">
-                  <div className="text-xs text-slate-300 whitespace-pre-wrap max-h-24 overflow-y-auto mb-2">
-                    {activeOutreach === 'email' ? templates.email.body : templates[activeOutreach]}
+                  <div className="text-xs text-slate-300 whitespace-pre-wrap max-h-32 overflow-y-auto mb-2">
+                    {outreach[activeOutreach]}
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => { navigator.clipboard.writeText(activeOutreach === 'email' ? templates.email.body : templates[activeOutreach]); showToast('Copied to clipboard'); }}
+                    <button onClick={() => { navigator.clipboard.writeText(outreach[activeOutreach] || ''); showToast('Copied to clipboard'); }}
                       className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-brand/15 text-brand text-[10px] font-bold hover:bg-brand/25 transition-colors">
                       <Copy size={10} /> Copy
                     </button>
-                    {activeOutreach === 'email' && (
-                      <a href={`mailto:${lead.email}?subject=${encodeURIComponent(templates.email.subject)}&body=${encodeURIComponent(templates.email.body)}`}
-                        className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-purple-500 text-white text-[10px] font-bold hover:bg-purple-600 transition-colors">
-                        <Mail size={10} /> Send
+                    {activeOutreach === 'sms' && lead.phone && (
+                      <a href={`sms:${(lead.phone || '').replace(/[^+\d]/g, '')}&body=${encodeURIComponent(outreach.sms)}`}
+                        className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-amber-500 text-black text-[10px] font-bold hover:bg-amber-400 transition-colors">
+                        <MessageSquare size={10} /> Open SMS
                       </a>
                     )}
                     {activeOutreach === 'linkedin' && (

@@ -1050,18 +1050,23 @@ Context:\n${ctx}`;
                 <div className="text-sm font-medium text-white">{lead.phone ? 'Direct line available — tap to call' : 'Enrich lead to unlock phone'}</div>
               </div>
             </a>
-            {/* Email */}
-            <a href={`mailto:${lead.email}`}
-              className="flex items-center gap-4 p-4 rounded-xl bg-purple-500/[0.08] border-2 border-purple-500/25 hover:bg-purple-500/15 hover:border-purple-500/40 hover:shadow-lg hover:shadow-purple-500/10 transition-all group">
-              <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center shrink-0">
-                <Mail size={22} className="text-purple-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-[10px] text-purple-400 uppercase tracking-wider font-bold mb-1">Email</div>
-                <div className="text-base font-medium text-white truncate group-hover:text-purple-300 transition-colors">{lead.email}</div>
-              </div>
-              <CopyBtn text={lead.email} />
-            </a>
+            {/* Email — rendered only when an address actually exists. Apollo's
+                free plan returns company-level records, so lead.email is null
+                for every one and this used to render as mailto:null. Outreach
+                is phone-first and manual for now. */}
+            {lead.email && (
+              <a href={`mailto:${lead.email}`}
+                className="flex items-center gap-4 p-4 rounded-xl bg-purple-500/[0.08] border-2 border-purple-500/25 hover:bg-purple-500/15 hover:border-purple-500/40 hover:shadow-lg hover:shadow-purple-500/10 transition-all group">
+                <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center shrink-0">
+                  <Mail size={22} className="text-purple-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] text-purple-400 uppercase tracking-wider font-bold mb-1">Email</div>
+                  <div className="text-base font-medium text-white truncate group-hover:text-purple-300 transition-colors">{lead.email}</div>
+                </div>
+                <CopyBtn text={lead.email} />
+              </a>
+            )}
             {/* LinkedIn */}
             <a href={lead.linkedin_url || `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(lead.name + ' ' + lead.company)}`}
               target="_blank" rel="noopener noreferrer"
@@ -1652,17 +1657,19 @@ Context:\n${ctx}`;
                 <Users size={16} className="text-brand" /> Contact Information
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* Email */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                  <div className="flex items-center gap-3">
-                    <Mail size={15} className="text-slate-500" />
-                    <div>
-                      <div className="text-[10px] text-slate-500 uppercase tracking-wider">Email</div>
-                      <a href={`mailto:${lead.email}`} className="text-sm text-brand hover:text-white underline decoration-brand/30 hover:decoration-white/50 transition-colors">{lead.email}</a>
+                {/* Email row — same gating as the action tile above. */}
+                {lead.email && (
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                    <div className="flex items-center gap-3">
+                      <Mail size={15} className="text-slate-500" />
+                      <div>
+                        <div className="text-[10px] text-slate-500 uppercase tracking-wider">Email</div>
+                        <a href={`mailto:${lead.email}`} className="text-sm text-brand hover:text-white underline decoration-brand/30 hover:decoration-white/50 transition-colors">{lead.email}</a>
+                      </div>
                     </div>
+                    <CopyBtn text={lead.email} />
                   </div>
-                  <CopyBtn text={lead.email} />
-                </div>
+                )}
                 {/* Phone */}
                 <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                   <div className="flex items-center gap-3">

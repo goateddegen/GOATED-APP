@@ -19,7 +19,7 @@ import {
   Eye, Activity, Globe, Cpu, Users, ShoppingBag, Mail, BarChart3, Wrench,
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
-import { calLink, CAL_EVENT_AUDIT_WALKTHROUGH } from '../lib/config';
+import { contactMailto } from '../lib/config';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function slugify(url) {
@@ -553,12 +553,15 @@ export default function AuditPage() {
               </div>
               <div className="flex flex-col gap-2 w-full sm:w-auto">
                 <a
-                  href={`${calLink(CAL_EVENT_AUDIT_WALKTHROUGH)}?brand=${encodeURIComponent(biz.name || slugify(r.url))}&url=${encodeURIComponent(r.url)}`}
-                  target="_blank" rel="noreferrer noopener"
+                  href={contactMailto({
+                    subject: `GOATED audit — ${biz.name || slugify(r.url)}`,
+                    url: r.url,
+                    business: biz.name,
+                  })}
                   className="flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-base font-bold transition whitespace-nowrap"
                   style={{ background: accent, color: '#000' }}
                 >
-                  <Phone size={18} /> Book a call — let&apos;s close it
+                  <Phone size={18} /> Get these fixed — talk to us
                 </a>
                 <button
                   onClick={copyShare}

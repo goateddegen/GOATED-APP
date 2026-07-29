@@ -276,9 +276,13 @@ export default function HomePage() {
     { icon: Award, title: 'Revenue Audit', desc: 'Free, public, shareable. Enter your URL — in 15 seconds we show how much call/booking revenue you\'re leaking. Ammunition for the call. Funnel for the close.', page: 'audit', color: '#10b981', stats: 'Free' },
     { icon: Bot, title: 'SMS Auto-Text-Back', desc: 'Every missed call triggers a 30-second follow-up text. Two-way conversation routed to your phone. Recovers 30-50% of missed call revenue automatically.', color: '#a855f7', action: () => setAiOpen(true), stats: 'Auto-recovery' },
     { icon: Users, title: 'Reactivation Campaigns', desc: 'Mine your dormant customer list — anyone who hasn\'t been in for 6+ months. AI-personalized outreach across voice, SMS, email. We take 15% of recovered revenue, no monthly retainer.', page: 'leads', color: '#10b981', stats: 'Performance-only' },
-    { icon: TrendingUp, title: 'Review Engine', desc: 'Auto-requests Google reviews from happy customers at the optimal moment (4-24 hr post-job). Adds 10-15 five-star reviews per month. Tops local search in 6 months.', page: 'trends', color: '#06b6d4', stats: '+15 reviews/mo' },
-    { icon: Globe, title: 'Custom AI Builds', desc: 'For $10K+ deposits: AI receptionist OS, multi-location brain, custom RAG agents trained on your data, owner copilot in Slack/SMS. Built on the GOATED stack.', page: 'trends', color: '#ef4444', stats: 'Custom scope' },
-    { icon: Wallet, title: '30-Day Refund', desc: 'Real risk-reversal. If we don\'t deliver measurable results in 30 days, every dollar back. No long-term contracts, no setup retention. Aligns our incentives with yours.', page: 'wallet', color: '#06b6d4', stats: 'Money-back' },
+    // These three used to point at TrendPulse and Wallet. Both are disabled, so
+    // the store's gate bounced the visitor silently back to Home — the card
+    // looked broken. Repointed at surfaces that exist and actually follow on
+    // from the copy.
+    { icon: TrendingUp, title: 'Review Engine', desc: 'Auto-requests Google reviews from happy customers at the optimal moment (4-24 hr post-job). Adds 10-15 five-star reviews per month. Tops local search in 6 months.', page: 'audit', cta: 'Check your site', color: '#06b6d4', stats: '+15 reviews/mo' },
+    { icon: Globe, title: 'Custom AI Builds', desc: 'For $10K+ deposits: AI receptionist OS, multi-location brain, custom RAG agents trained on your data, owner copilot in Slack/SMS. Built on the GOATED stack.', action: () => setAiOpen(true), cta: 'Scope a build', color: '#ef4444', stats: 'Custom scope' },
+    { icon: Wallet, title: '30-Day Refund', desc: 'Real risk-reversal. If we don\'t deliver measurable results in 30 days, every dollar back. No long-term contracts, no setup retention. Aligns our incentives with yours.', page: 'audit', cta: 'Start with a free audit', color: '#06b6d4', stats: 'Money-back' },
     { icon: BarChart3, title: 'Command Center', desc: 'Pipeline + activations + commission split + TCPA compliance logs. One dashboard. Daily close-rate, weekly revenue. Zero noise.', page: 'dashboard', color: '#8b5cf6', stats: 'One view' },
   ];
 
@@ -578,7 +582,7 @@ export default function HomePage() {
                   </div>
                   <h3 className="font-bold text-white mb-1.5 group-hover:text-brand transition-colors">{f.title}</h3>
                   <p className="text-sm text-slate-400 leading-relaxed mb-3 flex-1">{f.desc}</p>
-                  <div className="flex items-center gap-1 text-xs text-slate-500 group-hover:text-brand transition-colors mt-auto"><span>Explore</span><ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" /></div>
+                  <div className="flex items-center gap-1 text-xs text-slate-500 group-hover:text-brand transition-colors mt-auto"><span>{f.cta || 'Explore'}</span><ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" /></div>
                 </div>
               </motion.button>
             ))}
