@@ -58,7 +58,7 @@ console.log(`  project : ${url}`);
 console.log(`  pub key : ${publishable.slice(0, 22)}…`);
 console.log(`  secret  : ${secret ? secret.slice(0, 14) + '…' : '(not set)'}\n`);
 
-const TABLES = ['waitlist', 'user_settings', 'leads', 'deals', 'transactions',
+const TABLES = ['profiles', 'waitlist', 'user_settings', 'leads', 'deals', 'transactions',
   'commissions', 'market_data', 'analytics_events'];
 
 let failures = 0;
@@ -99,10 +99,14 @@ try {
   const r = await req('/auth/v1/settings', publishable);
   if (r.ok) {
     const s = await r.json();
-    ok(`Auth up — email signup ${s.disable_signup ? '\x1b[31mDISABLED\x1b[0m' : 'enabled'}`);
+    ok('Auth service reachable');
     const providers = Object.entries(s.external || {}).filter(([, v]) => v).map(([k]) => k);
-    if (providers.length) ok(`OAuth providers: ${providers.join(', ')}`);
-    else warn('No OAuth providers enabled — the Google/GitHub buttons will fail');
+    // The app is Google-only, so that provider specifically has to be on.
+    if (providers.includes('google')) ok(`Google OAuth enabled (providers: ${providers.join(', ')})`);
+    else {
+      bad(`Google OAuth NOT enabled — the sign-in button will fail. Providers on: ${providers.join(', ') || 'none'}`);
+      failures++;
+    }
   } else {
     bad(`Auth settings returned ${r.status}`);
     failures++;

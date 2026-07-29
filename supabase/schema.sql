@@ -6,9 +6,67 @@
 -- security on by default so a leaked anon key can't drain the database.
 --
 -- Tables referenced by the app today:
---   waitlist, leads, deals, market_data, transactions, commissions,
+--   profiles, waitlist, leads, deals, market_data, transactions, commissions,
 --   user_settings, analytics_events
 -- =============================================================================
+
+-- ─── Profiles — the OAuth login mirror ──────────────────────────────────────
+-- Supabase already persists every signup into auth.users, but that table can't
+-- take extra columns and can't be joined against from the client. This mirrors
+-- each new user into a table we own, populated by a trigger so it stays in sync
+-- without any application code. Google sign-ins land here automatically.
+create table if not exists public.profiles (
+  id         uuid primary key references auth.users(id) on delete cascade,
+  email      text,
+  full_name  text,
+  avatar_url text,
+  provider   text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+
+drop policy if exists "profiles_own_row" on public.profiles;
+create policy "profiles_own_row"
+  on public.profiles for all
+  to authenticated
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
+
+-- security definer so the trigger can write regardless of the caller's RLS.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (id, email, full_name, avatar_url, provider)
+  values (
+    new.id,
+    new.email,
+    new.raw_user_meta_data->>'full_name',
+    new.raw_user_meta_data->>'avatar_url',
+    new.raw_app_meta_data->>'provider'
+  )
+  on conflict (id) do nothing;
+  return new;
+end $$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- Backfill anyone who signed up before this trigger existed.
+insert into public.profiles (id, email, full_name, avatar_url, provider)
+select u.id,
+       u.email,
+       u.raw_user_meta_data->>'full_name',
+       u.raw_user_meta_data->>'avatar_url',
+       u.raw_app_meta_data->>'provider'
+from auth.users u
+on conflict (id) do nothing;
 
 -- ─── Waitlist (public insert, admin read) ───────────────────────────────────
 create table if not exists public.waitlist (
