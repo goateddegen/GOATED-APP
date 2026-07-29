@@ -11,7 +11,6 @@ import LeadDetail from './components/LeadDetail';
 // AIOverlay is 2600+ LOC + framer-motion + voice synth imports — lazy-load so first-paint stays thin.
 const AIOverlay = lazy(() => import('./components/AIOverlay'));
 import AccountModal from './components/AccountModal';
-import Onboarding from './components/Onboarding';
 import { onAuthStateChange, trackPerformance, trackPageView, startAutoSync, stopAutoSync, loadUserDataFromCloud, supabase } from './lib/supabase';
 import { PAGE_KEYBINDS, isPageEnabled, isAdminEmail } from './lib/config';
 
@@ -245,7 +244,6 @@ export default function App() {
   const setPreviousPage = useStore(s => s.setPreviousPage);
   const accountModalOpen = useStore(s => s.accountModalOpen);
   const setAccountModalOpen = useStore(s => s.setAccountModalOpen);
-  const onboardingComplete = useStore(s => s.onboardingComplete);
   const setUser = useStore(s => s.setUser);
   const setIsLoggedIn = useStore(s => s.setIsLoggedIn);
   const isLoggedIn = useStore(s => s.isLoggedIn);
@@ -585,7 +583,6 @@ export default function App() {
           </Suspense>
         )}
       </PageErrorBoundary>
-      {!onboardingComplete && <Onboarding />}
       {degenToast && (
         <div
           className="fixed top-4 left-1/2 -translate-x-1/2 z-[999] flex items-center gap-2.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider shadow-lg border backdrop-blur-md pointer-events-none"

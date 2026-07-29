@@ -183,13 +183,16 @@ export async function recordCommission(dealId, amount, rate = 0.13) {
 const PERF_KEY = 'goated_perf_metrics';
 
 export function trackEvent(event, properties = {}) {
-  // Log to console in dev, send to Supabase analytics table in prod
+  // Column names must be snake_case to match the analytics_events table. This
+  // previously sent `userAgent`, which PostgREST rejected with a 400 on every
+  // single page view — a steady stream of failed inserts in the Supabase logs,
+  // silent in the app because the promise result was discarded.
   const entry = {
     event,
     properties,
     timestamp: new Date().toISOString(),
     page: window.location.pathname,
-    userAgent: navigator.userAgent,
+    user_agent: navigator.userAgent,
   };
 
   if (import.meta.env.DEV) {
@@ -197,7 +200,11 @@ export function trackEvent(event, properties = {}) {
   }
 
   if (supabase) {
-    supabase.from('analytics_events').insert([entry]).then(() => {});
+    // Surface failures instead of swallowing them — a broken analytics insert
+    // should be visible in the console, not just in the provider's dashboard.
+    supabase.from('analytics_events').insert([entry]).then(({ error }) => {
+      if (error) console.warn('[GOATED] analytics insert failed:', error.message);
+    });
   } else {
     // Queue locally for when Supabase is configured
     try {
