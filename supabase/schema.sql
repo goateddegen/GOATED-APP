@@ -259,6 +259,24 @@ create policy "analytics_public_insert"
 
 -- ─── Realtime ───────────────────────────────────────────────────────────────
 -- src/lib/supabase.js subscribes to these three tables.
-alter publication supabase_realtime add table public.leads;
-alter publication supabase_realtime add table public.deals;
-alter publication supabase_realtime add table public.market_data;
+--
+-- `alter publication ... add table` throws if the table is already a member, so
+-- guard each one — otherwise re-running this file fails at the last step, after
+-- everything else has already succeeded.
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables
+    where pubname='supabase_realtime' and schemaname='public' and tablename='leads') then
+    alter publication supabase_realtime add table public.leads;
+  end if;
+
+  if not exists (select 1 from pg_publication_tables
+    where pubname='supabase_realtime' and schemaname='public' and tablename='deals') then
+    alter publication supabase_realtime add table public.deals;
+  end if;
+
+  if not exists (select 1 from pg_publication_tables
+    where pubname='supabase_realtime' and schemaname='public' and tablename='market_data') then
+    alter publication supabase_realtime add table public.market_data;
+  end if;
+end $$;
