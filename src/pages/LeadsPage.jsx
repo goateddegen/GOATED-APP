@@ -621,10 +621,14 @@ export default function LeadsPage({ onSelect }) {
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, []);
 
-  // Pull real company records from /api/leads (Apollo) on mount. The synthetic
-  // pool is only generated if that call fails, so the page shows live data by
-  // default instead of 250K invented rows.
-  useEffect(() => { fetchLiveLeads(); }, [fetchLiveLeads]);
+  // Refetch on every visit to this page, not just the first mount of the session.
+  // The component unmounts on navigation, so keying the effect to `page` means
+  // leaving and returning pulls a fresh rotation of businesses rather than
+  // redisplaying the previous list.
+  const currentPage = useStore(s => s.page);
+  useEffect(() => {
+    if (currentPage === 'leads') fetchLiveLeads();
+  }, [currentPage, fetchLiveLeads]);
 
   const isLive = dataMode === 'live' && liveLeads.length > 0;
 

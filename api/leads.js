@@ -96,6 +96,38 @@ function scoreApolloOrg(org) {
   return Math.max(1, Math.min(99, Math.round(score)));
 }
 
+
+// ─── Default prospecting rotation ───────────────────────────────────────────
+// The Leads page requests /api/leads with no search term. routeToPlaces required
+// search||industry, so it fell through to Apollo and returned things like "Flash
+// Moving Service" — which is why the page looked bad despite Places working.
+//
+// These are the trades the offer actually fits: phone-driven, owner-operated,
+// where a missed call is a lost job the owner feels personally. Rotating through
+// them on each request means repeat visits surface different businesses, so the
+// operator never works the same list twice and never runs dry.
+const DEFAULT_TRADES = [
+  'hvac repair', 'plumber', 'roofing contractor', 'electrician',
+  'garage door repair', 'pest control', 'landscaping', 'tree service',
+  'dentist', 'chiropractor', 'med spa', 'auto repair',
+  'appliance repair', 'water damage restoration', 'fencing contractor',
+  'pool service', 'locksmith', 'towing service', 'septic service',
+  'window replacement', 'flooring contractor', 'painting contractor',
+];
+
+// Advance on every request so two consecutive visits to the Leads page never
+// show the same trade. A time-window version returned identical results to
+// back-to-back calls, which defeats the point of refetching on each visit.
+//
+// Seeded from the clock so a cold lambda doesn't always restart at 'hvac repair',
+// then stepped per request. Sequential rather than random: an operator walking
+// the page repeatedly sees the whole list instead of re-rolling the same few.
+let tradeCursor = Math.floor(Date.now() / 1000) % 22;
+function rotatingTrade() {
+  tradeCursor = (tradeCursor + 1) % DEFAULT_TRADES.length;
+  return DEFAULT_TRADES[tradeCursor];
+}
+
 // Entities that discuss a trade rather than practise it. Real results for "hvac":
 // "HVAC School", "Hvac Hacks", "HVAC SIMPLIFIED™", "HVAC 360 Haber Portalı",
 // "ConstructionPlacements Official", "EEP - Electrical Engineering Portal".
@@ -744,7 +776,11 @@ export default async function handler(req, res) {
     const wantsBigDeals = Number(minDeal) >= 15000;
     const autoSource = !forceSource || forceSource === 'auto';
     const routeToApollo = wantsBigDeals && hasApolloKey;
-    const routeToPlaces = !routeToApollo && placesConfigured() && !!(search || industry);
+    // With no search term, default to a rotating local trade rather than
+    // dropping through to Apollo.
+    const defaultTrade = (!search && !industry && placesConfigured()) ? rotatingTrade() : '';
+    const effectiveQuery = search || industry || defaultTrade;
+    const routeToPlaces = !routeToApollo && placesConfigured() && !!effectiveQuery;
 
     const useApollo = forceSource === 'apollo'
       || (autoSource && routeToApollo)
@@ -776,7 +812,7 @@ export default async function handler(req, res) {
     // ten-person shop. It also carries review counts, which Apollo doesn't, and
     // which are the strongest opening line available for this offer.
     if (forceSource === 'places' || (autoSource && routeToPlaces)) {
-      const pl = await searchPlaces({ query: search || industry, location: location || impliedLocation, limit, pageToken });
+      const pl = await searchPlaces({ query: effectiveQuery, location: location || impliedLocation, limit, pageToken });
       if (!pl.fallback && pl.leads) {
         let out = pl.leads;
         if (minScore > 0) out = out.filter(l => l.score >= minScore);
@@ -809,6 +845,8 @@ export default async function handler(req, res) {
             granularity: 'local-business',
             nextPageToken: pl.nextPageToken,
             locationSource: location ? 'query' : (impliedLocation ? 'caller-ip' : 'places-default'),
+            trade: effectiveQuery,
+            tradeSource: (search || industry) ? 'query' : 'rotation',
             resolvedLocation: location || impliedLocation || null,
             contactDataAvailable: false,
             contactDataNote: 'Listing-level data. Use ?action=enrich&website= to pull named humans off their site.',

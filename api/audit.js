@@ -541,6 +541,8 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'No LLM API key configured. Set GROQ_API_KEY or ANTHROPIC_API_KEY in Vercel env.' });
   }
 
+  const startedAt = Date.now();
+
   let html;
   try {
     html = await fetchPage(url);
@@ -566,13 +568,36 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: `Signal extraction failed: ${e.message}` });
   }
 
-  // Fire the deep-crawl helpers in parallel — best effort, never throw.
-  const [extraPagesSettled, socialDataSettled] = await Promise.allSettled([
-    fetchAdditionalPages(url, html),
-    fetchSocialSnippets(signals.socials),
-  ]);
-  const extraPages = extraPagesSettled.status === 'fulfilled' ? extraPagesSettled.value : [];
-  const socialData = socialDataSettled.status === 'fulfilled' ? socialDataSettled.value : {};
+  // Deep-crawl helpers are OPTIONAL enrichment, and they were what pushed heavy
+  // sites past Vercel's 10s function ceiling — the page fetch, then extra pages,
+  // then social profiles, then the LLM. Total ~8.5s on a content-heavy site, and
+  // anything over budget returned 502, which is what "audit failed" looked like.
+  //
+  // Reserve time for the LLM call, which is the part that actually produces the
+  // report. If the page fetch already ate the budget, skip enrichment and audit
+  // the page alone — a thinner report beats a failed one.
+  const LLM_RESERVE_MS = 5200;   // Groq typically answers in 3-5s
+  const HARD_BUDGET_MS = 9000;   // stay inside the 10s platform cap
+  const remaining = HARD_BUDGET_MS - (Date.now() - startedAt) - LLM_RESERVE_MS;
+
+  let extraPages = [];
+  let socialData = {};
+  let enrichmentSkipped = false;
+
+  if (remaining > 900) {
+    const timeboxed = (p) => Promise.race([
+      p,
+      new Promise(resolve => setTimeout(() => resolve(null), remaining)),
+    ]);
+    const [extraPagesSettled, socialDataSettled] = await Promise.allSettled([
+      timeboxed(fetchAdditionalPages(url, html)),
+      timeboxed(fetchSocialSnippets(signals.socials)),
+    ]);
+    extraPages = (extraPagesSettled.status === 'fulfilled' && extraPagesSettled.value) || [];
+    socialData = (socialDataSettled.status === 'fulfilled' && socialDataSettled.value) || {};
+  } else {
+    enrichmentSkipped = true;
+  }
 
   const prompt = buildPrompt(signals, extraPages, socialData);
 
@@ -597,6 +622,7 @@ export default async function handler(req, res) {
     url,
     generatedAt: new Date().toISOString(),
     llm: llmUsed,
+    enrichmentSkipped,
     signals,     // include so the UI can show the "here's what we saw" transparency panel
     extraPages: extraPages.map(p => ({ url: p.url, bytes: p.html?.length || 0 })), // just metadata, not raw HTML
     socialData,  // { instagram: {...}, twitter: {...} } or {} if none
