@@ -1178,20 +1178,19 @@ export const useStore = create((set, get) => ({
   business: null,
   setBusiness: (b) => set({ business: b }),
 
-  // DEGEN MODE — default ON. Closers, traders, money-makers.
-  // Users can opt into CHILL mode via the toggle.
-  // Stored as 'goated_degen' in localStorage for backwards compat.
-  degenMode: typeof window !== 'undefined'
-    ? (localStorage.getItem('goated_degen') === null ? true : localStorage.getItem('goated_degen') === 'true')
-    : true,
-  setDegenMode: (v) => { localStorage.setItem('goated_degen', v.toString()); set({ degenMode: v }); },
-  toggleDegenMode: () => {
-    const next = !get().degenMode;
-    localStorage.setItem('goated_degen', next.toString());
-    set({ degenMode: next });
-    if (next) get().generateDegenData();
-    else set({ degenData: null });
-  },
+  // Fixed on. 'Degen' is the app's red/orange identity now, not a mode.
+  //
+  // The Shift+D keybind and the sidebar switch are gone. Flipping it only
+  // re-applied colours, plus an aggressive AI persona ("Wolf of Wall Street
+  // energy", manufactured 48-hour urgency) that read as a scam when the person
+  // on the other end is a plumber being asked about missed calls.
+  //
+  // Kept as a flag rather than removed because ~200 references across 14 files
+  // read it for styling. Rewriting those is churn with no user-visible benefit
+  // and real regression risk.
+  degenMode: true,
+  setDegenMode: () => {},
+  toggleDegenMode: () => {},
 
   // ─── DEGEN DATA — Whale alerts, alpha plays, hot signals, degen score ───
   degenData: null,

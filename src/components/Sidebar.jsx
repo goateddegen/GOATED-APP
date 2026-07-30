@@ -143,40 +143,8 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* DEGEN / CHILL Toggle — Degen mode is default-on */}
-      <div className="p-2">
-        <button
-          onClick={() => {
-            const wasOff = !degenMode;
-            toggleDegenMode();
-            // Screen shake + confetti when flipping INTO degen mode
-            if (wasOff) {
-              const root = document.querySelector('.min-h-screen');
-              if (root) {
-                root.classList.add('degen-activate');
-                setTimeout(() => root.classList.remove('degen-activate'), 600);
-              }
-              setTimeout(() => triggerConfetti(), 200);
-            }
-          }}
-          aria-label={degenMode ? 'Switch to CHILL mode' : 'Switch to DEGEN mode'}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-300 group ${
-            degenMode
-              ? 'bg-gradient-to-r from-orange-500/20 via-red-500/20 to-yellow-500/20 text-orange-400 border border-orange-500/30'
-              : 'text-emerald-400 bg-emerald-500/5 border border-emerald-500/20 hover:bg-emerald-500/10'
-          }`}
-        >
-          <Flame size={18} className={`flex-shrink-0 ${degenMode ? 'text-orange-400 animate-pulse' : 'text-emerald-400'}`} aria-hidden="true" />
-          {expanded && (
-            <>
-              <span className="flex-1 text-left text-xs font-bold tracking-wider uppercase">{degenMode ? 'DEGEN MODE' : 'CHILL MODE'}</span>
-              <div className={`w-8 h-4 rounded-full transition-colors relative ${degenMode ? 'bg-orange-500' : 'bg-emerald-600'}`}>
-                <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${degenMode ? 'translate-x-4' : 'translate-x-0.5'}`} />
-              </div>
-            </>
-          )}
-        </button>
-      </div>
+      {/* DEGEN/CHILL toggle removed — the theme is fixed, so the switch only
+          re-applied the same colours. */}
 
       {/* Version tag at bottom */}
       {expanded && (

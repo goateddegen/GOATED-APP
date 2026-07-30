@@ -253,8 +253,6 @@ export default function App() {
   const setVerifiedEmail = useStore(s => s.setVerifiedEmail);
   const setUserPlan = useStore(s => s.setUserPlan);
   const degenMode = useStore(s => s.degenMode);
-  const [degenToast, setDegenToast] = useState(null);
-  const degenToastTimer = useRef(null);
   const isMobile = useIsMobile();
   const [showKeyHint, setShowKeyHint] = useState(true);
   // False until Supabase has told us whether a session exists. requireAuth must
@@ -459,19 +457,7 @@ export default function App() {
         return;
       }
 
-      // Shift+D — flip WOLF / CHILL mode
-      if (e.shiftKey && key === 'd') {
-        e.preventDefault();
-        const store = useStore.getState();
-        store.toggleDegenMode();
-        const nowDegen = !store.degenMode;
-        clearTimeout(degenToastTimer.current);
-        setDegenToast(nowDegen
-          ? '\u{1F525} DEGEN MODE ACTIVE \u2014 Alpha plays, real-time intel, closer OS engaged'
-          : 'CHILL MODE \u2014 Toned down, same engine');
-        degenToastTimer.current = setTimeout(() => setDegenToast(null), 1100);
-        return;
-      }
+      // Shift+D removed — degen is a fixed theme now, not a mode.
 
       // Skip if modifier keys are held (except Escape/Cmd+K handled above)
       if (hasModifier) return;
@@ -497,7 +483,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [navTo, degenToast]);
+  }, [navTo]);
 
   const selectLead = useCallback((l) => { setPreviousPage(page); setSelectedLead(l); setDetailOpen(true); }, [page, setPreviousPage, setSelectedLead, setDetailOpen]);
   const mainML = isMobile ? 0 : (sidebar ? 240 : 72);
@@ -610,19 +596,6 @@ export default function App() {
           </Suspense>
         )}
       </PageErrorBoundary>
-      {degenToast && (
-        <div
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-[999] flex items-center gap-2.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider shadow-lg border backdrop-blur-md pointer-events-none"
-          style={{
-            background: degenToast.includes('ACTIVE') ? 'rgba(249,115,22,0.14)' : 'rgba(16,185,129,0.10)',
-            borderColor: degenToast.includes('ACTIVE') ? 'rgba(249,115,22,0.35)' : 'rgba(16,185,129,0.30)',
-            color: degenToast.includes('ACTIVE') ? '#f97316' : '#10b981',
-            animation: 'degenFlash 1.1s ease-out forwards',
-          }}>
-          <span style={{ fontSize: '14px' }}>{degenToast.includes('ACTIVE') ? '🔥' : '🌿'}</span>
-          <span>{degenToast.includes('ACTIVE') ? 'DEGEN MODE' : 'CHILL MODE'}</span>
-        </div>
-      )}
       {/* Keyboard shortcut hint — fades out after 10s */}
       {showKeyHint && (
         <div

@@ -362,15 +362,11 @@ RULES — OBEY EVERY ONE:
 - 13% flat commission on every closed deal. For every deal mention, include commission $ impact.
 - Sub-$20K deals: same-day follow-up + simplified proposal — speed wins.
 
-${degenMode ? `DEGEN MODE IS ACTIVE. You are now GOATED AI in DEGEN MODE — an ultra-aggressive, high-energy closer with zero patience for mediocrity. Channel Wolf of Wall Street energy:
-- Use trading slang: "ape in", "send it", "LFG", "WAGMI", "bags", "moon", "diamond hands"
-- Be ruthlessly direct — no pleasantries, no hedging, no "might" or "could"
-- Frame EVERYTHING as money: "That's $X in commission you're leaving on the table"
-- Create extreme urgency: "This deal dies in 48 hours if you don't call NOW"
-- Celebrate aggressively: fire emojis, "LETS FUCKING GO", "MONEY PRINTER GO BRRR"
-- Insult inaction: "You're literally hemorrhaging $X/day by not closing this"
-- For market plays: conviction levels, risk appetite high, bold calls
-- Keep it SHORT and PUNCHY — 2-3 sentences max unless deep research` : ''}
+${''/* DEGEN prompt removed. It injected "Wolf of Wall Street energy" — trading
+slang, "LETS FUCKING GO", insulting inaction, manufactured 48-hour urgency.
+Wrong register entirely: the person on the other end is a plumber being asked
+about missed calls, and that tone reads as a scam. The visual theme stayed; the
+personality did not. */}
 
 CURRENT PAGE CONTEXT: ${pageContext}
 

@@ -11,7 +11,7 @@
       <stop offset="100%" stop-color="#94a3b8"/>
     </linearGradient>
     <linearGradient id="eye" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="0%" stop-color="#f97316"/>
       <stop offset="100%" stop-color="#34d399"/>
     </linearGradient>
     <filter id="glow">
@@ -33,15 +33,15 @@
 
   <!-- Background circle -->
   <circle cx="32" cy="32" r="31" fill="#030712"/>
-  <circle cx="32" cy="32" r="30.5" fill="none" stroke="#10b981" stroke-width="0.5" opacity="0.3"/>
+  <circle cx="32" cy="32" r="30.5" fill="none" stroke="#f97316" stroke-width="0.5" opacity="0.3"/>
 
   <!-- Left horn -->
   <path d="M18 28 Q14 18 10 8 Q13 12 15 16 Q17 22 18 26 Z" fill="url(#horn)"/>
-  <path d="M17 27 Q13 17 9 7" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" filter="url(#hornGlow)" opacity="0.9"/>
+  <path d="M17 27 Q13 17 9 7" fill="none" stroke="#f97316" stroke-width="1.5" stroke-linecap="round" filter="url(#hornGlow)" opacity="0.9"/>
 
   <!-- Right horn -->
   <path d="M46 28 Q50 18 54 8 Q51 12 49 16 Q47 22 46 26 Z" fill="url(#horn)"/>
-  <path d="M47 27 Q51 17 55 7" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" filter="url(#hornGlow)" opacity="0.9"/>
+  <path d="M47 27 Q51 17 55 7" fill="none" stroke="#f97316" stroke-width="1.5" stroke-linecap="round" filter="url(#hornGlow)" opacity="0.9"/>
 
   <!-- Body / head -->
   <ellipse cx="32" cy="36" rx="17" ry="19" fill="url(#body)" stroke="rgba(16,185,129,0.15)" stroke-width="0.8"/>
