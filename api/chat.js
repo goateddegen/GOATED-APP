@@ -2,6 +2,8 @@
 // GOATED AI Chat — Enhanced LLM Integration with Security Hardening
 // =============================================================================
 
+import { TOOL_SCHEMAS, runTool } from './_lib/tools.js';
+
 // ─── Security: Input Sanitization ───────────────────────────────────────────
 function sanitizeInput(text) {
   if (typeof text !== 'string') return '';
@@ -460,6 +462,8 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
     let rawContent = null;
     let llmUsed = null;
     const providerErrors = [];
+    // Surfaced in the response so the UI can show what the assistant actually did.
+    const toolsUsed = [];
 
     if (apiKey) {
       try {
@@ -494,27 +498,95 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
 
     if (!rawContent && groqKey) {
       try {
-        const gr = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${groqKey}`,
-          },
-          body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
-            max_tokens: maxTokens,
-            temperature: activeMode.temperature,
-            messages: [{ role: 'system', content: systemPrompt }, ...chatMessages],
-          }),
-          signal: AbortSignal.timeout(30000),
-        });
+        // ── Agentic loop ──────────────────────────────────────────────────
+        // The model gets real tools and decides what to call. "hvac leads in
+        // dallas" now triggers a live search_leads({query:'hvac',
+        // location:'Dallas TX'}) — a fresh API request — rather than being
+        // answered from whichever leads happened to be in page memory.
+        //
+        // Two rounds maximum: enough to call a tool and then answer with the
+        // result, bounded so a confused model can't loop until the function
+        // times out.
+        // Vercel sets x-forwarded-proto; local dev doesn't, and defaulting to
+        // https made the self-fetch to http://localhost fail silently — the tool
+        // ran, returned nothing, and the model truthfully said "no leads".
+        const host = req.headers.host || '';
+        const proto = req.headers['x-forwarded-proto']
+          || (/^(localhost|127\.0\.0\.1)/.test(host) ? 'http' : 'https');
+        const origin = `${proto}://${host}`;
+        const convo = [{ role: 'system', content: systemPrompt }, ...chatMessages];
+        const MAX_ROUNDS = 2;
 
-        if (gr.ok) {
+        for (let round = 0; round < MAX_ROUNDS && !rawContent; round++) {
+          const gr = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${groqKey}`,
+            },
+            body: JSON.stringify({
+              model: 'llama-3.3-70b-versatile',
+              max_tokens: maxTokens,
+              temperature: activeMode.temperature,
+              messages: convo,
+              // Only offer tools on the first round. After results are in, the
+              // model should be writing an answer, not calling again.
+              ...(round === 0 ? { tools: TOOL_SCHEMAS, tool_choice: 'auto' } : {}),
+            }),
+            signal: AbortSignal.timeout(30000),
+          });
+
+          if (!gr.ok) {
+            providerErrors.push(`groq ${gr.status}: ${(await gr.text()).slice(0, 200)}`);
+            break;
+          }
+
           const gd = await gr.json();
-          rawContent = gd.choices?.[0]?.message?.content || null;
+          const msg = gd.choices?.[0]?.message;
+          const calls = msg?.tool_calls || [];
+
+          if (calls.length) {
+            convo.push(msg);
+            // Hard grounding. Left to itself the model dressed real tool output in
+            // invented numbers — "$15K, 80% close, [LEAD_CARD:1234]" for
+            // businesses whose deal value and close rate we never computed, and
+            // "Email <name>" when no address was returned. Tool output is the
+            // only permitted source of fact for this answer.
+            convo.push({
+              role: 'system',
+              content:
+                'The tool results below are the ONLY source of truth for your next message.\n'
+                + '- Quote company name, city, phone, rating and review count exactly as returned.\n'
+                + '- Do NOT invent deal values, close probabilities, commissions or scores. If a field '
+                + 'is absent, omit it — never estimate it.\n'
+                + '- Do NOT emit [LEAD_CARD:id] tokens; you have no real ids.\n'
+                + '- Do NOT suggest emailing anyone unless an email address appears in the results. '
+                + 'These are phone-first prospects.\n'
+                + '- If a business has no website or few reviews, say so plainly — that is the opening.\n'
+                + '- NEVER write a phone number that is not present in the results. Llama will '
+                + 'happily produce (123) 456-7890 to fill the slot; omit the number instead.\n'
+                + '- Be concise: a short list, one line each, then a single next action.',
+            });
+            for (const c of calls) {
+              let args = {};
+              try { args = JSON.parse(c.function?.arguments || '{}'); } catch { /* malformed args */ }
+              const result = await runTool(c.function?.name, args, {
+                origin,
+                authorization: req.headers.authorization,
+              });
+              toolsUsed.push({ name: c.function?.name, args });
+              convo.push({
+                role: 'tool',
+                tool_call_id: c.id,
+                name: c.function?.name,
+                content: JSON.stringify(result).slice(0, 6000),
+              });
+            }
+            continue; // let the model answer from the tool output
+          }
+
+          rawContent = msg?.content || null;
           llmUsed = 'groq:llama-3.3-70b-versatile';
-        } else {
-          providerErrors.push(`groq ${gr.status}: ${(await gr.text()).slice(0, 200)}`);
         }
       } catch (e) {
         providerErrors.push(`groq threw: ${e.message}`);
@@ -532,6 +604,7 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
       content: safeContent,
       fallback: false,
       llm: llmUsed,
+      toolsUsed,
       requestId,
       responseMode: responseMode || 'default',
     });
