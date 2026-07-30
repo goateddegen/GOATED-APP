@@ -598,6 +598,7 @@ function getAllLeads(poolSize = DEFAULT_POOL) {
 import { guardRequest, setCacheHeaders } from './_lib/guard.js';
 import { extractContacts } from './_lib/contacts.js';
 import { userFromRequest, saveLeads, loadLeads, dbConfigured } from './_lib/db.js';
+import { searchPlaces, placesConfigured } from './_lib/places.js';
 
 export default async function handler(req, res) {
   // Apollo API passthrough — 30/min per IP is plenty, daily cap prevents quota burn
@@ -687,6 +688,58 @@ export default async function handler(req, res) {
         page, limit,
         _meta: { dataType: 'supabase-saved', source: 'supabase', persisted: true },
       });
+    }
+
+    // ── Google Places prospecting ──────────────────────────────────────────
+    // ?source=places — the local-business layer. Apollo indexes companies with a
+    // corporate footprint, which is why searching it for "HVAC" surfaced Samsung
+    // HVAC America. Places indexes the physical world, so it returns the actual
+    // ten-person shop. It also carries review counts, which Apollo doesn't, and
+    // which are the strongest opening line available for this offer.
+    if (forceSource === 'places' || (forceSource === '' && search && placesConfigured() && !hasApolloKey)) {
+      const pl = await searchPlaces({ query: search || industry, location, limit });
+      if (!pl.fallback && pl.leads) {
+        let out = pl.leads;
+        if (minScore > 0) out = out.filter(l => l.score >= minScore);
+        if (priority) out = out.filter(l => l.priority === priority.toLowerCase());
+
+        let persistedPlaces = 0;
+        if (caller) {
+          try { persistedPlaces = await saveLeads(out, caller.id); }
+          catch (e) { console.warn('[GOATED] places persistence failed:', e.message); }
+        }
+
+        return res.status(200).json({
+          leads: out,
+          total: out.length,
+          page, limit,
+          totalPages: 1,
+          summary: {
+            totalLeads: out.length,
+            returned: out.length,
+            reachableByPhone: pl.stats.reachable,
+            withoutWebsite: pl.stats.withoutWebsite,
+            thinReviews: pl.stats.thinReviews,
+            pipelineValue: out.reduce((a, l) => a + (l.dealValue || 0), 0),
+          },
+          _meta: {
+            generatedAt: new Date().toISOString(),
+            dataType: 'places-live',
+            source: 'google-places-new',
+            query: pl.query,
+            granularity: 'local-business',
+            contactDataAvailable: false,
+            contactDataNote: 'Listing-level data. Use ?action=enrich&website= to pull named humans off their site.',
+            persistedCount: persistedPlaces,
+            signedIn: !!caller,
+          },
+        });
+      }
+      console.warn('[GOATED] Places failed:', pl.error);
+      if (pl.needsEnabling) {
+        return res.status(503).json({ error: pl.error, needsEnabling: true });
+      }
+      // else fall through to Apollo/generated
     }
 
     if (useApollo && hasApolloKey) {
