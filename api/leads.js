@@ -115,17 +115,20 @@ const DEFAULT_TRADES = [
   'window replacement', 'flooring contractor', 'painting contractor',
 ];
 
-// Advance on every request so two consecutive visits to the Leads page never
-// show the same trade. A time-window version returned identical results to
-// back-to-back calls, which defeats the point of refetching on each visit.
+// Must be request-scoped, not module-scoped. Two earlier attempts failed in
+// production for the same underlying reason:
 //
-// Seeded from the clock so a cold lambda doesn't always restart at 'hvac repair',
-// then stepped per request. Sequential rather than random: an operator walking
-// the page repeatedly sees the whole list instead of re-rolling the same few.
-let tradeCursor = Math.floor(Date.now() / 1000) % 22;
+//   1. A clock window (45s) returned identical results to back-to-back calls.
+//   2. A module-level cursor looked right locally but not on Vercel — each lambda
+//      instance keeps its own copy, and instances seeded within the same second
+//      landed on the same index. Three consecutive production calls all returned
+//      "med spa".
+//
+// Random per request is the only thing that actually varies across a fleet with
+// no shared state. Repeats are possible but harmless; going stale is not, and
+// persistence dedupes on external_id anyway.
 function rotatingTrade() {
-  tradeCursor = (tradeCursor + 1) % DEFAULT_TRADES.length;
-  return DEFAULT_TRADES[tradeCursor];
+  return DEFAULT_TRADES[Math.floor(Math.random() * DEFAULT_TRADES.length)];
 }
 
 // Entities that discuss a trade rather than practise it. Real results for "hvac":
