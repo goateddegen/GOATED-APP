@@ -60,16 +60,14 @@ function useMouseParallax() {
 // ── Floating Particles removed — was O(n²) connection lines per frame, tanked homepage perf ──
 
 // ── Sandboxed AI Demo Chat for Homepage ──────────────────────────────────────
-const DEMO_RESPONSES = {
-  'leads': "Found **3 hot leads** with rising momentum:\n\n1. **Mike Chen** at Pinnacle Dental — Score: 94, Deal: $85K\n   Pain: Lead quality issues. Just hired a marketing director.\n2. **Sarah Kim** at TechFlow — Score: 91, Deal: $120K\n   Pain: Scaling outreach. Evaluating competitors.\n3. **James Park** at Vertex AI — Score: 88, Deal: $95K\n   Pain: Pipeline visibility. Decision in 2 weeks.\n\nWant me to draft outreach for any of these?",
-  'market': "**B2B Pipeline Pulse**\n\nOutbound voice reply rates: 14.3% (vs 1.8% cold email)\nSMS open within 90s: 82%\nLinkedIn DM accept rate on warm signals: 38%\nCold email deliverability: collapsing Q2 '26 (Google/Yahoo DMARC)\n\nTop Signal: buyers answer phones between 10–11am + 2–3pm local.\nDecision windows: fiscal-year resets + new-hire triggers are the fastest entry points.",
-  'alpha': "**Revenue Recovery Detected**\n\nWhat we scan: your site, checkout, CTAs, tech stack, inbound funnel.\nWhat we find: missed-call rescue, abandoned carts, dead lead-magnet forms, dormant buyer lists, booking-page friction.\nQuick win: re-activate the last 90 days of no-shows + non-responders with an AI voice + SMS touch.\n\nExpected 90-day recovery: $11K–$34K/mo on most pipelines we audit.",
-  'default': "I'm GOATED AI — built for B2B founders, agencies, and sales teams. I can help with:\n\n- Auditing a website for revenue leaks in 15 seconds\n- Finding dormant leads that never got a second touch\n- Writing outbound scripts (voice / SMS / LinkedIn — not email)\n- Detecting tech-stack gaps that are killing conversion\n- Booking meetings via Vapi + Twilio + Cal.com, no email required\n\nDrop a URL into the audit, or ask me what to fix first.",
-};
+// DEMO_RESPONSES deleted. Four hardcoded strings presented as product output
+// on the public homepage — invented leads ("Mike Chen at Pinnacle Dental,
+// $85K"), invented benchmarks ("14.3% voice reply rate"). The demo now calls
+// the real endpoint.
 
 function HomepageAIDemo({ onOpenFull }) {
   const [msgs, setMsgs] = useState([
-    { role: 'assistant', text: "Yo! I'm GOATED AI. Ask me anything — leads, markets, alpha plays. This shit actually works. Try it." }
+    { role: 'assistant', text: "Ask me for prospects in any city — \"hvac leads in dallas\", \"dentists in scottsdale\". I'll search live and show you who to call." }
   ]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
@@ -77,20 +75,38 @@ function HomepageAIDemo({ onOpenFull }) {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs, typing]);
 
-  const send = () => {
+  // Real /api/chat, not a keyword dispatcher.
+  //
+  // This used to match the input against four canned strings and print one back
+  // after a fake 800ms "typing" delay. The lead one named Mike Chen at Pinnacle
+  // Dental with a $85K deal; the market one quoted a 14.3% voice reply rate. All
+  // invented, and all shown on the public homepage as if the product produced it.
+  //
+  // The chat endpoint is agentic now, so the demo can just be the product: ask it
+  // for HVAC leads in Dallas and it really searches. If the call fails we say so
+  // instead of falling back to fiction.
+  const send = async () => {
     if (!input.trim() || typing) return;
-    const msg = input.trim().toLowerCase();
-    setMsgs(p => [...p, { role: 'user', text: input.trim() }]);
+    const text = input.trim();
+    setMsgs(p => [...p, { role: 'user', text }]);
     setInput('');
     setTyping(true);
-    setTimeout(() => {
-      let response = DEMO_RESPONSES.default;
-      if (msg.includes('lead') || msg.includes('find') || msg.includes('pipeline') || msg.includes('top') || msg.includes('account')) response = DEMO_RESPONSES.leads;
-      else if (msg.includes('market') || msg.includes('pipeline') || msg.includes('trend') || msg.includes('response rate')) response = DEMO_RESPONSES.market;
-      else if (msg.includes('audit') || msg.includes('leak') || msg.includes('revenue') || msg.includes('opportunit') || msg.includes('alpha')) response = DEMO_RESPONSES.alpha;
-      setMsgs(p => [...p, { role: 'assistant', text: response }]);
+    try {
+      const r = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [{ role: 'user', content: text }], currentPage: 'home' }),
+      });
+      const j = await r.json();
+      const answer = (!j.fallback && j.content)
+        ? j.content.replace(/\[NAVIGATE:[^\]]+\]/g, '').replace(/\[LEAD_CARD:[^\]]+\]/g, '').trim()
+        : "The assistant is briefly unavailable — try the Audit tab, that runs live.";
+      setMsgs(p => [...p, { role: 'assistant', text: answer }]);
+    } catch {
+      setMsgs(p => [...p, { role: 'assistant', text: "Couldn't reach the assistant just now. The Audit tab still works." }]);
+    } finally {
       setTyping(false);
-    }, 800 + Math.random() * 600);
+    }
   };
 
   return (
@@ -101,7 +117,7 @@ function HomepageAIDemo({ onOpenFull }) {
           <div className="text-brand"><GoatIcon /></div>
           <div>
             <div className="font-bold text-sm">GOATED AI</div>
-            <div className="text-xs text-slate-500 flex items-center gap-1"><span className="w-1.5 h-1.5 bg-brand rounded-full animate-pulse" />Interactive Demo</div>
+            <div className="text-xs text-slate-500 flex items-center gap-1"><span className="w-1.5 h-1.5 bg-brand rounded-full animate-pulse" />Live — real answers</div>
           </div>
         </div>
         <div className="h-[200px] overflow-y-auto p-3 space-y-2">
@@ -135,7 +151,7 @@ function HomepageAIDemo({ onOpenFull }) {
           <input
             value={input} onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && send()}
-            placeholder="Try: find top leads, market pulse, alpha plays..."
+            placeholder="Try: hvac leads in dallas"
             className="flex-1 px-3 py-2 rounded-lg bg-surface-2 border border-white/[0.03] text-xs text-white placeholder-slate-500 outline-none focus:border-brand/30"
           />
           <button onClick={send} disabled={typing || !input.trim()}
