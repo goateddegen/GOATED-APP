@@ -337,3 +337,24 @@ export function getHealthStatus() {
     analyticsQueueSize: (() => { try { return JSON.parse(localStorage.getItem('goated_analytics_queue') || '[]').length; } catch { return 0; } })(),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Authenticated fetch
+// ---------------------------------------------------------------------------
+/**
+ * fetch() that forwards the current Supabase access token.
+ *
+ * /api/leads needs this to know who to file saved leads under — without the
+ * token the route still returns results, it just can't persist them.
+ */
+export async function authedFetch(url, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
+  if (supabase) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (token) headers.Authorization = `Bearer ${token}`;
+    } catch { /* fall through unauthenticated */ }
+  }
+  return fetch(url, { ...opts, headers });
+}

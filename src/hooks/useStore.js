@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { isPageEnabled } from '../lib/config';
+import { authedFetch } from '../lib/supabase';
 // startTransition removed — direct set() prevents Suspense flash during page navigation
 
 // ===========================================================================
@@ -980,7 +981,9 @@ export const useStore = create((set, get) => ({
   fetchLiveLeads: async () => {
     set({ isLoadingLeads: true, leadsError: null });
     try {
-      const res = await fetch('/api/leads');
+      // authedFetch forwards the Supabase token so the route can persist
+      // these rows against the signed-in operator.
+      const res = await authedFetch('/api/leads');
       if (!res.ok) throw new Error(`Leads API returned ${res.status}`);
       const data = await res.json();
       set({

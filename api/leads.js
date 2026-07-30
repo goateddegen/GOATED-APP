@@ -597,6 +597,7 @@ function getAllLeads(poolSize = DEFAULT_POOL) {
 // ---------------------------------------------------------------------------
 import { guardRequest, setCacheHeaders } from './_lib/guard.js';
 import { extractContacts } from './_lib/contacts.js';
+import { userFromRequest, saveLeads, loadLeads, dbConfigured } from './_lib/db.js';
 
 export default async function handler(req, res) {
   // Apollo API passthrough — 30/min per IP is plenty, daily cap prevents quota burn
@@ -671,6 +672,23 @@ export default async function handler(req, res) {
 
     let apolloError = null;
 
+    // Who is asking? Present only when the client forwards its Supabase access
+    // token. Anonymous callers still get results, they just aren't persisted.
+    const caller = await userFromRequest(req);
+
+    // ?source=saved — read this operator's stored leads instead of hitting
+    // Apollo. Survives reloads, keeps status/notes, and costs no quota.
+    if (forceSource === 'saved') {
+      if (!caller) return res.status(401).json({ error: 'Sign in to read saved leads' });
+      const saved = await loadLeads(caller.id, { limit, offset: (page - 1) * limit, search, industry });
+      return res.status(200).json({
+        leads: saved || [],
+        total: (saved || []).length,
+        page, limit,
+        _meta: { dataType: 'supabase-saved', source: 'supabase', persisted: true },
+      });
+    }
+
     if (useApollo && hasApolloKey) {
       const apolloResult = await fetchApolloLeads({ page, limit, search, industry, location, minEmployees, maxEmployees });
 
@@ -682,6 +700,19 @@ export default async function handler(req, res) {
 
         const pipelineValue = apolloLeads.reduce((s, l) => s + (l.dealValue || 0), 0);
         const withPhone = apolloLeads.filter(l => l.phone).length;
+
+        // Best-effort persistence. Upserts on (owner_id, external_id) so
+        // re-running a search refreshes rows rather than duplicating them. A
+        // failure here must never fail the user's request — they still get their
+        // leads, they just aren't saved this time.
+        let persisted = 0;
+        if (caller) {
+          try {
+            persisted = await saveLeads(apolloLeads, caller.id);
+          } catch (e) {
+            console.warn('[GOATED] lead persistence failed:', e.message);
+          }
+        }
 
         return res.status(200).json({
           leads: apolloLeads,
@@ -711,6 +742,9 @@ export default async function handler(req, res) {
             // Honest about the plan limitation rather than faking contacts.
             contactDataAvailable: false,
             contactDataNote: 'Apollo Free plan exposes company records only. Person-level contacts (name/email/direct dial) require a paid Apollo plan.',
+            persistedCount: persisted,
+            persistenceAvailable: dbConfigured(),
+            signedIn: !!caller,
           },
         });
       }

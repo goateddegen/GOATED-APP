@@ -11,7 +11,7 @@ import LeadDetail from './components/LeadDetail';
 // AIOverlay is 2600+ LOC + framer-motion + voice synth imports — lazy-load so first-paint stays thin.
 const AIOverlay = lazy(() => import('./components/AIOverlay'));
 import AccountModal from './components/AccountModal';
-import { onAuthStateChange, trackPerformance, trackPageView, startAutoSync, stopAutoSync, loadUserDataFromCloud, supabase } from './lib/supabase';
+import { onAuthStateChange, trackPerformance, trackPageView, startAutoSync, stopAutoSync, loadUserDataFromCloud, supabase, getUser } from './lib/supabase';
 import { PAGE_KEYBINDS, isPageEnabled, isAdminEmail } from './lib/config';
 
 // Lazy-loaded pages wrapped in React.memo to reduce CSR overhead on re-renders
@@ -331,8 +331,29 @@ export default function App() {
       setAuthChecked(true);
     });
 
-    // Belt and braces: if the listener never fires (Supabase unconfigured, or a
-    // network stall), don't leave protected pages hanging forever.
+    // Don't depend solely on the listener. If INITIAL_SESSION is late, fires with
+    // null, or the stored token has expired, verifiedEmail would stay null and the
+    // operator silently loses Admin while still appearing signed in. getUser()
+    // validates the token server-side, so this both rehydrates and revokes.
+    (async () => {
+      if (!supabase) { setAuthChecked(true); return; }
+      try {
+        const { data, error } = await getUser();
+        if (!error && data?.user) {
+          adopt({ user: data.user });
+        } else if (localStorage.getItem('goated_current_user')) {
+          // Stored session is no longer valid — clear it rather than showing a
+          // logged-in shell with no privileges.
+          setUser(null);
+          setIsLoggedIn(false);
+          setVerifiedEmail(null);
+          localStorage.removeItem('goated_current_user');
+        }
+      } catch { /* listener + timeout still cover us */ }
+      setAuthChecked(true);
+    })();
+
+    // Final fallback: never leave protected pages hanging.
     const authTimeout = setTimeout(() => setAuthChecked(true), 3000);
 
     // Performance monitoring (Web Vitals)
