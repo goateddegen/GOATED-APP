@@ -59,115 +59,14 @@ function useMouseParallax() {
 
 // ── Floating Particles removed — was O(n²) connection lines per frame, tanked homepage perf ──
 
-// ── Sandboxed AI Demo Chat for Homepage ──────────────────────────────────────
-// DEMO_RESPONSES deleted. Four hardcoded strings presented as product output
-// on the public homepage — invented leads ("Mike Chen at Pinnacle Dental,
-// $85K"), invented benchmarks ("14.3% voice reply rate"). The demo now calls
-// the real endpoint.
+// HomepageAIDemo deleted — it was defined but never rendered, so it shipped as
+// nothing and was tree-shaken out. Worth removing rather than leaving: it held
+// four hardcoded "AI" responses with invented leads and benchmarks, and the next
+// person to find it would reasonably assume it was live.
+//
+// The homepage's real AI surface is the button that opens AIOverlay, which hits
+// /api/chat and is agentic.
 
-function HomepageAIDemo({ onOpenFull }) {
-  const [msgs, setMsgs] = useState([
-    { role: 'assistant', text: "Ask me for prospects in any city — \"hvac leads in dallas\", \"dentists in scottsdale\". I'll search live and show you who to call." }
-  ]);
-  const [input, setInput] = useState('');
-  const [typing, setTyping] = useState(false);
-  const endRef = useRef(null);
-
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs, typing]);
-
-  // Real /api/chat, not a keyword dispatcher.
-  //
-  // This used to match the input against four canned strings and print one back
-  // after a fake 800ms "typing" delay. The lead one named Mike Chen at Pinnacle
-  // Dental with a $85K deal; the market one quoted a 14.3% voice reply rate. All
-  // invented, and all shown on the public homepage as if the product produced it.
-  //
-  // The chat endpoint is agentic now, so the demo can just be the product: ask it
-  // for HVAC leads in Dallas and it really searches. If the call fails we say so
-  // instead of falling back to fiction.
-  const send = async () => {
-    if (!input.trim() || typing) return;
-    const text = input.trim();
-    setMsgs(p => [...p, { role: 'user', text }]);
-    setInput('');
-    setTyping(true);
-    try {
-      const r = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [{ role: 'user', content: text }], currentPage: 'home' }),
-      });
-      const j = await r.json();
-      const answer = (!j.fallback && j.content)
-        ? j.content.replace(/\[NAVIGATE:[^\]]+\]/g, '').replace(/\[LEAD_CARD:[^\]]+\]/g, '').trim()
-        : "The assistant is briefly unavailable — try the Audit tab, that runs live.";
-      setMsgs(p => [...p, { role: 'assistant', text: answer }]);
-    } catch {
-      setMsgs(p => [...p, { role: 'assistant', text: "Couldn't reach the assistant just now. The Audit tab still works." }]);
-    } finally {
-      setTyping(false);
-    }
-  };
-
-  return (
-    <div className="relative">
-      <div className="bg-surface-0/80 backdrop-blur rounded-xl border border-brand/30 overflow-hidden relative">
-        <div className="absolute top-0 right-0 px-3 py-1.5 bg-brand text-black text-xs font-black uppercase tracking-wider rounded-bl-xl z-10">TRY IT</div>
-        <div className="flex items-center gap-3 p-4 border-b border-white/[0.03]">
-          <div className="text-brand"><GoatIcon /></div>
-          <div>
-            <div className="font-bold text-sm">GOATED AI</div>
-            <div className="text-xs text-slate-500 flex items-center gap-1"><span className="w-1.5 h-1.5 bg-brand rounded-full animate-pulse" />Live — real answers</div>
-          </div>
-        </div>
-        <div className="h-[200px] overflow-y-auto p-3 space-y-2">
-          {msgs.map((m, i) => (
-            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`px-3 py-2 rounded-xl text-xs leading-relaxed max-w-[85%] whitespace-pre-wrap ${
-                m.role === 'user'
-                  ? 'bg-brand/20 text-brand rounded-br-sm'
-                  : 'bg-surface-2 text-slate-300 rounded-bl-sm'
-              }`}>
-                {m.text.split(/(\*\*[^*]+\*\*)/).map((part, j) =>
-                  part.startsWith('**') && part.endsWith('**')
-                    ? <strong key={j} className="text-white font-semibold">{part.slice(2, -2)}</strong>
-                    : <span key={j}>{part}</span>
-                )}
-              </div>
-            </div>
-          ))}
-          {typing && (
-            <div className="flex justify-start">
-              <div className="bg-surface-2 px-3 py-2 rounded-xl rounded-bl-sm">
-                <div className="flex gap-1">
-                  {[0,1,2].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-brand" style={{ animation: `bounce 0.6s ${i * 0.15}s infinite` }} />)}
-                </div>
-              </div>
-            </div>
-          )}
-          <div ref={endRef} />
-        </div>
-        <div className="p-3 border-t border-white/[0.03] flex gap-2">
-          <input
-            value={input} onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && send()}
-            placeholder="Try: hvac leads in dallas"
-            className="flex-1 px-3 py-2 rounded-lg bg-surface-2 border border-white/[0.03] text-xs text-white placeholder-slate-500 outline-none focus:border-brand/30"
-          />
-          <button onClick={send} disabled={typing || !input.trim()}
-            className="px-3 py-2 rounded-lg bg-brand text-black font-bold text-xs disabled:opacity-30">
-            <Send size={14} />
-          </button>
-        </div>
-        <button onClick={onOpenFull}
-          className="w-full py-2 text-center text-xs text-brand hover:text-emerald-300 transition-colors border-t border-white/[0.03] font-medium">
-          Open Full AI Experience →
-        </button>
-      </div>
-      <div className="absolute -inset-4 bg-brand/5 rounded-2xl blur-xl -z-10" />
-    </div>
-  );
-}
 
 // useLiveCounter removed — was faking incrementing user counts
 
