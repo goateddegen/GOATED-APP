@@ -223,6 +223,9 @@ export async function searchPlaces({ query, location = '', limit = 20, pageToken
         // nextPageToken — verified: 20 then 18 then more. So depth within a
         // single trade+geo is available, and the caller can walk it.
         maxResultCount: Math.min(Math.max(limit, 1), 20),
+        // Domestic only. Apollo without a country filter returned Dubai and
+        // Belgrade for "hvac"; don't leave the same gap open here.
+        regionCode: 'US',
         ...(pageToken ? { pageToken } : {}),
       }),
       signal: AbortSignal.timeout(12000),

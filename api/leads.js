@@ -96,6 +96,42 @@ function scoreApolloOrg(org) {
   return Math.max(1, Math.min(99, Math.round(score)));
 }
 
+// Entities that discuss a trade rather than practise it. Real results for "hvac":
+// "HVAC School", "Hvac Hacks", "HVAC SIMPLIFIED™", "HVAC 360 Haber Portalı",
+// "ConstructionPlacements Official", "EEP - Electrical Engineering Portal".
+// Media, training and job boards — they have no customers to miss calls from, so
+// nothing we sell applies to them.
+const NON_OPERATOR = new RegExp([
+  // media / education / community
+  'school','academy','training','course','institute','university','college',
+  'blog','magazine','media','news','portal','podcast','channel','forum',
+  'community','association','society','council','federation','union',
+  'wiki','tips','hacks','guide','learn','education','certification',
+  // events — "AHR Expo" is a trade show, not a contractor
+  'expo','conference','summit','tradeshow','trade show','convention',
+  // vendors to the trade, not the trade itself — "P3 HVAC Software"
+  'software','saas','app','platform','technolog','systems inc','solutions inc',
+  // aggregators and marketplaces — "HVAC-Connect.com"
+  'directory','marketplace','connect\\.com','\\.com$','listings','network',
+  // labour market
+  'jobs?','careers?','recruit','placements?','staffing','consultanc',
+  'publishing','press','review',
+].map(w => '\\b' + w).join('|'), 'i');
+
+/** Is this an actual operating business we could sell to? */
+function isOperator(org) {
+  const name = org.name || '';
+  if (NON_OPERATOR.test(name)) return false;
+  // Keyword tags describe what the company is about; media outfits tag heavily
+  // on content terms.
+  const tags = (org.keywords || []).join(' ');
+  if (/\b(blog|publishing|news|magazine|podcast|online education|e-learning|job board)\b/i.test(tags)) return false;
+  // A business with neither a phone nor a site cannot be worked at all.
+  if (!org.sanitized_phone && !org.primary_phone?.number && !org.phone
+      && !org.website_url && !org.primary_domain) return false;
+  return true;
+}
+
 /** Real buying signals derived from the record — empty if the data isn't there. */
 function apolloBuyingSignals(org) {
   const out = [];
@@ -198,7 +234,10 @@ async function fetchApolloLeads({ page, limit, search, industry, location, minEm
   const tags = [search, industry].filter(Boolean).map(s => String(s).toLowerCase().trim());
   if (tags.length) body.q_organization_keyword_tags = tags;
 
-  if (location) body.organization_locations = [location];
+  // Domestic by default. Without this Apollo searches globally and returned
+  // Dubai, Pimpri-Chinchwad, Portsmouth and Belgrade for "hvac" — none of which
+  // an agency in Texas can service. Pass ?location= to override.
+  body.organization_locations = [location || 'United States'];
 
   // Employee-range filter uses Apollo's "min,max" string format.
   // Default to genuinely small operators. The old 1–500 default is what surfaced
@@ -235,7 +274,11 @@ async function fetchApolloLeads({ page, limit, search, industry, location, minEm
     }
 
     const data = await response.json();
-    const orgs = data.organizations || data.accounts || [];
+    let orgs = data.organizations || data.accounts || [];
+    // Strip media/training/job-board entities before scoring.
+    const beforeFilter = orgs.length;
+    orgs = orgs.filter(isOperator);
+    const rejected = beforeFilter - orgs.length;
     if (!orgs.length) {
       return { error: 'Apollo returned no organizations for this query', fallback: true };
     }
@@ -243,7 +286,7 @@ async function fetchApolloLeads({ page, limit, search, industry, location, minEm
     const total = data.pagination?.total_entries || orgs.length;
     const leads = orgs.map((org, idx) => transformApolloOrg(org, (page - 1) * perPage + idx));
 
-    const result = { leads, total, source: 'apollo', cached: false };
+    const result = { leads, total, source: 'apollo', cached: false, rejectedNonOperators: rejected };
     apolloCache = { data: result, timestamp: now, key: cacheKey };
     return result;
   } catch (err) {
@@ -671,6 +714,17 @@ export default async function handler(req, res) {
     // Pass ?source=generated to force fallback data
     // -------------------------------------------------------------------
     const hasApolloKey = !!process.env.APOLLO_API_KEY;
+    // Caller's city, from Vercel's edge geo headers. Free, no lookup, and it
+    // means an operator in Dallas gets Dallas businesses without typing anything.
+    // Falls back to nothing rather than a guess — Places' own default is already
+    // sensible, and inventing a city would be worse than leaving it open.
+    const geoCity = req.headers?.['x-vercel-ip-city'] ? decodeURIComponent(req.headers['x-vercel-ip-city']) : '';
+    const geoRegion = req.headers?.['x-vercel-ip-country-region'] || '';
+    const geoCountry = req.headers?.['x-vercel-ip-country'] || '';
+    const impliedLocation = (geoCountry === 'US' && geoCity)
+      ? `${geoCity}${geoRegion ? ' ' + geoRegion : ''}`
+      : '';
+
     // ── Source routing: two different businesses, two different databases ───
     //
     //   places → A2B. Agency to local business. Owner answers the phone, decides
@@ -722,7 +776,7 @@ export default async function handler(req, res) {
     // ten-person shop. It also carries review counts, which Apollo doesn't, and
     // which are the strongest opening line available for this offer.
     if (forceSource === 'places' || (autoSource && routeToPlaces)) {
-      const pl = await searchPlaces({ query: search || industry, location, limit, pageToken });
+      const pl = await searchPlaces({ query: search || industry, location: location || impliedLocation, limit, pageToken });
       if (!pl.fallback && pl.leads) {
         let out = pl.leads;
         if (minScore > 0) out = out.filter(l => l.score >= minScore);
@@ -754,6 +808,8 @@ export default async function handler(req, res) {
             query: pl.query,
             granularity: 'local-business',
             nextPageToken: pl.nextPageToken,
+            locationSource: location ? 'query' : (impliedLocation ? 'caller-ip' : 'places-default'),
+            resolvedLocation: location || impliedLocation || null,
             contactDataAvailable: false,
             contactDataNote: 'Listing-level data. Use ?action=enrich&website= to pull named humans off their site.',
             persistedCount: persistedPlaces,
