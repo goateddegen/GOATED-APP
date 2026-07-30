@@ -821,6 +821,14 @@ export default async function handler(req, res) {
         if (minScore > 0) out = out.filter(l => l.score >= minScore);
         if (priority) out = out.filter(l => l.priority === priority.toLowerCase());
 
+        // The edge cache was the real reason rotation looked broken. s-maxage=30
+        // meant five consecutive requests all got one cached response, so every
+        // fix to the rotation logic itself was untestable. A rotating default must
+        // not be cached; an explicit search still can be.
+        if (!search && !industry) {
+          res.setHeader('Cache-Control', 'no-store, max-age=0');
+        }
+
         let persistedPlaces = 0;
         if (caller) {
           try { persistedPlaces = await saveLeads(out, caller.id); }
@@ -843,6 +851,7 @@ export default async function handler(req, res) {
           _meta: {
             generatedAt: new Date().toISOString(),
             dataType: 'places-live',
+            cached: false,
             source: 'google-places-new',
             query: pl.query,
             granularity: 'local-business',
