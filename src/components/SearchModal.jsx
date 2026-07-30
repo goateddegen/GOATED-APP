@@ -54,7 +54,10 @@ export default function SearchModal() {
   const setDetailOpen = useStore(s => s.setDetailOpen);
   const degenMode = useStore(s => s.degenMode);
   const page = useStore(s => s.page);
+  // `user` is for DISPLAY only (name, avatar). Privilege decisions use
+  // verifiedEmail, which comes from a confirmed Supabase session.
   const user = useStore(s => s.user);
+  const verifiedEmail = useStore(s => s.verifiedEmail);
 
   const [q, setQ] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
@@ -81,7 +84,7 @@ export default function SearchModal() {
         (l.title || '').toLowerCase().includes(query)
       )
       .slice(0, 8);
-    const pageMatches = ALL_PAGES.filter(p => isPageEnabled(p.id, user)).filter(p =>
+    const pageMatches = ALL_PAGES.filter(p => isPageEnabled(p.id, verifiedEmail)).filter(p =>
       p.name.toLowerCase().includes(query) || p.hint.toLowerCase().includes(query)
     );
     const actionMatches = [
@@ -98,7 +101,7 @@ export default function SearchModal() {
     const aiSuggest = nlHit || (longQuery && noLocalMatch) || noLocalMatch;
 
     return { leads: leadMatches, pages: pageMatches, actions: actionMatches, aiSuggest };
-  }, [q, leads, degenMode, user]);
+  }, [q, leads, degenMode, verifiedEmail]);
 
   // Build flat result list. "Ask AI" is first if aiSuggest; otherwise appended.
   const flatResults = useMemo(() => {
@@ -175,12 +178,12 @@ export default function SearchModal() {
         }
       }
       // Never let an AI-proposed link jump to a disabled or admin-only page.
-      if (intent.page && isPageEnabled(intent.page, user)) {
+      if (intent.page && isPageEnabled(intent.page, verifiedEmail)) {
         setPage(intent.page);
         setSearchOpen(false);
       }
     }
-  }, [setPage, setSelectedLead, setDetailOpen, setSearchOpen, askAI, leads, user]);
+  }, [setPage, setSelectedLead, setDetailOpen, setSearchOpen, askAI, leads, verifiedEmail]);
 
   const onKeyDown = useCallback((e) => {
     if (e.key === 'ArrowDown') {

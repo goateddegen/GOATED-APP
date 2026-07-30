@@ -34,9 +34,12 @@ const sections = [
 
 export default function KeybindsModal() {
   const { setKeybindsOpen } = useStore();
+  // `user` is for DISPLAY only (name, avatar). Privilege decisions use
+  // verifiedEmail, which comes from a confirmed Supabase session.
   const user = useStore(s => s.user);
+  const verifiedEmail = useStore(s => s.verifiedEmail);
   // Don't advertise a shortcut the user isn't allowed to use.
-  const visible = (k) => !k.page || isPageEnabled(k.page, user);
+  const visible = (k) => !k.page || isPageEnabled(k.page, verifiedEmail);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setKeybindsOpen(false)} />

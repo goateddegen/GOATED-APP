@@ -159,9 +159,18 @@ export const isAdminPage = (id) => ADMIN_PAGES.includes(id);
  * @param {string} id   page id
  * @param {object|null} user  the signed-in user, or null
  */
-export const isPageEnabled = (id, user) => {
+/**
+ * Can this page be reached?
+ *
+ * @param {string} id
+ * @param {string|null} verifiedEmail  Email from the CONFIRMED Supabase session
+ *   only — never the localStorage-hydrated copy. `goated_current_user` is
+ *   attacker-writable, so trusting its email let anyone hand themselves the
+ *   Admin page from devtools.
+ */
+export const isPageEnabled = (id, verifiedEmail) => {
   if (!NAV_PAGES.includes(id)) return false;
-  if (isAdminPage(id)) return isAdminEmail(user?.email);
+  if (isAdminPage(id)) return isAdminEmail(verifiedEmail);
   return true;
 };
 

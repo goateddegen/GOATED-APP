@@ -1642,7 +1642,7 @@ export default function AIOverlay() {
           const navMatch = data.content.match(/\[NAVIGATE:(\w+)\]/);
           if (navMatch) {
             const navPage = navMatch[1];
-            if (isPageEnabled(navPage, user)) {
+            if (isPageEnabled(navPage, useStore.getState().verifiedEmail)) {
               setPage(navPage);
               window.scrollTo(0, 0);
             }
@@ -1746,7 +1746,7 @@ export default function AIOverlay() {
           .then(data => {
             if (!data.fallback && data.content) {
               const navM = data.content.match(/\[NAVIGATE:(\w+)\]/);
-              if (navM && isPageEnabled(navM[1], user)) {
+              if (navM && isPageEnabled(navM[1], useStore.getState().verifiedEmail)) {
                 setPage(navM[1]);
                 window.scrollTo(0, 0);
               }

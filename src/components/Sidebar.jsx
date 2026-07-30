@@ -36,7 +36,10 @@ export default function Sidebar() {
   const setMobileMenu = useStore(s => s.setMobileMenu);
   const setAccountModalOpen = useStore(s => s.setAccountModalOpen);
   const isLoggedIn = useStore(s => s.isLoggedIn);
+  // `user` is for DISPLAY only (name, avatar). Privilege decisions use
+  // verifiedEmail, which comes from a confirmed Supabase session.
   const user = useStore(s => s.user);
+  const verifiedEmail = useStore(s => s.verifiedEmail);
   const degenMode = useStore(s => s.degenMode);
   const toggleDegenMode = useStore(s => s.toggleDegenMode);
   const triggerConfetti = useStore(s => s.triggerConfetti);
@@ -70,7 +73,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="p-2 flex-1 overflow-y-auto" aria-label="Main navigation">
-        {nav.filter(n => isPageEnabled(n.id, user)).map(n => (
+        {nav.filter(n => isPageEnabled(n.id, verifiedEmail)).map(n => (
           <button
             key={n.id}
             onClick={() => { useStore.getState().setDetailOpen(false); setPage(n.id); setMobileMenu(false); window.scrollTo(0, 0); }}

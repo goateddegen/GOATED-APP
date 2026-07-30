@@ -833,12 +833,18 @@ function computePipelineAnalytics(leads) {
 // ===========================================================================
 export const useStore = create((set, get) => ({
   // Navigation
+  // Email from a CONFIRMED Supabase session. Deliberately separate from `user`,
+  // which is restored from localStorage and therefore untrusted for privilege
+  // decisions. Only App.jsx's auth listener writes this.
+  verifiedEmail: null,
+  setVerifiedEmail: (e) => set({ verifiedEmail: e ? String(e).trim().toLowerCase() : null }),
+
   page: 'home',
   setPage: (page) => {
     // Hard gate: disabled pages (TrendPulse, Wallet) and admin-only pages are
     // unreachable from every caller — keybinds, search, AI overlay, deep links.
     // Redirect rather than no-op so the user never lands on a blank screen.
-    const target = isPageEnabled(page, get().user) ? page : 'home';
+    const target = isPageEnabled(page, get().verifiedEmail) ? page : 'home';
     // Close any open modals/detail views to prevent stale renders
     const current = get().page;
     if (current === target) return; // No-op if already on that page

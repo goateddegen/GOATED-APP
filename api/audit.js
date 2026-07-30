@@ -545,7 +545,18 @@ export default async function handler(req, res) {
   try {
     html = await fetchPage(url);
   } catch (e) {
-    return res.status(502).json({ error: `Could not fetch target URL: ${e.message}`, url });
+    // 422, not 502. An unreachable or misspelled domain is bad input, not a
+    // failure of this service — returning 5xx made every typo look like an
+    // outage, which would bury real incidents in false alarms and shows the
+    // visitor a scary error on the public lead magnet.
+    const dns = /ENOTFOUND|EAI_AGAIN|getaddrinfo|fetch failed/i.test(e.message || '');
+    return res.status(422).json({
+      error: dns
+        ? "We couldn't reach that site. Check the address and try again."
+        : `Could not fetch that site: ${e.message}`,
+      url,
+      retryable: !dns,
+    });
   }
 
   let signals;

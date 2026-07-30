@@ -248,6 +248,9 @@ export default function App() {
   const setIsLoggedIn = useStore(s => s.setIsLoggedIn);
   const isLoggedIn = useStore(s => s.isLoggedIn);
   const user = useStore(s => s.user);
+  // Privilege decisions read this, never `user` (localStorage-backed).
+  const verifiedEmail = useStore(s => s.verifiedEmail);
+  const setVerifiedEmail = useStore(s => s.setVerifiedEmail);
   const setUserPlan = useStore(s => s.setUserPlan);
   const degenMode = useStore(s => s.degenMode);
   const [degenToast, setDegenToast] = useState(null);
@@ -307,6 +310,8 @@ export default function App() {
       setUser(u);
       setIsLoggedIn(true);
       setUserPlan(u.plan);
+      // Only place this is ever set: a confirmed Supabase session.
+      setVerifiedEmail(su.email);
       localStorage.setItem('goated_current_user', JSON.stringify(u));
       loadUserDataFromCloud(su.id).then(() => startAutoSync(su.id));
     };
@@ -317,6 +322,7 @@ export default function App() {
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsLoggedIn(false);
+        setVerifiedEmail(null);
         localStorage.removeItem('goated_current_user');
         stopAutoSync();
       }
@@ -423,7 +429,7 @@ export default function App() {
         e.preventDefault();
         const target = PAGE_KEYBINDS[key];
         // Admin keybind is inert without an admin session.
-        if (target && !isPageEnabled(target, useStore.getState().user)) { setKeybindsOpen(false); return; }
+        if (target && !isPageEnabled(target, useStore.getState().verifiedEmail)) { setKeybindsOpen(false); return; }
         setKeybindsOpen(false);
         if (target) { navTo(target); }
         else if (key === 'g') { setAiOpen(true); }
@@ -453,7 +459,7 @@ export default function App() {
       // (TrendPulse, Wallet) have no binding at all rather than a silent one.
       // Debounce same-key rapid presses (200ms) to reduce CSR overhead on low-memory devices
       const navTarget = PAGE_KEYBINDS[key];
-      if (navTarget && isPageEnabled(navTarget, useStore.getState().user)) {
+      if (navTarget && isPageEnabled(navTarget, useStore.getState().verifiedEmail)) {
         const now = Date.now();
         if (key === lastNavKeyRef.current && now - lastNavRef.current < 200) return;
         lastNavKeyRef.current = key;
@@ -497,7 +503,7 @@ export default function App() {
     // Final gate: anything not in NAV_PAGES — or an admin page without an admin
     // session — renders Home, no matter how the store got set (stale persisted
     // state, hash, programmatic setPage, a session that lost admin rights).
-    if (!isPageEnabled(page, user)) return <HomePage />;
+    if (!isPageEnabled(page, verifiedEmail)) return <HomePage />;
 
     if (PROTECTED_PAGES.has(page)) {
       switch (page) {
