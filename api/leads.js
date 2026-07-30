@@ -631,6 +631,8 @@ export default async function handler(req, res) {
       maxEmployees = '',
       action = '',
       website = '',
+      pageToken = '',
+      minDeal = '',
     } = req.query;
 
     // ── Person-level enrichment ────────────────────────────────────────────
@@ -669,7 +671,30 @@ export default async function handler(req, res) {
     // Pass ?source=generated to force fallback data
     // -------------------------------------------------------------------
     const hasApolloKey = !!process.env.APOLLO_API_KEY;
-    const useApollo = forceSource === 'apollo' || (hasApolloKey && forceSource !== 'generated');
+    // ── Source routing: two different businesses, two different databases ───
+    //
+    //   places → A2B. Agency to local business. Owner answers the phone, decides
+    //            alone, closes in 1–3 calls. Local Engine money ($2K + $750/mo).
+    //            Places is right because it indexes the physical world and carries
+    //            review counts, which is the opening line.
+    //
+    //   apollo → B2B. Growth Engine money ($10–20K setup). Multi-location
+    //            operators, agencies, $1M+ SMBs — organisations with headcount
+    //            and revenue on record, which is exactly what Apollo has and
+    //            Places does not.
+    //
+    // `?source=auto` picks by intended deal size: minDeal >= 15000 means the
+    // operator is hunting Growth Engine deals, so go to Apollo. Otherwise the
+    // default is Places, because A2B is the volume business and the one where
+    // "no website / 11 reviews" is a live wound.
+    const wantsBigDeals = Number(minDeal) >= 15000;
+    const autoSource = !forceSource || forceSource === 'auto';
+    const routeToApollo = wantsBigDeals && hasApolloKey;
+    const routeToPlaces = !routeToApollo && placesConfigured() && !!(search || industry);
+
+    const useApollo = forceSource === 'apollo'
+      || (autoSource && routeToApollo)
+      || (hasApolloKey && forceSource !== 'generated' && forceSource !== 'places' && forceSource !== 'saved');
 
     let apolloError = null;
 
@@ -696,8 +721,8 @@ export default async function handler(req, res) {
     // HVAC America. Places indexes the physical world, so it returns the actual
     // ten-person shop. It also carries review counts, which Apollo doesn't, and
     // which are the strongest opening line available for this offer.
-    if (forceSource === 'places' || (forceSource === '' && search && placesConfigured() && !hasApolloKey)) {
-      const pl = await searchPlaces({ query: search || industry, location, limit });
+    if (forceSource === 'places' || (autoSource && routeToPlaces)) {
+      const pl = await searchPlaces({ query: search || industry, location, limit, pageToken });
       if (!pl.fallback && pl.leads) {
         let out = pl.leads;
         if (minScore > 0) out = out.filter(l => l.score >= minScore);
@@ -728,6 +753,7 @@ export default async function handler(req, res) {
             source: 'google-places-new',
             query: pl.query,
             granularity: 'local-business',
+            nextPageToken: pl.nextPageToken,
             contactDataAvailable: false,
             contactDataNote: 'Listing-level data. Use ?action=enrich&website= to pull named humans off their site.',
             persistedCount: persistedPlaces,

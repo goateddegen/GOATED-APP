@@ -39,6 +39,7 @@ const FIELDS = [
   'places.primaryTypeDisplayName',
   'places.googleMapsUri',
   'places.location',
+  'nextPageToken',
 ].join(',');
 
 const key = () => process.env.GOOGLE_PLACES_API_KEY || '';
@@ -134,7 +135,7 @@ function e164(p) {
  * and the missed-call estimate.
  */
 export function transformPlace(p, index = 0) {
-  const score = placeGaps(p).length ? scorePlace(p) : scorePlace(p);
+  const score = scorePlace(p);
   const phone = e164(p);
   const reviews = p.userRatingCount ?? null;
   const gaps = placeGaps(p);
@@ -202,7 +203,7 @@ export function transformPlace(p, index = 0) {
  * @param {string} [opts.location] "Katy TX"
  * @param {number} [opts.limit]   max 20 per Places
  */
-export async function searchPlaces({ query, location = '', limit = 20 }) {
+export async function searchPlaces({ query, location = '', limit = 20, pageToken = '' }) {
   if (!placesConfigured()) return { error: 'GOOGLE_PLACES_API_KEY not set', fallback: true };
   if (!query) return { error: 'query is required', fallback: true };
 
@@ -218,7 +219,11 @@ export async function searchPlaces({ query, location = '', limit = 20 }) {
       },
       body: JSON.stringify({
         textQuery,
+        // 20 is the per-request ceiling, but searchText DOES return a
+        // nextPageToken — verified: 20 then 18 then more. So depth within a
+        // single trade+geo is available, and the caller can walk it.
         maxResultCount: Math.min(Math.max(limit, 1), 20),
+        ...(pageToken ? { pageToken } : {}),
       }),
       signal: AbortSignal.timeout(12000),
     });
@@ -249,6 +254,7 @@ export async function searchPlaces({ query, location = '', limit = 20 }) {
       total: leads.length,
       source: 'places',
       query: textQuery,
+      nextPageToken: body?.nextPageToken || null,
       stats: {
         withoutWebsite: leads.filter(l => !l.website).length,
         thinReviews: leads.filter(l => l.reviewCount != null && l.reviewCount < 25).length,
