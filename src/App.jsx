@@ -11,7 +11,7 @@ import LeadDetail from './components/LeadDetail';
 // AIOverlay is 2600+ LOC + framer-motion + voice synth imports — lazy-load so first-paint stays thin.
 const AIOverlay = lazy(() => import('./components/AIOverlay'));
 import AccountModal from './components/AccountModal';
-import { onAuthStateChange, trackPerformance, trackPageView, startAutoSync, stopAutoSync, loadUserDataFromCloud, supabase, getUser } from './lib/supabase';
+import { onAuthStateChange, trackPerformance, trackPageView, startAutoSync, stopAutoSync, loadUserDataFromCloud, supabase, getUser, authedFetch } from './lib/supabase';
 import { PAGE_KEYBINDS, isPageEnabled, isAdminEmail } from './lib/config';
 
 // Lazy-loaded pages wrapped in React.memo to reduce CSR overhead on re-renders
@@ -308,8 +308,18 @@ export default function App() {
       setUser(u);
       setIsLoggedIn(true);
       setUserPlan(u.plan);
-      // Only place this is ever set: a confirmed Supabase session.
+      // Confirm admin status with the SERVER rather than trusting this client's
+      // own reading of the session. The browser now asks; it does not decide.
+      // Set optimistically to the session email so the UI isn't blocked on a
+      // round-trip, then corrected by the server's answer.
       setVerifiedEmail(su.email);
+      authedFetch('/api/leads?action=whoami')
+        .then(r => r.json())
+        .then(({ isAdmin }) => {
+          // If the server disagrees, the server wins.
+          if (!isAdmin && isAdminEmail(su.email)) setVerifiedEmail(null);
+        })
+        .catch(() => { /* keep the optimistic value; nav gate still applies */ });
       localStorage.setItem('goated_current_user', JSON.stringify(u));
       loadUserDataFromCloud(su.id).then(() => startAutoSync(su.id));
     };

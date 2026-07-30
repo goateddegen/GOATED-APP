@@ -713,6 +713,34 @@ export default async function handler(req, res) {
       minDeal = '',
     } = req.query;
 
+    // ── Server-authoritative identity ──────────────────────────────────────
+    // GET /api/leads?action=whoami
+    //
+    // Until now "am I admin?" was decided entirely in the browser, from a
+    // verifiedEmail the client set itself. That closed the forged-localStorage
+    // hole but left the decision client-side, so it was still assertion rather
+    // than verification.
+    //
+    // This validates the caller's Supabase JWT server-side (userFromRequest hits
+    // /auth/v1/user, which checks the signature) and compares the resulting email
+    // against the allow-list here, where a browser cannot reach it. The client
+    // now asks rather than decides.
+    if (action === 'whoami') {
+      res.setHeader('Cache-Control', 'no-store, max-age=0');
+      const me = await userFromRequest(req);
+      if (!me) return res.status(200).json({ signedIn: false, isAdmin: false });
+      const admins = (process.env.ADMIN_EMAILS || 'devfudkupradio@gmail.com')
+        .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+      const email = String(me.email || '').trim().toLowerCase();
+      return res.status(200).json({
+        signedIn: true,
+        email,
+        // The only authoritative answer. Forging localStorage cannot change it,
+        // because the email comes from a signature-checked token.
+        isAdmin: admins.includes(email),
+      });
+    }
+
     // ── Person-level enrichment ────────────────────────────────────────────
     // GET /api/leads?action=enrich&website=example.com
     //
