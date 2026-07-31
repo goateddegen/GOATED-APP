@@ -983,7 +983,10 @@ export const useStore = create((set, get) => ({
     try {
       // authedFetch forwards the Supabase token so the route can persist
       // these rows against the signed-in operator.
-      const res = await authedFetch('/api/leads');
+      // 25, explicitly. A single Places trade query only returns ~15 results,
+      // which is what the page was actually showing; the blended multi-trade
+      // fetch can fill a full 25 across different business types.
+      const res = await authedFetch('/api/leads?limit=25');
       if (!res.ok) throw new Error(`Leads API returned ${res.status}`);
       const data = await res.json();
       set({

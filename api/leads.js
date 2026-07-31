@@ -131,6 +131,23 @@ function rotatingTrade() {
   return DEFAULT_TRADES[Math.floor(Math.random() * DEFAULT_TRADES.length)];
 }
 
+/**
+ * Pick N distinct trades for one page of leads.
+ *
+ * A single rotating trade meant every row on the Leads page was the same
+ * business type — a full screen of septic companies. An operator working that
+ * list is making the same call twenty times, and if the vertical is a poor fit
+ * the whole page is wasted. Blending gives a mixed book to work.
+ */
+function pickTrades(n) {
+  const pool = [...DEFAULT_TRADES];
+  const out = [];
+  for (let i = 0; i < n && pool.length; i++) {
+    out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  }
+  return out;
+}
+
 // Entities that discuss a trade rather than practise it. Real results for "hvac":
 // "HVAC School", "Hvac Hacks", "HVAC SIMPLIFIED™", "HVAC 360 Haber Portalı",
 // "ConstructionPlacements Official", "EEP - Electrical Engineering Portal".
@@ -843,7 +860,50 @@ export default async function handler(req, res) {
     // ten-person shop. It also carries review counts, which Apollo doesn't, and
     // which are the strongest opening line available for this offer.
     if (forceSource === 'places' || (autoSource && routeToPlaces)) {
-      const pl = await searchPlaces({ query: effectiveQuery, location: location || impliedLocation, limit, pageToken });
+      const loc = location || impliedLocation;
+      let pl;
+
+      if (search || industry || pageToken) {
+        // Explicit query, or paging through one — keep it single-trade.
+        pl = await searchPlaces({ query: effectiveQuery, location: loc, limit, pageToken });
+      } else {
+        // Default view: blend several trades so the page isn't one vertical.
+        // Places caps at 20 per query, so fan out and interleave.
+        const trades = pickTrades(Math.min(5, Math.max(2, Math.ceil(limit / 5))));
+        const per = Math.max(3, Math.ceil(limit / trades.length) + 1);
+        const settled = await Promise.allSettled(
+          trades.map(t => searchPlaces({ query: t, location: loc, limit: per }))
+        );
+        const buckets = settled
+          .map(r => (r.status === 'fulfilled' && r.value?.leads) ? r.value.leads : [])
+          .filter(b => b.length);
+
+        // Interleave round-robin rather than concatenating, so the top of the
+        // list is mixed even before scoring reorders it.
+        const merged = [];
+        for (let i = 0; merged.length < limit; i++) {
+          let added = false;
+          for (const b of buckets) {
+            if (b[i]) { merged.push(b[i]); added = true; }
+            if (merged.length >= limit) break;
+          }
+          if (!added) break;
+        }
+        // Closability first — that ordering is the product.
+        merged.sort((a, b) => b.score - a.score);
+        merged.forEach((l, i) => { l.id = i + 1; });
+
+        pl = merged.length
+          ? { leads: merged, total: merged.length, source: 'places',
+              query: trades.join(' / '), nextPageToken: null,
+              stats: {
+                withoutWebsite: merged.filter(l => !l.website).length,
+                thinReviews: merged.filter(l => l.reviewCount != null && l.reviewCount < 25).length,
+                reachable: merged.filter(l => l.phone).length,
+              } }
+          : { fallback: true, error: 'no places results' };
+      }
+
       if (!pl.fallback && pl.leads) {
         let out = pl.leads;
         if (minScore > 0) out = out.filter(l => l.score >= minScore);

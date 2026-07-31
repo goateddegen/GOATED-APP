@@ -228,3 +228,71 @@ export function buildCallSheet(lead) {
     objections: buildObjections(lead),
   };
 }
+
+// ─── What to sell this specific business ────────────────────────────────────
+// Priced off PRICING in lib/config.js, assembled from the gaps the record
+// actually shows. Two signals dominate for a local operator:
+//
+//   no website   — they are invisible outside Maps, and there is nowhere for a
+//                  lead to land. Highest-value build, so it leads the package.
+//   no reception — nobody answers after hours, so demand they already paid to
+//                  create rings out. This is the retainer line.
+//
+// Everything carries an explicit deposit and monthly so the operator can quote
+// on the call without opening another tab.
+export function buildPackage(lead) {
+  const items = [];
+  const noWebsite = !lead.website && !lead.domain;
+  const reviews = lead.reviewCount;
+  const thinReviews = typeof reviews === 'number' && reviews > 0 && reviews < 25;
+  const noReviews = reviews === 0;
+
+  if (noWebsite) {
+    items.push({
+      name: 'Website build + lead capture',
+      why: 'No site on file — every enquiry has to arrive by phone or Maps, and anything after hours is gone.',
+      deposit: 2000,
+      monthly: 250,
+      priority: 'P0',
+    });
+  }
+
+  // The core offer. Pitched to everyone, because a local operator without an
+  // after-hours answer is the norm rather than the exception.
+  items.push({
+    name: 'AI receptionist — missed-call recovery',
+    why: lead.phone
+      ? 'Answers in under 60 seconds, qualifies the caller, books the job, texts you the transcript.'
+      : 'No published number, so there is no reliable way for a customer to reach them at all.',
+    deposit: 2000,
+    monthly: 750,
+    priority: 'P0',
+  });
+
+  if (noReviews || thinReviews) {
+    items.push({
+      name: 'Review engine',
+      why: noReviews
+        ? 'No reviews at all — effectively invisible in local ranking.'
+        : `Only ${reviews} reviews. Competitors outrank them on volume, not quality.`,
+      deposit: 1500,
+      monthly: 300,
+      priority: 'P1',
+    });
+  }
+
+  const deposit = items.reduce((a, i) => a + i.deposit, 0);
+  const monthly = items.reduce((a, i) => a + i.monthly, 0);
+
+  return {
+    items,
+    deposit,
+    monthly,
+    // What actually lands in month one — the number that matters on the call.
+    firstMonth: deposit + monthly,
+    year1: deposit + monthly * 12,
+    headline: noWebsite
+      ? 'No website + no after-hours answer — build and phone cover together'
+      : 'Missed-call recovery, live in 14 days',
+  };
+}

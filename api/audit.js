@@ -349,7 +349,7 @@ function buildPrompt(signals, extraPages, socialData) {
     mobileViewport: signals.mobileViewport,
     hasStructuredData: signals.hasStructuredData,
     h1: signals.headings.h1,
-    h2: signals.headings.h2.slice(0, 8),
+    h2: signals.headings.h2.slice(0, 6),
     tech_stack: signals.tech,
     socials: signals.socials,
     top_ctas: signals.cta,
@@ -367,8 +367,8 @@ function buildPrompt(signals, extraPages, socialData) {
     emails_found: signals.contacts.emails.length,
     phones_found: signals.contacts.phones.length,
     word_count: signals.wordCount,
-    text_sample: signals.rawTextSnippet,
-    additional_pages_sampled: (extraPages || []).map(p => ({
+    text_sample: signals.rawTextSnippet.slice(0, 1200),
+    additional_pages_sampled: (extraPages || []).slice(0, 2).map(p => ({
       url: p.url,
       title: p.html.match(/<title[^>]*>([^<]{1,200})<\/title>/i)?.[1]?.trim() || null,
       snippet: p.html
@@ -377,7 +377,7 @@ function buildPrompt(signals, extraPages, socialData) {
         .replace(/<[^>]+>/g, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 800),
+        .slice(0, 350),
     })),
     social_profile_snapshots: socialData || {},
   };
@@ -486,7 +486,7 @@ async function callGroq(prompt, apiKey) {
         { role: 'user', content: prompt },
       ],
       temperature: 0.35,
-      max_tokens: 4000,
+      max_tokens: 2600,
       response_format: { type: 'json_object' },
     }),
   });
@@ -504,7 +504,7 @@ async function callClaude(prompt, apiKey) {
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4000,
+      max_tokens: 2600,
       system: 'You are GOATED AI. Return strict JSON matching the schema in the user prompt. No markdown, no prose outside the JSON. Begin your response directly with { and end with }.',
       messages: [{ role: 'user', content: prompt }],
     }),
@@ -516,6 +516,157 @@ async function callClaude(prompt, apiKey) {
   // Strip any accidental code fences
   const clean = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
   return JSON.parse(clean);
+}
+
+
+// ─── Deterministic fallback report ───────────────────────────────────────────
+// When every LLM provider is unavailable — most often the daily token cap, not
+// an outage — we previously returned a bare 500. The scrape had already
+// succeeded, so we were throwing away real findings and showing the visitor a
+// failure on the public lead magnet.
+//
+// Shape matches the LLM schema exactly so AuditPage renders it unchanged.
+// Nothing is invented: every finding names the signal that triggered it, the
+// revenue range is explicitly a wide low-confidence band, and the response is
+// flagged `degraded` so the UI can say the analysis is rule-based.
+function deterministicAnalysis(signals) {
+  const s = signals;
+  const has = (v) => !!v;
+  const dimensions = [];
+  const leaks = [];
+
+  const dim = (area, score, observed, gap, dollarImpactMonthly, fixProduct, priority) =>
+    dimensions.push({ area, score, observed, gap, dollarImpactMonthly, fixProduct, priority });
+
+  // Scale proxy. Word count and link graph are the only size signals we have
+  // without an LLM, so the bands stay deliberately wide.
+  const big = s.wordCount > 2000 || s.links.internal > 60;
+  const mid = s.wordCount > 600 || s.links.internal > 20;
+  const base = big ? 4000 : mid ? 1500 : 600;
+
+  dim('Conversion', has(s.forms) || s.hasBooking ? 65 : 20,
+    s.forms ? `${s.forms} form(s) on the page.` : 'No form or booking widget found.',
+    s.forms || s.hasBooking ? 'Capture exists but no instant follow-up detected.' : 'No way to convert a visitor without phoning during business hours.',
+    s.forms || s.hasBooking ? base : base * 2, 'Lead capture + AI receptionist', s.forms ? 'P1' : 'P0');
+
+  dim('Trust', s.hasTestimonials ? 70 : 30,
+    s.hasTestimonials ? 'Testimonials or reviews present.' : 'No testimonial or review section found.',
+    s.hasTestimonials ? 'Proof present but not quantified.' : 'Nothing answers "why trust these people".',
+    s.hasTestimonials ? Math.round(base * 0.3) : base, 'Review engine', s.hasTestimonials ? 'P2' : 'P1');
+
+  dim('Email Capture', s.forms ? 60 : 15,
+    s.forms ? 'A form exists that could capture email.' : 'No email capture anywhere on the page.',
+    'Visitors who are not ready to buy leave with no way to be reached again.',
+    Math.round(base * 0.6), 'Lead capture + nurture', 'P1');
+
+  dim('Local/Reviews', Object.keys(s.socials || {}).length ? 60 : 25,
+    `${Object.keys(s.socials || {}).length} social profile(s) linked.`,
+    Object.keys(s.socials || {}).length ? 'Presence exists; consistency unverified.' : 'No off-site authority signals.',
+    Math.round(base * 0.4), 'Brand presence setup', 'P2');
+
+  dim('SEO', s.description && s.headings.h1.length ? 65 : 30,
+    `${s.headings.h1.length} H1(s); meta description ${s.description ? 'present' : 'missing'}; structured data ${s.hasStructuredData ? 'present' : 'absent'}.`,
+    s.description && s.headings.h1.length ? 'Basics present; depth unverified without rank data.' : 'Missing fundamentals that decide how they appear in search.',
+    Math.round(base * 0.5), 'Technical SEO pass', 'P1');
+
+  dim('Outbound Readiness', s.contacts.phones.length || s.contacts.emails.length ? 70 : 20,
+    `${s.contacts.phones.length} phone(s), ${s.contacts.emails.length} email(s) published.`,
+    s.contacts.phones.length ? 'Reachable, but after-hours handling is unknown.' : 'No published phone — the primary conversion path for a local business is missing.',
+    s.contacts.phones.length ? Math.round(base * 0.4) : base * 2, 'AI receptionist', s.contacts.phones.length ? 'P1' : 'P0');
+
+  dim('Traffic', s.mobileViewport ? 60 : 20,
+    `Mobile viewport ${s.mobileViewport ? 'present' : 'absent'}; ${s.wordCount} words of content.`,
+    s.mobileViewport ? 'Mobile-ready; performance unmeasured.' : 'Served desktop-only while most local search is on a phone.',
+    s.mobileViewport ? Math.round(base * 0.3) : base * 2, 'Website rebuild', s.mobileViewport ? 'P2' : 'P0');
+
+  const leak = (title, severity, observed, impact, fixProduct, expectedLift, timeToImplement) =>
+    leaks.push({ title, severity, observed, impact, fixProduct, expectedLift, timeToImplement });
+
+  if (!s.forms && !s.hasBooking)
+    leak('No way to convert a visitor', 'high', 'No form and no booking widget found.',
+      'Every ready-to-buy visitor must find a number and call during business hours.',
+      'Lead capture + AI receptionist', 'Usually the single largest conversion gain on a site like this.', '1 week');
+  if (!s.contacts.phones.length)
+    leak('No phone number on the page', 'high', 'No phone number in the page markup.',
+      'For a local service business the call is the sale, and there is no obvious way to place one.',
+      'Tracked number + AI receptionist', 'Restores the primary conversion path.', '48 hours');
+  if (!s.mobileViewport)
+    leak('Not mobile-ready', 'high', 'No mobile viewport meta tag.',
+      'The majority of local search traffic arrives on a phone.',
+      'Website rebuild', 'Affects most of their traffic.', '2 weeks');
+  if (!s.hasLiveChat)
+    leak('No instant-response channel', 'medium', 'No live chat or messaging widget detected.',
+      'Questions that would close a sale wait until someone checks email.',
+      'AI chat + SMS follow-up', 'Recovers a share of undecided visitors.', '48 hours');
+  if (!s.hasTestimonials)
+    leak('No social proof', 'medium', 'No testimonial or review section detected.',
+      'Nothing on the page establishes credibility.',
+      'Review engine', 'Meaningful lift on high-consideration purchases.', '2 weeks');
+  if (!s.loadsAnalytics)
+    leak('Flying blind — no analytics', 'medium', 'No analytics script detected.',
+      'They cannot tell which marketing spend works, so all of it continues.',
+      'Tracking + reporting setup', 'Enables every other optimisation.', '48 hours');
+  if (!Object.keys(s.socials || {}).length)
+    leak('No social presence linked', 'low', 'No social profile links found.',
+      'No off-site authority and no second touchpoint.',
+      'Brand presence setup', 'Supporting trust signal.', '1 week');
+
+  const monthlyLow = dimensions.reduce((a, d) => a + d.dollarImpactMonthly, 0);
+  const monthlyHigh = Math.round(monthlyLow * 2.2);
+  const highs = leaks.filter(l => l.severity === 'high');
+  const modelGuess = s.hasCheckout ? 'Ecom' : s.contacts.phones.length ? 'Local-Services' : 'Other';
+
+  return {
+    business: {
+      name: s.title || s.url,
+      type: s.description || 'Not stated on the page.',
+      stage: big ? 'scaling' : mid ? 'early-revenue' : 'pre-revenue',
+      modelGuess,
+      primaryAudience: 'Not determinable without AI analysis.',
+      estimatedMonthlyTrafficBand: big ? '10K-50K' : mid ? '1K-10K' : '<1K',
+      estimatedMonthlyRevenueBand: big ? '$50K-$250K' : mid ? '$10K-$50K' : '<$10K',
+      revenueBandReasoning: `Estimated from content depth (${s.wordCount} words) and internal link count (${s.links.internal}) only — no traffic data available in rule-based mode.`,
+    },
+    scrapedSummary: `${s.title || s.url} — ${s.wordCount} words, ${s.forms || 0} form(s), `
+      + `${s.contacts.phones.length} phone number(s), ${s.contacts.emails.length} email(s), `
+      + `${Object.keys(s.socials || {}).length} social profile(s) linked. `
+      + `Rule-based analysis from observed page signals; AI analysis was unavailable.`,
+    revenueLoss: {
+      monthlyLowEstimate: monthlyLow,
+      monthlyHighEstimate: monthlyHigh,
+      annualLowEstimate: monthlyLow * 12,
+      annualHighEstimate: monthlyHigh * 12,
+      reasoning: dimensions.filter(d => d.dollarImpactMonthly > 0)
+        .map(d => `${d.area}: $${d.dollarImpactMonthly.toLocaleString('en-US')}/mo (${d.gap})`).join(' · ')
+        + `. Scale base of $${base.toLocaleString('en-US')} derived from content depth and link count, not traffic data.`,
+      confidenceBand: 'low',
+      biggestSingleLeak: highs[0]?.title || leaks[0]?.title || 'No high-severity gaps detected from page signals.',
+    },
+    dimensions,
+    leaks: leaks.slice(0, 7),
+    upsellOpportunities: [
+      { name: 'AI receptionist', why: 'Answers and books every call, including after hours.', priceRangeMonthly: '$750' },
+      !s.forms && { name: 'Website + lead capture', why: 'No working conversion path on the current site.', priceRangeMonthly: '$250' },
+      !s.hasTestimonials && { name: 'Review engine', why: 'No social proof on the page.', priceRangeMonthly: '$300' },
+    ].filter(Boolean),
+    outreachAngles: [
+      { channel: 'voice',
+        hook: highs.length
+          ? `I pulled up ${s.title || 'your site'} — there are ${highs.length} things costing you calls right now.`
+          : `I pulled up ${s.title || 'your site'} — one quick thing about how your calls get handled.`,
+        value: 'Missed calls answered and booked automatically within 14 days.' },
+      { channel: 'sms',
+        hook: `Looked at ${s.title || 'your site'} — ${(leaks[0]?.title || 'a gap in how enquiries come in').toLowerCase()}.`,
+        value: 'Two minutes to show what it is costing.' },
+      { channel: 'chatbot',
+        hook: `${s.hasLiveChat ? 'Your chat widget' : 'No chat on the site'} — visitors with questions have nowhere to go.`,
+        value: 'AI chat that qualifies and books, live in 48 hours.' },
+    ],
+    confidenceScore: 55,
+    oneLinePitch: leaks[0]
+      ? `Noticed ${leaks[0].title.toLowerCase()} on ${s.title || 'your site'} — that is costing you jobs every week.`
+      : `Had a look at ${s.title || 'your site'} — worth two minutes on how your calls get handled?`,
+  };
 }
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
@@ -613,8 +764,13 @@ export default async function handler(req, res) {
     catch (e) { llmError = `${llmError || ''} | Claude failed: ${e.message}`; }
   }
 
+  // Never fail the whole audit because the LLM tier is exhausted. We already
+  // have real scraped signals — fall back to the rule-based report and label it.
+  let degraded = false;
   if (!analysis) {
-    return res.status(500).json({ error: 'LLM analysis failed', detail: llmError, signalsCaptured: true });
+    analysis = deterministicAnalysis(signals);
+    llmUsed = 'rule-based';
+    degraded = true;
   }
 
   return res.status(200).json({
@@ -622,6 +778,14 @@ export default async function handler(req, res) {
     url,
     generatedAt: new Date().toISOString(),
     llm: llmUsed,
+    degraded,
+    // Surfaced so the UI can explain *why* the report is rule-based rather than
+    // implying the site itself scored badly.
+    degradedReason: degraded
+      ? (/rate.?limit|quota|429|tokens per day|TPD/i.test(llmError || '')
+          ? 'AI analysis is at its daily limit — showing rule-based findings from the live scan.'
+          : 'AI analysis is temporarily unavailable — showing rule-based findings from the live scan.')
+      : null,
     enrichmentSkipped,
     signals,     // include so the UI can show the "here's what we saw" transparency panel
     extraPages: extraPages.map(p => ({ url: p.url, bytes: p.html?.length || 0 })), // just metadata, not raw HTML

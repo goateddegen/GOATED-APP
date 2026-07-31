@@ -40,7 +40,6 @@ export default function Sidebar() {
   // verifiedEmail, which comes from a confirmed Supabase session.
   const user = useStore(s => s.user);
   const verifiedEmail = useStore(s => s.verifiedEmail);
-  const degenMode = useStore(s => s.degenMode);
   const toggleDegenMode = useStore(s => s.toggleDegenMode);
   const triggerConfetti = useStore(s => s.triggerConfetti);
 
@@ -149,7 +148,7 @@ export default function Sidebar() {
       {/* Version tag at bottom */}
       {expanded && (
         <div className="px-4 py-2 border-t border-white/[0.03]">
-          <div className="text-[10px] text-slate-600 text-center">{degenMode ? 'v7.2 — DEGEN MODE' : 'v7.2 — CHILL MODE'}</div>
+          <div className="text-[10px] text-slate-600 text-center">v7.2</div>
         </div>
       )}
     </>

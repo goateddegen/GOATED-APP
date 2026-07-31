@@ -1105,7 +1105,7 @@ export default function TrendsPage() {
                 );
               })}
               <div className="text-[9px] text-slate-600 text-center pt-2">
-                {degenMode ? 'DEGEN MODE — all plays, sorted by greed score' : 'CHILL MODE — vetted plays only, risk-adjusted'}<br />
+                All plays, sorted by score<br />
                 Powered by GOATED AI · NFA — DYOR · Refreshes every 30s
               </div>
             </div>

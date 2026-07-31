@@ -9,7 +9,7 @@ import {
   ExternalLink, MapPin, Crosshair, AlertTriangle, Radio,
 } from 'lucide-react';
 import { useStore, fmt, priorities, statuses, industries } from '../hooks/useStore';
-import { buildOutreachStrategy, deriveGaps, recommendTier } from '../lib/outreach';
+import { buildOutreachStrategy, deriveGaps, recommendTier, buildPackage } from '../lib/outreach';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -1000,6 +1000,7 @@ export default function LeadsPage({ onSelect }) {
                 const isExpanded = expandedRows.has(l.id);
                 const prob = getCloseProbability(l, i);
                 const dv = l.dealValue || 0;
+                const pkg = buildPackage(l);
                 const isHot = l.score >= 85;
                 return (
                   <React.Fragment key={l.id}>
@@ -1041,7 +1042,11 @@ export default function LeadsPage({ onSelect }) {
                       {/* Deal Value */}
                       <td className="px-3 py-2.5">
                         <div className="font-mono text-sm text-white">{fmt(dv)}</div>
-                        <div className="text-[10px] text-emerald-400/60">{fmt(Math.round(dv * 0.13))} comm.</div>
+                        {/* Commission removed — payouts/wallet aren't live, so
+                            quoting a split was promising money we can't pay.
+                            The monthly retainer is the number that matters on
+                            the call anyway. */}
+                        <div className="text-[10px] text-slate-500">{fmt(pkg.monthly)}/mo retainer</div>
                       </td>
 
                       {/* Close % */}

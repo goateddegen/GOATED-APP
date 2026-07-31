@@ -9,7 +9,7 @@ import {
   MapPin, Linkedin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight,
 } from 'lucide-react';
 import { useStore, fmt, enrichLead } from '../hooks/useStore';
-import { buildCallSheet } from '../lib/outreach';
+import { buildCallSheet, buildPackage } from '../lib/outreach';
 
 // ─── Color Maps ────────────────────────────────────────────────────────────────
 const priorityColors = {
@@ -139,6 +139,16 @@ function GlassCard({ children, className = '', highlight = false }) {
 // =============================================================================
 // CLOSE GUIDE TAB — Enhanced linear closing experience
 // =============================================================================
+// Year-one value of whichever package we're recommending: deposit plus twelve
+// months of retainer. Replaces the commission figures that used to headline the
+// close guide — payouts aren't wired, so quoting a split promised money we
+// cannot pay out.
+function recommendedPkgYear1(pkgs) {
+  const p = (pkgs || []).find(x => x.recommended) || (pkgs || [])[0];
+  if (!p) return 0;
+  return p.year1 || (p.price || 0) + (p.monthly || 0) * 12;
+}
+
 function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfidence, safeCallScript, safePackages, safeObjections, safeOutreach, safePainPoints, safeConversion, setTab }) {
   const [expandedStep, setExpandedStep] = useState(null);
   const [fastTrackMode, setFastTrackMode] = useState(false);
@@ -152,11 +162,12 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
     return checks;
   }, [closeSteps]);
 
-  const commission = Math.round(dv * 0.12);
+  const contractYear1 = recommendedPkgYear1(safePackages);
   const currentStep = closeSteps.find(s => s.status === 'current') || closeSteps[0];
   const currentStepIdx = currentStep ? currentStep.step - 1 : 0;
   const recommendedPkg = safePackages.find(p => p.recommended) || safePackages[1];
-  const roiMultiple = recommendedPkg ? ((dv / (recommendedPkg.price * 12)) || 0).toFixed(1) : 0;
+  const recAnnual = recommendedPkg ? (recommendedPkg.year1 || (recommendedPkg.price + recommendedPkg.monthly * 12)) : 0;
+  const roiMultiple = recAnnual ? ((dv / recAnnual) || 0).toFixed(1) : 0;
 
   // Lost revenue calculations for psychology-driven scripts
   const monthlyLeak = fmt(Math.round(dv * 0.15));
@@ -164,7 +175,9 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
   const costOfInaction = fmt(Math.round(dv * 0.15 * 3)); // 3 months of delay
   const fn = (lead.name || '').split(' ')[0];
   const recPkg = safePackages.find(p => p.recommended);
-  const recPrice = fmt(recPkg?.price || Math.round(dv * 0.025));
+  // Monthly retainer — this is quoted with a "/mo" suffix in the scripts below.
+  const recPrice = fmt(recPkg?.monthly || Math.round(dv * 0.025));
+  const recDeposit = fmt(recPkg?.price || 2000);
   const pp1 = (safePainPoints[0] || 'operational gaps').toLowerCase();
   const pp2 = (safePainPoints[1] || 'customer acquisition costs').toLowerCase();
 
@@ -173,7 +186,7 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
     { script: `${fn}, I've been studying ${lead.company}'s ${lead.industry} operation and I found something that might be costing you money. Companies your size dealing with ${pp1} typically lose ${monthlyLeak} per month in missed revenue. I have a specific fix — got 2 minutes?`, label: 'Pain-First Opener' },
     { script: `Subject: ${lead.company} is leaving ${annualLeak}/yr on the table\n\nHi ${fn},\n\nI analyzed ${lead.industry} companies with ${(lead.employees || 50).toLocaleString()}+ employees and found that ${pp1} typically costs businesses like ${lead.company} around ${monthlyLeak}/month in lost revenue and inflated customer acquisition costs.\n\nI have a 12-minute walkthrough showing exactly where the leak is and how to plug it. Worth a quick look?\n\nBest,\nGOATED Solutions`, label: 'Lost Revenue Email' },
     { script: `${fn}, thanks for the time. Before I pitch anything, I want to understand YOUR numbers. Walk me through how ${lead.company} handles ${pp1} today.\n\n[Listen — let them talk]\n\nSo when that breaks down, what happens to your customer acquisition cost? What does it actually cost you to land a new client right now?\n\n[Listen — anchor the pain in dollars]\n\nGot it. So between ${pp1} and ${pp2}, you're looking at roughly ${monthlyLeak}/month in leakage. What if I showed you exactly how to cut that in half within 60 days?`, label: 'Discovery — Dollar Anchoring' },
-    { script: `${fn}, based on what you told me about ${lead.company}'s challenges with ${pp1} and ${pp2}, here's the math:\n\nYou're currently losing: ~${monthlyLeak}/mo (${annualLeak}/yr)\nOur fix costs: ${recPrice}/mo\nProjected recovery: ${fmt(Math.round(dv * 0.15))} in 90 days\nNet ROI: ${((dv * 0.15) / ((recPkg?.price || dv * 0.025) * 3)).toFixed(1)}x in the first quarter\n\nEvery month you wait costs ${lead.company} another ${monthlyLeak}. That's the real price of doing nothing.`, label: 'ROI-Anchored Proposal' },
+    { script: `${fn}, based on what you told me about ${lead.company}'s challenges with ${pp1} and ${pp2}, here's the math:\n\nYou're currently losing: ~${monthlyLeak}/mo (${annualLeak}/yr)\nOur fix costs: ${recDeposit} to set up, then ${recPrice}/mo\nProjected recovery: ${fmt(Math.round(dv * 0.15))} in 90 days\nNet ROI: ${((dv * 0.15) / ((recPkg?.monthly || dv * 0.025) * 3)).toFixed(1)}x in the first quarter\n\nEvery month you wait costs ${lead.company} another ${monthlyLeak}. That's the real price of doing nothing.`, label: 'ROI-Anchored Proposal' },
     { script: `I hear you, ${fn}. But let's look at this differently:\n\nThe cost of this solution: ${recPrice}/mo\nThe cost of NOT solving ${pp1}: ${monthlyLeak}/mo\n\nYou're already paying ${monthlyLeak}/mo for this problem — you're just paying it in lost revenue instead of a solution. A 30-day pilot proves the ROI with zero long-term commitment. If we don't deliver, you walk away. But if we do — and we will — you just stopped a ${annualLeak}/yr bleed.`, label: 'Cost-of-Inaction Close' },
     { script: `${fn}, here's where we are: ${lead.company} has been losing ${monthlyLeak} every month to ${pp1}. We've shown you exactly how to fix it. Every week you wait to sign is another ${fmt(Math.round(dv * 0.15 / 4))} walking out the door.\n\nI'm sending the ${recPkg?.name || 'Growth'} agreement over now — ${recPrice}/mo, 30-day performance guarantee. Let's stop the bleeding and start recovering that ${annualLeak}/yr. Ready to go?`, label: 'Urgency Close' },
   ];
@@ -193,7 +206,7 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
   // Fast Track steps (compressed 3-step for hot leads) — revenue-loss driven
   const fastTrackSteps = [
     { step: 1, name: 'Pain Strike', desc: `Lead with ${lead.company}'s specific revenue leak — make them feel the cost of inaction`, script: `${fn}, I'll cut straight to it — I ran the numbers on ${lead.company} and your ${pp1} problem is costing you roughly ${monthlyLeak} every single month. That's ${annualLeak} a year walking out the door. I can show you exactly where the leak is in 10 minutes. Worth a look?` },
-    { step: 2, name: 'Dollar Demo', desc: 'Show the math: what they lose vs. what the fix costs — make inaction the expensive option', script: `Here's ${lead.company}'s situation in black and white:\n\nYou're losing: ${monthlyLeak}/mo to ${pp1}\nYour customer acquisition cost is inflated by ${pp2}\nOur fix: ${recPrice}/mo — pays for itself ${((dv * 0.15) / ((recPkg?.price || dv * 0.025))).toFixed(0)}x over\n\nYou're already spending ${monthlyLeak}/mo on this problem — you're just spending it on lost revenue instead of a solution.` },
+    { step: 2, name: 'Dollar Demo', desc: 'Show the math: what they lose vs. what the fix costs — make inaction the expensive option', script: `Here's ${lead.company}'s situation in black and white:\n\nYou're losing: ${monthlyLeak}/mo to ${pp1}\nYour customer acquisition cost is inflated by ${pp2}\nOur fix: ${recDeposit} deposit + ${recPrice}/mo — pays for itself ${((dv * 0.15) / ((recPkg?.monthly || dv * 0.025))).toFixed(0)}x over\n\nYou're already spending ${monthlyLeak}/mo on this problem — you're just spending it on lost revenue instead of a solution.` },
     { step: 3, name: 'Bleed Close', desc: `Every day without signing costs ${lead.company} real money — close on the urgency`, script: `${fn}, we've seen the numbers. ${lead.company} is bleeding ${monthlyLeak} every month from ${pp1}. That's ${fmt(Math.round(dv * 0.15 / 4))} per week. Every week you wait to decide is another ${fmt(Math.round(dv * 0.15 / 4))} gone.\n\nI'm sending the agreement now. ${recPrice}/mo, 30-day money-back guarantee. Let's stop the bleeding today.` },
   ];
 
@@ -231,13 +244,13 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
             <div>
               <div className="text-sm font-bold text-brand">Deal Economics</div>
               <p className="text-xs text-slate-400 mt-0.5">
-                What {lead.company} loses by NOT buying vs. what you earn when they do
+                What {lead.company} loses by NOT buying vs. what the contract is worth
               </p>
             </div>
           </div>
           <div className="text-right shrink-0 ml-4">
-            <div className="text-[10px] text-slate-500 uppercase tracking-wider">Your Commission</div>
-            <div className="text-xl font-black text-brand">{fmt(commission)}</div>
+            <div className="text-[10px] text-slate-500 uppercase tracking-wider">Year One Contract</div>
+            <div className="text-xl font-black text-brand">{fmt(contractYear1)}</div>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2">
@@ -254,7 +267,7 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
           <div className="p-2.5 rounded-lg bg-brand/[0.06] border border-brand/15 text-center">
             <div className="text-[10px] text-brand uppercase tracking-wider font-bold">Deal Value</div>
             <div className="text-base font-bold text-brand">{fmt(dv)}</div>
-            <div className="text-[10px] text-slate-500">{fmt(commission)} commission</div>
+            <div className="text-[10px] text-slate-500">{fmt(contractYear1)} year one</div>
           </div>
         </div>
       </div>
@@ -358,7 +371,7 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
                     {/* Revenue Impact badge */}
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/15 font-medium flex items-center gap-1">
-                        <DollarSign size={9} /> {fmt(commission)} commission if closed
+                        <DollarSign size={9} /> {fmt(contractYear1)} year one if closed
                       </span>
                     </div>
 
@@ -434,9 +447,9 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
             </div>
           </div>
           <div className="text-center p-3 rounded-lg bg-brand/[0.04] border border-brand/15">
-            <div className="text-2xl font-black text-brand">{fmt(commission)}</div>
-            <div className="text-[10px] text-slate-500 uppercase tracking-wider">Commission</div>
-            <div className="text-[9px] text-brand mt-1">if closed at {fmt(dv)}</div>
+            <div className="text-2xl font-black text-brand">{fmt(contractYear1)}</div>
+            <div className="text-[10px] text-slate-500 uppercase tracking-wider">Year One</div>
+            <div className="text-[9px] text-brand mt-1">deal value {fmt(dv)}</div>
           </div>
         </div>
       </GlassCard>
@@ -613,10 +626,10 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
             <p className="text-sm text-slate-200 leading-relaxed">
               {currentStep && currentStep.step === 1 && `${lead.company} is losing ~${fmt(Math.round(dv * 0.15))}/mo to ${(safePainPoints[0] || 'operational gaps').toLowerCase()}. Review the pain point analysis above and craft your opening around this number. Your first message should make ${(lead.name || '').split(' ')[0]} feel the cost of inaction — not hear a sales pitch. Prepare a ${el.bestMethod || 'direct outreach'} message and move to contact within 24 hours.`}
               {currentStep && currentStep.step === 2 && `Hit ${(lead.name || '').split(' ')[0]} today via ${el.bestMethod || 'email'}. Lead with the money: "${lead.company} is leaving ${fmt(Math.round(dv * 0.15 * 12))}/yr on the table because of ${(safePainPoints[0] || 'process gaps').toLowerCase()}." Don't sell — diagnose. Your goal is to get them to confirm the pain and agree to a discovery call.`}
-              {currentStep && currentStep.step === 3 && `Discovery call with ${(lead.name || '').split(' ')[0]}: Your job is to get them to say the dollar amount out loud. Ask: "What does ${(safePainPoints[0] || 'this problem').toLowerCase()} cost ${lead.company} per month?" Then anchor: "So you're spending ${fmt(Math.round(dv * 0.15))}/mo on a problem that has a ${fmt(safePackages.find(p => p.recommended)?.price || Math.round(dv * 0.025))}/mo fix." Verify budget authority and timeline.`}
-              {currentStep && currentStep.step === 4 && `Send the proposal NOW. Frame it as: "${lead.company} is currently paying ${fmt(Math.round(dv * 0.15))}/mo for ${(safePainPoints[0] || 'this problem').toLowerCase()} — you're just paying it in lost revenue instead of a solution. The ${safePackages.find(p => p.recommended)?.name || 'Growth'} plan at ${fmt(safePackages.find(p => p.recommended)?.price || Math.round(dv * 0.025))}/mo pays for itself ${roiMultiple}x over." Follow up in 48 hours — every day of delay costs them.`}
-              {currentStep && currentStep.step === 5 && `${(lead.name || '').split(' ')[0]} is negotiating — they WANT to buy but need justification. Reframe any budget objection: "The question isn't whether you can afford ${fmt(safePackages.find(p => p.recommended)?.price || Math.round(dv * 0.025))}/mo — it's whether you can afford another ${fmt(Math.round(dv * 0.15))} month of doing nothing." Offer the 30-day pilot if needed. Close this week.`}
-              {currentStep && currentStep.step === 6 && `Lock it down. ${lead.company} at ${fmt(dv)} — your commission: ${fmt(Math.round(dv * 0.12))}. Send the agreement, process payment, and schedule onboarding. Then immediately ask: "Who else in ${lead.industry} should I be talking to?" Every won deal should generate 2-3 warm referrals.`}
+              {currentStep && currentStep.step === 3 && `Discovery call with ${(lead.name || '').split(' ')[0]}: Your job is to get them to say the dollar amount out loud. Ask: "What does ${(safePainPoints[0] || 'this problem').toLowerCase()} cost ${lead.company} per month?" Then anchor: "So you're spending ${fmt(Math.round(dv * 0.15))}/mo on a problem that has a ${fmt(safePackages.find(p => p.recommended)?.monthly || Math.round(dv * 0.025))}/mo fix." Verify budget authority and timeline.`}
+              {currentStep && currentStep.step === 4 && `Send the proposal NOW. Frame it as: "${lead.company} is currently paying ${fmt(Math.round(dv * 0.15))}/mo for ${(safePainPoints[0] || 'this problem').toLowerCase()} — you're just paying it in lost revenue instead of a solution. The ${safePackages.find(p => p.recommended)?.name || 'Growth'} plan at ${fmt(safePackages.find(p => p.recommended)?.price || 2000)} + ${fmt(safePackages.find(p => p.recommended)?.monthly || Math.round(dv * 0.025))}/mo pays for itself ${roiMultiple}x over." Follow up in 48 hours — every day of delay costs them.`}
+              {currentStep && currentStep.step === 5 && `${(lead.name || '').split(' ')[0]} is negotiating — they WANT to buy but need justification. Reframe any budget objection: "The question isn't whether you can afford ${fmt(safePackages.find(p => p.recommended)?.monthly || Math.round(dv * 0.025))}/mo — it's whether you can afford another ${fmt(Math.round(dv * 0.15))} month of doing nothing." Offer the 30-day pilot if needed. Close this week.`}
+              {currentStep && currentStep.step === 6 && `Lock it down. ${lead.company} at ${fmt(dv)} — year one contract: ${fmt(contractYear1)}. Send the agreement, process payment, and schedule onboarding. Then immediately ask: "Who else in ${lead.industry} should I be talking to?" Every won deal should generate 2-3 warm referrals.`}
               {!currentStep && `Start with the revenue leak: ${lead.company} is losing ~${fmt(Math.round(dv * 0.15))}/mo to ${(safePainPoints[0] || 'inefficiency').toLowerCase()}. Build your outreach around making ${(lead.name || '').split(' ')[0]} feel that cost.`}
             </p>
           </div>
@@ -652,7 +665,6 @@ export default function LeadDetail() {
   const previousPage = useStore(s => s.previousPage);
   const setPreviousPage = useStore(s => s.setPreviousPage);
   const setPage = useStore(s => s.setPage);
-  const degenMode = useStore(s => s.degenMode);
   const getLeadAlpha = useStore(s => s.getLeadAlpha);
   const [tab, setTab] = useState('intelligence');
   const [coachingOutput, setCoachingOutput] = useState(null);
@@ -707,15 +719,28 @@ export default function LeadDetail() {
 
   // Packages come from the tier this business actually qualifies for, priced
   // off PRICING rather than a percentage of an invented deal value.
+  // The bundle this specific business needs, assembled from its own gaps —
+  // a missing website and no after-hours answer are the two that move money,
+  // so they lead. Deposit and monthly are both explicit: the operator has to
+  // be able to quote the deal on the call without opening another tab.
+  const tailored = buildPackage(el);
   const safePackages = el.packages || [
     {
-      name: 'Local Engine', price: 2000, monthly: 750,
-      features: ['AI receptionist answers in <60s', 'SMS auto-text-back on missed calls', 'Calendar booking', 'Monthly recovered-revenue report'],
+      name: tailored.items.length > 1 ? 'Recommended Bundle' : 'Local Engine',
+      price: tailored.deposit,
+      monthly: tailored.monthly,
+      features: tailored.items.map(i => `${i.name} — ${fmt(i.deposit)} + ${fmt(i.monthly)}/mo`),
+      headline: tailored.headline,
+      firstMonth: tailored.firstMonth,
+      year1: tailored.year1,
+      items: tailored.items,
       recommended: sheet.tier.id !== 'growth',
     },
     {
       name: 'Growth Engine', price: 10000, monthly: 2500,
-      features: ['Everything in Local Engine', 'Outbound SDR campaign', 'Multi-channel outreach', 'Custom CRM integration', 'Weekly performance review'],
+      features: ['Everything in the bundle above', 'Outbound SDR campaign', 'Multi-channel outreach', 'Custom CRM integration', 'Weekly performance review'],
+      firstMonth: 12500,
+      year1: 40000,
       recommended: sheet.tier.id === 'growth',
     },
   ];
@@ -782,7 +807,7 @@ Context:\n${ctx}`;
   }, [lead, el, dv, safePainPoints, safeBuyingSignals]);
 
   // Degen Alpha Intel — per-lead intelligence (only computed when degen mode is on)
-  const alphaIntel = degenMode ? getLeadAlpha(el) : null;
+  const alphaIntel = getLeadAlpha(el);
 
   // ── GOATED Close Guide — step-by-step closing system ──────────────────────
   // NOTE: Demo data never auto-ticks. Step 1 is the anchor, rest are pending until
@@ -803,7 +828,7 @@ Context:\n${ctx}`;
     { id: 'intelligence', label: 'Overview', icon: <BarChart3 size={15} /> },
     { id: 'closing', label: 'Close Guide', icon: <Target size={15} /> },
     { id: 'outreach', label: 'Outreach & Scripts', icon: <Brain size={15} /> },
-    ...(degenMode ? [{ id: 'alpha', label: 'Alpha Intel', icon: <Radar size={15} /> }] : []),
+    { id: 'alpha', label: 'Alpha Intel', icon: <Radar size={15} /> },
   ];
 
   // ── Keyboard shortcuts ──────────────────────────────────────────────────────
@@ -896,7 +921,8 @@ Context:\n${ctx}`;
 
   // ROI calculations
   const recommendedPkg = safePackages.find(p => p.recommended) || safePackages[1];
-  const roiMultiple = recommendedPkg ? ((dv / (recommendedPkg.price * 12)) || 0).toFixed(1) : 0;
+  const recAnnual = recommendedPkg ? (recommendedPkg.year1 || (recommendedPkg.price + recommendedPkg.monthly * 12)) : 0;
+  const roiMultiple = recAnnual ? ((dv / recAnnual) || 0).toFixed(1) : 0;
 
   // ─── Momentum Icon ──────────────────────────────────────────────────────────
   const MomentumIcon = lead.momentum === 'rising' ? TrendingUp : lead.momentum === 'declining' ? TrendingDown : Minus;
@@ -1108,29 +1134,60 @@ Context:\n${ctx}`;
 
           {/* Secondary Contact Info */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {/* Company Website */}
-            <a href={lead.website?.startsWith('http') ? lead.website : `https://${lead.website}`}
-              target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-lg bg-brand/[0.06] border border-brand/15 hover:bg-brand/10 transition-colors group">
-              <div className="w-9 h-9 rounded-lg bg-brand/15 flex items-center justify-center shrink-0">
-                <Globe size={16} className="text-brand" />
+            {/* Company Website — or, when there isn't one, the pitch.
+                This used to render an <a> to "https://undefined" for every
+                business without a site, which is exactly the segment we most
+                want to sell a website to. */}
+            {lead.website ? (
+              <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 rounded-lg bg-brand/[0.06] border border-brand/15 hover:bg-brand/10 transition-colors group">
+                <div className="w-9 h-9 rounded-lg bg-brand/15 flex items-center justify-center shrink-0">
+                  <Globe size={16} className="text-brand" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] text-brand uppercase tracking-wider font-semibold">Company Website</div>
+                  <div className="text-sm text-white truncate group-hover:text-brand transition-colors">{lead.website}</div>
+                </div>
+                <ExternalLink size={12} className="text-brand/50 ml-auto shrink-0" />
+              </a>
+            ) : (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-500/[0.08] border border-amber-500/25">
+                <div className="w-9 h-9 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
+                  <Globe size={16} className="text-amber-400" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] text-amber-400 uppercase tracking-wider font-semibold">No Website</div>
+                  <div className="text-sm text-white truncate">Lead with the build — {fmt(2000)} + {fmt(250)}/mo</div>
+                </div>
               </div>
-              <div className="min-w-0">
-                <div className="text-[10px] text-brand uppercase tracking-wider font-semibold">Company Website</div>
-                <div className="text-sm text-white truncate group-hover:text-brand transition-colors">{lead.website || lead.company}</div>
+            )}
+            {/* Location — links straight to the Google Maps listing when the
+                lead came from Places, so the operator can read the reviews and
+                photos before dialling. */}
+            {el.mapsUrl ? (
+              <a href={el.mapsUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 rounded-lg bg-orange-500/[0.06] border border-orange-500/15 hover:bg-orange-500/10 transition-colors group">
+                <div className="w-9 h-9 rounded-lg bg-orange-500/15 flex items-center justify-center shrink-0">
+                  <MapPin size={16} className="text-orange-400" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] text-orange-400 uppercase tracking-wider font-semibold">Google Maps Listing</div>
+                  <div className="text-sm text-white truncate group-hover:text-orange-300 transition-colors">{lead.location || 'View listing'}</div>
+                </div>
+                <ExternalLink size={12} className="text-orange-400/50 ml-auto shrink-0" />
+              </a>
+            ) : (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-orange-500/[0.06] border border-orange-500/15">
+                <div className="w-9 h-9 rounded-lg bg-orange-500/15 flex items-center justify-center shrink-0">
+                  <MapPin size={16} className="text-orange-400" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] text-orange-400 uppercase tracking-wider font-semibold">Location</div>
+                  <div className="text-sm text-white truncate">{lead.location || 'Location unknown'}</div>
+                </div>
               </div>
-              <ExternalLink size={12} className="text-brand/50 ml-auto shrink-0" />
-            </a>
-            {/* Location */}
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-orange-500/[0.06] border border-orange-500/15">
-              <div className="w-9 h-9 rounded-lg bg-orange-500/15 flex items-center justify-center shrink-0">
-                <MapPin size={16} className="text-orange-400" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-[10px] text-orange-400 uppercase tracking-wider font-semibold">Location</div>
-                <div className="text-sm text-white truncate">{lead.location || 'Location unknown'}</div>
-              </div>
-            </div>
+            )}
             {/* People Search */}
             <div className="flex items-center gap-2 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
               <a href={`https://www.truepeoplesearch.com/results?name=${encodeURIComponent(lead.name)}&citystatezip=${encodeURIComponent(lead.location || '')}`}
@@ -1381,15 +1438,8 @@ Context:\n${ctx}`;
           </div>
         )}
 
-        {/* ─── DEGEN ALPHA INTEL TAB ──────────────────────────────────────────── */}
-        {tab === 'alpha' && !degenMode && (
-          <div className="p-6 rounded-xl border border-orange-500/20 bg-orange-500/[0.03] text-center">
-            <Flame size={32} className="text-orange-400/40 mx-auto mb-3" />
-            <p className="text-sm text-slate-400">Alpha Intel requires DEGEN MODE to be enabled.</p>
-            <p className="text-xs text-slate-500 mt-1">Toggle DEGEN MODE from the sidebar to access alpha intelligence data.</p>
-          </div>
-        )}
-        {tab === 'alpha' && degenMode && !alphaIntel && (
+        {/* ─── ALPHA INTEL TAB ─────────────────────────────────────────────── */}
+        {tab === 'alpha' && !alphaIntel && (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-orange-500/15 flex items-center justify-center">
@@ -1397,7 +1447,7 @@ Context:\n${ctx}`;
               </div>
               <div>
                 <h2 className="text-lg font-bold">Alpha Intel</h2>
-                <p className="text-xs text-slate-500">DEGEN MODE intelligence for {lead.name}</p>
+                <p className="text-xs text-slate-500">Deep intelligence for {lead.name}</p>
               </div>
             </div>
             <div className="p-6 rounded-xl border border-orange-500/20 bg-orange-500/[0.03] text-center">
@@ -1407,7 +1457,7 @@ Context:\n${ctx}`;
             </div>
           </div>
         )}
-        {tab === 'alpha' && degenMode && alphaIntel && (
+        {tab === 'alpha' && alphaIntel && (
           <div className="space-y-6">
             {/* Alpha Header */}
             <div className="flex items-center gap-3">
@@ -1528,7 +1578,7 @@ Context:\n${ctx}`;
                 <div className="p-3 rounded-lg bg-brand/5 border border-brand/20">
                   <div className="text-[10px] text-brand uppercase tracking-widest mb-1 font-bold">Step 4 — Lock It Down</div>
                   <p className="text-sm text-slate-300">
-                    Push for the {safePackages.find(p => p.recommended)?.name || 'Growth'} package at <span className="text-brand font-semibold">{fmt((safePackages.find(p => p.recommended)?.price || 500) * 12)}/yr</span>.
+                    Push for the {safePackages.find(p => p.recommended)?.name || 'Growth'} package — <span className="text-brand font-semibold">{fmt(safePackages.find(p => p.recommended)?.price || 2000)} deposit + {fmt(safePackages.find(p => p.recommended)?.monthly || 750)}/mo</span>.
                     ROI angle: <span className="text-brand font-semibold">{roiMultiple}x return</span> on their {fmt(dv)} deal value.
                     Close: <span className="text-white font-medium italic">"If this works the way it has for every other {lead.industry} company we work with, when would you want to start?"</span>
                   </p>
@@ -2461,7 +2511,6 @@ Context:\n${ctx}`;
                         body: JSON.stringify({
                           messages: [{ role: 'user', content: `Generate a personalized closing strategy for this lead: ${lead.name}, ${lead.title} at ${lead.company} (${lead.industry}). Score: ${lead.score}/100. Pain points: ${safePainPoints.join(', ')}. Deal value: $${dv}. Momentum: ${lead.momentum}. Priority: ${lead.priority}. Give me 3 specific, actionable steps I can take TODAY to move this deal forward. Be specific to their industry and role.` }],
                           pageContext: 'leads',
-                          degenMode,
                         }),
                       });
                       const data = await res.json();
@@ -2518,10 +2567,26 @@ Context:\n${ctx}`;
                   )}
                   <div className="text-center pt-2 pb-4">
                     <h3 className="text-lg font-bold">{pkg.name}</h3>
-                    <div className="mt-2">
+                    {pkg.headline && (
+                      <p className="text-[11px] text-slate-400 mt-1 px-2">{pkg.headline}</p>
+                    )}
+                    {/* Deposit and retainer are separate numbers. This used to
+                        render the setup fee with a "/mo" suffix, so a $2,000
+                        one-time deposit was quoted as $2,000 every month. */}
+                    <div className="mt-3">
                       <span className="text-3xl font-bold">{fmt(pkg.price)}</span>
-                      <span className="text-slate-500 text-sm">/mo</span>
+                      <span className="text-slate-500 text-sm"> deposit</span>
                     </div>
+                    <div className="mt-1">
+                      <span className="text-xl font-bold text-brand">{fmt(pkg.monthly)}</span>
+                      <span className="text-slate-500 text-sm">/mo retainer</span>
+                    </div>
+                    {pkg.firstMonth && (
+                      <div className="mt-3 pt-3 border-t border-white/[0.06] text-[11px] text-slate-400">
+                        <span className="text-white font-semibold">{fmt(pkg.firstMonth)}</span> due month one
+                        {pkg.year1 && <> · <span className="text-white font-semibold">{fmt(pkg.year1)}</span> year one</>}
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 space-y-2.5 border-t border-white/[0.06] pt-4">
                     {pkg.features.map((f, j) => (
@@ -2597,7 +2662,7 @@ Context:\n${ctx}`;
                 </div>
                 <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.05] text-center">
                   <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Recommended Package (Annual)</div>
-                  <div className="text-2xl font-bold text-brand">{recommendedPkg ? fmt(recommendedPkg.price * 12) : 'N/A'}</div>
+                  <div className="text-2xl font-bold text-brand">{recAnnual ? fmt(recAnnual) : 'N/A'}</div>
                   <div className="text-xs text-slate-500 mt-1">{recommendedPkg?.name} plan</div>
                 </div>
                 <div className="p-4 rounded-xl bg-brand/[0.08] border border-brand/20 text-center">
@@ -2607,7 +2672,7 @@ Context:\n${ctx}`;
                 </div>
               </div>
               <p className="text-xs text-slate-500 mt-4 text-center">
-                If you close this deal at {fmt(dv)}, your annual ROI on the {recommendedPkg?.name} plan ({fmt(recommendedPkg?.price * 12)}/yr) is {roiMultiple}x.
+                If you close this deal at {fmt(dv)}, your annual ROI on the {recommendedPkg?.name} plan ({fmt(recAnnual)} year one) is {roiMultiple}x.
               </p>
             </GlassCard>
           </div>

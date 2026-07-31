@@ -308,7 +308,8 @@ export default function AuditPage() {
   const lossLow = Number(loss.monthlyLowEstimate) || 0;
   const lossHigh = Number(loss.monthlyHighEstimate) || 0;
   const lossMid = Math.round((lossLow + lossHigh) / 2);
-  const commission13 = Math.round(lossMid * 0.13);
+  // Recovered in the first 90 days at a conservative one-third capture rate.
+  const recoverable90 = Math.round(lossMid * 3 * 0.33);
   const annualLoss = Math.round(lossMid * 12);
 
   return (
@@ -359,10 +360,18 @@ export default function AuditPage() {
                 {loss.reasoning}
               </div>
             )}
+            {r.degraded && r.degradedReason && (
+              <div className="mt-5 flex items-start gap-2.5 p-3 rounded-lg bg-amber-500/[0.07] border border-amber-500/25">
+                <AlertTriangle size={15} className="text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-200/90 leading-relaxed">
+                  {r.degradedReason} Findings below come from the live scan of this site — the dollar ranges are wide by design.
+                </p>
+              </div>
+            )}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
               <Stat icon={DollarSign} label="Midpoint / mo"      value={`$${lossMid.toLocaleString()}`} />
               <Stat icon={TrendingUp} label="Annualized impact"  value={`$${annualLoss.toLocaleString()}`} />
-              <Stat icon={Award} label="GOATED commission (13%)" value={`$${commission13.toLocaleString()}`} />
+              <Stat icon={Award} label="Recoverable in 90 days"   value={`$${recoverable90.toLocaleString()}`} />
               <Stat icon={Activity} label="Confidence"            value={`${a.confidenceScore ?? '—'}${a.confidenceScore != null ? '/100' : ''}`} />
             </div>
           </motion.div>
