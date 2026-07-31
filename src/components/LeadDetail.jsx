@@ -6,7 +6,7 @@ import {
   Cpu, Eye, MessageSquare, Send, Package, Calculator, Flame, Crosshair,
   Brain, Radar, Timer, AlertTriangle, Keyboard, ExternalLink, Search, UserSearch,
   Crown, Sparkles, PhoneCall, FileText, CreditCard, Trophy, Rocket, ChevronUp,
-  MapPin, Linkedin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight,
+  MapPin, Linkedin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight, Voicemail,
 } from 'lucide-react';
 import { useStore, fmt, enrichLead } from '../hooks/useStore';
 import { buildCallSheet, buildPackage } from '../lib/outreach';
@@ -139,17 +139,25 @@ function GlassCard({ children, className = '', highlight = false }) {
 // =============================================================================
 // CLOSE GUIDE TAB — Enhanced linear closing experience
 // =============================================================================
-// Year-one value of whichever package we're recommending: deposit plus twelve
-// months of retainer. Replaces the commission figures that used to headline the
-// close guide — payouts aren't wired, so quoting a split promised money we
-// cannot pay out.
-function recommendedPkgYear1(pkgs) {
-  const p = (pkgs || []).find(x => x.recommended) || (pkgs || [])[0];
-  if (!p) return 0;
-  return p.year1 || (p.price || 0) + (p.monthly || 0) * 12;
+// Google Maps link for a lead. Prefers the canonical listing URL captured from
+// Places; falls back to a Maps search on the business name and location so the
+// link resolves for every lead, on refresh and for previously-saved rows.
+function mapsLinkFor(lead) {
+  if (lead?.mapsUrl) return { url: lead.mapsUrl, exact: true };
+  const q = [lead?.company || lead?.name, lead?.address || lead?.location].filter(Boolean).join(' ');
+  if (!q.trim()) return null;
+  return { url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`, exact: false };
 }
 
-function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfidence, safeCallScript, safePackages, safeObjections, safeOutreach, safePainPoints, safeConversion, setTab }) {
+// The two numbers the operator actually says out loud. Replaces both the
+// commission figures (payouts aren't wired) and the year-one/ROI projections
+// that dressed an estimate up as a return.
+function recommendedPkgQuote(pkgs) {
+  const p = (pkgs || []).find(x => x.recommended) || (pkgs || [])[0];
+  return { deposit: p?.price || 0, monthly: p?.monthly || 0 };
+}
+
+function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfidence, safeCallScript, safePackages, safeObjections, safePainPoints, safeConversion, setTab }) {
   const [expandedStep, setExpandedStep] = useState(null);
   const [fastTrackMode, setFastTrackMode] = useState(false);
 
@@ -162,12 +170,16 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
     return checks;
   }, [closeSteps]);
 
-  const contractYear1 = recommendedPkgYear1(safePackages);
+  const quoted = recommendedPkgQuote(safePackages);
   const currentStep = closeSteps.find(s => s.status === 'current') || closeSteps[0];
   const currentStepIdx = currentStep ? currentStep.step - 1 : 0;
   const recommendedPkg = safePackages.find(p => p.recommended) || safePackages[1];
-  const recAnnual = recommendedPkg ? (recommendedPkg.year1 || (recommendedPkg.price + recommendedPkg.monthly * 12)) : 0;
-  const roiMultiple = recAnnual ? ((dv / recAnnual) || 0).toFixed(1) : 0;
+  const recQuote = recommendedPkgQuote(safePackages);
+  // Annual and ROI are both retainer-based: the deposit is a one-time build
+  // cost, so folding it into a recurring-return multiple would overstate it.
+  const recAnnualRetainer = recQuote.monthly * 12;
+  const annualLeakNum = Math.round(dv * 0.15 * 12);
+  const roiMultiple = recAnnualRetainer ? (annualLeakNum / recAnnualRetainer).toFixed(1) : null;
 
   // Lost revenue calculations for psychology-driven scripts
   const monthlyLeak = fmt(Math.round(dv * 0.15));
@@ -249,8 +261,9 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
             </div>
           </div>
           <div className="text-right shrink-0 ml-4">
-            <div className="text-[10px] text-slate-500 uppercase tracking-wider">Year One Contract</div>
-            <div className="text-xl font-black text-brand">{fmt(contractYear1)}</div>
+            <div className="text-[10px] text-slate-500 uppercase tracking-wider">Your Quote</div>
+            <div className="text-xl font-black text-brand">{fmt(quoted.deposit)}</div>
+            <div className="text-[10px] text-slate-500">+ {fmt(quoted.monthly)}/mo</div>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2">
@@ -267,7 +280,7 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
           <div className="p-2.5 rounded-lg bg-brand/[0.06] border border-brand/15 text-center">
             <div className="text-[10px] text-brand uppercase tracking-wider font-bold">Deal Value</div>
             <div className="text-base font-bold text-brand">{fmt(dv)}</div>
-            <div className="text-[10px] text-slate-500">{fmt(contractYear1)} year one</div>
+            <div className="text-[10px] text-slate-500">{fmt(quoted.deposit)} + {fmt(quoted.monthly)}/mo</div>
           </div>
         </div>
       </div>
@@ -371,7 +384,7 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
                     {/* Revenue Impact badge */}
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/15 font-medium flex items-center gap-1">
-                        <DollarSign size={9} /> {fmt(contractYear1)} year one if closed
+                        <DollarSign size={9} /> {fmt(quoted.deposit)} + {fmt(quoted.monthly)}/mo if closed
                       </span>
                     </div>
 
@@ -447,9 +460,9 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
             </div>
           </div>
           <div className="text-center p-3 rounded-lg bg-brand/[0.04] border border-brand/15">
-            <div className="text-2xl font-black text-brand">{fmt(contractYear1)}</div>
-            <div className="text-[10px] text-slate-500 uppercase tracking-wider">Year One</div>
-            <div className="text-[9px] text-brand mt-1">deal value {fmt(dv)}</div>
+            <div className="text-2xl font-black text-brand">{fmt(quoted.deposit)}</div>
+            <div className="text-[10px] text-slate-500 uppercase tracking-wider">Deposit</div>
+            <div className="text-[9px] text-brand mt-1">+ {fmt(quoted.monthly)}/mo</div>
           </div>
         </div>
       </GlassCard>
@@ -586,7 +599,7 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
           )}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             {[
-              { label: 'Our Advantage', items: ['AI-powered intelligence', `${lead.industry}-specific playbooks`, `${roiMultiple}x projected ROI`], color: 'brand' },
+              { label: 'Our Advantage', items: ['AI-powered intelligence', `${lead.industry}-specific playbooks`, `${fmt(recQuote.deposit)} + ${fmt(recQuote.monthly)}/mo`], color: 'brand' },
               { label: 'Their Weakness', items: ['Generic one-size-fits-all', 'No industry specialization', 'Slower time-to-value'], color: 'red-400' },
               { label: 'Switching Triggers', items: ['Contract renewal window', `${safePainPoints[0]} worsening`, 'New budget cycle'], color: 'yellow-400' },
             ].map((col, i) => (
@@ -625,11 +638,11 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
           <div className="p-4 rounded-xl bg-black/30 border border-brand/15">
             <p className="text-sm text-slate-200 leading-relaxed">
               {currentStep && currentStep.step === 1 && `${lead.company} is losing ~${fmt(Math.round(dv * 0.15))}/mo to ${(safePainPoints[0] || 'operational gaps').toLowerCase()}. Review the pain point analysis above and craft your opening around this number. Your first message should make ${(lead.name || '').split(' ')[0]} feel the cost of inaction — not hear a sales pitch. Prepare a ${el.bestMethod || 'direct outreach'} message and move to contact within 24 hours.`}
-              {currentStep && currentStep.step === 2 && `Hit ${(lead.name || '').split(' ')[0]} today via ${el.bestMethod || 'email'}. Lead with the money: "${lead.company} is leaving ${fmt(Math.round(dv * 0.15 * 12))}/yr on the table because of ${(safePainPoints[0] || 'process gaps').toLowerCase()}." Don't sell — diagnose. Your goal is to get them to confirm the pain and agree to a discovery call.`}
+              {currentStep && currentStep.step === 2 && `Hit ${(lead.name || '').split(' ')[0]} today via ${el.bestMethod || 'phone'}. Lead with the money: "${lead.company} is leaving ${fmt(Math.round(dv * 0.15 * 12))}/yr on the table because of ${(safePainPoints[0] || 'process gaps').toLowerCase()}." Don't sell — diagnose. Your goal is to get them to confirm the pain and agree to a discovery call.`}
               {currentStep && currentStep.step === 3 && `Discovery call with ${(lead.name || '').split(' ')[0]}: Your job is to get them to say the dollar amount out loud. Ask: "What does ${(safePainPoints[0] || 'this problem').toLowerCase()} cost ${lead.company} per month?" Then anchor: "So you're spending ${fmt(Math.round(dv * 0.15))}/mo on a problem that has a ${fmt(safePackages.find(p => p.recommended)?.monthly || Math.round(dv * 0.025))}/mo fix." Verify budget authority and timeline.`}
-              {currentStep && currentStep.step === 4 && `Send the proposal NOW. Frame it as: "${lead.company} is currently paying ${fmt(Math.round(dv * 0.15))}/mo for ${(safePainPoints[0] || 'this problem').toLowerCase()} — you're just paying it in lost revenue instead of a solution. The ${safePackages.find(p => p.recommended)?.name || 'Growth'} plan at ${fmt(safePackages.find(p => p.recommended)?.price || 2000)} + ${fmt(safePackages.find(p => p.recommended)?.monthly || Math.round(dv * 0.025))}/mo pays for itself ${roiMultiple}x over." Follow up in 48 hours — every day of delay costs them.`}
+              {currentStep && currentStep.step === 4 && `Send the proposal NOW. Frame it as: "${lead.company} is currently paying ${fmt(Math.round(dv * 0.15))}/mo for ${(safePainPoints[0] || 'this problem').toLowerCase()} — you're just paying it in lost revenue instead of a solution. The ${safePackages.find(p => p.recommended)?.name || 'Growth'} plan at ${fmt(safePackages.find(p => p.recommended)?.price || 2000)} + ${fmt(safePackages.find(p => p.recommended)?.monthly || Math.round(dv * 0.025))}/mo — and it starts paying for itself the first month." Follow up in 48 hours — every day of delay costs them.`}
               {currentStep && currentStep.step === 5 && `${(lead.name || '').split(' ')[0]} is negotiating — they WANT to buy but need justification. Reframe any budget objection: "The question isn't whether you can afford ${fmt(safePackages.find(p => p.recommended)?.monthly || Math.round(dv * 0.025))}/mo — it's whether you can afford another ${fmt(Math.round(dv * 0.15))} month of doing nothing." Offer the 30-day pilot if needed. Close this week.`}
-              {currentStep && currentStep.step === 6 && `Lock it down. ${lead.company} at ${fmt(dv)} — year one contract: ${fmt(contractYear1)}. Send the agreement, process payment, and schedule onboarding. Then immediately ask: "Who else in ${lead.industry} should I be talking to?" Every won deal should generate 2-3 warm referrals.`}
+              {currentStep && currentStep.step === 6 && `Lock it down. ${lead.company} — ${fmt(quoted.deposit)} deposit plus ${fmt(quoted.monthly)}/mo. Send the agreement, process payment, and schedule onboarding. Then immediately ask: "Who else in ${lead.industry} should I be talking to?" Every won deal should generate 2-3 warm referrals.`}
               {!currentStep && `Start with the revenue leak: ${lead.company} is losing ~${fmt(Math.round(dv * 0.15))}/mo to ${(safePainPoints[0] || 'inefficiency').toLowerCase()}. Build your outreach around making ${(lead.name || '').split(' ')[0]} feel that cost.`}
             </p>
           </div>
@@ -748,16 +761,6 @@ export default function LeadDetail() {
   const safeObjections = el.objections || sheet.objections;
   const firstName = (lead.name || '').split(' ')[0] || 'there';
   const painPoint1 = (safePainPoints[0] || 'scaling challenges').toLowerCase();
-  const painPoint2 = (safePainPoints[1] || 'revenue growth').toLowerCase();
-  const missedRev = fmt(Math.round((dv || 50000) * 0.15));
-  const cacInflation = fmt(Math.round(dv * 0.08));
-  const quarterlyLoss = fmt(Math.round(dv * 0.15 * 3));
-  const safeOutreach = el.outreach || [
-    { type: 'Cold Email — Revenue Leak', template: `Subject: ${lead.company} is burning ${missedRev}/mo on ${painPoint1}\n\nHi ${firstName},\n\nI analyze ${lead.industry} companies for a living, and ${lead.company} has a pattern I see all the time: ${painPoint1} is silently draining revenue — typically ${missedRev}/mo for a company your size.\n\nOn top of that, your customer acquisition costs are probably ${Math.round(20 + (lead.score || 50) * 0.15)}% higher than they need to be because ${painPoint2} is making every new customer more expensive to land.\n\nI built a 12-minute breakdown showing exactly where the money is going and how to plug the leak. No pitch, just math.\n\nOpen to seeing the numbers?\n\nBest,\nGOATED Solutions` },
-    { type: 'LinkedIn DM — CAC Attack', template: `${firstName} — quick question. Do you know what it actually costs ${lead.company} to acquire a new customer right now?\n\n${lead.industry} companies dealing with ${painPoint1} typically overspend ${cacInflation}/yr on customer acquisition alone — and most don't realize it until someone shows them the math.\n\nI've got the breakdown for companies your size. Worth a 10-min look?` },
-    { type: 'Follow-up — Competitor Displacement', template: `Hi ${firstName}, following up with some numbers that might surprise you.\n\n${lead.industry} companies that fix ${painPoint1} see:\n• ${Math.round(15 + (lead.score || 50) * 0.2)}% revenue lift in 90 days\n• ${Math.round(20 + (lead.score || 50) * 0.1)}% drop in customer acquisition cost\n• ${missedRev}/mo back in recovered revenue\n\n${lead.competitorUsing ? `I know you're using ${lead.competitorUsing} — we've displaced them at 3 similar ${lead.industry} companies this quarter alone. Happy to share what changed.` : `For ${lead.company}, that's ${quarterlyLoss} recovered in the first quarter.`}\n\nWorth a quick look?` },
-    { type: 'Breakup Email — Cost of Inaction', template: `${firstName}, last note from me.\n\nSince I first reached out, ${lead.company} has likely lost another ${missedRev}+ to ${painPoint1}. That's not a guess — it's what the data shows for ${lead.industry} companies your size.\n\nIf stopping a ${fmt(Math.round(dv * 0.15 * 12))}/yr revenue leak ever becomes a priority for the ${lead.title || 'leadership team'}, I've got the playbook ready.\n\nNo hard feelings either way. The numbers will still be here when the timing is right.\n\nBest,\nGOATED Solutions` },
-  ];
   const safeRanking = el.ranking || { overall: 50, byIndustry: 5, byPriority: 10, engagement: 'Medium', fitScore: 50, intentScore: 50 };
   const safeConversion = el.conversionProbability || Math.round((el.score || 50) * 0.6);
   const safeBuyingSignals = el.buyingSignals || lead.buyingSignals || [];
@@ -775,20 +778,21 @@ Pain points: ${safePainPoints.join('; ')}.
 Buying signals: ${safeBuyingSignals.join('; ') || 'none detected'}.
 Competitor: ${lead.competitorUsing || 'none'}.
 Revenue leak estimate: ${fmt(Math.round(dv * 0.15))}/mo (${fmt(Math.round(dv * 0.15 * 12))}/yr).
-Best channel: ${el.bestMethod || 'email'}.`;
+Best channel: ${el.bestMethod || 'phone'}.`;
       const prompt = `Generate SHARP, revenue-loss-first outreach for this specific lead. Format exactly:
 
-1) **Cold Email** — subject line + body, leading with the $ leak
-2) **LinkedIn DM** — 3 lines max, pattern-interrupt opener
-3) **Cold Call Opener** — 15-second script, name the dollar amount in first sentence
-4) **Voicemail** — 20-second script, drop numbers + callback hook
-5) **Breakup Email** — short, cost-of-inaction framed
+1) **Cold Call Opener** — 15-second script, name the dollar amount in the first sentence
+2) **Voicemail** — 20-second script, drop the numbers + a callback hook
+3) **Follow-up Call** — for the second attempt, assume they half-remember you
+4) **SMS** — 2 lines max, one question that gets a reply
+5) **LinkedIn DM** — 3 lines max, pattern-interrupt opener
 
 Rules:
+- Phone-first. Do NOT write email of any kind — we do not run email outreach.
 - Cite the lead's exact pain points and dollar leak
 - Zero marketing fluff
 - No bullet padding
-- If competitor exists, reference it in the follow-up, not the cold email
+- If competitor exists, reference it on the follow-up, not the first call
 
 Context:\n${ctx}`;
       const resp = await fetch('/api/chat', {
@@ -814,7 +818,7 @@ Context:\n${ctx}`;
   // the operator actually works the deal. No gamification on seeded leads.
   const closeSteps = [
     { step: 1, name: 'Research & Prep', status: 'current', desc: 'AI deep research on company, pain points, decision makers, and competitive landscape', check: 'Review AI Executive Summary above', action: 'Read the full intelligence report and pain point analysis' },
-    { step: 2, name: 'Initial Outreach', status: 'pending', desc: 'Multi-channel first touch — personalized based on AI analysis of best method', check: `Use ${el.bestMethod || 'email'} as primary channel`, action: 'Send personalized outreach using AI-generated scripts' },
+    { step: 2, name: 'Initial Outreach', status: 'pending', desc: 'Multi-channel first touch — personalized based on AI analysis of best method', check: `Use ${el.bestMethod || 'phone'} as primary channel`, action: 'Send personalized outreach using AI-generated scripts' },
     { step: 3, name: 'Discovery Call', status: 'pending', desc: 'Guided discovery with real-time AI coaching and objection handling', check: 'Confirm pain points and budget authority', action: 'Schedule and conduct discovery call with AI coaching enabled' },
     { step: 4, name: 'Value Demonstration', status: 'pending', desc: 'Custom proposal with ROI projections tailored to their specific pain points', check: 'Present personalized packages from Packages tab', action: 'Send proposal with custom pricing and ROI analysis' },
     { step: 5, name: 'Negotiation', status: 'pending', desc: 'AI-powered negotiation support with real-time battle cards and competitor displacement strategies', check: 'Handle objections using AI battle cards', action: 'Navigate objections and align on terms' },
@@ -921,8 +925,13 @@ Context:\n${ctx}`;
 
   // ROI calculations
   const recommendedPkg = safePackages.find(p => p.recommended) || safePackages[1];
-  const recAnnual = recommendedPkg ? (recommendedPkg.year1 || (recommendedPkg.price + recommendedPkg.monthly * 12)) : 0;
-  const roiMultiple = recAnnual ? ((dv / recAnnual) || 0).toFixed(1) : 0;
+  const recQuote = recommendedPkgQuote(safePackages);
+  const mapsLink = mapsLinkFor(el);
+  // Annual and ROI are both retainer-based: the deposit is a one-time build
+  // cost, so folding it into a recurring-return multiple would overstate it.
+  const recAnnualRetainer = recQuote.monthly * 12;
+  const annualLeakNum = Math.round(dv * 0.15 * 12);
+  const roiMultiple = recAnnualRetainer ? (annualLeakNum / recAnnualRetainer).toFixed(1) : null;
 
   // ─── Momentum Icon ──────────────────────────────────────────────────────────
   const MomentumIcon = lead.momentum === 'rising' ? TrendingUp : lead.momentum === 'declining' ? TrendingDown : Minus;
@@ -1096,7 +1105,8 @@ Context:\n${ctx}`;
                 <div className={`text-[10px] uppercase tracking-wider font-bold mb-1 ${lead.phone ? 'text-emerald-400' : 'text-slate-500'}`}>
                   {lead.phone ? 'Call Now' : 'Phone Unavailable'}
                 </div>
-                <div className="text-sm font-medium text-white">{lead.phone ? 'Direct line available — tap to call' : 'Enrich lead to unlock phone'}</div>
+                <div className="text-sm font-medium text-white font-mono tracking-wide">{lead.phone || 'No number on the listing'}</div>
+                {lead.phone && <div className="text-[10px] text-slate-500 mt-0.5">Public line — tap to call</div>}
               </div>
             </a>
             {/* Email — rendered only when an address actually exists. Apollo's
@@ -1165,14 +1175,16 @@ Context:\n${ctx}`;
             {/* Location — links straight to the Google Maps listing when the
                 lead came from Places, so the operator can read the reviews and
                 photos before dialling. */}
-            {el.mapsUrl ? (
-              <a href={el.mapsUrl} target="_blank" rel="noopener noreferrer"
+            {mapsLink ? (
+              <a href={mapsLink.url} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-3 p-3 rounded-lg bg-orange-500/[0.06] border border-orange-500/15 hover:bg-orange-500/10 transition-colors group">
                 <div className="w-9 h-9 rounded-lg bg-orange-500/15 flex items-center justify-center shrink-0">
                   <MapPin size={16} className="text-orange-400" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] text-orange-400 uppercase tracking-wider font-semibold">Google Maps Listing</div>
+                  <div className="text-[10px] text-orange-400 uppercase tracking-wider font-semibold">
+                    {mapsLink.exact ? 'Google Maps Listing' : 'Find on Google Maps'}
+                  </div>
                   <div className="text-sm text-white truncate group-hover:text-orange-300 transition-colors">{lead.location || 'View listing'}</div>
                 </div>
                 <ExternalLink size={12} className="text-orange-400/50 ml-auto shrink-0" />
@@ -1219,18 +1231,26 @@ Context:\n${ctx}`;
             <span className="text-xs font-semibold text-blue-400">LinkedIn Connect</span>
             <span className="text-[10px] text-slate-500">Copy request message</span>
           </button>
-          {/* Draft Cold Email */}
+          {/* Voicemail — replaces the old cold-email drafter. We don't run
+              email outreach, and that button wrote a generic template that
+              named no real signal from this business. */}
           <button onClick={() => {
-            const emailBody = `Subject: Quick idea for ${lead.company}\n\nHi ${(lead.name || '').split(' ')[0]},\n\nI've been following ${lead.company}'s growth in the ${lead.industry} space, and I noticed you might be dealing with ${safePainPoints[0]?.toLowerCase() || 'scaling challenges'}.\n\nWe've helped similar ${lead.industry} companies solve this exact problem, generating an average of ${fmt(Math.round(dv * 0.15))} in additional revenue within 90 days.\n\nWould you be open to a quick 15-minute call this week to see if there's a fit?\n\nBest regards`;
-            navigator.clipboard.writeText(emailBody);
-            alert('Cold email template copied to clipboard!');
+            const vm = `VOICEMAIL — ${lead.company} (20 seconds)\n\n`
+              + `"Hi, this is [your name] calling for the owner at ${lead.company}. `
+              + `${tailored.headline}. `
+              + `I put together the numbers on what that's costing you month to month — `
+              + `takes two minutes to walk through. `
+              + `Give me a call back on [your number]. Thanks."\n\n`
+              + `[IF THEY CALL BACK — LEAD WITH]\n${safeCallScript.opener}`;
+            navigator.clipboard.writeText(vm);
+            alert('Voicemail script copied to clipboard!');
           }}
             className="flex flex-col items-center gap-2 p-4 rounded-xl bg-purple-500/[0.06] border border-purple-500/15 hover:bg-purple-500/10 transition-colors group cursor-pointer">
             <div className="w-10 h-10 rounded-xl bg-purple-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Mail size={18} className="text-purple-400" />
+              <Voicemail size={18} className="text-purple-400" />
             </div>
-            <span className="text-xs font-semibold text-purple-400">Draft Cold Email</span>
-            <span className="text-[10px] text-slate-500">Copy email template</span>
+            <span className="text-xs font-semibold text-purple-400">Voicemail Script</span>
+            <span className="text-[10px] text-slate-500">Copy 20-second script</span>
           </button>
           {/* Call Script */}
           <button onClick={() => {
@@ -1383,13 +1403,13 @@ Context:\n${ctx}`;
             <div className="text-[10px] text-brand uppercase tracking-wider font-bold">Next Step</div>
             <div className="text-sm text-slate-300 truncate">
               {lead.status === 'new' && `Research ${lead.company} and prepare ${el.bestMethod || 'outreach'} targeting "${safePainPoints[0]?.toLowerCase() || 'key pain points'}"`}
-              {lead.status === 'contacted' && `Follow up with ${firstName} via ${el.bestMethod || 'email'} — reference ${painPoint1}`}
+              {lead.status === 'contacted' && `Follow up with ${firstName} via ${el.bestMethod || 'phone'} — reference ${painPoint1}`}
               {lead.status === 'qualified' && `Schedule discovery call with ${firstName} — confirm budget and timeline`}
               {lead.status === 'proposal' && `Send proposal: ${fmt(dv)} deal with ${safePainPoints[0]?.toLowerCase() || 'core solution'} focus`}
               {lead.status === 'negotiation' && `Close this deal — handle objections and push for verbal commitment today`}
               {lead.status === 'won' && `Deal closed! Request referral and explore upsell opportunities`}
               {lead.status === 'lost' && `Re-engage in 30 days with fresh value prop targeting ${painPoint1}`}
-              {!['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost'].includes(lead.status) && `Reach out to ${firstName} via ${el.bestMethod || 'email'} with personalized value prop`}
+              {!['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost'].includes(lead.status) && `Reach out to ${firstName} via ${el.bestMethod || 'phone'} with personalized value prop`}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -1433,7 +1453,7 @@ Context:\n${ctx}`;
           <div id="close-guide-section">
           <CloseGuideTab lead={lead} el={el} dv={dv} closeSteps={closeSteps} completedSteps={completedSteps}
             closeConfidence={closeConfidence} safeCallScript={safeCallScript} safePackages={safePackages}
-            safeObjections={safeObjections} safeOutreach={safeOutreach} safePainPoints={safePainPoints}
+            safeObjections={safeObjections} safePainPoints={safePainPoints}
             safeConversion={safeConversion} setTab={setTab} />
           </div>
         )}
@@ -1579,7 +1599,7 @@ Context:\n${ctx}`;
                   <div className="text-[10px] text-brand uppercase tracking-widest mb-1 font-bold">Step 4 — Lock It Down</div>
                   <p className="text-sm text-slate-300">
                     Push for the {safePackages.find(p => p.recommended)?.name || 'Growth'} package — <span className="text-brand font-semibold">{fmt(safePackages.find(p => p.recommended)?.price || 2000)} deposit + {fmt(safePackages.find(p => p.recommended)?.monthly || 750)}/mo</span>.
-                    ROI angle: <span className="text-brand font-semibold">{roiMultiple}x return</span> on their {fmt(dv)} deal value.
+                    Quote: <span className="text-brand font-semibold">{fmt(recQuote.deposit)} deposit + {fmt(recQuote.monthly)}/mo</span>.
                     Close: <span className="text-white font-medium italic">"If this works the way it has for every other {lead.industry} company we work with, when would you want to start?"</span>
                   </p>
                 </div>
@@ -1750,7 +1770,7 @@ Context:\n${ctx}`;
                     <div>
                       <div className="text-[10px] text-slate-500 uppercase tracking-wider">Phone</div>
                       {lead.phone ? (
-                        <a href={`tel:${(lead.phone || '').replace(/[^+\d]/g, '')}`} className="text-sm text-brand hover:text-white transition-colors cursor-pointer">Call direct line</a>
+                        <a href={`tel:${(lead.phone || '').replace(/[^+\d]/g, '')}`} className="text-sm text-brand hover:text-white transition-colors cursor-pointer font-mono">{lead.phone}</a>
                       ) : (
                         <span className="text-sm text-slate-500">Enrich to unlock</span>
                       )}
@@ -2439,7 +2459,7 @@ Context:\n${ctx}`;
                     <div className="text-xs text-slate-500">
                       <span className="text-purple-400 font-medium">💡 Coach tip:</span>{' '}
                       {lead.industry} companies respond best to ROI-focused messaging.
-                      Lead with the <span className="text-brand font-medium">{roiMultiple}x ROI</span> on the {safePackages.find(p => p.recommended)?.name || 'Growth'} package.
+                      Lead with the <span className="text-brand font-medium">{fmt(recQuote.deposit)} deposit + {fmt(recQuote.monthly)}/mo</span> on the {safePackages.find(p => p.recommended)?.name || 'Growth'} package.
                     </div>
                   </div>
                 </div>
@@ -2581,12 +2601,6 @@ Context:\n${ctx}`;
                       <span className="text-xl font-bold text-brand">{fmt(pkg.monthly)}</span>
                       <span className="text-slate-500 text-sm">/mo retainer</span>
                     </div>
-                    {pkg.firstMonth && (
-                      <div className="mt-3 pt-3 border-t border-white/[0.06] text-[11px] text-slate-400">
-                        <span className="text-white font-semibold">{fmt(pkg.firstMonth)}</span> due month one
-                        {pkg.year1 && <> · <span className="text-white font-semibold">{fmt(pkg.year1)}</span> year one</>}
-                      </div>
-                    )}
                   </div>
                   <div className="flex-1 space-y-2.5 border-t border-white/[0.06] pt-4">
                     {pkg.features.map((f, j) => (
@@ -2653,27 +2667,36 @@ Context:\n${ctx}`;
             {/* ROI Calculator */}
             <GlassCard highlight>
               <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
-                <Calculator size={16} className="text-brand" /> ROI Calculator
+                <Calculator size={16} className="text-brand" /> What You're Quoting
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.05] text-center">
-                  <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Deal Value</div>
-                  <div className="text-2xl font-bold text-white">{fmt(dv)}</div>
-                </div>
-                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.05] text-center">
-                  <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Recommended Package (Annual)</div>
-                  <div className="text-2xl font-bold text-brand">{recAnnual ? fmt(recAnnual) : 'N/A'}</div>
-                  <div className="text-xs text-slate-500 mt-1">{recommendedPkg?.name} plan</div>
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Deposit</div>
+                  <div className="text-2xl font-bold text-white">{fmt(recQuote.deposit)}</div>
+                  <div className="text-xs text-slate-500 mt-1">one time, up front</div>
                 </div>
                 <div className="p-4 rounded-xl bg-brand/[0.08] border border-brand/20 text-center">
-                  <div className="text-[10px] text-brand uppercase tracking-wider mb-2">Projected ROI</div>
-                  <div className="text-2xl font-bold text-brand">{roiMultiple}x</div>
-                  <div className="text-xs text-slate-500 mt-1">Return on investment</div>
+                  <div className="text-[10px] text-brand uppercase tracking-wider mb-2">Monthly Retainer</div>
+                  <div className="text-2xl font-bold text-brand">{fmt(recQuote.monthly)}</div>
+                  <div className="text-xs text-slate-500 mt-1">{recommendedPkg?.name}</div>
+                </div>
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.05] text-center">
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Annual Retainer</div>
+                  <div className="text-2xl font-bold text-white">{fmt(recAnnualRetainer)}</div>
+                  <div className="text-xs text-slate-500 mt-1">12 × monthly</div>
+                </div>
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.05] text-center">
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Their ROI</div>
+                  <div className="text-2xl font-bold text-white">{roiMultiple ? `${roiMultiple}x` : '—'}</div>
+                  <div className="text-xs text-slate-500 mt-1">recovered vs retainer</div>
                 </div>
               </div>
-              <p className="text-xs text-slate-500 mt-4 text-center">
-                If you close this deal at {fmt(dv)}, your annual ROI on the {recommendedPkg?.name} plan ({fmt(recAnnual)} year one) is {roiMultiple}x.
-              </p>
+              {roiMultiple && (
+                <p className="text-xs text-slate-500 mt-4 text-center">
+                  Against an estimated {fmt(annualLeakNum)}/yr in missed-call revenue, the {fmt(recAnnualRetainer)}/yr
+                  retainer returns about {roiMultiple}x. Deposit is excluded — it's a one-time build cost, not recurring.
+                </p>
+              )}
             </GlassCard>
           </div>
         )}

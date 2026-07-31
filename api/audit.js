@@ -53,21 +53,43 @@ function checkRate(ip) {
 }
 
 // ─── URL sanitization ───────────────────────────────────────────────────────
+// Returns { url } on success, or { error } with a message that names the actual
+// problem. The previous version collapsed every rejection into one null, so a
+// typo, an intranet address and a `javascript:` string all produced the same
+// unhelpful "Invalid URL" — the visitor had no idea what to change.
 function normalizeUrl(raw) {
-  if (!raw || typeof raw !== 'string') return null;
+  if (!raw || typeof raw !== 'string' || !raw.trim()) {
+    return { error: 'Enter a website address to audit — for example goated.solutions.' };
+  }
   let url = raw.trim().toLowerCase();
-  if (!url) return null;
-  // Block obvious garbage, file schemes, internal IPs
-  if (url.startsWith('file:') || url.startsWith('javascript:')) return null;
+
+  if (url.startsWith('file:') || url.startsWith('javascript:') || url.startsWith('data:')) {
+    return { error: 'That looks like a local file or script, not a website. Paste a public web address starting with https://.' };
+  }
+  if (/\s/.test(url)) {
+    return { error: "That address contains a space, so it isn't a valid web address. Check for a typo and paste the full URL." };
+  }
+  if (/^[^:]+:\/\//.test(url) && !/^https?:\/\//.test(url)) {
+    return { error: 'Only http and https addresses can be audited. Paste the site’s normal web address.' };
+  }
   if (!/^https?:\/\//.test(url)) url = `https://${url}`;
-  try {
-    const parsed = new URL(url);
-    // Block private / local IPs
-    const h = parsed.hostname;
-    if (h === 'localhost' || h.startsWith('127.') || h.startsWith('10.') || h.startsWith('192.168.') || h === '0.0.0.0') return null;
-    if (h.endsWith('.local') || h.endsWith('.internal')) return null;
-    return parsed.toString();
-  } catch { return null; }
+
+  let parsed;
+  try { parsed = new URL(url); }
+  catch { return { error: `We couldn't read “${raw.trim()}” as a web address. It should look like https://example.com.` }; }
+
+  const h = parsed.hostname;
+  if (h === 'localhost' || h.startsWith('127.') || h.startsWith('10.') || h.startsWith('192.168.')
+      || h.startsWith('169.254.') || h === '0.0.0.0' || h.endsWith('.local') || h.endsWith('.internal')) {
+    return { error: 'That address is on a private or local network, so we cannot reach it from the internet. Use the site’s public address.' };
+  }
+  if (!h.includes('.')) {
+    return { error: `“${h}” is missing a domain ending. Try something like ${h}.com.` };
+  }
+  if (h.endsWith('.')) {
+    return { error: `“${h}” ends with a dot. Remove the trailing dot and try again.` };
+  }
+  return { url: parsed.toString() };
 }
 
 // ─── Fetch with timeout + size cap ──────────────────────────────────────────
@@ -84,9 +106,9 @@ async function fetchPage(url, timeoutMs = 5000, maxBytes = 500_000) {
         'Accept-Language': 'en-US,en;q=0.9',
       },
     });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    if (!resp.ok) { const e = new Error(`HTTP ${resp.status}`); e.httpStatus = resp.status; throw e; }
     const ct = resp.headers.get('content-type') || '';
-    if (!ct.includes('text/html') && !ct.includes('application/xhtml')) throw new Error('Non-HTML response');
+    if (!ct.includes('text/html') && !ct.includes('application/xhtml')) { const e = new Error('Non-HTML response'); e.contentType = ct || 'unknown'; throw e; }
     // Cap body size — abort reading after maxBytes
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
@@ -678,18 +700,25 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const ip = req.headers?.['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
-  if (!checkRate(ip)) return res.status(429).json({ error: 'Rate limited. Try again in a minute.' });
+  if (!checkRate(ip)) return res.status(429).json({
+    error: "You've run several audits in a row — give it about a minute and try again.",
+    retryable: true,
+  });
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
   const rawUrl = body?.url;
-  const url = normalizeUrl(rawUrl);
-  if (!url) return res.status(400).json({ error: 'Invalid URL. Provide a public https URL.' });
+  const norm = normalizeUrl(rawUrl);
+  if (norm.error) return res.status(400).json({ error: norm.error, retryable: false });
+  const url = norm.url;
 
   const GROQ_KEY = process.env.GROQ_API_KEY;
   const CLAUDE_KEY = process.env.ANTHROPIC_API_KEY;
   if (!GROQ_KEY && !CLAUDE_KEY) {
-    return res.status(500).json({ error: 'No LLM API key configured. Set GROQ_API_KEY or ANTHROPIC_API_KEY in Vercel env.' });
+    return res.status(500).json({
+      error: 'The audit service is not fully configured yet. This is on our side, not your URL — try again shortly.',
+      retryable: true,
+    });
   }
 
   const startedAt = Date.now();
@@ -700,23 +729,58 @@ export default async function handler(req, res) {
   } catch (e) {
     // 422, not 502. An unreachable or misspelled domain is bad input, not a
     // failure of this service — returning 5xx made every typo look like an
-    // outage, which would bury real incidents in false alarms and shows the
-    // visitor a scary error on the public lead magnet.
-    const dns = /ENOTFOUND|EAI_AGAIN|getaddrinfo|fetch failed/i.test(e.message || '');
-    return res.status(422).json({
-      error: dns
-        ? "We couldn't reach that site. Check the address and try again."
-        : `Could not fetch that site: ${e.message}`,
-      url,
-      retryable: !dns,
-    });
+    // outage and showed the visitor a scary error on the public lead magnet.
+    //
+    // Each branch names what actually went wrong, because "Could not fetch
+    // that site" gave the visitor nothing to act on.
+    const host = (() => { try { return new URL(url).hostname; } catch { return url; } })();
+    const msg = e?.message || '';
+    const code = e?.cause?.code || '';
+    let error, retryable = true;
+
+    if (e?.httpStatus === 404) {
+      error = `${host} is reachable, but that page doesn't exist (404). Try the homepage instead.`;
+      retryable = false;
+    } else if (e?.httpStatus === 401 || e?.httpStatus === 403) {
+      error = `${host} blocked our scan (${e.httpStatus}). Sites behind a login or a strict firewall can't be audited.`;
+      retryable = false;
+    } else if (e?.httpStatus === 429) {
+      error = `${host} is rate-limiting us. Wait a minute and try again.`;
+    } else if (e?.httpStatus >= 500) {
+      error = `${host} returned a server error (${e.httpStatus}). Their site is having trouble — try again later.`;
+    } else if (e?.contentType) {
+      const ct = e.contentType.split(';')[0].trim();
+      error = ct && ct !== 'unknown'
+        ? `That address returned ${ct}, not a web page. Point us at an HTML page — usually the homepage.`
+        : "That address didn't return a web page. Point us at the site's homepage.";
+      retryable = false;
+    } else if (/abort/i.test(msg) || e?.name === 'AbortError' || code === 'UND_ERR_HEADERS_TIMEOUT' || code === 'UND_ERR_CONNECT_TIMEOUT') {
+      error = `${host} took too long to respond. It may be slow or temporarily down — try again in a moment.`;
+    } else if (code === 'ENOTFOUND' || code === 'EAI_AGAIN' || /getaddrinfo/i.test(e?.cause?.message || '')) {
+      error = `We couldn't find a site at ${host}. Check the spelling — that domain doesn't appear to exist.`;
+      retryable = false;
+    } else if (/CERT|SSL|TLS/i.test(code) || /certificate/i.test(msg)) {
+      error = `${host} has an invalid security certificate, so we couldn't connect safely.`;
+      retryable = false;
+    } else if (code === 'ECONNREFUSED') {
+      error = `${host} refused the connection. The domain exists but nothing is serving a website on it.`;
+      retryable = false;
+    } else if (code === 'UND_ERR_SOCKET' || code === 'ECONNRESET') {
+      error = `${host} closed the connection before responding. It's likely blocking automated visits.`;
+    } else {
+      error = `We couldn't load ${host}. It may be down or blocking automated visits.`;
+    }
+    return res.status(422).json({ error, url, retryable });
   }
 
   let signals;
   try {
     signals = extractSignals(html, url);
   } catch (e) {
-    return res.status(500).json({ error: `Signal extraction failed: ${e.message}` });
+    return res.status(500).json({
+      error: 'We reached the site but could not read its structure. This is usually a very unusual page layout — try the homepage.',
+      retryable: false,
+    });
   }
 
   // Deep-crawl helpers are OPTIONAL enrichment, and they were what pushed heavy

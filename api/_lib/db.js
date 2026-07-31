@@ -61,6 +61,17 @@ export async function userFromRequest(req) {
 
 // ─── Leads ──────────────────────────────────────────────────────────────────
 
+/**
+ * A Google Maps search URL for a business we have a name (and ideally an
+ * address) for. Used when no canonical listing URL was captured, so the
+ * "view the listing" action always works instead of silently disappearing.
+ */
+function mapsSearchUrl(company, location) {
+  if (!company) return null;
+  const q = [company, location].filter(Boolean).join(' ');
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+}
+
 /** Map our in-memory lead shape onto the leads table columns. */
 function toRow(lead, ownerId) {
   return {
@@ -94,6 +105,12 @@ function toRow(lead, ownerId) {
       domain: lead.domain || null,
       logo: lead.logo || null,
       contactAvailable: lead.contactAvailable ?? null,
+      mapsUrl: lead.mapsUrl || null,
+      rating: lead.rating ?? null,
+      reviewCount: lead.reviewCount ?? null,
+      placeGaps: lead.placeGaps || [],
+      painPoints: lead.painPoints || [],
+      bestMethod: lead.bestMethod || null,
     },
   };
 }
@@ -133,6 +150,15 @@ function fromRow(row) {
     domain: m.domain || null,
     logo: m.logo || null,
     contactAvailable: m.contactAvailable ?? false,
+    // Fall back to a Maps search for the business when no listing URL was
+    // stored — leads saved before this field existed, or sourced from Apollo.
+    // The link should resolve on every lead, not only freshly-fetched ones.
+    mapsUrl: m.mapsUrl || mapsSearchUrl(row.company || row.name, m.address || row.location),
+    rating: m.rating ?? null,
+    reviewCount: m.reviewCount ?? null,
+    placeGaps: m.placeGaps || [],
+    painPoints: m.painPoints || [],
+    bestMethod: m.bestMethod || null,
     _source: 'supabase',
   };
 }

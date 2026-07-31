@@ -567,7 +567,8 @@ function CloseCoachRow({ lead, index, colSpan, onCallClick, showToast }) {
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between"><span className="text-slate-500">Industry</span><span className="text-white font-medium">{lead.industry}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Location</span><span className="text-white font-medium">{lead.location || '--'}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Deal Value</span><span className="text-brand font-bold">{fmt(lead.dealValue || 0)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Deposit</span><span className="text-brand font-bold">{fmt(buildPackage(lead).deposit)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Monthly</span><span className="text-brand font-bold">{fmt(buildPackage(lead).monthly)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Score</span><span className={`font-bold ${scoreColor(lead.score)}`}>{lead.score}/100</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Timeline</span><span className="text-white">{lead.decisionTimeline || '--'}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Last Active</span><span className="text-white">{intel.lastActive}</span></div>
@@ -774,7 +775,11 @@ export default function LeadsPage({ onSelect }) {
     filtered.sort((a, b) => {
       const sf = aiFilters?.sort || sortField;
       const dir = (aiFilters?.order || sortDirection) === 'asc' ? 1 : -1;
-      const aVal = a[sf]; const bVal = b[sf];
+      // `deposit` isn't a field on the lead — it's derived from the gaps the
+      // record shows, so the column has to compute it to sort by what's
+      // actually on screen.
+      const pick = (l) => sf === 'deposit' ? buildPackage(l).deposit : l[sf];
+      const aVal = pick(a); const bVal = pick(b);
       if (typeof aVal === 'number' && typeof bVal === 'number') return (aVal - bVal) * dir;
       return String(aVal || '').localeCompare(String(bVal || '')) * dir;
     });
@@ -988,7 +993,7 @@ export default function LeadsPage({ onSelect }) {
                 <SortHeader field="name" label="Lead" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                 <SortHeader field="company" label="Company" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                 <SortHeader field="score" label="Score" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                <SortHeader field="dealValue" label="Deal Value" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                <SortHeader field="deposit" label="Deposit" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                 <th className="px-3 py-3 text-left text-xs text-emerald-400 font-medium uppercase tracking-wider">Close %</th>
                 <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider">Status</th>
                 <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider hidden lg:table-cell">Timeline</th>
@@ -1039,14 +1044,10 @@ export default function LeadsPage({ onSelect }) {
                         </div>
                       </td>
 
-                      {/* Deal Value */}
+                      {/* Price — deposit up front, retainer per month. */}
                       <td className="px-3 py-2.5">
-                        <div className="font-mono text-sm text-white">{fmt(dv)}</div>
-                        {/* Commission removed — payouts/wallet aren't live, so
-                            quoting a split was promising money we can't pay.
-                            The monthly retainer is the number that matters on
-                            the call anyway. */}
-                        <div className="text-[10px] text-slate-500">{fmt(pkg.monthly)}/mo retainer</div>
+                        <div className="font-mono text-sm text-white">{fmt(pkg.deposit)}</div>
+                        <div className="text-[10px] text-slate-500">+ {fmt(pkg.monthly)}/mo</div>
                       </td>
 
                       {/* Close % */}

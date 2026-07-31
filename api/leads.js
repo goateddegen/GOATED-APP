@@ -106,14 +106,35 @@ function scoreApolloOrg(org) {
 // where a missed call is a lost job the owner feels personally. Rotating through
 // them on each request means repeat visits surface different businesses, so the
 // operator never works the same list twice and never runs dry.
-const DEFAULT_TRADES = [
-  'hvac repair', 'plumber', 'roofing contractor', 'electrician',
-  'garage door repair', 'pest control', 'landscaping', 'tree service',
-  'dentist', 'chiropractor', 'med spa', 'auto repair',
-  'appliance repair', 'water damage restoration', 'fencing contractor',
-  'pool service', 'locksmith', 'towing service', 'septic service',
-  'window replacement', 'flooring contractor', 'painting contractor',
+// Ordered by how closable the vertical is for us, not by how many businesses
+// exist in it. The top block is emergency and high-ticket trades: the customer
+// calls in a hurry, calls the next name on the list if nobody answers, and a
+// single booked job is worth more than a month of our retainer. That is the
+// easiest missed-call argument to make, so those trades are weighted to appear
+// more often than the long tail below them.
+const CORE_TRADES = [
+  'hvac repair', 'hvac contractor', 'air conditioning repair', 'heating contractor',
+  'plumber', 'emergency plumber', 'drain cleaning service', 'water heater installation',
+  'electrician', 'emergency electrician',
+  'roofing contractor', 'water damage restoration', 'mold remediation',
+  'garage door repair', 'locksmith', 'appliance repair',
+  'septic service', 'well drilling contractor', 'foundation repair',
 ];
+
+const SECONDARY_TRADES = [
+  'pest control', 'landscaping', 'tree service', 'lawn care service',
+  'auto repair', 'transmission repair', 'auto body shop', 'towing service',
+  'fencing contractor', 'pool service', 'window replacement',
+  'flooring contractor', 'painting contractor', 'concrete contractor',
+  'remodeling contractor', 'gutter cleaning service', 'chimney sweep',
+  'junk removal service', 'moving company', 'carpet cleaning service',
+  'house cleaning service', 'paving contractor', 'solar installer',
+  'dentist', 'chiropractor', 'med spa', 'veterinarian', 'optometrist',
+];
+
+// Core trades appear twice so a random draw favours them roughly 2:1 without
+// ever excluding the long tail — variety on the page still matters.
+const DEFAULT_TRADES = [...CORE_TRADES, ...CORE_TRADES, ...SECONDARY_TRADES];
 
 // Must be request-scoped, not module-scoped. Two earlier attempts failed in
 // production for the same underlying reason:
@@ -140,10 +161,14 @@ function rotatingTrade() {
  * the whole page is wasted. Blending gives a mixed book to work.
  */
 function pickTrades(n) {
+  // DEFAULT_TRADES repeats the core trades to weight the draw, so drawing by
+  // index alone could pick the same trade twice and hand back a page that is
+  // half one vertical again. Skip anything already chosen.
   const pool = [...DEFAULT_TRADES];
   const out = [];
-  for (let i = 0; i < n && pool.length; i++) {
-    out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  while (out.length < n && pool.length) {
+    const t = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+    if (!out.includes(t)) out.push(t);
   }
   return out;
 }
@@ -880,11 +905,24 @@ export default async function handler(req, res) {
 
         // Interleave round-robin rather than concatenating, so the top of the
         // list is mixed even before scoring reorders it.
+        //
+        // Trades overlap — "hvac repair" and "air conditioning repair" return
+        // many of the same businesses — so the same company was landing on the
+        // page twice. Dedupe on the Places id, falling back to name + address
+        // for anything without one.
         const merged = [];
+        const seen = new Set();
+        const keyOf = (l) => (l._placeId || l._apolloId || l.external_id
+          || `${(l.company || '').toLowerCase()}|${(l.address || '').toLowerCase()}`);
         for (let i = 0; merged.length < limit; i++) {
           let added = false;
           for (const b of buckets) {
-            if (b[i]) { merged.push(b[i]); added = true; }
+            if (!b[i]) continue;
+            added = true;                       // bucket still has depth to draw from
+            const k = keyOf(b[i]);
+            if (seen.has(k)) continue;
+            seen.add(k);
+            merged.push(b[i]);
             if (merged.length >= limit) break;
           }
           if (!added) break;

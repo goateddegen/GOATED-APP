@@ -101,13 +101,27 @@ export default function AuditPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: u }),
       });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data?.error || `HTTP ${resp.status}`);
-      if (!data?.analysis) throw new Error('Audit returned no analysis');
+      // A non-JSON body (gateway timeout, HTML error page) used to surface as a
+      // JSON parse error, which told the visitor nothing.
+      let data = null;
+      try { data = await resp.json(); } catch { data = null; }
+
+      if (!resp.ok) {
+        throw new Error(data?.error || (
+          resp.status === 504 || resp.status === 408
+            ? 'The scan took too long and timed out. Large sites sometimes need a second attempt.'
+            : "Something went wrong on our side while scanning that site. Try again in a moment."
+        ));
+      }
+      if (!data?.analysis) throw new Error('We scanned the site but could not produce a report. Try again in a moment.');
       setResult(data);
       setStep('result');
     } catch (e) {
-      setErr(e.message || 'Audit failed');
+      // A thrown TypeError here means the request never left the browser.
+      const offline = e instanceof TypeError || /failed to fetch|networkerror/i.test(e?.message || '');
+      setErr(offline
+        ? 'We could not reach the audit service. Check your connection and try again.'
+        : (e.message || 'Something went wrong. Try again in a moment.'));
       setStep('error');
     } finally {
       if (phaseTimer.current) { clearInterval(phaseTimer.current); phaseTimer.current = null; }
@@ -261,14 +275,18 @@ export default function AuditPage() {
   // STEP: ERROR
   // ══════════════════════════════════════════════════════════════════════
   if (step === 'error') {
-    const isKeyIssue = err && /api.?key|unauthor|forbidd|no llm|no provider|503|rate.?limit/i.test(String(err));
+    const isKeyIssue = err && /not fully configured|api.?key|no llm|no provider/i.test(String(err));
+    // Problems the visitor can fix by changing what they typed.
+    const isInputIssue = err && /check the spelling|doesn't exist|homepage|web address|domain ending|private or local|security certificate|not a web page|404|blocked our scan/i.test(String(err));
     return (
       <div className="min-h-screen flex items-center justify-center px-6">
         <div className="text-center max-w-2xl">
           <div className="w-14 h-14 mx-auto mb-5 rounded-full flex items-center justify-center bg-red-500/10 border border-red-500/30">
             <AlertTriangle size={24} className="text-red-400" />
           </div>
-          <div className="text-xl font-bold text-white mb-2">Audit failed</div>
+          <div className="text-xl font-bold text-white mb-2">
+            {isInputIssue ? "We couldn't audit that address" : 'Audit failed'}
+          </div>
           <div className="text-sm text-slate-400 mb-6">{err}</div>
           {isKeyIssue && (
             <div className="text-left bg-black/40 border border-amber-500/20 rounded-xl p-5 mb-6">
