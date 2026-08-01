@@ -6,7 +6,7 @@ import {
   Linkedin, Clock, Flame, Brain, MessageSquare, Bot, Wand2, Filter,
   Target, Star, Eye, Copy, X, Activity, CheckCircle,
   Crown, PhoneCall, CalendarClock, Timer, UserSearch, Table2,
-  ExternalLink, MapPin, Crosshair, AlertTriangle, Radio,
+  ExternalLink, MapPin, Crosshair, AlertTriangle, Radio, RefreshCw,
 } from 'lucide-react';
 import { useStore, fmt, priorities, statuses, industries } from '../hooks/useStore';
 import { buildOutreachStrategy, deriveGaps, recommendTier, buildPackage } from '../lib/outreach';
@@ -594,6 +594,10 @@ function CloseCoachRow({ lead, index, colSpan, onCallClick, showToast }) {
 // ---------------------------------------------------------------------------
 // MAIN COMPONENT
 // ---------------------------------------------------------------------------
+// Set on the first leads fetch of this page load and deliberately never reset
+// by navigation — only a browser refresh clears it (the module re-executes).
+let fetchedThisLoad = false;
+
 export default function LeadsPage({ onSelect }) {
   // Selective selectors to avoid full-store re-renders (ticker, RAF, etc).
   const search = useStore(s => s.search);
@@ -615,6 +619,7 @@ export default function LeadsPage({ onSelect }) {
   const degenMode = useStore(s => s.degenMode);
 
   const fetchLiveLeads = useStore(s => s.fetchLiveLeads);
+  const lastAddedLeadCount = useStore(s => s.lastAddedLeadCount);
   const liveLeads = useStore(s => s.liveLeads);
   const dataMode = useStore(s => s.dataMode);
   const isLoadingLeads = useStore(s => s.isLoadingLeads);
@@ -622,13 +627,19 @@ export default function LeadsPage({ onSelect }) {
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, []);
 
-  // Refetch on every visit to this page, not just the first mount of the session.
-  // The component unmounts on navigation, so keying the effect to `page` means
-  // leaving and returning pulls a fresh rotation of businesses rather than
-  // redisplaying the previous list.
+  // Fetch once per page load, not once per visit to this route.
+  //
+  // This used to fire on every visit, which meant opening a lead and pressing
+  // back replaced the entire list — the row you had just been reading was gone,
+  // along with everything you had already worked through. `fetchedThisLoad` is
+  // module-scoped, so it survives in-app navigation but resets on a real
+  // browser refresh: back from a lead keeps the list untouched, while a refresh
+  // pulls a new rotation and appends it to what's already there.
   const currentPage = useStore(s => s.page);
   useEffect(() => {
-    if (currentPage === 'leads') fetchLiveLeads();
+    if (currentPage !== 'leads' || fetchedThisLoad) return;
+    fetchedThisLoad = true;
+    fetchLiveLeads();
   }, [currentPage, fetchLiveLeads]);
 
   const isLive = dataMode === 'live' && liveLeads.length > 0;
@@ -880,10 +891,22 @@ export default function LeadsPage({ onSelect }) {
             {degenMode ? <><Flame size={24} className="text-orange-400" /> DEGEN Closer</> : <><Target size={24} className="text-brand" /> Closing Pipeline</>}
           </h1>
           <p className="text-slate-500 text-sm mt-0.5">
-            {totalFiltered.toLocaleString()} leads {aiFilters ? '(filtered)' : ''} &middot; Close deals, earn 13% flat commission
+            {/* Commission dropped here too — payouts aren't wired, so the
+                header was advertising a split we have no way to pay. */}
+            {totalFiltered.toLocaleString()} leads {aiFilters ? '(filtered)' : ''} &middot; Ranked by closability
+            {lastAddedLeadCount > 0 && (
+              <span className="text-emerald-400"> &middot; {lastAddedLeadCount} new added</span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Leads accumulate rather than being replaced, so there has to be a
+              way to pull more without reloading the whole page. */}
+          <button onClick={() => fetchLiveLeads()} disabled={isLoadingLeads}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border bg-surface-2 border-white/[0.05] text-slate-400 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed">
+            <RefreshCw size={14} className={isLoadingLeads ? 'animate-spin' : ''} />
+            {isLoadingLeads ? 'Finding…' : 'Load more'}
+          </button>
           <button onClick={() => setAiChatOpen(!aiChatOpen)}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${aiChatOpen ? 'bg-brand/15 border-brand/30 text-brand' : 'bg-surface-2 border-white/[0.05] text-slate-400 hover:text-white'}`}>
             <Brain size={14} /> AI Search

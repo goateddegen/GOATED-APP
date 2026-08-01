@@ -832,6 +832,60 @@ function computePipelineAnalytics(leads) {
 // ===========================================================================
 // ZUSTAND STORE
 // ===========================================================================
+// ─── Persisted lead pool ────────────────────────────────────────────────────
+// Leaving a lead and coming back used to replace the whole list, so the row you
+// were just looking at could vanish and the page you had worked through was
+// gone. Leads now accumulate: each fetch appends whatever is genuinely new and
+// leaves everything already on the page alone.
+const LIVE_LEADS_KEY = 'goated_live_leads';
+const MAX_STORED_LEADS = 200;   // ~300KB of localStorage, well inside the 5MB cap
+
+/** Stable identity for a lead across fetches. Falls back to name + place. */
+function leadKey(l) {
+  return l._placeId || l._apolloId || l.external_id
+    || `${(l.company || l.name || '').toLowerCase()}|${(l.address || l.location || '').toLowerCase()}`;
+}
+
+function loadStoredLeads() {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = JSON.parse(localStorage.getItem(LIVE_LEADS_KEY) || '[]');
+    return Array.isArray(raw) ? raw : [];
+  } catch { return []; }
+}
+
+function persistLeads(leads) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(LIVE_LEADS_KEY, JSON.stringify(leads.slice(-MAX_STORED_LEADS)));
+  } catch {
+    // Quota exceeded — keep only the most recent half rather than losing the lot.
+    try { localStorage.setItem(LIVE_LEADS_KEY, JSON.stringify(leads.slice(-Math.floor(MAX_STORED_LEADS / 2)))); }
+    catch { /* give up on persistence; the in-memory list still works */ }
+  }
+}
+
+/**
+ * Merge a freshly fetched batch onto the leads we already hold.
+ *
+ * New rows go on the end and are given ids above every existing one. Reusing
+ * the API's 1..25 numbering would collide with stored leads, and since `id` is
+ * what selects a lead, opening one row would have shown a different business.
+ */
+function mergeLeads(existing, incoming) {
+  const seen = new Set(existing.map(leadKey));
+  let nextId = existing.reduce((m, l) => Math.max(m, Number(l.id) || 0), 0) + 1;
+  const added = [];
+  for (const l of incoming) {
+    const k = leadKey(l);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    added.push({ ...l, id: nextId++, _addedAt: new Date().toISOString() });
+  }
+  const merged = [...existing, ...added].slice(-MAX_STORED_LEADS);
+  return { merged, addedCount: added.length };
+}
+
 export const useStore = create((set, get) => ({
   // Navigation
   // Email from a CONFIRMED Supabase session. Deliberately separate from `user`,
@@ -958,7 +1012,10 @@ export const useStore = create((set, get) => ({
   },
 
   // Live Data State
-  liveLeads: [],
+  // Restored from localStorage so a browser refresh keeps the list you built
+  // and appends to it, rather than starting from nothing.
+  liveLeads: loadStoredLeads(),
+  lastAddedLeadCount: 0,
   liveTrends: [],
   liveMarketData: {},
   livePlays: [],
@@ -989,13 +1046,17 @@ export const useStore = create((set, get) => ({
       const res = await authedFetch('/api/leads?limit=25');
       if (!res.ok) throw new Error(`Leads API returned ${res.status}`);
       const data = await res.json();
+      const incoming = data.leads || data;
+      const { merged, addedCount } = mergeLeads(get().liveLeads, incoming);
+      persistLeads(merged);
       set({
-        liveLeads: data.leads || data,
+        liveLeads: merged,
+        lastAddedLeadCount: addedCount,
         isLoadingLeads: false,
         lastFetchedLeads: new Date().toISOString(),
         dataMode: 'live',
       });
-      return data.leads || data;
+      return merged;
     } catch (err) {
       console.warn('[GOATED] Live leads fetch failed, using generated data:', err.message);
       set({
