@@ -794,6 +794,24 @@ export default function LeadDetail() {
     }
   }, [el.website, el.domain, el.company]);
 
+  // Run it as soon as a lead is opened rather than waiting for a click. Every
+  // other piece of lead data is derived on render, so the contacts panel was
+  // the only thing that stayed blank until asked — the operator had no reason
+  // to know there was anything behind the button.
+  //
+  // Deliberately per-lead and not per-row: firing this from the Leads table
+  // would launch 25 site crawls on every page load.
+  const contactsFetchedFor = useRef(null);
+  useEffect(() => {
+    const site = el.website || el.domain;
+    const key = `${lead.id}|${site || ''}`;
+    if (!site || contactsFetchedFor.current === key) return;
+    contactsFetchedFor.current = key;
+    setContacts(null);
+    setContactsError(null);
+    findContacts();
+  }, [lead.id, el.website, el.domain, findContacts]);
+
   // ── Regenerate outreach with real AI, per-lead ──────────────────────────────
   const regenerateAIScripts = useCallback(async () => {
     setAiScriptsLoading(true);
@@ -1126,7 +1144,7 @@ Context:\n${ctx}`;
               disabled={contactsLoading || (!el.website && !el.domain)}
               className="ml-auto shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-300 text-xs font-semibold hover:bg-violet-500/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
               {contactsLoading ? <><Timer size={13} className="animate-spin" /> Reading site…</>
-                : <><Search size={13} /> {contacts ? 'Re-scan' : 'Find contacts'}</>}
+                : <><Search size={13} /> Re-scan</>}
             </button>
           </div>
 

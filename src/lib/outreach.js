@@ -23,7 +23,12 @@ export function deriveGaps(lead) {
   if (!lead.website && !lead.domain) {
     gaps.push({ key: 'no-site', label: 'No website on file', angle: 'They are invisible to search — every lead comes from referral or luck.' });
   }
-  if (!lead.linkedin_url) {
+  // Only meaningful for a company that would plausibly have one. A two-truck
+  // plumber has no LinkedIn and does not care, so this fired on every local
+  // lead and buried the gaps that actually matter.
+  const isLocalOperator = lead.lead_source === 'Google Places' || lead._source === 'places'
+    || (!lead.employees && lead.reviewCount != null);
+  if (!lead.linkedin_url && !isLocalOperator) {
     gaps.push({ key: 'no-linkedin', label: 'No LinkedIn presence', angle: 'No employer brand — hiring and credibility both suffer.' });
   }
   if (!lead.phone) {
@@ -37,6 +42,29 @@ export function deriveGaps(lead) {
   }
   if (lead.foundedYear && new Date().getFullYear() - lead.foundedYear <= 5) {
     gaps.push({ key: 'young', label: `Founded ${lead.foundedYear}`, angle: 'Young business still building repeatable lead flow.' });
+  }
+  // Review signals ride along on every Places lead and are the strongest local
+  // angle we have, but this only looked at Apollo-shaped fields — so a business
+  // with 4.9 stars and six reviews showed no gap at all.
+  const reviews = lead.reviewCount;
+  const rating = lead.rating;
+  if (reviews === 0) {
+    gaps.push({ key: 'no-reviews', label: 'No reviews at all', angle: 'Invisible in local ranking — review generation is the fastest lever here.' });
+  } else if (typeof reviews === 'number' && reviews < 25) {
+    gaps.push({
+      key: 'thin-reviews',
+      label: rating ? `Only ${reviews} reviews at ${rating}★` : `Only ${reviews} reviews`,
+      angle: rating && rating >= 4
+        ? 'Customers are happy but nobody is asking them to say so — competitors outrank them on volume alone.'
+        : 'Too little social proof to win a comparison.',
+    });
+  }
+  if (typeof rating === 'number' && rating > 0 && rating < 4 && reviews > 5) {
+    gaps.push({
+      key: 'low-rating',
+      label: `${rating}★ average`,
+      angle: 'Rating is actively costing them calls. Fixing follow-up matters more than more traffic.',
+    });
   }
   return gaps;
 }
