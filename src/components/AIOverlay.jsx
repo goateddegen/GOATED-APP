@@ -1625,16 +1625,10 @@ export default function AIOverlay() {
               ? `${m.content}\n\n[${pipelineContext}]`
               : m.content
           }));
-        const slimLeads = leads.slice(0, 200).map(l => ({
-          id: l.id, name: l.name, company: l.company, industry: l.industry,
-          location: l.location, score: l.score, dealValue: l.dealValue,
-          status: l.status, priority: l.priority, conversionProbability: l.conversionProbability,
-          bestMethod: l.bestMethod, email: l.email, phone: l.phone,
-        }));
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: apiMessages, degenMode, leadData: slimLeads, currentPage }),
+          body: JSON.stringify({ messages: apiMessages, degenMode, currentPage }),
         });
         const data = await res.json();
         // A rate-limited or unreachable provider now comes back with a plain
@@ -1728,7 +1722,7 @@ export default function AIOverlay() {
           `${l.name} at ${l.company} (score: ${l.score}, value: ${fmt(l.dealValue)}, priority: ${l.priority}, status: ${l.status})`
         ).join('; ')}${leadCtx}${revenueCtx}${coachCtx}`;
 
-        const slimLeadsQA = leads.slice(0, 200).map(l => ({
+        const slimLeadsQA = leads.slice(0, 25).map(l => ({
           id: l.id, name: l.name, company: l.company, industry: l.industry,
           location: l.location, score: l.score, dealValue: l.dealValue,
           status: l.status, priority: l.priority, conversionProbability: l.conversionProbability,

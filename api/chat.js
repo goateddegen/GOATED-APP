@@ -252,140 +252,10 @@ function setSecurityHeaders(res, origin) {
 }
 
 // ─── Lead Search Utilities ──────────────────────────────────────────────────
-const KNOWN_LOCATIONS = [
-  'San Francisco', 'New York', 'Austin', 'Seattle', 'Boston', 'Chicago', 'Denver', 'Miami', 'LA', 'London',
-  'Toronto', 'Berlin', 'Paris', 'Amsterdam', 'Dublin', 'Singapore', 'Sydney', 'Tokyo', 'Hong Kong', 'Tel Aviv',
-  'Portland', 'Nashville', 'Atlanta', 'Dallas', 'Phoenix', 'San Diego', 'Philadelphia', 'Minneapolis', 'Detroit', 'Charlotte',
-  'Raleigh', 'Salt Lake City', 'Pittsburgh', 'Columbus', 'Indianapolis', 'Tampa', 'Orlando', 'Las Vegas', 'Kansas City', 'St Louis',
-  'Vancouver', 'Montreal', 'Melbourne', 'Auckland', 'Stockholm', 'Copenhagen', 'Oslo', 'Helsinki', 'Zurich', 'Munich',
-  'Barcelona', 'Lisbon', 'Warsaw', 'Prague', 'Vienna', 'Milan', 'Rome', 'Bangkok', 'Seoul', 'Taipei',
-  'Dubai', 'Riyadh', 'Cape Town', 'Lagos', 'Nairobi', 'Cairo', 'Mumbai', 'Bangalore', 'Delhi', 'Jakarta',
-];
 
-const LOCATION_ALIASES = {
-  'sf': 'San Francisco', 'san fran': 'San Francisco', 'bay area': 'San Francisco',
-  'nyc': 'New York', 'new york city': 'New York', 'manhattan': 'New York',
-  'los angeles': 'LA', 'la': 'LA',
-  'stl': 'St Louis', 'saint louis': 'St Louis',
-  'lv': 'Las Vegas', 'vegas': 'Las Vegas',
-  'kc': 'Kansas City',
-  'slc': 'Salt Lake City',
-  'philly': 'Philadelphia',
-  'atl': 'Atlanta',
-  'bengaluru': 'Bangalore',
-  'bombay': 'Mumbai',
-  'hk': 'Hong Kong',
-};
 
-// Cities people might ask about that are NOT in the dataset
-const UNLISTED_CITIES = [
-  'houston', 'san antonio', 'sacramento', 'san jose', 'washington', 'dc',
-  'new orleans', 'nola', 'baltimore', 'memphis', 'louisville', 'milwaukee',
-  'oklahoma city', 'tucson', 'fresno', 'mesa', 'omaha', 'albuquerque',
-  'colorado springs', 'virginia beach', 'jacksonville', 'richmond',
-  'hartford', 'buffalo', 'rochester', 'honolulu', 'anchorage',
-];
 
-const KNOWN_INDUSTRIES = [
-  'SaaS', 'DevTools', 'AI/ML', 'Fintech', 'Healthcare', 'MedTech', 'BioTech',
-  'E-commerce', 'Retail', 'EdTech', 'Cybersecurity', 'MarTech', 'AdTech',
-  'PropTech', 'InsurTech', 'LegalTech', 'CleanTech', 'FoodTech', 'HRTech',
-  'RegTech', 'Web3/Crypto', 'Gaming', 'Robotics', 'IoT', 'SpaceTech', 'GovTech',
-];
 
-function extractSearchIntent(message) {
-  const lower = message.toLowerCase();
-  let location = null;
-  let locationNotFound = null;
-  let industry = null;
-  let minDealSize = null;
-
-  // Check aliases first
-  for (const [alias, mapped] of Object.entries(LOCATION_ALIASES)) {
-    const re = new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-    if (re.test(lower)) {
-      location = mapped;
-      break;
-    }
-  }
-
-  // Check unlisted cities (cities NOT in dataset)
-  if (!location) {
-    for (const city of UNLISTED_CITIES) {
-      const re = new RegExp(`\\b${city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-      if (re.test(lower)) {
-        locationNotFound = city.charAt(0).toUpperCase() + city.slice(1);
-        break;
-      }
-    }
-  }
-
-  // Check known locations
-  if (!location && !locationNotFound) {
-    for (const loc of KNOWN_LOCATIONS) {
-      const re = new RegExp(`\\b${loc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-      if (re.test(lower)) {
-        location = loc;
-        break;
-      }
-    }
-  }
-
-  // Check industries
-  for (const ind of KNOWN_INDUSTRIES) {
-    const re = new RegExp(`\\b${ind.replace(/[\/]/g, '.')}\\b`, 'i');
-    if (re.test(lower)) { industry = ind; break; }
-  }
-  if (!industry) {
-    if (/\bsaas\b/i.test(lower)) industry = 'SaaS';
-    else if (/\bai\b|\bmachine learning\b|\bml\b/i.test(lower)) industry = 'AI/ML';
-    else if (/\bfintech\b|\bfinancial tech/i.test(lower)) industry = 'Fintech';
-    else if (/\bcrypto\b|\bweb3\b|\bblockchain\b/i.test(lower)) industry = 'Web3/Crypto';
-    else if (/\bcyber\b|\bsecurity\b/i.test(lower)) industry = 'Cybersecurity';
-    else if (/\bhealth\b|\bmedical\b/i.test(lower)) industry = 'Healthcare';
-    else if (/\bedtech\b|\beducation\b/i.test(lower)) industry = 'EdTech';
-    else if (/\becommerce\b|\be-comm/i.test(lower)) industry = 'E-commerce';
-    else if (/\bgaming\b|\bgames?\b/i.test(lower)) industry = 'Gaming';
-  }
-
-  // Check deal size
-  const dealMatch = lower.match(/\$\s*([\d,.]+)\s*[kK]/);
-  if (dealMatch) minDealSize = parseFloat(dealMatch[1].replace(/,/g, '')) * 1000;
-  if (!minDealSize) {
-    const alt = lower.match(/([\d,.]+)\s*[kK]\+?\s*(?:deal|lead|value)/);
-    if (alt) minDealSize = parseFloat(alt[1].replace(/,/g, '')) * 1000;
-  }
-
-  return { location, locationNotFound, industry, minDealSize };
-}
-
-function searchLeads(leads, intent) {
-  if (!leads || !Array.isArray(leads) || leads.length === 0) return { matches: [], filters: '' };
-  let filtered = leads;
-  const appliedFilters = [];
-
-  if (intent.location) {
-    // Case-insensitive partial match (e.g., "houston" matches "Houston", "salt lake" matches "Salt Lake City")
-    const locLower = intent.location.toLowerCase();
-    filtered = filtered.filter(l => {
-      if (!l.location) return false;
-      const leadLocLower = l.location.toLowerCase();
-      return leadLocLower === locLower || leadLocLower.includes(locLower) || locLower.includes(leadLocLower);
-    });
-    appliedFilters.push(`location: ${intent.location}`);
-  }
-  if (intent.industry) {
-    filtered = filtered.filter(l => l.industry === intent.industry);
-    appliedFilters.push(`industry: ${intent.industry}`);
-  }
-  if (intent.minDealSize) {
-    filtered = filtered.filter(l => l.dealValue >= intent.minDealSize);
-    appliedFilters.push(`deal >= $${intent.minDealSize.toLocaleString()}`);
-  }
-
-  filtered.sort((a, b) => b.score - a.score);
-  return { matches: filtered, filters: appliedFilters.join(', ') };
-}
 
 // ─── Response Mode Configuration ────────────────────────────────────────────
 const RESPONSE_MODES = {
@@ -479,21 +349,6 @@ export default async function handler(req, res) {
     // Determine response mode and temperature
     const activeMode = RESPONSE_MODES[responseMode] || RESPONSE_MODES.default;
 
-    // Extract search intent from the latest user message
-    const latestUserMsg = sanitizedMessages[sanitizedMessages.length - 1]?.content || '';
-    const searchIntent = extractSearchIntent(latestUserMsg);
-    const hasSearchIntent = searchIntent.location || searchIntent.locationNotFound || searchIntent.industry || searchIntent.minDealSize;
-
-    // Search leads if we have data and intent
-    let leadSearchResults = null;
-    if (hasSearchIntent && leadData && Array.isArray(leadData) && leadData.length > 0) {
-      if (searchIntent.locationNotFound) {
-        leadSearchResults = { matches: [], filters: `location: ${searchIntent.locationNotFound}`, notFoundCity: searchIntent.locationNotFound };
-      } else {
-        leadSearchResults = searchLeads(leadData, searchIntent);
-      }
-    }
-
     // Determine current page context
     const currentPage = req.body.currentPage || 'home';
 
@@ -507,6 +362,11 @@ export default async function handler(req, res) {
       home: 'The user is on the HOME page — give a broad overview and guide them to the most relevant features for their question.',
     };
     const pageContext = PAGE_CONTEXT_MAP[currentPage] || PAGE_CONTEXT_MAP.home;
+
+    // The latest user turn drives several intent checks below. It was declared
+    // alongside the removed lead-search extractor, so pulling that out took
+    // this with it.
+    const latestUserMsg = sanitizedMessages[sanitizedMessages.length - 1]?.content || '';
 
     // Detect deep research mode
     const isDeepResearch = /\b(research|analyze|deep dive|report|brief|investigation|breakdown)\b/i.test(latestUserMsg);
@@ -533,13 +393,15 @@ RULES — OBEY EVERY ONE:
 - Bullets beat paragraphs. Lead with the number or action — no "Sure, here's…" preambles.
 - Name + number is a complete answer. Say it and stop.
 - EXACT actions only. No "follow up soon" / "build rapport" — give the literal next move.
-- ONLY real leads from the search results injected below. Never invent a name, company, or dollar amount.
-- If no results: "No leads in [filter]." Done.
-- Lead refs = [LEAD_CARD:id]. Page refs bold: **Leads**, **Dashboard**, **Trends**, **Wallet**, **Audit**, **Managed**.
-- Lead queries: numbered list, each as [LEAD_CARD:id] + deal value + close % + one-line action. End with [NAVIGATE:leads].
+- ONLY real businesses returned by a tool. Never invent a name, company, phone or dollar amount.
+- If a tool returns nothing: say so plainly and stop. Do not fill the gap.
+- Page refs bold: **Leads**, **Dashboard**, **Audit**.
+- Lead queries are answered from tool output, and the app formats that list itself —
+  do NOT restate deal values or close percentages. We do not compute them per business,
+  so any figure you write there is invented. This line used to ask you for exactly that.
+- Never emit [LEAD_CARD:id]; you have no real ids.
 - Nav phrases ("go to X", "open X", "take me to X"): respond with one line and [NAVIGATE:pageid]. No essay.
-- Plays: BUY/SELL/HOLD first, 1 line why, entry/exit/stop.
-- 13% flat commission on every closed deal. For every deal mention, include commission $ impact.
+- Never mention commission, payouts or splits — we do not pay them.
 - Sub-$20K deals: same-day follow-up + simplified proposal — speed wins.
 
 ${''/* DEGEN prompt removed. It injected "Wolf of Wall Street energy" — trading
@@ -552,21 +414,17 @@ CURRENT PAGE CONTEXT: ${pageContext}
 
 RESPONSE MODE: ${activeMode.description}`;
 
-    // Inject lead search results
-    if (leadSearchResults) {
-      if (leadSearchResults.notFoundCity || leadSearchResults.matches.length === 0) {
-        const cityName = leadSearchResults.notFoundCity || searchIntent.location || 'that location';
-        systemPrompt += `\n\nLEAD SEARCH: No leads found for "${leadSearchResults.filters || cityName}". Tell the user exactly: "No leads found in ${cityName}." Then suggest nearby cities from our coverage: San Francisco, New York, Austin, Seattle, Boston, Chicago, Denver, Miami, LA, London, Toronto, Atlanta, Dallas, Phoenix, Charlotte, Nashville, Portland, Tampa, Orlando. Do NOT make up leads.`;
-      } else {
-        const top = leadSearchResults.matches.slice(0, 8);
-        const totalVal = leadSearchResults.matches.reduce((s, l) => s + l.dealValue, 0);
-        systemPrompt += `\n\nLEAD SEARCH RESULTS (${leadSearchResults.filters}): ${leadSearchResults.matches.length} leads found, total pipeline $${totalVal.toLocaleString()}. Top ${top.length}:\n`;
-        top.forEach((l, i) => {
-          systemPrompt += `${i + 1}. [LEAD_CARD:${l.id}] ${l.name} @ ${l.company} (${l.industry}) — Score:${l.score}, Deal:$${l.dealValue.toLocaleString()}, ${l.location}, ${l.status}, Conv:${l.conversionProbability}%\n`;
-        });
-        systemPrompt += `Present these using [LEAD_CARD:id] format. Start with a 1-line summary of count and total value. Do NOT add leads not in this list. ALWAYS include [NAVIGATE:leads] at the end so the app routes to the leads page.`;
-      }
-    }
+    // The legacy in-memory lead search that used to live here has been removed.
+    //
+    // It filtered whatever the client had already loaded rather than fetching
+    // real businesses, and it injected two fabrications straight into the
+    // prompt as fact: `Conv:${l.conversionProbability}%`, which is null on
+    // every live lead and therefore rendered as "undefined%", and a "total
+    // pipeline" sum of estimated deal values. It also offered London and
+    // Toronto as coverage, which is not the market.
+    //
+    // Live lead search is handled by the deterministic fast path and the
+    // search_leads tool, both of which return real businesses.
 
     // Enrich system prompt with lead context if provided
     if (context && mode === 'leads') {
