@@ -28,6 +28,60 @@ function sanitizeInput(text) {
  * Anything numeric that does appear in the tool results is left alone, so real
  * ratings, review counts and prices survive.
  */
+/**
+ * Render a lead search result without going back to the model.
+ *
+ * Everything the assistant used to get wrong about a lead list was a
+ * re-typing error: company names that were not in the results, phone numbers
+ * invented to fill a slot, review counts drifting, "no gaps" attached to a
+ * business that had three. The model was reading correct data and
+ * paraphrasing it badly.
+ *
+ * There is no reason to let it paraphrase at all here. The tool output is
+ * already structured, so we format it ourselves — which makes this answer
+ * hallucination-proof by construction, halves the token cost of the most
+ * common query, and still works when the model is rate limited.
+ */
+function renderLeadResults(result, args) {
+  const leads = Array.isArray(result?.leads) ? result.leads : [];
+  const titleCase = (t) => String(t || '').replace(/\b[a-z]/g, (c) => c.toUpperCase());
+  const where = titleCase(result?.locationUsed || args?.location || '') || 'your area';
+  const trade = String(args?.query || '').trim();
+  // "12 hvac in dallas" reads like a typo; name the unit.
+  const what = trade ? `${trade} businesses` : 'businesses';
+
+  if (!leads.length) {
+    return `No ${what} found in ${where} right now. Try a nearby city, or a broader trade `
+      + `(for example "plumber" rather than "emergency drain repair").`;
+  }
+
+  const money = (n) => `$${n.toLocaleString('en-US')}`;
+  const lines = leads.slice(0, 8).map((l, i) => {
+    const bits = [];
+    if (l.reviews != null) bits.push(`${l.reviews} review${l.reviews === 1 ? '' : 's'}${l.rating ? ` at ${l.rating}★` : ''}`);
+    if (!l.website) bits.push('**no website**');
+    if (!l.phone) bits.push('no published number');
+    // `gaps` carries the placeholder string when nothing was found; only show
+    // real ones so we never announce a gap that isn't there.
+    const realGaps = (l.gaps || []).filter(g => !/^none found/i.test(g));
+    if (realGaps.length) bits.push(realGaps.join(', '));
+
+    const quote = !l.website ? `${money(4000)} + ${money(1000)}/mo` : `${money(2000)} + ${money(750)}/mo`;
+    return `${i + 1}. **${l.company}**${l.location ? ` — ${l.location}` : ''}\n`
+      + `   ${bits.join(' · ') || 'Established operator'}\n`
+      + `   ${l.phone ? `${l.phone} · ` : ''}Quote ${quote}`;
+  });
+
+  const noSite = leads.filter(l => !l.website).length;
+  const head = `${leads.length} ${what} in ${where}, ranked by how closable they are.`;
+  const tail = noSite
+    ? `\n\n${noSite} ${noSite === 1 ? 'has' : 'have'} no website — lead with the build plus phone cover.`
+    : `\n\nAll of them have a site and solid reviews, so there's no obvious gap to open on. `
+      + `Pitch missed-call recovery: ask who answers after hours.`;
+
+  return `${head}\n\n${lines.join('\n')}${tail}`;
+}
+
 function stripUngroundedFigures(text, toolResultsJson) {
   if (!text) return text;
   const grounded = toolResultsJson || '';
@@ -76,6 +130,66 @@ function sanitizeOutput(text) {
   clean = clean.replace(/javascript:/gi, '');
   clean = clean.replace(/on\w+\s*=\s*["'][^"']*["']/gi, '');
   return clean;
+}
+
+// ─── No-LLM fast path for lead searches ─────────────────────────────────────
+// "hvac leads in dallas" is the single most common thing anyone asks this
+// chat, and it needs no language model: it's a trade and a city. Parsing it
+// directly means the answer is identical every time, costs nothing against the
+// daily token allowance, and keeps working when the model is unavailable — the
+// state the assistant spent most of today in.
+//
+// Deliberately conservative. Anything that isn't clearly "<trade> in <place>"
+// falls through to the model, because a wrong guess here would answer a
+// question the user didn't ask.
+const TRADE_WORDS = [
+  'hvac', 'air conditioning', 'ac repair', 'heating', 'furnace',
+  'plumber', 'plumbing', 'drain', 'water heater',
+  'electrician', 'electrical', 'roofer', 'roofing', 'gutter',
+  'landscaper', 'landscaping', 'lawn care', 'tree service', 'fencing', 'fence',
+  'pest control', 'exterminator', 'locksmith', 'garage door',
+  'appliance repair', 'water damage', 'mold remediation', 'restoration',
+  'septic', 'well drilling', 'foundation repair', 'concrete', 'paving',
+  'painter', 'painting', 'flooring', 'remodeling', 'contractor',
+  'auto repair', 'mechanic', 'body shop', 'towing', 'tow truck',
+  'pool service', 'pool cleaning', 'window replacement', 'windows',
+  'cleaning service', 'house cleaning', 'carpet cleaning', 'junk removal',
+  'moving company', 'movers', 'chimney', 'solar',
+  'dentist', 'chiropractor', 'med spa', 'veterinarian', 'vet', 'optometrist',
+];
+
+function fastLeadSearchIntent(message) {
+  if (typeof message !== 'string') return null;
+  const text = message.trim();
+  if (text.length > 140) return null;                    // long asks are rarely a plain search
+
+  const lower = text.toLowerCase();
+
+  // Must read as a request for businesses, not advice about them.
+  if (/\b(how|why|should i|what should|explain|write|draft|script|objection|pitch|email)\b/.test(lower)) return null;
+
+  // Allow the plural — people ask for "plumbers", not "plumber".
+  const trade = TRADE_WORDS.find(t =>
+    new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`).test(lower));
+  if (!trade) return null;
+
+  // Location: whatever follows in/near/around, minus trailing qualifiers.
+  let location = null;
+  const m = lower.match(/\b(?:in|near|around|from)\s+([a-z .'-]{2,40}?)(?:\s+(?:with|that|who|and|area|please)\b|[,.?!]|$)/);
+  if (m) {
+    location = m[1].trim().replace(/\s+/g, ' ');
+    if (/^(the|my|me|us|here|town|city|area)$/.test(location)) location = null;
+  } else if (/\bnear me\b|\bmy area\b|\baround here\b/.test(lower)) {
+    location = '';                                       // caller's own city, resolved server-side
+  }
+  if (location === null) return null;                    // no place named — let the model handle it
+
+  // An explicit "with no website" style filter is a real request we cannot
+  // express through the Places query, so hand those to the model instead of
+  // silently ignoring the constraint.
+  if (/\bno website\b|\bwithout a website\b|\bbad reviews?\b|\bno reviews?\b/.test(lower)) return null;
+
+  return { query: trade, location };
 }
 
 // ─── Security: Request ID Tracking ──────────────────────────────────────────
@@ -536,6 +650,40 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
       pricing: [2000, 750, 250, 300, 1500, 10000, 20000, 2500, 5000],
     });
 
+    // Before spending a model call: if this is plainly "<trade> in <city>",
+    // run the search and format it ourselves. Same answer every time, no
+    // tokens, and it still works once the daily allowance is gone.
+    // NB: `origin` above is the CORS origin — an allow-listed constant, not
+    // this server's address. Self-fetches must use the request's own host, or
+    // they end up hitting whatever is first in ALLOWED_ORIGINS.
+    const selfHost = req.headers.host || '';
+    const selfProto = req.headers['x-forwarded-proto']
+      || (/^(localhost|127\.0\.0\.1)/.test(selfHost) ? 'http' : 'https');
+    const selfOrigin = `${selfProto}://${selfHost}`;
+
+    const fastIntent = fastLeadSearchIntent(contextMessages[contextMessages.length - 1]?.content || '');
+    if (fastIntent) {
+      try {
+        const result = await runTool('search_leads', fastIntent, {
+          origin: selfOrigin,
+          authorization: req.headers.authorization,
+        });
+        if (result && !result.error) {
+          return res.status(200).json({
+            content: renderLeadResults(result, fastIntent),
+            fallback: false,
+            llm: 'deterministic:fast-path',
+            toolsUsed: [{ name: 'search_leads', args: fastIntent }],
+            requestId,
+            responseMode: responseMode || 'default',
+          });
+        }
+      } catch (e) {
+        // Fall through to the model rather than failing the request.
+        console.warn(`[${requestId}] fast path failed, deferring to LLM:`, e.message);
+      }
+    }
+
     if (apiKey) {
       try {
         const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -578,13 +726,6 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
         // Two rounds maximum: enough to call a tool and then answer with the
         // result, bounded so a confused model can't loop until the function
         // times out.
-        // Vercel sets x-forwarded-proto; local dev doesn't, and defaulting to
-        // https made the self-fetch to http://localhost fail silently — the tool
-        // ran, returned nothing, and the model truthfully said "no leads".
-        const host = req.headers.host || '';
-        const proto = req.headers['x-forwarded-proto']
-          || (/^(localhost|127\.0\.0\.1)/.test(host) ? 'http' : 'https');
-        const origin = `${proto}://${host}`;
         const convo = [{ role: 'system', content: systemPrompt }, ...chatMessages];
         const MAX_ROUNDS = 2;
 
@@ -646,14 +787,21 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
                 + 'happily produce (123) 456-7890 to fill the slot; omit the number instead.\n'
                 + '- Be concise: a short list, one line each, then a single next action.',
             });
+            let directAnswer = null;
             for (const c of calls) {
               let args = {};
               try { args = JSON.parse(c.function?.arguments || '{}'); } catch { /* malformed args */ }
               const result = await runTool(c.function?.name, args, {
-                origin,
+                origin: selfOrigin,
                 authorization: req.headers.authorization,
               });
               toolsUsed.push({ name: c.function?.name, args });
+
+              // A lead list is pure data. Render it ourselves rather than
+              // asking the model to read it back — see renderLeadResults.
+              if (c.function?.name === 'search_leads' && !result?.error && calls.length === 1) {
+                directAnswer = renderLeadResults(result, args);
+              }
               convo.push({
                 role: 'tool',
                 tool_call_id: c.id,
@@ -663,6 +811,16 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
                   groundingJson += j;   // what the model was actually allowed to see
                   return j;
                 })(),
+              });
+            }
+            if (directAnswer) {
+              return res.status(200).json({
+                content: directAnswer,
+                fallback: false,
+                llm: 'deterministic:search_leads',
+                toolsUsed,
+                requestId,
+                responseMode: responseMode || 'default',
               });
             }
             continue; // let the model answer from the tool output
@@ -682,10 +840,18 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
       // rate limit was indistinguishable from the assistant being broken — the
       // same failure shape the audit endpoint used to have.
       const joined = providerErrors.join(' ');
-      const rateLimited = /429|rate.?limit|tokens per day|TPD/i.test(joined);
+      // A per-minute throttle and an exhausted daily allowance need different
+      // advice. Telling someone to wait "a few seconds" when the day's tokens
+      // are gone just sends them in a loop.
+      const dailyCap = /tokens per day|TPD/i.test(joined);
+      const perMinute = !dailyCap && /429|rate.?limit/i.test(joined);
       return res.status(200).json({
         fallback: true,
-        content: rateLimited
+        content: dailyCap
+          ? "I've used up today's AI allowance, so I can't answer in my own words until it "
+            + 'resets. Lead search still works — ask me for businesses in a city and you\'ll '
+            + 'get real results. Audits and the leads page are unaffected.'
+          : perMinute
           ? "I'm being rate limited right now — give it a few seconds and ask again. "
             + 'Your leads and audits are unaffected.'
           : "I couldn't reach the AI service just then. Try again in a moment — "

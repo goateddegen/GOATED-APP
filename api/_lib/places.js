@@ -265,7 +265,30 @@ export async function searchPlaces({ query, location = '', limit = 20, pageToken
     const places = body?.places || [];
     // Drop anything not currently trading — a closed business is not a lead.
     const open = places.filter(p => !p.businessStatus || p.businessStatus === 'OPERATIONAL');
-    const leads = open.map((p, i) => transformPlace(p, i)).sort((a, b) => b.score - a.score);
+
+    // Places matches on business NAME as well as place, so a search for
+    // "pest control in tampa" returned "Houston Pest Control" — in Houston —
+    // as the top result, because the name is a strong text match. Anything
+    // whose address doesn't mention the city we asked for is not in that city.
+    //
+    // Only applied when the city token is distinctive enough to test, and only
+    // if it doesn't wipe the whole result set — a neighbouring-suburb address
+    // ("Oldsmar" for a Tampa search) is still a legitimate local lead.
+    let candidates = open;
+    const cityToken = String(location || '').split(',')[0].trim().toLowerCase();
+    if (cityToken.length >= 4) {
+      const inCity = open.filter(p => {
+        const addr = `${p.formattedAddress || ''} ${p.shortFormattedAddress || ''}`.toLowerCase();
+        const name = (p.displayName?.text || '').toLowerCase();
+        // Named for a different city and not addressed in this one → drop.
+        return addr.includes(cityToken) || !/\b(houston|dallas|austin|phoenix|atlanta|chicago|denver|miami|seattle|boston|tampa|orlando|nashville|charlotte|portland|vegas)\b/.test(name)
+          || name.includes(cityToken);
+      });
+      // Keep the filter only if it left us a usable list.
+      if (inCity.length >= Math.min(5, open.length)) candidates = inCity;
+    }
+
+    const leads = candidates.map((p, i) => transformPlace(p, i)).sort((a, b) => b.score - a.score);
 
     return {
       leads,
