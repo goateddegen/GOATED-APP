@@ -1391,65 +1391,78 @@ export const useStore = create((set, get) => ({
   // Per-lead alpha intel (shown in LeadDetail when degen mode is on)
   // Uses pre-computed industry stats where possible to avoid re-scanning 250K leads
   _leadAlphaCache: {},
+  // ─── Alpha: what makes THIS lead worth calling before the others ──────────
+  // Rebuilt to only report things the record actually supports. The previous
+  // version mixed real ranking with invented precision:
+  //
+  //   bestContactTime  — derived from (title.length + industry.length) % 4.
+  //                      String lengths, presented to the operator as the best
+  //                      hour and day to call.
+  //   contractExpiry   — read funding_round, which no local business has, so
+  //   competitorWindow   every Places lead got a confident "~15 months / OPEN".
+  //
+  // Anything we cannot source is now omitted rather than defaulted.
   getLeadAlpha: (lead) => {
     if (!lead) return null;
-
-    // Check cache by lead id
     const cached = get()._leadAlphaCache[lead.id];
     if (cached) return cached;
 
     const s = get();
     const allLeads = s.getActiveLeads();
-    // Filter by industry — this is much smaller than 250K
     const industryLeads = allLeads.filter(l => l.industry === lead.industry);
-    // Use a copy for sort to avoid mutating the filtered array
     const sorted = [...industryLeads].sort((a, b) => b.score - a.score);
     const industryRank = sorted.findIndex(l => l.id === lead.id) + 1;
-    const industryPctile = industryLeads.length ? Math.round((1 - industryRank / industryLeads.length) * 100) : 50;
+    const industryPctile = industryLeads.length
+      ? Math.round((1 - industryRank / industryLeads.length) * 100)
+      : null;
 
-    // Optimal contact timing (computed from role + industry patterns)
-    const roleHash = (lead.title || '').length + (lead.industry || '').length;
-    const bestHour = 8 + (roleHash % 4); // 8am-12pm sweet spot
-    const bestDay = ['Monday', 'Tuesday', 'Wednesday', 'Thursday'][roleHash % 4];
-
-    // Urgency scoring
+    // Why this one is worth the call, each tied to a field on the record.
     const urgencyFactors = [];
-    if (lead.momentum === 'rising') urgencyFactors.push('Rising momentum — act NOW');
-    if (lead.score >= 85) urgencyFactors.push('Top-tier score — high intent');
-    if (lead.priority === 'critical') urgencyFactors.push('Critical priority flagged');
-    if ((lead.dealValue || lead.value || 0) >= 100000) urgencyFactors.push('6-figure deal value');
-    if (lead.status === 'new') urgencyFactors.push('Fresh lead — first mover advantage');
-    if (lead.status === 'contacted' && lead.momentum === 'rising') urgencyFactors.push('Engaged & warming — push to qualify');
+    if (!lead.website && !lead.domain) {
+      urgencyFactors.push('No website — the build and the phone cover sell together');
+    }
+    if (lead.reviewCount === 0) {
+      urgencyFactors.push('No reviews — invisible in local ranking');
+    } else if (typeof lead.reviewCount === 'number' && lead.reviewCount < 25) {
+      urgencyFactors.push(`Only ${lead.reviewCount} reviews — thin proof against competitors`);
+    }
+    if (typeof lead.rating === 'number' && lead.rating > 0 && lead.rating < 4 && lead.reviewCount > 5) {
+      urgencyFactors.push(`${lead.rating}★ average — rating is costing them calls`);
+    }
+    if (!lead.phone) {
+      urgencyFactors.push('No published number — customers cannot reach them either');
+    }
+    if (lead.momentum === 'rising') urgencyFactors.push('Headcount rising — intake breaks first');
+    if (lead.momentum === 'declining') urgencyFactors.push('Headcount shrinking — automation lands well now');
+    if (lead.score >= 85) urgencyFactors.push(`Score ${lead.score} — top of this batch`);
+    if (lead.status === 'new') urgencyFactors.push('Never contacted — no history to work around');
 
-    const urgencyLevel = urgencyFactors.length >= 3 ? 'CRITICAL' : urgencyFactors.length >= 2 ? 'HIGH' : urgencyFactors.length >= 1 ? 'MEDIUM' : 'LOW';
+    const urgencyLevel = urgencyFactors.length >= 4 ? 'CRITICAL'
+      : urgencyFactors.length >= 3 ? 'HIGH'
+      : urgencyFactors.length >= 1 ? 'MEDIUM' : 'LOW';
 
-    // Competitor vulnerability window
-    const fundingAge = lead.funding_round === 'Series A' ? 18 : lead.funding_round === 'Series B' ? 12 :
-      lead.funding_round === 'Seed' ? 24 : lead.funding_round === 'Series C' ? 8 : 15;
-    const contractExpiry = `~${fundingAge} months`;
-
-    // Buying signals strength (0-100)
-    const buyingSignalScore = Math.min(100, Math.round(
-      (lead.score || 50) * 0.4 +
-      (lead.momentum === 'rising' ? 25 : lead.momentum === 'declining' ? 5 : 15) +
-      (lead.priority === 'critical' ? 20 : lead.priority === 'high' ? 15 : lead.priority === 'medium' ? 10 : 5) +
-      ((lead.intent_score || 50) * 0.15)
-    ));
+    // Composite of signals we hold, stated as such. No intent-score default.
+    const parts = [];
+    if (typeof lead.score === 'number') parts.push(lead.score);
+    if (typeof lead.reviewCount === 'number') parts.push(lead.reviewCount < 25 ? 80 : 40);
+    if (!lead.website && !lead.domain) parts.push(90);
+    const buyingSignalScore = parts.length
+      ? Math.min(100, Math.round(parts.reduce((a, b) => a + b, 0) / parts.length))
+      : null;
 
     const result = {
       industryRank,
       industryPctile,
       totalInIndustry: industryLeads.length,
-      bestContactTime: `${bestDay} ${bestHour}:00 AM`,
-      bestHour,
-      bestDay,
       urgencyLevel,
       urgencyFactors,
-      contractExpiry,
       buyingSignalScore,
-      competitorWindow: fundingAge <= 12 ? 'CLOSING SOON' : 'OPEN',
+      // Only when the record genuinely carries funding data — Apollo B2B rows.
+      contractExpiry: lead.funding_round
+        ? `~${lead.funding_round === 'Series A' ? 18 : lead.funding_round === 'Series B' ? 12
+            : lead.funding_round === 'Seed' ? 24 : lead.funding_round === 'Series C' ? 8 : 15} months`
+        : null,
     };
-    // Cache by lead id
     get()._leadAlphaCache[lead.id] = result;
     return result;
   },

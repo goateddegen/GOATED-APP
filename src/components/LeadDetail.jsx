@@ -4,7 +4,7 @@ import {
   TrendingUp, TrendingDown, Minus, Target, Shield, Zap, Star, ChevronRight,
   ChevronDown, Users, DollarSign, Clock, Award, BarChart3, Activity,
   Cpu, Eye, MessageSquare, Send, Package, Calculator, Flame, Crosshair,
-  Brain, Radar, Timer, AlertTriangle, Keyboard, ExternalLink, Search, UserSearch,
+  Brain, Timer, AlertTriangle, Keyboard, ExternalLink, Search, UserSearch,
   Crown, Sparkles, PhoneCall, FileText, CreditCard, Trophy, Rocket, ChevronUp,
   MapPin, Linkedin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight, Voicemail,
 } from 'lucide-react';
@@ -157,7 +157,7 @@ function recommendedPkgQuote(pkgs) {
   return { deposit: p?.price || 0, monthly: p?.monthly || 0 };
 }
 
-function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfidence, safeCallScript, safePackages, safeObjections, safePainPoints, safeConversion, setTab }) {
+function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfidence, safeCallScript, safePackages, safeObjections, safePainPoints, safeConversion, setTab, alphaIntel }) {
   const [expandedStep, setExpandedStep] = useState(null);
   const [fastTrackMode, setFastTrackMode] = useState(false);
 
@@ -247,6 +247,57 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
           </div>
         </div>
       </div>
+
+      {/* ── Why this one first ────────────────────────────────────────────────
+          What used to be the separate Alpha Intel tab. It lives here because
+          it only matters while you're deciding who to call, and everything in
+          it is now sourced from the record rather than inferred — the old tab
+          derived "best day and hour to call" from the length of the job title
+          string and reported a vendor-contract window for local businesses
+          that have no funding data at all. */}
+      {alphaIntel && (alphaIntel.urgencyFactors.length > 0 || alphaIntel.industryRank > 0) && (
+        <div className={`p-4 rounded-xl border ${
+          alphaIntel.urgencyLevel === 'CRITICAL' ? 'border-red-500/30 bg-red-500/[0.04]' :
+          alphaIntel.urgencyLevel === 'HIGH' ? 'border-orange-500/30 bg-orange-500/[0.04]' :
+          alphaIntel.urgencyLevel === 'MEDIUM' ? 'border-yellow-500/25 bg-yellow-500/[0.03]' :
+          'border-white/[0.06] bg-white/[0.02]'}`}>
+          <div className="flex items-center gap-2.5 mb-3">
+            <Flame size={16} className={
+              alphaIntel.urgencyLevel === 'CRITICAL' ? 'text-red-400' :
+              alphaIntel.urgencyLevel === 'HIGH' ? 'text-orange-400' :
+              alphaIntel.urgencyLevel === 'MEDIUM' ? 'text-yellow-400' : 'text-slate-400'} />
+            <div className="text-sm font-bold text-white">Why {lead.company} first</div>
+            <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
+              alphaIntel.urgencyLevel === 'CRITICAL' ? 'text-red-400 border-red-500/30 bg-red-500/10' :
+              alphaIntel.urgencyLevel === 'HIGH' ? 'text-orange-400 border-orange-500/30 bg-orange-500/10' :
+              alphaIntel.urgencyLevel === 'MEDIUM' ? 'text-yellow-400 border-yellow-500/25 bg-yellow-500/10' :
+              'text-slate-400 border-white/[0.08] bg-white/[0.03]'}`}>
+              {alphaIntel.urgencyLevel}
+            </span>
+            {alphaIntel.industryRank > 0 && alphaIntel.totalInIndustry > 1 && (
+              <span className="ml-auto text-[10px] text-slate-500">
+                #{alphaIntel.industryRank} of {alphaIntel.totalInIndustry} in {lead.industry}
+              </span>
+            )}
+          </div>
+
+          {alphaIntel.urgencyFactors.length > 0 ? (
+            <div className="space-y-1.5">
+              {alphaIntel.urgencyFactors.map((f, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs text-slate-300">
+                  <ChevronRight size={12} className="text-slate-600 shrink-0 mt-0.5" />
+                  <span>{f}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400">
+              Nothing obviously broken on the record — no gap to lead with. Open on the
+              missed-call math instead of a problem you can name.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Revenue Impact Banner */}
       <div className="p-4 rounded-xl border border-brand/20 bg-brand/[0.03]">
@@ -877,7 +928,6 @@ Context:\n${ctx}`;
     { id: 'intelligence', label: 'Overview', icon: <BarChart3 size={15} /> },
     { id: 'closing', label: 'Close Guide', icon: <Target size={15} /> },
     { id: 'outreach', label: 'Outreach & Scripts', icon: <Brain size={15} /> },
-    { id: 'alpha', label: 'Alpha Intel', icon: <Radar size={15} /> },
   ];
 
   // ── Keyboard shortcuts ──────────────────────────────────────────────────────
@@ -1603,225 +1653,17 @@ Context:\n${ctx}`;
       ═══════════════════════════════════════════════════════════════════════ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
 
-        {/* ─── DEGEN ALPHA INTEL TAB ──────────────────────────────────────────── */}
         {/* ─── GOATED CLOSE GUIDE TAB ──────────────────────────────────────── */}
         {tab === 'closing' && (
           <div id="close-guide-section">
           <CloseGuideTab lead={lead} el={el} dv={dv} closeSteps={closeSteps} completedSteps={completedSteps}
             closeConfidence={closeConfidence} safeCallScript={safeCallScript} safePackages={safePackages}
             safeObjections={safeObjections} safePainPoints={safePainPoints}
-            safeConversion={safeConversion} setTab={setTab} />
+            safeConversion={safeConversion} setTab={setTab} alphaIntel={alphaIntel} />
           </div>
         )}
 
         {/* ─── ALPHA INTEL TAB ─────────────────────────────────────────────── */}
-        {tab === 'alpha' && !alphaIntel && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-500/15 flex items-center justify-center">
-                <Flame size={20} className="text-orange-400" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold">Alpha Intel</h2>
-                <p className="text-xs text-slate-500">Deep intelligence for {lead.name}</p>
-              </div>
-            </div>
-            <div className="p-6 rounded-xl border border-orange-500/20 bg-orange-500/[0.03] text-center">
-              <Radar size={32} className="text-orange-400/40 mx-auto mb-3" />
-              <p className="text-sm text-slate-400">No Alpha Intel data available for this lead.</p>
-              <p className="text-xs text-slate-500 mt-1">Alpha Intel requires lead enrichment data that is not yet available for {lead.name}. Try refreshing or check back later.</p>
-            </div>
-          </div>
-        )}
-        {tab === 'alpha' && alphaIntel && (
-          <div className="space-y-6">
-            {/* Alpha Header */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-500/15 flex items-center justify-center">
-                <Flame size={20} className="text-orange-400" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold flex items-center gap-2">
-                  Alpha Intel — {lead.name}
-                </h2>
-                <p className="text-xs text-slate-500">Real-time sniping data & actionable intelligence</p>
-              </div>
-            </div>
-
-            {/* Urgency Banner */}
-            <div className={`p-4 rounded-xl border ${
-              alphaIntel.urgencyLevel === 'CRITICAL' ? 'bg-red-500/10 border-red-500/30' :
-              alphaIntel.urgencyLevel === 'HIGH' ? 'bg-orange-500/10 border-orange-500/30' :
-              alphaIntel.urgencyLevel === 'MEDIUM' ? 'bg-yellow-500/10 border-yellow-500/30' :
-              'bg-slate-500/10 border-slate-500/30'
-            }`}>
-              <div className="flex items-center gap-3 mb-2">
-                <AlertTriangle size={18} className={
-                  alphaIntel.urgencyLevel === 'CRITICAL' ? 'text-red-400' :
-                  alphaIntel.urgencyLevel === 'HIGH' ? 'text-orange-400' :
-                  'text-yellow-400'
-                } />
-                <span className={`text-sm font-bold uppercase tracking-wider ${
-                  alphaIntel.urgencyLevel === 'CRITICAL' ? 'text-red-400' :
-                  alphaIntel.urgencyLevel === 'HIGH' ? 'text-orange-400' :
-                  'text-yellow-400'
-                }`}>
-                  Urgency: {alphaIntel.urgencyLevel}
-                </span>
-              </div>
-              <div className="space-y-1.5 ml-8">
-                {alphaIntel.urgencyFactors.map((f, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm text-slate-300">
-                    <Zap size={12} className="text-orange-400 flex-shrink-0" /> {f}
-                  </div>
-                ))}
-                {alphaIntel.urgencyFactors.length === 0 && (
-                  <div className="text-sm text-slate-500">No urgency signals detected — standard follow-up pace</div>
-                )}
-              </div>
-            </div>
-
-            {/* Alpha Metrics Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <GlassCard className="text-center alpha-panel">
-                <div className="text-[10px] text-orange-400 uppercase tracking-wider mb-2 font-bold">Buying Signal</div>
-                <CircularGauge value={alphaIntel.buyingSignalScore} size={80} strokeWidth={6} color="#f97316" />
-                <div className="text-[10px] text-slate-500 mt-1">
-                  {alphaIntel.buyingSignalScore >= 80 ? 'EXTREMELY HIGH' : alphaIntel.buyingSignalScore >= 60 ? 'HIGH' : alphaIntel.buyingSignalScore >= 40 ? 'MODERATE' : 'LOW'}
-                </div>
-              </GlassCard>
-
-              <GlassCard className="text-center alpha-panel">
-                <div className="text-[10px] text-orange-400 uppercase tracking-wider mb-2 font-bold">Industry Rank</div>
-                <div className="text-3xl font-bold text-white">{ordinal(alphaIntel.industryRank)}</div>
-                <div className="text-[10px] text-slate-500 mt-1">of {alphaIntel.totalInIndustry.toLocaleString()}</div>
-                <div className="mt-2 h-1.5 bg-white/[0.02] rounded-full overflow-hidden">
-                  <div className="h-full bg-orange-400 rounded-full" style={{ width: `${alphaIntel.industryPctile}%` }} />
-                </div>
-                <div className="text-[10px] text-orange-400 mt-1">Top {100 - alphaIntel.industryPctile}%</div>
-              </GlassCard>
-
-              <GlassCard className="text-center alpha-panel">
-                <div className="text-[10px] text-orange-400 uppercase tracking-wider mb-2 font-bold">Best Contact</div>
-                <div className="w-10 h-10 rounded-full bg-orange-500/15 flex items-center justify-center mx-auto mb-1">
-                  <Timer size={18} className="text-orange-400" />
-                </div>
-                <div className="text-sm font-bold text-white">{alphaIntel.bestDay}</div>
-                <div className="text-xs text-slate-400">{alphaIntel.bestHour}:00 AM</div>
-              </GlassCard>
-
-              <GlassCard className="text-center alpha-panel">
-                <div className="text-[10px] text-orange-400 uppercase tracking-wider mb-2 font-bold">Competitor Window</div>
-                <div className="w-10 h-10 rounded-full bg-orange-500/15 flex items-center justify-center mx-auto mb-1">
-                  <Crosshair size={18} className="text-orange-400" />
-                </div>
-                <div className={`text-sm font-bold ${alphaIntel.competitorWindow === 'CLOSING SOON' ? 'text-red-400' : 'text-emerald-400'}`}>
-                  {alphaIntel.competitorWindow}
-                </div>
-                <div className="text-xs text-slate-400">{alphaIntel.contractExpiry}</div>
-              </GlassCard>
-            </div>
-
-            {/* Snipe Playbook */}
-            <GlassCard className="alpha-panel">
-              <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
-                <Crosshair size={16} className="text-orange-400" /> Snipe Playbook
-              </h3>
-              <div className="space-y-3">
-                <div className="p-3 rounded-lg bg-orange-500/5 border border-orange-500/20">
-                  <div className="text-[10px] text-orange-400 uppercase tracking-widest mb-1 font-bold">Step 1 — Initial Strike</div>
-                  <p className="text-sm text-slate-300">
-                    Hit {lead.name.split(' ')[0]} on <span className="text-orange-400 font-semibold">{alphaIntel.bestDay} at {alphaIntel.bestHour}:00 AM</span> via {lead.bestMethod || 'phone'}.
-                    Lead with their #1 pain point: <span className="text-white font-medium">"{safePainPoints[0] || 'scaling challenges'}"</span>
-                  </p>
-                </div>
-                <div className="p-3 rounded-lg bg-orange-500/5 border border-orange-500/20">
-                  <div className="text-[10px] text-orange-400 uppercase tracking-widest mb-1 font-bold">Step 2 — Value Drop</div>
-                  <p className="text-sm text-slate-300">
-                    {lead.industry} companies with {(lead.employees || 50).toLocaleString()}+ employees are leaving <span className="text-brand font-semibold">30-40% revenue on the table</span>.
-                    Drop the industry benchmark comparison — {alphaIntel.industryPctile >= 70 ? 'they\'re already top-tier, emphasize maintaining edge' : 'show them where they rank vs competitors'}.
-                  </p>
-                </div>
-                <div className="p-3 rounded-lg bg-orange-500/5 border border-orange-500/20">
-                  <div className="text-[10px] text-orange-400 uppercase tracking-widest mb-1 font-bold">Step 3 — Close Window</div>
-                  <p className="text-sm text-slate-300">
-                    {alphaIntel.competitorWindow === 'CLOSING SOON'
-                      ? `Their current vendor contract window is closing in ${alphaIntel.contractExpiry}. FOMO angle — "We're working with 3 other ${lead.industry} companies right now. Spots are limited."`
-                      : `Contract window is open for ${alphaIntel.contractExpiry}. Build urgency with pilot: "Let's run a 30-day proof of concept — zero risk, we'll prove the ROI."`
-                    }
-                  </p>
-                </div>
-                <div className="p-3 rounded-lg bg-brand/5 border border-brand/20">
-                  <div className="text-[10px] text-brand uppercase tracking-widest mb-1 font-bold">Step 4 — Lock It Down</div>
-                  <p className="text-sm text-slate-300">
-                    Push for the {safePackages.find(p => p.recommended)?.name || 'Growth'} package — <span className="text-brand font-semibold">{fmt(safePackages.find(p => p.recommended)?.price || 2000)} deposit + {fmt(safePackages.find(p => p.recommended)?.monthly || 750)}/mo</span>.
-                    Quote: <span className="text-brand font-semibold">{fmt(recQuote.deposit)} deposit + {fmt(recQuote.monthly)}/mo</span>.
-                    Close: <span className="text-white font-medium italic">"If this works the way it has for every other {lead.industry} company we work with, when would you want to start?"</span>
-                  </p>
-                </div>
-              </div>
-            </GlassCard>
-
-            {/* Lead Context Intel */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <GlassCard className="alpha-panel">
-                <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
-                  <Target size={16} className="text-orange-400" /> Pain Point Intel
-                </h3>
-                <div className="space-y-2">
-                  {safePainPoints.map((p, i) => {
-                    const sev = severityFor(i);
-                    return (
-                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-white/[0.02]">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${sev.bg}`}>
-                          <span className={`text-[10px] font-bold ${sev.color}`}>{i + 1}</span>
-                        </div>
-                        <span className="text-sm text-slate-300 flex-1">{p}</span>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${sev.bg} ${sev.color}`}>
-                          {sev.label}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </GlassCard>
-
-              <GlassCard className="alpha-panel">
-                <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
-                  <Eye size={16} className="text-orange-400" /> Company Intel
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Industry</span>
-                    <span className="text-white font-medium">{lead.industry}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Employees</span>
-                    <span className="text-white font-medium">{(lead.employees || 0).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Funding</span>
-                    <span className="text-white font-medium">{lead.funding_round || 'Unknown'}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Growth Rate</span>
-                    <span className="text-brand font-medium">{lead.growth_rate ? `${lead.growth_rate}%` : 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Tech Stack</span>
-                    <span className="text-white font-medium">{lead.tech_stack_primary || 'Unknown'}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">NPS Score</span>
-                    <span className={`font-medium ${(lead.nps_score || 0) >= 50 ? 'text-brand' : 'text-yellow-400'}`}>
-                      {lead.nps_score || 'N/A'}
-                    </span>
-                  </div>
-                </div>
-              </GlassCard>
-            </div>
-          </div>
-        )}
 
         {/* ─── INTELLIGENCE TAB ─────────────────────────────────────────────── */}
         {tab === 'intelligence' && (
