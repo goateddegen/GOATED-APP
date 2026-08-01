@@ -136,6 +136,19 @@ const SECONDARY_TRADES = [
 // ever excluding the long tail — variety on the page still matters.
 const DEFAULT_TRADES = [...CORE_TRADES, ...CORE_TRADES, ...SECONDARY_TRADES];
 
+// Trades that actually contain businesses with no website. Measured, not
+// assumed: across 20 results each, hvac and roofing returned zero — those are
+// established trades where everyone has a site — while locksmiths and lawn
+// care returned two apiece. The no-website section is the strongest pitch we
+// have, so when the ordinary blend doesn't surface enough we go looking in
+// the places they actually live: one-person operations with a phone and a van.
+const NO_SITE_TRADES = [
+  'locksmith', 'lawn care service', 'junk removal service', 'house cleaning service',
+  'landscaping', 'handyman', 'mobile mechanic', 'pressure washing',
+  'gutter cleaning service', 'tree service', 'moving company', 'carpet cleaning service',
+  'hauling service', 'window cleaning', 'pool cleaning', 'auto detailing',
+];
+
 // Must be request-scoped, not module-scoped. Two earlier attempts failed in
 // production for the same underlying reason:
 //
@@ -948,7 +961,36 @@ export default async function handler(req, res) {
         const withWebsite = live.filter(l => l.website);
 
         const primary = withWebsite.slice(0, limit);
-        const needsSite = noWebsite.slice(0, Math.max(10, Math.round(limit / 3)));
+        let needsSite = noWebsite.slice(0, Math.max(10, Math.round(limit / 3)));
+
+        // The ordinary blend is drawn for variety, and the trades it favours
+        // are ones where practically everyone has a website — so the
+        // no-website section frequently came back empty. Top it up from the
+        // trades that measurably contain them. Only fires when short, so the
+        // common case costs no extra requests.
+        if (needsSite.length < 6) {
+          const hunt = [];
+          const pool = [...NO_SITE_TRADES];
+          for (let i = 0; i < 4 && pool.length; i++) {
+            hunt.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+          }
+          const extra = await Promise.allSettled(
+            hunt.map(t => searchPlaces({ query: t, location: loc, limit: 20 }))
+          );
+          for (const r of extra) {
+            if (r.status !== 'fulfilled' || !r.value?.leads) continue;
+            for (const l of r.value.leads) {
+              if (l.website) continue;
+              if (l.activity?.callable === false) continue;
+              const k = keyOf(l);
+              if (seen.has(k)) continue;
+              seen.add(k);
+              needsSite.push(l);
+            }
+          }
+          needsSite.sort((a, b) => b.score - a.score);
+          needsSite = needsSite.slice(0, Math.max(10, Math.round(limit / 3)));
+        }
 
         // Ids must be unique across BOTH lists — the client keys rows and lead
         // selection off them, so a collision opens the wrong business.
