@@ -8,7 +8,7 @@ import {
   Crown, PhoneCall, CalendarClock, Timer, UserSearch, Table2,
   ExternalLink, MapPin, Crosshair, AlertTriangle, Radio, RefreshCw, Globe,
 } from 'lucide-react';
-import { useStore, fmt, priorities, statuses, industries } from '../hooks/useStore';
+import { useStore, fmt, priorities, statuses, industries, initialsOf } from '../hooks/useStore';
 import { buildOutreachStrategy, deriveGaps, recommendTier, buildPackage } from '../lib/outreach';
 
 // ---------------------------------------------------------------------------
@@ -594,10 +594,6 @@ function CloseCoachRow({ lead, index, colSpan, onCallClick, showToast }) {
 // ---------------------------------------------------------------------------
 // MAIN COMPONENT
 // ---------------------------------------------------------------------------
-// Set on the first leads fetch of this page load and deliberately never reset
-// by navigation — only a browser refresh clears it (the module re-executes).
-let fetchedThisLoad = false;
-
 export default function LeadsPage({ onSelect }) {
   // Selective selectors to avoid full-store re-renders (ticker, RAF, etc).
   const search = useStore(s => s.search);
@@ -632,20 +628,22 @@ export default function LeadsPage({ onSelect }) {
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, []);
 
-  // Fetch once per page load, not once per visit to this route.
+  // Pull fresh businesses every time the page is opened.
   //
-  // This used to fire on every visit, which meant opening a lead and pressing
-  // back replaced the entire list — the row you had just been reading was gone,
-  // along with everything you had already worked through. `fetchedThisLoad` is
-  // module-scoped, so it survives in-app navigation but resets on a real
-  // browser refresh: back from a lead keeps the list untouched, while a refresh
-  // pulls a new rotation and appends it to what's already there.
+  // This was previously once-per-load, because refetching used to REPLACE the
+  // list and pressing back from a lead wiped everything worked so far. Fetches
+  // now append and dedupe, so a refetch can only add — and the server is told
+  // which places we already hold, so what comes back is genuinely new rather
+  // than the same rotation.
+  //
+  // Coming back from a lead detail is excluded: that's not a fresh visit, and
+  // firing a search because someone pressed back is just noise.
   const currentPage = useStore(s => s.page);
+  const detailOpen = useStore(s => s.detailOpen);
   useEffect(() => {
-    if (currentPage !== 'leads' || fetchedThisLoad) return;
-    fetchedThisLoad = true;
+    if (currentPage !== 'leads' || detailOpen) return;
     fetchLiveLeads();
-  }, [currentPage, fetchLiveLeads]);
+  }, [currentPage, detailOpen, fetchLiveLeads]);
 
   const isLive = dataMode === 'live' && liveLeads.length > 0;
 
@@ -1076,7 +1074,77 @@ export default function LeadsPage({ onSelect }) {
 
       {/* ── Lead Table ── */}
       <div className="bg-surface-3 rounded-xl border border-white/[0.03] overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* ── Mobile: cards, not a table ────────────────────────────────────
+            The table below carries eight columns. At 375px that becomes a
+            sideways scroll where nothing useful is visible without dragging,
+            so on small screens the same rows render as cards instead: the
+            fields that decide whether to call, and a call button that works
+            with a thumb. */}
+        <div className="md:hidden divide-y divide-white/[0.03]">
+          {leads.map((l, i) => {
+            const prob = getCloseProbability(l, i);
+            const pkg = buildPackage(l);
+            const act = l.activity || {};
+            const isHot = l.score >= 85;
+            return (
+              <div key={l.id} onClick={() => handleSelectLead(l)}
+                className="p-4 active:bg-white/[0.04] transition-colors cursor-pointer">
+                <div className="flex items-start gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isHot ? 'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30' : 'bg-brand/15 text-brand'}`}>
+                    {(l.company || l.name || '?').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-semibold text-sm text-white">{l.company}</span>
+                      {isHot && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                          <Flame size={8} className="inline" /> HOT
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-500 truncate">
+                      {l.industry}{l.location ? ` · ${l.location}` : ''}
+                    </div>
+                    {act.label && (
+                      <div className={`text-[10px] mt-1 ${act.level === 'active' ? 'text-emerald-400' : 'text-slate-500'}`}>
+                        {act.label}{l.revenueFormatted ? ` · est. ${l.revenueFormatted}` : ''}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className={`text-lg font-bold ${isHot ? 'text-emerald-400' : 'text-brand'}`}>{l.score}</div>
+                    <div className="text-[9px] text-slate-600 uppercase tracking-wider">score</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 mt-3">
+                  <div className="flex-1 min-w-0 text-[11px] text-slate-400">
+                    <span className="text-white font-semibold">{fmt(pkg.deposit)}</span> + {fmt(pkg.monthly)}/mo
+                    <span className="text-slate-600"> · </span>
+                    <span className="text-emerald-400">{prob}% close</span>
+                  </div>
+                  {l.phone && (
+                    <a href={`tel:${(l.phone || '').replace(/[^+\d]/g, '')}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="shrink-0 flex items-center gap-1.5 px-3 h-10 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold active:bg-emerald-500/25">
+                      <PhoneCall size={14} /> Call
+                    </a>
+                  )}
+                  <button onClick={(e) => { e.stopPropagation(); toggleRow(l.id); }}
+                    aria-label="Toggle lead details"
+                    className="shrink-0 w-10 h-10 rounded-lg bg-white/[0.03] border border-white/[0.06] text-slate-400 flex items-center justify-center active:bg-white/[0.06]">
+                    {expandedRows.has(l.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          {leads.length === 0 && (
+            <div className="p-8 text-center text-sm text-slate-500">No leads match the current filters.</div>
+          )}
+        </div>
+
+        <div className="overflow-x-auto hidden md:block">
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/[0.03]">
@@ -1106,7 +1174,7 @@ export default function LeadsPage({ onSelect }) {
                       <td className="px-3 py-2.5">
                         <div className="flex items-center gap-2.5">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isHot ? 'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30' : 'bg-brand/15 text-brand'}`}>
-                            {l.name.split(' ').map(n => n[0]).join('')}
+                            {initialsOf(l.company || l.name)}
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">

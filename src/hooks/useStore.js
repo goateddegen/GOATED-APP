@@ -752,6 +752,24 @@ function enrichLead(lead) {
 
 const fmt = (v) => v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `$${(v / 1e3).toFixed(0)}K` : `$${v}`;
 
+/**
+ * Initials for an avatar circle, capped at two characters.
+ *
+ * The old inline version took the first letter of every word, so
+ * "Water Pro Well Service (Water Well Service)" rendered as WPWS(WWS) and
+ * spilled straight out of the circle. Punctuation-only tokens are skipped so
+ * a bracket never becomes an initial.
+ */
+const initialsOf = (nameOrCompany) => {
+  const words = String(nameOrCompany || '')
+    .split(/[\s\-_/]+/)
+    .map(w => w.replace(/[^A-Za-z0-9]/g, ''))
+    .filter(Boolean);
+  if (!words.length) return '?';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+};
+
 // ---------------------------------------------------------------------------
 // Pipeline Analytics — aggregate stats computed from lead pool
 // ---------------------------------------------------------------------------
@@ -1049,7 +1067,18 @@ export const useStore = create((set, get) => ({
       // 25, explicitly. A single Places trade query only returns ~15 results,
       // which is what the page was actually showing; the blended multi-trade
       // fetch can fill a full 25 across different business types.
-      const res = await authedFetch('/api/leads?limit=40');
+      // Tell the server what we already have so it returns businesses the
+      // operator hasn't worked yet, instead of the same top-20 for the same
+      // trade and city. Most recent first, capped to keep the URL sane.
+      const held = [...get().liveLeads, ...get().noWebsiteLeads];
+      const exclude = held
+        .slice(-120)
+        .map(l => l._placeId)
+        .filter(Boolean)
+        .join(',');
+      const qs = new URLSearchParams({ limit: '40' });
+      if (exclude) qs.set('exclude', exclude);
+      const res = await authedFetch(`/api/leads?${qs}`);
       if (!res.ok) throw new Error(`Leads API returned ${res.status}`);
       const data = await res.json();
       const incoming = data.leads || data;
@@ -1673,4 +1702,4 @@ if (typeof window !== 'undefined' && localStorage.getItem('goated_degen') === 't
   useStore.getState().generateDegenData();
 }
 
-export { fmt, enrichLead, computePipelineAnalytics, priorities, statuses, industries, leadSources, dealStages, tagOptions, fundingRounds, techStacks, buyingSignals };
+export { fmt, initialsOf, enrichLead, computePipelineAnalytics, priorities, statuses, industries, leadSources, dealStages, tagOptions, fundingRounds, techStacks, buyingSignals };

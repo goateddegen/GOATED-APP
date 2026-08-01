@@ -818,6 +818,18 @@ export default async function handler(req, res) {
       });
     }
 
+    // Places ids the caller already holds. Without this the same trade+city
+    // returns the same top-20 every time, so a second visit surfaced almost
+    // nothing new — the "stale cycling" problem. Capped so the query string
+    // stays sane; the client sends its most recent ids.
+    const excludeIds = new Set(
+      String(req.query?.exclude || '')
+        .split(',')
+        .map(x => x.trim())
+        .filter(Boolean)
+        .slice(0, 120)
+    );
+
     const page = Math.max(parseInt(rawPage, 10) || 1, 1);
     const limit = Math.min(Math.max(parseInt(rawLimit, 10) || 50, 1), 1000); // Bumped max to 1000 for bulk ops
 
@@ -933,17 +945,42 @@ export default async function handler(req, res) {
           || `${(l.company || '').toLowerCase()}|${(l.address || '').toLowerCase()}`);
         // Drain every bucket, not just enough to fill the page — the partition
         // below needs the whole pool to find no-website businesses.
-        for (let i = 0; ; i++) {
-          let added = false;
-          for (const b of buckets) {
-            if (!b[i]) continue;
-            added = true;
-            const k = keyOf(b[i]);
-            if (seen.has(k)) continue;
-            seen.add(k);
-            merged.push(b[i]);
+        const drain = (bucketList) => {
+          for (let i = 0; ; i++) {
+            let added = false;
+            for (const b of bucketList) {
+              if (!b[i]) continue;
+              added = true;
+              const k = keyOf(b[i]);
+              if (seen.has(k)) continue;
+              seen.add(k);
+              if (excludeIds.has(b[i]._placeId)) continue;   // already on their page
+              merged.push(b[i]);
+            }
+            if (!added) break;
           }
-          if (!added) break;
+        };
+        drain(buckets);
+
+        // If most of what came back is already on the operator's page, go
+        // deeper rather than handing them the same list again. Places pages
+        // via nextPageToken, so this reaches businesses the first page never
+        // shows. Only runs when the fresh yield is genuinely short.
+        const FRESH_TARGET = Math.min(limit, 25);
+        if (excludeIds.size && merged.length < FRESH_TARGET) {
+          const tokens = settled
+            .map(r => (r.status === 'fulfilled' && r.value?.nextPageToken)
+              ? { token: r.value.nextPageToken, query: r.value.query } : null)
+            .filter(Boolean)
+            .slice(0, 4);
+          if (tokens.length) {
+            const deeper = await Promise.allSettled(
+              tokens.map(t => searchPlaces({ query: t.query, location: loc, limit: 20, pageToken: t.token }))
+            );
+            drain(deeper
+              .map(r => (r.status === 'fulfilled' && r.value?.leads) ? r.value.leads : [])
+              .filter(b => b.length));
+          }
         }
 
         // Drop businesses we have positive evidence are no longer trading.

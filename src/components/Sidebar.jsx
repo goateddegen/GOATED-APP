@@ -127,9 +127,18 @@ export default function Sidebar() {
         <button onClick={() => { setAccountModalOpen(true); setMobileMenu(false); }} aria-label={isLoggedIn && user ? `Account: ${user.name}` : 'Sign in to your account'}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-white/[0.02] hover:text-slate-200 transition-colors">
           {isLoggedIn && user ? (
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-brand to-cyan-400 flex items-center justify-center text-black text-[10px] font-bold flex-shrink-0" aria-hidden="true">
-              {user.avatar || user.name?.slice(0, 2).toUpperCase() || 'U'}
-            </div>
+            /* `avatar` holds the Google account photo URL, but this rendered it
+               as text — so the raw https://lh3.googleusercontent.com/... string
+               wrapped inside a 24px circle and printed as garbage over the
+               gradient. Show the photo when we have one; otherwise leave the
+               gradient plain rather than stacking characters on it. */
+            user.avatar && /^https?:\/\//.test(user.avatar) ? (
+              <img src={user.avatar} alt="" referrerPolicy="no-referrer"
+                className="w-6 h-6 rounded-full object-cover flex-shrink-0 bg-gradient-to-br from-brand to-cyan-400"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-brand to-cyan-400 flex-shrink-0" aria-hidden="true" />
+            )
           ) : (
             <User size={20} className="flex-shrink-0" aria-hidden="true" />
           )}
@@ -161,7 +170,10 @@ export default function Sidebar() {
         onClick={() => setMobileMenu(!mobileMenu)}
         aria-label={mobileMenu ? 'Close navigation menu' : 'Open navigation menu'}
         aria-expanded={mobileMenu}
-        className="fixed top-2 left-3 z-50 p-2 rounded-lg bg-black/30 backdrop-blur border border-white/[0.05] text-slate-400 hover:text-white transition-colors md:hidden"
+        /* 44px minimum — the WCAG target size, and roughly a fingertip. This
+           was 38x40, which is the difference between hitting it and hitting
+           the page behind it. */
+        className="fixed top-2 left-3 z-50 w-11 h-11 flex items-center justify-center rounded-lg bg-black/40 backdrop-blur border border-white/[0.05] text-slate-300 hover:text-white active:bg-black/60 transition-colors md:hidden"
       >
         {mobileMenu ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
       </button>

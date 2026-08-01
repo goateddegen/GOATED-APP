@@ -8,7 +8,7 @@ import {
   Crown, Sparkles, PhoneCall, FileText, CreditCard, Trophy, Rocket, ChevronUp,
   MapPin, Linkedin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight, Voicemail,
 } from 'lucide-react';
-import { useStore, fmt, enrichLead } from '../hooks/useStore';
+import { useStore, fmt, enrichLead, initialsOf } from '../hooks/useStore';
 import { buildCallSheet, buildPackage } from '../lib/outreach';
 
 // ─── Color Maps ────────────────────────────────────────────────────────────────
@@ -1085,7 +1085,7 @@ Context:\n${ctx}`;
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-16 h-16 rounded-xl bg-brand/15 flex items-center justify-center text-brand font-bold text-lg">
-                  {lead.name.split(' ').map(n => n[0]).join('')}
+                  {initialsOf(lead.company || lead.name)}
                 </div>
               </div>
             </div>

@@ -10,7 +10,7 @@ import {
   Brain, Newspaper, BookOpen, Crosshair,
   Bell, Copy, Eye, AlertTriangle, Award
 } from 'lucide-react';
-import { useStore, fmt } from '../hooks/useStore';
+import { useStore, fmt, initialsOf } from '../hooks/useStore';
 import { GoatIcon } from './GoatLogo';
 import { notify, requestNotifPermission, getNotifPermission } from '../utils/notifications';
 import { isPageEnabled } from '../lib/config';
@@ -853,7 +853,7 @@ function ParsedMessage({ content, onNavigate, onOpenLead, leads }) {
                 className="flex items-center gap-2 my-1.5 px-3 py-2 rounded-lg w-full text-left
                   bg-white/[0.03] hover:bg-brand/10 border border-white/[0.03] hover:border-brand/20 transition-colors group">
                 <div className="w-8 h-8 rounded-full bg-brand/15 flex items-center justify-center text-brand text-[10px] font-bold shrink-0">
-                  {lead.name.split(' ').map(n => n[0]).join('')}
+                  {initialsOf(lead.company || lead.name)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium text-white truncate">{lead.name}</div>
@@ -2351,7 +2351,7 @@ export default function AIOverlay() {
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 text-[9px] font-bold">
-                        {selectedLead.name.split(' ').map(n => n[0]).join('')}
+                        {initialsOf(selectedLead.company || selectedLead.name)}
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-white">{selectedLead.name}</div>

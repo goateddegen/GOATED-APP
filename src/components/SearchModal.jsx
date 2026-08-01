@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Search, Home, Users, X, ArrowUp, ArrowDown, CornerDownLeft, Sparkles, Bot, Loader2, ArrowRight } from 'lucide-react';
-import { useStore } from '../hooks/useStore';
+import { useStore, initialsOf } from '../hooks/useStore';
 import { isPageEnabled } from '../lib/config';
 
 // Natural-language markers — if the query has these, we surface "Ask AI" first.
@@ -401,7 +401,7 @@ export default function SearchModal() {
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${idx === activeIdx ? `${accentBg}` : 'hover:bg-white/[0.02]'}`}
                     >
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${idx === activeIdx ? `${accentBg} ${accentText}` : 'bg-brand/15 text-brand'}`}>
-                        {(l.name || '?').split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        {initialsOf(l.company || l.name)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className={`text-sm font-medium truncate ${idx === activeIdx ? accentText : 'text-white'}`}>{l.name}</div>

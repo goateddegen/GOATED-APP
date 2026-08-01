@@ -76,7 +76,10 @@ export default function AccountModal() {
       ...safeData,
       isAdmin,
       plan: isAdmin ? 'enterprise' : (userData.plan || 'free'),
-      avatar: userData.avatar || userData.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U',
+      // Only ever a photo URL now. Initials are derived at render time where
+      // they're needed, so this never holds a two-letter string that a URL
+      // check would misread.
+      avatar: /^https?:\/\//.test(userData.avatar || '') ? userData.avatar : null,
     };
     setUser(u);
     setIsLoggedIn(true);
@@ -185,8 +188,17 @@ export default function AccountModal() {
               <div>
                 {/* Avatar + Info */}
                 <div className="flex items-center gap-4 mb-6">
-                  <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold ${user.isAdmin ? 'bg-gradient-to-br from-yellow-400 via-brand to-purple-500 text-black ring-2 ring-yellow-400/50' : 'bg-gradient-to-br from-brand to-cyan-400 text-black'}`}>
-                    {user.isAdmin ? <Shield size={28} /> : (user.avatar || user.name?.slice(0, 2).toUpperCase() || 'U')}
+                  {/* Same fix as the sidebar: `avatar` is a photo URL, not two
+                      letters, so rendering it as text printed the URL across
+                      the gradient. */}
+                  <div className={`w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-xl font-bold ${user.isAdmin ? 'bg-gradient-to-br from-yellow-400 via-brand to-purple-500 text-black ring-2 ring-yellow-400/50' : 'bg-gradient-to-br from-brand to-cyan-400 text-black'}`}>
+                    {user.isAdmin
+                      ? <Shield size={28} />
+                      : (user.avatar && /^https?:\/\//.test(user.avatar)
+                          ? <img src={user.avatar} alt="" referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                          : null)}
                   </div>
                   <div>
                     <h3 className="text-lg font-bold flex items-center gap-2">
