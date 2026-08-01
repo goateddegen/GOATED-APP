@@ -16,6 +16,59 @@ function sanitizeInput(text) {
   return clean.slice(0, 2000);
 }
 
+/**
+ * Strip figures the model invented rather than read from a tool result.
+ *
+ * Llama will not reliably follow "do not invent deal values" — across three
+ * identical runs of the same query it produced "$10K - 60%", "$8K - 55%" and
+ * "$10K - 50%" for the same businesses. Those numbers are not in the tool
+ * output and change every time, which is exactly the kind of confident
+ * fabrication that makes the whole feature untrustworthy.
+ *
+ * Anything numeric that does appear in the tool results is left alone, so real
+ * ratings, review counts and prices survive.
+ */
+function stripUngroundedFigures(text, toolResultsJson) {
+  if (!text) return text;
+  const grounded = toolResultsJson || '';
+  const isGrounded = (token) => {
+    const digits = token.replace(/[^0-9.]/g, '');
+    return digits.length > 0 && grounded.includes(digits);
+  };
+
+  let out = text;
+  // Placeholder maths — "$X/year", "$Y return". No digits, so the grounding
+  // check below never sees them, and they read as a broken template.
+  out = out.replace(/\$[A-Z]\b\/?\w*/g, '');
+  // Dollar amounts: $10K, $8,500, $2000
+  out = out.replace(/\$\s?[\d,]+(?:\.\d+)?\s?[KkMm]?\b/g, (m) => (isGrounded(m) ? m : ''));
+  // Percentages presented as close/conversion rates. Digit-matching alone is
+  // not enough here: "60%" matched `score: 60` in the tool output and
+  // survived as a fabricated close rate. A percentage is only real if the
+  // tool output actually expressed one.
+  const groundedHasPercent = grounded.includes('%');
+  out = out.replace(/\b\d{1,3}(?:\.\d+)?\s?%/g, (m) => (groundedHasPercent && isGrounded(m) ? m : ''));
+  // Tidy up what the removals left behind, or the line reads as broken
+  // ("Rescue Air - - Call to recover"). Collapse runs of separators until
+  // stable, then drop any that now dangle at the end of a line.
+  let prev;
+  do {
+    prev = out;
+    out = out.replace(/([ \t]*[-–—][ \t]*){2,}/g, ' - ');
+  } while (out !== prev);
+  out = out.replace(/[ \t]*[-–—][ \t]*(?=[\n,.)]|$)/gm, '');
+  out = out.replace(/^[ \t]*[-–—][ \t]*/gm, (m, off) => (off === 0 ? '' : m));
+  out = out.replace(/[ \t]{2,}/g, ' ');
+  out = out.replace(/[ \t]+([,.])/g, '$1');
+  // A stripped figure can leave a stub like "commission =." or
+  // "Commission impact: on a deal." Drop clauses that no longer say anything.
+  out = out.replace(/[^.\n]*\b(?:commission|deal value|close rate)\b[^.\n]*(?:[.,]|$)/gi, '');
+  out = out.replace(/^[\s*\-–—|]*$/gm, '');
+  out = out.replace(/\n{3,}/g, '\n\n');
+  out = out.replace(/[ \t]{2,}/g, ' ');
+  return out.trim();
+}
+
 function sanitizeOutput(text) {
   if (typeof text !== 'string') return '';
   // Remove any script tags or event handlers that might have leaked through
@@ -351,6 +404,17 @@ ${isDeepResearch ? `DEEP RESEARCH: structured report.
 Data-dense. Numbers and dollars throughout.` : ''}
 
 RULES — OBEY EVERY ONE:
+- Tools are for fetching real data the user asked for, never for illustrating a point.
+  "Find me plumbers in Phoenix" is a search. "What should I sell a roofer with no website"
+  is advice — answer it yourself, from what we sell, with NO tool call. If you do not have a
+  real domain the user gave you, do not call a tool that needs one.
+- Never state a deal value, close rate, commission or percentage that did not come back from
+  a tool. If you do not have the number, leave it out — an answer without it is fine.
+- NEVER mention commission, payouts or splits. We do not pay them and the UI does not show them.
+- Never write placeholder maths like "$X/year" or "$Y return". Either use a real figure or
+  describe the benefit in words.
+- Our pricing is a one-time deposit plus a monthly retainer: $2,000 + $750/mo for the AI
+  receptionist, $2,000 + $250/mo to add a website build. Quote those when asked what to sell.
 - 60 words MAX unless the user explicitly asks for a report / breakdown / deep dive.
 - Bullets beat paragraphs. Lead with the number or action — no "Sure, here's…" preambles.
 - Name + number is a complete answer. Say it and stop.
@@ -464,6 +528,13 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
     const providerErrors = [];
     // Surfaced in the response so the UI can show what the assistant actually did.
     const toolsUsed = [];
+    // Seeded with our own canonical pricing so the ungrounded-figure stripper
+    // treats it as real. Without this it deleted the numbers we actually want
+    // quoted — "$2,000 + $750/mo" came out as "+ /mo" — because they originate
+    // in the system prompt rather than a tool result.
+    let groundingJson = JSON.stringify({
+      pricing: [2000, 750, 250, 300, 1500, 10000, 20000, 2500, 5000],
+    });
 
     if (apiKey) {
       try {
@@ -563,6 +634,14 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
                 + '- Do NOT suggest emailing anyone unless an email address appears in the results. '
                 + 'These are phone-first prospects.\n'
                 + '- If a business has no website or few reviews, say so plainly — that is the opening.\n'
+                // The model was leading with whichever business looked most
+                // impressive — recommending a 4.9-star operator with 4,000
+                // reviews, which is the single hardest sale in the list. We
+                // rank on need, and `score` already encodes it.
+                + '- Rank by how CLOSABLE they are, not how successful. Highest `score` first. '
+                + 'A business with no website, few reviews or no phone is the BEST prospect because '
+                + 'we can fix that; one with thousands of reviews and a polished site is the WORST. '
+                + 'Lead with the ones that have gaps and say which gap.\n'
                 + '- NEVER write a phone number that is not present in the results. Llama will '
                 + 'happily produce (123) 456-7890 to fill the slot; omit the number instead.\n'
                 + '- Be concise: a short list, one line each, then a single next action.',
@@ -579,7 +658,11 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
                 role: 'tool',
                 tool_call_id: c.id,
                 name: c.function?.name,
-                content: JSON.stringify(result).slice(0, 6000),
+                content: (() => {
+                  const j = JSON.stringify(result).slice(0, 6000);
+                  groundingJson += j;   // what the model was actually allowed to see
+                  return j;
+                })(),
               });
             }
             continue; // let the model answer from the tool output
@@ -595,10 +678,25 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
 
     if (!rawContent) {
       console.error(`[${requestId}] All LLM providers failed:`, providerErrors.join(' | '));
-      return res.status(200).json({ fallback: true, requestId, providerErrors });
+      // Say why. Returning a bare `fallback` rendered as an empty bubble, so a
+      // rate limit was indistinguishable from the assistant being broken — the
+      // same failure shape the audit endpoint used to have.
+      const joined = providerErrors.join(' ');
+      const rateLimited = /429|rate.?limit|tokens per day|TPD/i.test(joined);
+      return res.status(200).json({
+        fallback: true,
+        content: rateLimited
+          ? "I'm being rate limited right now — give it a few seconds and ask again. "
+            + 'Your leads and audits are unaffected.'
+          : "I couldn't reach the AI service just then. Try again in a moment — "
+            + 'everything else in the app still works.',
+        retryable: true,
+        requestId,
+        providerErrors,
+      });
     }
 
-    const safeContent = sanitizeOutput(rawContent);
+    const safeContent = stripUngroundedFigures(sanitizeOutput(rawContent), groundingJson);
 
     return res.status(200).json({
       content: safeContent,

@@ -73,6 +73,21 @@ function scorePlace(p) {
   // Reachable at all.
   if (p.nationalPhoneNumber || p.internationalPhoneNumber) score += 10;
 
+  // Size, proxied by review volume — the missing dimension. Without this every
+  // established business scored exactly 60, so a 6,000-review franchise tied
+  // with a 40-review owner-operator and the ordering fell back to whatever
+  // Places considered most prominent. That put the single hardest sale in the
+  // city at the top of the list.
+  //
+  // We sell to the owner. Past a few hundred reviews there is a marketing
+  // manager, an agency on retainer, and a procurement process; below that the
+  // person who answers the phone can also sign.
+  if (reviews > 2000) score -= 18;        // regional/franchise, already has an agency
+  else if (reviews > 800) score -= 12;
+  else if (reviews > 300) score -= 5;
+  else if (reviews >= 40) score += 10;    // established but still owner-run: the sweet spot
+  else if (reviews >= 10) score += 6;
+
   // Don't pitch a business that has closed.
   if (p.businessStatus && p.businessStatus !== 'OPERATIONAL') score -= 40;
 

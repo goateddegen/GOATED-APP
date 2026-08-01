@@ -1637,6 +1637,14 @@ export default function AIOverlay() {
           body: JSON.stringify({ messages: apiMessages, degenMode, leadData: slimLeads, currentPage }),
         });
         const data = await res.json();
+        // A rate-limited or unreachable provider now comes back with a plain
+        // explanation attached. Show that rather than a canned template that
+        // reads like a real answer to a question we never processed.
+        if (data.fallback && data.content) {
+          setMessages(p => [...p, { role: 'assistant', content: data.content }]);
+          setTyping(false);
+          return;
+        }
         if (!data.fallback && data.content) {
           // Auto-navigate if response contains [NAVIGATE:page]
           const navMatch = data.content.match(/\[NAVIGATE:(\w+)\]/);
