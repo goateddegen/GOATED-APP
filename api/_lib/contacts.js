@@ -31,7 +31,7 @@ const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
 /** Pages most likely to name a human, in priority order. */
 const CONTACT_PATHS = ['', '/contact', '/contact-us', '/about', '/about-us', '/team', '/our-team', '/staff'];
 
-async function fetchPage(url, timeoutMs = 8000) {
+async function fetchPage(url, timeoutMs = 2500) {
   try {
     const r = await fetch(url, {
       headers: { 'User-Agent': UA, Accept: 'text/html' },
@@ -198,7 +198,7 @@ function extractSocials(html) {
  * @returns {Promise<object>} contacts, with `pagesFetched` so the caller can
  *   tell "nothing published" apart from "site unreachable".
  */
-export async function extractContacts(website) {
+export async function extractContacts(website, companyHint = '') {
   if (!website) return { ok: false, reason: 'no website on record' };
 
   let base;
@@ -214,7 +214,16 @@ export async function extractContacts(website) {
   let socials = {};
   const pagesFetched = [];
 
+  // Vercel Hobby kills the function at 10s. Walking 8 paths sequentially at the
+  // old 8s-per-page timeout could reach 64s, so a slow prospect site would have
+  // timed out with nothing to show. Budget the whole crawl and stop early —
+  // fewer pages read beats a dead request.
+  const startedAt = Date.now();
+  const CRAWL_BUDGET_MS = 7000;
+  let ranOutOfTime = false;
+
   for (const path of CONTACT_PATHS) {
+    if (Date.now() - startedAt > CRAWL_BUDGET_MS) { ranOutOfTime = true; break; }
     const url = `${base.origin}${path}`;
     const html = await fetchPage(url);
     if (!html) continue;
@@ -239,20 +248,46 @@ export async function extractContacts(website) {
   // confirm one — while kevin@company.com is sitting right there. Surfacing the
   // local part as a *probable* first name is honest and immediately useful on a
   // call ("is Kevin around?"). Flagged as inferred so the UI can hedge it.
+  //
+  // The inference has to reject the business's own name. A local business
+  // mailbox is usually the brand — theonelandscape@gmail.com — and calling that
+  // a probable first name put "Hi Theonelandscape" in front of the operator,
+  // which is worse than surfacing nothing.
+  const brandTokens = new Set(
+    `${companyHint} ${base.hostname}`
+      .toLowerCase()
+      .replace(/\.(com|net|org|co|us|biz|info|io)\b/g, ' ')
+      .split(/[^a-z]+/)
+      .filter(t => t.length >= 3)
+  );
+  // Real first names run about 2-12 characters. Anything longer is a brand,
+  // a compound, or a phrase.
+  const looksLikeBrand = (local) => {
+    if (brandTokens.has(local)) return true;
+    for (const t of brandTokens) {
+      if (t.length >= 4 && (local.includes(t) || t.includes(local))) return true;
+    }
+    return false;
+  };
+
   const probableNames = [];
   for (const { email } of direct) {
-    const local = email.split('@')[0];
-    if (!/^[a-z]{2,15}$/i.test(local)) continue;          // skip first.last, k.smith, ops2
-    if (NOT_A_FIRST_NAME.has(local.toLowerCase())) continue;
-    const pretty = local[0].toUpperCase() + local.slice(1).toLowerCase();
+    const local = email.split('@')[0].toLowerCase();
+    if (!/^[a-z]{2,12}$/.test(local)) continue;           // skip first.last, k.smith, ops2
+    if (NOT_A_FIRST_NAME.has(local)) continue;
+    if (looksLikeBrand(local)) continue;                  // it's the business, not a person
+    const pretty = local[0].toUpperCase() + local.slice(1);
     // Don't repeat someone already found by name on the page.
-    if ([...people.values()].some(p => p.name.toLowerCase().startsWith(local.toLowerCase()))) continue;
+    if ([...people.values()].some(p => p.name.toLowerCase().startsWith(local))) continue;
     probableNames.push({ firstName: pretty, evidence: email, inferred: true });
   }
 
   return {
     ok: true,
     pagesFetched,
+    // True when we stopped for time rather than because we ran out of pages —
+    // the operator should know the result may be incomplete.
+    partial: ranOutOfTime,
     people: [...people.values()],
     probableNames,
     phones: [...phones.values()],

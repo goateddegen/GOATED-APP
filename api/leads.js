@@ -793,7 +793,7 @@ export default async function handler(req, res) {
     // never fires 50 crawls.
     if (action === 'enrich') {
       if (!website) return res.status(400).json({ error: 'website is required' });
-      const contacts = await extractContacts(website);
+      const contacts = await extractContacts(website, req.query?.company || '');
       return res.status(200).json({
         website,
         ...contacts,

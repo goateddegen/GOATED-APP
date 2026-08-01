@@ -686,6 +686,14 @@ export default function LeadDetail() {
   const [aiScripts, setAiScripts] = useState(null);
   const [aiScriptsLoading, setAiScriptsLoading] = useState(false);
   const [aiScriptsError, setAiScriptsError] = useState(null);
+  // ── Points of contact inside the business ──────────────────────────────────
+  // The public Maps number reaches whoever is on the desk. This crawls the
+  // prospect's own site for named people and direct lines so the operator can
+  // ask for someone by name. On demand only — opening the Leads page must not
+  // fire a crawl per row.
+  const [contacts, setContacts] = useState(null);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactsError, setContactsError] = useState(null);
 
   const goBack = () => {
     setDetailOpen(false);
@@ -766,6 +774,25 @@ export default function LeadDetail() {
   const safeBuyingSignals = el.buyingSignals || lead.buyingSignals || [];
 
   const pc = priorityColors[lead.priority] || priorityColors.medium;
+
+  const findContacts = useCallback(async () => {
+    const site = el.website || el.domain;
+    if (!site) { setContactsError('No website on record for this business.'); return; }
+    setContactsLoading(true);
+    setContactsError(null);
+    try {
+      const qs = new URLSearchParams({ action: 'enrich', website: site, company: el.company || '' });
+      const res = await fetch(`/api/leads?${qs}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Lookup failed');
+      if (!data.ok) throw new Error(data.reason || 'Nothing published on their site.');
+      setContacts(data);
+    } catch (e) {
+      setContactsError(e.message || 'Could not read their site.');
+    } finally {
+      setContactsLoading(false);
+    }
+  }, [el.website, el.domain, el.company]);
 
   // ── Regenerate outreach with real AI, per-lead ──────────────────────────────
   const regenerateAIScripts = useCallback(async () => {
@@ -1077,6 +1104,117 @@ Context:\n${ctx}`;
           CONTACT INTEL + OUTREACH ACTIONS
       ═══════════════════════════════════════════════════════════════════════ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-4">
+        {/* ── Points of contact inside the business ──────────────────────────
+            The Maps number reaches the front desk. This surfaces named people
+            and direct lines published on the prospect's own site, so the call
+            can open with "is Dave around?" instead of a cold general enquiry.
+            Everything shown is quoted from their pages; inferred first names
+            are labelled as such rather than presented as fact. */}
+        <div className="rounded-2xl border border-violet-500/25 bg-violet-500/[0.03] p-5 mb-4">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center shrink-0">
+              <Users size={18} className="text-violet-400" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-violet-400">Points of Contact</h3>
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider">
+                Named people &amp; direct lines from their own site
+              </span>
+            </div>
+            <button
+              onClick={findContacts}
+              disabled={contactsLoading || (!el.website && !el.domain)}
+              className="ml-auto shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-300 text-xs font-semibold hover:bg-violet-500/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+              {contactsLoading ? <><Timer size={13} className="animate-spin" /> Reading site…</>
+                : <><Search size={13} /> {contacts ? 'Re-scan' : 'Find contacts'}</>}
+            </button>
+          </div>
+
+          {!el.website && !el.domain && (
+            <p className="text-xs text-slate-500">
+              No website on record, so there are no pages to read. The Maps number below is the only published line.
+            </p>
+          )}
+
+          {contactsError && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/[0.07] border border-amber-500/25">
+              <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-200/90">{contactsError}</p>
+            </div>
+          )}
+
+          {contacts && (
+            <div className="space-y-4">
+              {contacts.people?.length > 0 && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Named on their site</div>
+                  <div className="space-y-1.5">
+                    {contacts.people.map((p, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+                        <span className="text-sm text-white font-medium">{p.name}</span>
+                        {p.role && <span className="text-xs text-slate-400">— {p.role}</span>}
+                        <CopyBtn text={p.name} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {contacts.probableNames?.length > 0 && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">
+                    Probable first names <span className="text-amber-400/70 normal-case tracking-normal">· inferred, not confirmed</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {contacts.probableNames.map((p, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                        <span className="text-sm text-white font-medium">{p.firstName}</span>
+                        <span className="text-[10px] text-slate-500 font-mono truncate">from {p.evidence}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1.5">
+                    Inferred from a named inbox. Worth trying — "is {contacts.probableNames[0].firstName} around?" — but don't state it as known.
+                  </p>
+                </div>
+              )}
+
+              {contacts.phones?.length > 0 && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Numbers on their site</div>
+                  <div className="space-y-1.5">
+                    {contacts.phones.map((ph, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/[0.05] border border-emerald-500/15">
+                        <PhoneCall size={13} className="text-emerald-400 shrink-0" />
+                        <a href={`tel:${ph.number}`} className="text-sm text-white font-mono hover:text-emerald-300 transition-colors">{ph.number}</a>
+                        <span className="text-[10px] text-slate-500">{ph.source}</span>
+                        {el.phone && ph.number.replace(/\D/g, '') !== el.phone.replace(/\D/g, '') && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 font-bold ml-auto shrink-0">
+                            NOT THE MAPS LINE
+                          </span>
+                        )}
+                        <CopyBtn text={ph.number} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!contacts.people?.length && !contacts.probableNames?.length && !contacts.phones?.length && (
+                <p className="text-xs text-slate-500">
+                  Read {(contacts.pagesFetched || []).join(', ') || 'their site'} — no names or direct numbers published.
+                  Ask for the owner by role on the call.
+                </p>
+              )}
+
+              <p className="text-[10px] text-slate-600 pt-1 border-t border-white/[0.04]">
+                Quoted from {(contacts.pagesFetched || []).length} page(s) on {el.website || el.domain}.
+                {contacts.partial && ' Stopped early — their site was slow, so this may be incomplete. Re-scan to try more pages.'}
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Contact Intel Section — PROMINENT */}
         <div className="rounded-2xl border-2 border-cyan-500/25 bg-gradient-to-br from-cyan-500/[0.04] to-blue-500/[0.02] p-5 sm:p-6 mb-4 shadow-lg shadow-cyan-500/5">
           <div className="flex items-center gap-3 mb-5">
