@@ -838,6 +838,7 @@ function computePipelineAnalytics(leads) {
 // gone. Leads now accumulate: each fetch appends whatever is genuinely new and
 // leaves everything already on the page alone.
 const LIVE_LEADS_KEY = 'goated_live_leads';
+const NO_WEBSITE_KEY = 'goated_nowebsite_leads';
 const MAX_STORED_LEADS = 200;   // ~300KB of localStorage, well inside the 5MB cap
 
 /** Stable identity for a lead across fetches. Falls back to name + place. */
@@ -846,21 +847,21 @@ function leadKey(l) {
     || `${(l.company || l.name || '').toLowerCase()}|${(l.address || l.location || '').toLowerCase()}`;
 }
 
-function loadStoredLeads() {
+function loadStoredLeads(key = LIVE_LEADS_KEY) {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = JSON.parse(localStorage.getItem(LIVE_LEADS_KEY) || '[]');
+    const raw = JSON.parse(localStorage.getItem(key) || '[]');
     return Array.isArray(raw) ? raw : [];
   } catch { return []; }
 }
 
-function persistLeads(leads) {
+function persistLeads(leads, key = LIVE_LEADS_KEY) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(LIVE_LEADS_KEY, JSON.stringify(leads.slice(-MAX_STORED_LEADS)));
+    localStorage.setItem(key, JSON.stringify(leads.slice(-MAX_STORED_LEADS)));
   } catch {
     // Quota exceeded — keep only the most recent half rather than losing the lot.
-    try { localStorage.setItem(LIVE_LEADS_KEY, JSON.stringify(leads.slice(-Math.floor(MAX_STORED_LEADS / 2)))); }
+    try { localStorage.setItem(key, JSON.stringify(leads.slice(-Math.floor(MAX_STORED_LEADS / 2)))); }
     catch { /* give up on persistence; the in-memory list still works */ }
   }
 }
@@ -1015,6 +1016,11 @@ export const useStore = create((set, get) => ({
   // Restored from localStorage so a browser refresh keeps the list you built
   // and appends to it, rather than starting from nothing.
   liveLeads: loadStoredLeads(),
+  // Businesses with no website at all. Kept as a separate list because they
+  // are a different pitch — the site build and the phone cover sold together —
+  // and burying them a few rows apart in the main table hid the best leads
+  // we have.
+  noWebsiteLeads: loadStoredLeads(NO_WEBSITE_KEY),
   lastAddedLeadCount: 0,
   liveTrends: [],
   liveMarketData: {},
@@ -1043,15 +1049,37 @@ export const useStore = create((set, get) => ({
       // 25, explicitly. A single Places trade query only returns ~15 results,
       // which is what the page was actually showing; the blended multi-trade
       // fetch can fill a full 25 across different business types.
-      const res = await authedFetch('/api/leads?limit=25');
+      const res = await authedFetch('/api/leads?limit=40');
       if (!res.ok) throw new Error(`Leads API returned ${res.status}`);
       const data = await res.json();
       const incoming = data.leads || data;
       const { merged, addedCount } = mergeLeads(get().liveLeads, incoming);
       persistLeads(merged);
+
+      // Same accumulate-don't-replace rule for the no-website list. Ids are
+      // offset past the main list so the two can never collide — `id` is what
+      // selects a lead, and a clash would open the wrong business.
+      const nwIncoming = data.noWebsiteLeads || [];
+      const nwPrev = get().noWebsiteLeads;
+      const nwSeen = new Set(nwPrev.map(l => l._placeId || l._apolloId || l.external_id || `${l.company}|${l.address}`));
+      let nwNextId = Math.max(
+        100_000,
+        nwPrev.reduce((m, l) => Math.max(m, Number(l.id) || 0), 0) + 1,
+      );
+      const nwAdded = [];
+      for (const l of nwIncoming) {
+        const k = l._placeId || l._apolloId || l.external_id || `${l.company}|${l.address}`;
+        if (nwSeen.has(k)) continue;
+        nwSeen.add(k);
+        nwAdded.push({ ...l, id: nwNextId++, _addedAt: new Date().toISOString() });
+      }
+      const nwMerged = [...nwPrev, ...nwAdded].slice(-MAX_STORED_LEADS);
+      persistLeads(nwMerged, NO_WEBSITE_KEY);
+
       set({
         liveLeads: merged,
-        lastAddedLeadCount: addedCount,
+        noWebsiteLeads: nwMerged,
+        lastAddedLeadCount: addedCount + nwAdded.length,
         isLoadingLeads: false,
         lastFetchedLeads: new Date().toISOString(),
         dataMode: 'live',

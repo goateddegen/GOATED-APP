@@ -6,7 +6,7 @@ import {
   Linkedin, Clock, Flame, Brain, MessageSquare, Bot, Wand2, Filter,
   Target, Star, Eye, Copy, X, Activity, CheckCircle,
   Crown, PhoneCall, CalendarClock, Timer, UserSearch, Table2,
-  ExternalLink, MapPin, Crosshair, AlertTriangle, Radio, RefreshCw,
+  ExternalLink, MapPin, Crosshair, AlertTriangle, Radio, RefreshCw, Globe,
 } from 'lucide-react';
 import { useStore, fmt, priorities, statuses, industries } from '../hooks/useStore';
 import { buildOutreachStrategy, deriveGaps, recommendTier, buildPackage } from '../lib/outreach';
@@ -620,6 +620,11 @@ export default function LeadsPage({ onSelect }) {
 
   const fetchLiveLeads = useStore(s => s.fetchLiveLeads);
   const lastAddedLeadCount = useStore(s => s.lastAddedLeadCount);
+  const noWebsiteLeads = useStore(s => s.noWebsiteLeads);
+  // Opening a lead is a two-step store action — LeadDetail reads selectedLead
+  // and renders on detailOpen. Both were missing from this page's selectors.
+  const setSelectedLead = useStore(s => s.setSelectedLead);
+  const setDetailOpen = useStore(s => s.setDetailOpen);
   const liveLeads = useStore(s => s.liveLeads);
   const dataMode = useStore(s => s.dataMode);
   const isLoadingLeads = useStore(s => s.isLoadingLeads);
@@ -914,15 +919,77 @@ export default function LeadsPage({ onSelect }) {
         </div>
       </div>
 
+      {/* ── No website: the strongest pitch we have ──────────────────────────
+          These used to sit scattered through the main table a few rows apart,
+          which buried them. A business with no website is the one call where
+          we sell the build and the phone cover together, so it gets its own
+          list, populated from the same fetch as the main one. */}
+      {noWebsiteLeads.length > 0 && (
+        <div className="mb-5 rounded-2xl border border-amber-500/25 bg-amber-500/[0.03] overflow-hidden">
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-amber-500/15">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
+              <Globe size={16} className="text-amber-400" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold text-amber-400">No Website — Highest Intent</h2>
+              <p className="text-[11px] text-slate-500">
+                Invisible outside Maps. Sell the build plus the receptionist: {fmt(4000)} deposit + {fmt(1000)}/mo
+              </p>
+            </div>
+            <span className="ml-auto shrink-0 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
+              {noWebsiteLeads.length}
+            </span>
+          </div>
+          <div className="divide-y divide-white/[0.04] max-h-[420px] overflow-y-auto">
+            {noWebsiteLeads.map((l) => {
+              const act = l.activity || {};
+              const live = act.level === 'active';
+              return (
+                <button key={l.id} onClick={() => { setSelectedLead(l); setDetailOpen(true); }}
+                  className="w-full text-left px-4 py-3 hover:bg-white/[0.03] transition-colors flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-white truncate">{l.company}</span>
+                      {act.label && (
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full border shrink-0 ${
+                          live ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
+                               : 'bg-white/[0.03] text-slate-400 border-white/[0.06]'}`}>
+                          {act.label}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-500 truncate">
+                      {l.location || 'Location unknown'}
+                      {l.reviewCount != null && ` · ${l.reviewCount} reviews`}
+                      {l.revenueFormatted && ` · est. ${l.revenueFormatted}`}
+                    </div>
+                  </div>
+                  {l.phone && (
+                    <span className="hidden sm:block text-[11px] font-mono text-slate-400 shrink-0">{l.phone}</span>
+                  )}
+                  <div className="text-right shrink-0">
+                    <div className="text-sm font-bold text-amber-400">{l.score}</div>
+                    <div className="text-[9px] text-slate-600 uppercase tracking-wider">score</div>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-600 shrink-0" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── Pipeline Stats ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         <div className="bg-surface-3 rounded-xl p-4 border border-white/[0.03]">
           <div className="flex items-center gap-2 text-slate-500 text-xs mb-1"><DollarSign size={14} /> Pipeline Value</div>
           <div className="text-xl font-bold text-white">{fmt(stats.pipeline)}</div>
         </div>
-        <div className="bg-surface-3 rounded-xl p-4 border border-emerald-500/10">
-          <div className="flex items-center gap-2 text-emerald-400 text-xs mb-1"><DollarSign size={14} /> Your Commission</div>
-          <div className="text-xl font-bold text-emerald-400">{fmt(stats.commission)}</div>
+        {/* Commission tile replaced — payouts aren't wired, and the count of
+            businesses with no website is the number worth acting on. */}
+        <div className="bg-surface-3 rounded-xl p-4 border border-amber-500/15">
+          <div className="flex items-center gap-2 text-amber-400 text-xs mb-1"><Globe size={14} /> No Website</div>
+          <div className="text-xl font-bold text-amber-400">{noWebsiteLeads.length.toLocaleString()}</div>
         </div>
         <div className="bg-surface-3 rounded-xl p-4 border border-amber-500/10">
           <div className="flex items-center gap-2 text-amber-400 text-xs mb-1"><Target size={14} /> Negotiating</div>

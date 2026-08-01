@@ -25,6 +25,8 @@ const SEARCH_URL = 'https://places.googleapis.com/v1/places:searchText';
 
 // Ask only for what we use — Places bills by field mask, so a lazy '*' here is
 // a direct cost increase per request.
+import { assessActivity, estimateRevenue } from './qualify.js';
+
 const FIELDS = [
   'places.id',
   'places.displayName',
@@ -39,6 +41,17 @@ const FIELDS = [
   'places.primaryTypeDisplayName',
   'places.googleMapsUri',
   'places.location',
+  // Qualification signals. `reviews` is the important one: it carries
+  // publishTime for the 5 most recent, which is the only direct evidence
+  // Places gives us that a business is still trading. A listing with a
+  // review from last week is a live operation; one whose newest is from
+  // 2021 is a dead contact that still looks fine on paper.
+  //
+  // NOTE ON BILLING: places.reviews moves Text Search from the Pro SKU to
+  // Enterprise+Atmosphere ($32 -> $35 per 1,000). The $200/month free credit
+  // still covers roughly 5,700 requests, and we issue ~5 per leads page load.
+  'places.reviews',
+  'places.regularOpeningHours',
   'nextPageToken',
 ].join(',');
 
@@ -90,6 +103,16 @@ function scorePlace(p) {
 
   // Don't pitch a business that has closed.
   if (p.businessStatus && p.businessStatus !== 'OPERATIONAL') score -= 40;
+
+  // Liveness. A dead contact wastes the operator's time no matter how good the
+  // gap looks on paper, and a listing with no review in two years is exactly
+  // the kind of thing that scored well here before: no website, thin reviews,
+  // maximum apparent need, nobody home.
+  const act = assessActivity(p);
+  if (act.level === 'stale') score -= 30;
+  else if (act.level === 'slowing') score -= 10;
+  else if (act.level === 'active') score += 12;
+  else if (act.level === 'steady') score += 5;
 
   return Math.max(1, Math.min(99, Math.round(score)));
 }
@@ -154,6 +177,8 @@ export function transformPlace(p, index = 0) {
   const phone = e164(p);
   const reviews = p.userRatingCount ?? null;
   const gaps = placeGaps(p);
+  const activity = assessActivity(p);
+  const revenue = estimateRevenue(p);
 
   return {
     id: index + 1,
@@ -186,6 +211,15 @@ export function transformPlace(p, index = 0) {
     reviewCount: reviews,
     mapsUrl: p.googleMapsUri || null,
     businessStatus: p.businessStatus || null,
+    // Qualification — is this a live business, and roughly how big?
+    activity,
+    revenueEstimate: revenue,
+    revenueFormatted: revenue
+      ? `$${Math.round(revenue.monthlyLow / 1000)}K–$${Math.round(revenue.monthlyHigh / 1000)}K/mo`
+      : null,
+    openNow: p.regularOpeningHours?.openNow ?? null,
+    hasPublishedHours: (p.regularOpeningHours?.weekdayDescriptions || []).length > 0,
+    lastReviewDays: activity.daysSinceNewest ?? null,
     painPoints: [],
     techStack: null,
     keywords: [],

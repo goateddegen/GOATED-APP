@@ -894,10 +894,14 @@ export default async function handler(req, res) {
       } else {
         // Default view: blend several trades so the page isn't one vertical.
         // Places caps at 20 per query, so fan out and interleave.
-        const trades = pickTrades(Math.min(5, Math.max(2, Math.ceil(limit / 5))));
-        const per = Math.max(3, Math.ceil(limit / trades.length) + 1);
+        // Wider fan-out than the page needs. Businesses without a website are
+        // a minority of any Places result set — usually 1 in 10 — so a fetch
+        // sized exactly to the page returns few or none of them, and the
+        // no-website section would render empty on load. Pull a deeper pool
+        // and partition it afterwards.
+        const trades = pickTrades(Math.min(8, Math.max(4, Math.ceil(limit / 5))));
         const settled = await Promise.allSettled(
-          trades.map(t => searchPlaces({ query: t, location: loc, limit: per }))
+          trades.map(t => searchPlaces({ query: t, location: loc, limit: 20 }))
         );
         const buckets = settled
           .map(r => (r.status === 'fulfilled' && r.value?.leads) ? r.value.leads : [])
@@ -914,30 +918,54 @@ export default async function handler(req, res) {
         const seen = new Set();
         const keyOf = (l) => (l._placeId || l._apolloId || l.external_id
           || `${(l.company || '').toLowerCase()}|${(l.address || '').toLowerCase()}`);
-        for (let i = 0; merged.length < limit; i++) {
+        // Drain every bucket, not just enough to fill the page — the partition
+        // below needs the whole pool to find no-website businesses.
+        for (let i = 0; ; i++) {
           let added = false;
           for (const b of buckets) {
             if (!b[i]) continue;
-            added = true;                       // bucket still has depth to draw from
+            added = true;
             const k = keyOf(b[i]);
             if (seen.has(k)) continue;
             seen.add(k);
             merged.push(b[i]);
-            if (merged.length >= limit) break;
           }
           if (!added) break;
         }
-        // Closability first — that ordering is the product.
-        merged.sort((a, b) => b.score - a.score);
-        merged.forEach((l, i) => { l.id = i + 1; });
 
-        pl = merged.length
-          ? { leads: merged, total: merged.length, source: 'places',
+        // Drop businesses we have positive evidence are no longer trading.
+        // They scored well precisely because they look neglected, which is the
+        // same shape as a genuine opportunity.
+        const live = merged.filter(l => l.activity?.callable !== false);
+
+        // Closability first — that ordering is the product.
+        live.sort((a, b) => b.score - a.score);
+
+        // Two sections. No-website businesses are the strongest pitch we have
+        // (site build plus phone cover sold together), so they get their own
+        // list rather than being scattered a few rows apart in the main one.
+        const noWebsite = live.filter(l => !l.website);
+        const withWebsite = live.filter(l => l.website);
+
+        const primary = withWebsite.slice(0, limit);
+        const needsSite = noWebsite.slice(0, Math.max(10, Math.round(limit / 3)));
+
+        // Ids must be unique across BOTH lists — the client keys rows and lead
+        // selection off them, so a collision opens the wrong business.
+        const out = [...primary, ...needsSite];
+        out.forEach((l, i) => { l.id = i + 1; });
+
+        pl = out.length
+          ? { leads: primary, noWebsiteLeads: needsSite,
+              total: out.length, source: 'places',
               query: trades.join(' / '), nextPageToken: null,
               stats: {
-                withoutWebsite: merged.filter(l => !l.website).length,
-                thinReviews: merged.filter(l => l.reviewCount != null && l.reviewCount < 25).length,
-                reachable: merged.filter(l => l.phone).length,
+                pool: merged.length,
+                dropped: merged.length - live.length,
+                withoutWebsite: noWebsite.length,
+                thinReviews: live.filter(l => l.reviewCount != null && l.reviewCount < 25).length,
+                reachable: live.filter(l => l.phone).length,
+                activelyTrading: live.filter(l => l.activity?.level === 'active').length,
               } }
           : { fallback: true, error: 'no places results' };
       }
@@ -961,17 +989,34 @@ export default async function handler(req, res) {
           catch (e) { console.warn('[GOATED] places persistence failed:', e.message); }
         }
 
+        // The no-website partition rides along on the same response — it is
+        // the same fetch, split — so the page can render both sections on load
+        // without a second round trip.
+        let noWebsite = pl.noWebsiteLeads || [];
+        if (minScore > 0) noWebsite = noWebsite.filter(l => l.score >= minScore);
+        if (priority) noWebsite = noWebsite.filter(l => l.priority === priority.toLowerCase());
+
+        if (caller && noWebsite.length) {
+          try { await saveLeads(noWebsite, caller.id); }
+          catch (e) { console.warn('[GOATED] no-website persistence failed:', e.message); }
+        }
+
         return res.status(200).json({
           leads: out,
+          noWebsiteLeads: noWebsite,
           total: out.length,
           page, limit,
           totalPages: 1,
           summary: {
-            totalLeads: out.length,
+            totalLeads: out.length + noWebsite.length,
             returned: out.length,
+            noWebsiteCount: noWebsite.length,
             reachableByPhone: pl.stats.reachable,
             withoutWebsite: pl.stats.withoutWebsite,
             thinReviews: pl.stats.thinReviews,
+            activelyTrading: pl.stats.activelyTrading,
+            poolScanned: pl.stats.pool,
+            droppedInactive: pl.stats.dropped,
             pipelineValue: out.reduce((a, l) => a + (l.dealValue || 0), 0),
           },
           _meta: {
