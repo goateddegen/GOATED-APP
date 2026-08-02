@@ -541,7 +541,7 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
             </li>
             <li className="flex items-start gap-2">
               <Timer size={12} className="text-yellow-400 shrink-0 mt-0.5" />
-              <span><strong className="text-yellow-400">Cost of delay:</strong> Every month {lead.company} delays costs them <strong className="text-white">{fmt(Math.round(dv * 0.15))}</strong>. In {el.decisionTimeline || '3 months'}, that's <strong className="text-white">{fmt(Math.round(dv * 0.15 * 3))}</strong> gone. Use this number in your close: <em>"The question isn't whether you can afford this — it's whether you can afford another {fmt(Math.round(dv * 0.15))} month of doing nothing."</em></span>
+              <span><strong className="text-yellow-400">Cost of delay:</strong> Every month {lead.company} delays costs them <strong className="text-white">{fmt(Math.round(dv * 0.15))}</strong>. Over a quarter that's <strong className="text-white">{fmt(Math.round(dv * 0.15 * 3))}</strong> gone. Use this number in your close: <em>"The question isn't whether you can afford this — it's whether you can afford another {fmt(Math.round(dv * 0.15))} month of doing nothing."</em></span>
             </li>
             <li className="flex items-start gap-2">
               <Crosshair size={12} className="text-cyan-400 shrink-0 mt-0.5" />
@@ -1186,7 +1186,11 @@ Context:\n${ctx}`;
                 )}
                 Recommended attack: <span className="text-white font-medium">{el.bestMethod || 'direct outreach'}</span>{' '}
                 leading with the <span className="text-red-400">{fmt(Math.round(dv * 0.15))}/mo revenue leak</span> — make the cost of inaction louder than the cost of buying.{' '}
-                Close window: {el.decisionTimeline || '1-3 months'}.{' '}
+                {/* Was `Close window: {el.decisionTimeline || '1-3 months'}` — we have
+                    no decision timeline for a local business, so it printed a
+                    confident window for every lead. These close in one call or
+                    not at all. */}
+                Expect a decision on the call, not a procurement cycle.{' '}
                 {lead.competitorUsing && <>Currently on <span className="text-yellow-400">{lead.competitorUsing}</span> — displacement opportunity via superior ROI and {(safePainPoints[0] || 'pain point').toLowerCase()} resolution. </>}
                 Priority: <span className="font-medium" style={{ color: pc.hex }}>{lead.priority?.toUpperCase()}</span>.
               </p>
@@ -1756,8 +1760,10 @@ Context:\n${ctx}`;
                   <div className="w-10 h-10 rounded-full bg-purple-500/15 flex items-center justify-center mb-2">
                     <Clock size={18} className="text-purple-400" />
                   </div>
-                  <span className="text-sm font-bold text-purple-400">{lead.decisionTimeline || 'TBD'}</span>
-                  <span className="text-xs text-slate-400 mt-1">Timeline</span>
+                  <span className="text-sm font-bold text-purple-400">
+                    {el.activity?.label || (el.lastReviewDays != null ? `${el.lastReviewDays}d ago` : 'Unknown')}
+                  </span>
+                  <span className="text-xs text-slate-400 mt-1">Last activity</span>
                 </GlassCard>
               </div>
             </div>
@@ -1912,13 +1918,27 @@ Context:\n${ctx}`;
                 <Building2 size={16} className="text-brand" /> Company Intelligence
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Headcount and revenue are Apollo fields — null for every
+                    business sourced from Places, so both tiles read "N/A" on
+                    the leads we actually work. Falls back to the signals we do
+                    hold rather than showing an empty slot. */}
                 <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                  <div className="text-[10px] text-slate-500 uppercase tracking-wider">Employees</div>
-                  <div className="text-lg font-bold mt-1">{lead.employees ? lead.employees.toLocaleString() : 'N/A'}</div>
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider">
+                    {lead.employees ? 'Employees' : 'Reviews'}
+                  </div>
+                  <div className="text-lg font-bold mt-1">
+                    {lead.employees
+                      ? lead.employees.toLocaleString()
+                      : (el.reviewCount != null ? `${el.reviewCount}${el.rating ? ` · ${el.rating}★` : ''}` : '—')}
+                  </div>
                 </div>
                 <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                  <div className="text-[10px] text-slate-500 uppercase tracking-wider">Revenue</div>
-                  <div className="text-lg font-bold mt-1">{lead.revenue ? fmt(lead.revenue) : 'N/A'}</div>
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider">
+                    {lead.revenue ? 'Revenue' : 'Est. revenue'}
+                  </div>
+                  <div className="text-lg font-bold mt-1">
+                    {lead.revenue ? fmt(lead.revenue) : (el.revenueFormatted || '—')}
+                  </div>
                 </div>
                 <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                   <div className="text-[10px] text-slate-500 uppercase tracking-wider">Industry</div>
@@ -2782,8 +2802,12 @@ Context:\n${ctx}`;
                     <Target size={22} className="text-purple-400" />
                   </div>
                   <div>
-                    <div className="text-xl font-bold text-purple-400">{lead.decisionTimeline || 'TBD'}</div>
-                    <div className="text-xs text-slate-500 mt-0.5">Expected decision window</div>
+                    <div className="text-xl font-bold text-purple-400">
+                      {el.activity?.label || 'Activity unknown'}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-0.5">
+                      {el.activity?.why || 'No dated reviews to check recency against'}
+                    </div>
                   </div>
                 </div>
               </GlassCard>

@@ -574,7 +574,6 @@ function CloseCoachRow({ lead, index, colSpan, onCallClick, showToast }) {
                 <div className="flex justify-between"><span className="text-slate-500">Deposit</span><span className="text-brand font-bold">{fmt(buildPackage(lead).deposit)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Monthly</span><span className="text-brand font-bold">{fmt(buildPackage(lead).monthly)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Score</span><span className={`font-bold ${scoreColor(lead.score)}`}>{lead.score}/100</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Timeline</span><span className="text-white">{lead.decisionTimeline || '--'}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Last Active</span><span className="text-white">{intel.lastActive}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Momentum</span><span className={`font-medium ${lead.momentum === 'rising' || lead.momentum === 'surging' ? 'text-emerald-400' : lead.momentum === 'declining' ? 'text-red-400' : 'text-slate-400'}`}>{lead.momentum || 'stable'}</span></div>
               </div>
@@ -1298,7 +1297,6 @@ export default function LeadsPage({ onSelect }) {
                 <SortHeader field="deposit" label="Deposit" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                 <th className="px-3 py-3 text-left text-xs text-emerald-400 font-medium uppercase tracking-wider">Close %</th>
                 <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider">Status</th>
-                <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider hidden lg:table-cell">Timeline</th>
                 <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -1367,12 +1365,6 @@ export default function LeadsPage({ onSelect }) {
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColors[l.status] || 'bg-slate-500/15 text-slate-400'}`}>{l.status}</span>
                       </td>
 
-                      {/* Timeline */}
-                      <td className="px-3 py-2.5 hidden lg:table-cell">
-                        <span className={`text-[11px] font-medium ${l.decisionTimeline === 'This week' ? 'text-emerald-400' : l.decisionTimeline === '2 weeks' ? 'text-amber-400' : 'text-slate-500'}`}>
-                          {l.decisionTimeline || '--'}
-                        </span>
-                      </td>
 
                       {/* Actions */}
                       <td className="px-3 py-2.5">
