@@ -1061,6 +1061,10 @@ export const useStore = create((set, get) => ({
   // pinned to one city with no way out, and an operator working a different
   // metro (or behind a VPN that lands them somewhere else) had no override.
   market: loadMarket(),
+  // What the server actually resolved for the last fetch. Shown in the header
+  // so the operator can see which metro they are being served rather than
+  // having to infer it from the addresses.
+  resolvedMarket: null,
   setMarket: (city) => {
     const v = (city || '').trim();
     try {
@@ -1137,6 +1141,7 @@ export const useStore = create((set, get) => ({
       persistLeads(nwMerged, NO_WEBSITE_KEY);
 
       set({
+        resolvedMarket: data?._meta?.resolvedLocation || null,
         liveLeads: merged,
         noWebsiteLeads: nwMerged,
         lastAddedLeadCount: addedCount + nwAdded.length,

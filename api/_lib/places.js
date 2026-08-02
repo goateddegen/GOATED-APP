@@ -308,10 +308,23 @@ export async function searchPlaces({ query, location = '', limit = 20, pageToken
     // Only applied when the city token is distinctive enough to test, and only
     // if it doesn't wipe the whole result set — a neighbouring-suburb address
     // ("Oldsmar" for a Tampa search) is still a legitimate local lead.
-    let candidates = open;
+    // Domestic-focused, not domestic-locked.
+    //
+    // `regionCode: 'US'` is a bias rather than a restriction, so a US city
+    // search could still return the odd foreign result — a US business address
+    // ends with a state code and ZIP ("…, TX 77007") where a foreign one ends
+    // with a country ("…, UK"), and those strays are filtered out.
+    //
+    // But when EVERY result is foreign the caller has explicitly asked for a
+    // foreign market, so we serve it rather than handing back an empty page.
+    // The automatic path can't reach here — it only sets a location for US
+    // callers — so this is reachable only by typing a city in deliberately.
+    const US_ADDRESS = /,\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?\s*$|,\s*USA\s*$/;
+    const domestic = open.filter(p => US_ADDRESS.test(p.formattedAddress || ''));
+    let candidates = domestic.length ? domestic : open;
     const cityToken = String(location || '').split(',')[0].trim().toLowerCase();
     if (cityToken.length >= 4) {
-      const inCity = open.filter(p => {
+      const inCity = candidates.filter(p => {
         const addr = `${p.formattedAddress || ''} ${p.shortFormattedAddress || ''}`.toLowerCase();
         const name = (p.displayName?.text || '').toLowerCase();
         // Named for a different city and not addressed in this one → drop.
@@ -319,7 +332,7 @@ export async function searchPlaces({ query, location = '', limit = 20, pageToken
           || name.includes(cityToken);
       });
       // Keep the filter only if it left us a usable list.
-      if (inCity.length >= Math.min(5, open.length)) candidates = inCity;
+      if (inCity.length >= Math.min(5, candidates.length)) candidates = inCity;
     }
 
     const leads = candidates.map((p, i) => transformPlace(p, i)).sort((a, b) => b.score - a.score);

@@ -624,6 +624,7 @@ export default function LeadsPage({ onSelect }) {
   const market = useStore(s => s.market);
   const setMarket = useStore(s => s.setMarket);
   const [marketDraft, setMarketDraft] = useState(market);
+  const resolvedMarket = useStore(s => s.resolvedMarket);
 
   const liveLeads = useStore(s => s.liveLeads);
   const dataMode = useStore(s => s.dataMode);
@@ -934,7 +935,7 @@ export default function LeadsPage({ onSelect }) {
               <input
                 value={marketDraft}
                 onChange={(e) => setMarketDraft(e.target.value)}
-                placeholder={market || 'Auto (your city)'}
+                placeholder={market || (resolvedMarket ? `Auto — ${resolvedMarket}` : 'Auto (your city)')}
                 aria-label="Market to prospect in"
                 className="w-[150px] h-10 pl-8 pr-2 rounded-lg bg-surface-2 border border-white/[0.05] text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-brand/40"
               />
