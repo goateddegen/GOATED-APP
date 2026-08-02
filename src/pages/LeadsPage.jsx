@@ -8,7 +8,7 @@ import {
   Crown, PhoneCall, CalendarClock, Timer, UserSearch, Table2,
   ExternalLink, MapPin, Crosshair, AlertTriangle, Radio, RefreshCw, Globe,
 } from 'lucide-react';
-import { useStore, fmt, priorities, statuses, industries, initialsOf, OUTCOMES, leadCallKey, isDue } from '../hooks/useStore';
+import { useStore, fmt, priorities, statuses, industries, initialsOf } from '../hooks/useStore';
 import { buildOutreachStrategy, deriveGaps, recommendTier, buildPackage } from '../lib/outreach';
 
 // ---------------------------------------------------------------------------
@@ -621,8 +621,9 @@ export default function LeadsPage({ onSelect }) {
   // and renders on detailOpen. Both were missing from this page's selectors.
   const setSelectedLead = useStore(s => s.setSelectedLead);
   const setDetailOpen = useStore(s => s.setDetailOpen);
-  const callOutcomes = useStore(s => s.callOutcomes);
-  const recordCallOutcome = useStore(s => s.recordCallOutcome);
+  const market = useStore(s => s.market);
+  const setMarket = useStore(s => s.setMarket);
+  const [marketDraft, setMarketDraft] = useState(market);
 
   const liveLeads = useStore(s => s.liveLeads);
   const dataMode = useStore(s => s.dataMode);
@@ -657,26 +658,17 @@ export default function LeadsPage({ onSelect }) {
 
   const activeLeads = isLive ? liveLeads : (allLeads || []);
 
-  // ── Today's call queue ───────────────────────────────────────────────────
-  // The list answers "who exists". This answers "who do I ring in the next
-  // ten minutes", which is the only question that matters at 9am. Three
-  // filters, all from data we already hold: they must be open right now
-  // (Places publishes hours), reachable by phone, and either never called or
-  // past their retry window.
+  // ── Who to ring right now ────────────────────────────────────────────────
+  // The tables answer "who exists". This answers "who can I actually reach in
+  // the next ten minutes": open at this moment (Places publishes hours, and
+  // roughly half a sample is shut at any given time) and with a number to dial.
   const callQueue = useMemo(() => {
     const pool = [...(liveLeads || []), ...(noWebsiteLeads || [])];
     return pool
-      .filter(l => l.phone)
-      .filter(l => l.openNow !== false)
-      .filter(l => isDue(callOutcomes[leadCallKey(l)]))
+      .filter(l => l.phone && l.openNow === true)
       .sort((a, b) => (b.score || 0) - (a.score || 0))
       .slice(0, 12);
-  }, [liveLeads, noWebsiteLeads, callOutcomes]);
-
-  const workedToday = useMemo(() => {
-    const today = new Date().toDateString();
-    return Object.values(callOutcomes).filter(o => new Date(o.at).toDateString() === today).length;
-  }, [callOutcomes]);
+  }, [liveLeads, noWebsiteLeads]);
 
 
   // Core state
@@ -930,6 +922,37 @@ export default function LeadsPage({ onSelect }) {
         <div className="flex items-center gap-2 flex-wrap">
           {/* Leads accumulate rather than being replaced, so there has to be a
               way to pull more without reloading the whole page. */}
+          {/* Market. Defaults to whatever the edge geolocates the caller to,
+              which is right most of the time but pinned to a single city with
+              no way out — an operator working a different metro, or behind a
+              VPN that lands them elsewhere, was stuck with it. Blank returns
+              to automatic. */}
+          <form onSubmit={(e) => { e.preventDefault(); setMarket(marketDraft); fetchLiveLeads(); }}
+            className="flex items-center gap-1.5">
+            <div className="relative">
+              <MapPin size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+              <input
+                value={marketDraft}
+                onChange={(e) => setMarketDraft(e.target.value)}
+                placeholder={market || 'Auto (your city)'}
+                aria-label="Market to prospect in"
+                className="w-[150px] h-10 pl-8 pr-2 rounded-lg bg-surface-2 border border-white/[0.05] text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-brand/40"
+              />
+            </div>
+            {(marketDraft !== market) && (
+              <button type="submit"
+                className="h-10 px-3 rounded-lg bg-brand/15 border border-brand/30 text-brand text-xs font-semibold hover:bg-brand/25">
+                Go
+              </button>
+            )}
+            {market && marketDraft === market && (
+              <button type="button" onClick={() => { setMarketDraft(''); setMarket(''); fetchLiveLeads(); }}
+                aria-label="Reset to automatic location"
+                className="h-10 w-10 rounded-lg bg-surface-2 border border-white/[0.05] text-slate-500 hover:text-white flex items-center justify-center">
+                <X size={14} />
+              </button>
+            )}
+          </form>
           <button onClick={() => fetchLiveLeads()} disabled={isLoadingLeads}
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border bg-surface-2 border-white/[0.05] text-slate-400 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed">
             <RefreshCw size={14} className={isLoadingLeads ? 'animate-spin' : ''} />
@@ -942,12 +965,12 @@ export default function LeadsPage({ onSelect }) {
         </div>
       </div>
 
-      {/* ── Today's call queue ───────────────────────────────────────────────
-          The tables answer "who exists". This answers "who do I ring right
-          now", which is the only question that matters at the start of a
-          session. Open now, has a phone, not already spoken to — and once you
-          log an outcome it drops off the list rather than sitting there
-          tempting a second dial. */}
+      {/* ── Call Now ─────────────────────────────────────────────────────────
+          The tables answer "who exists". This answers "who can I actually
+          reach in the next ten minutes" — businesses whose published hours say
+          they are open at this moment, with a number to dial, best score
+          first. Roughly half of any sample is shut at a given time, so this is
+          the difference between dialling and leaving voicemails. */}
       {callQueue.length > 0 && (
         <div className="mb-5 rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.03] overflow-hidden">
           <div className="flex items-center gap-3 px-4 py-3 border-b border-emerald-500/15">
@@ -956,18 +979,16 @@ export default function LeadsPage({ onSelect }) {
             </div>
             <div className="min-w-0">
               <h2 className="text-sm font-bold text-emerald-400">Call Now</h2>
-              <p className="text-[11px] text-slate-500">Open right now · reachable · not yet worked</p>
+              <p className="text-[11px] text-slate-500">Open right now · has a number · ranked by closability</p>
             </div>
             <div className="ml-auto shrink-0 text-right">
               <div className="text-sm font-bold text-white">{callQueue.length}</div>
-              <div className="text-[9px] text-slate-600 uppercase tracking-wider">
-                {workedToday > 0 ? `${workedToday} done today` : 'queued'}
-              </div>
+              <div className="text-[9px] text-slate-600 uppercase tracking-wider">open now</div>
             </div>
           </div>
           <div className="divide-y divide-white/[0.04] max-h-[460px] overflow-y-auto">
             {callQueue.map((l) => (
-              <div key={leadCallKey(l)} className="px-4 py-3">
+              <div key={l._placeId || l.id} className="px-4 py-3">
                 <div className="flex items-center gap-3">
                   <div className="min-w-0 flex-1 cursor-pointer" onClick={() => handleSelectLead(l)}>
                     <div className="flex items-center gap-2">
@@ -989,22 +1010,6 @@ export default function LeadsPage({ onSelect }) {
                     <span className="hidden sm:inline font-mono">{l.phone}</span>
                     <span className="sm:hidden">Call</span>
                   </a>
-                </div>
-                {/* Log what happened. Without this the queue can't shrink and
-                    tomorrow you dial the same people again. */}
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {Object.entries(OUTCOMES).map(([k, cfg]) => (
-                    <button key={k}
-                      onClick={() => { recordCallOutcome(l, k); showToast(`${l.company} — ${cfg.label}`); }}
-                      className={`px-2.5 h-8 rounded-lg text-[11px] font-medium border transition-colors ${
-                        cfg.color === 'emerald' ? 'bg-emerald-500/[0.06] border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/15' :
-                        cfg.color === 'red' ? 'bg-red-500/[0.06] border-red-500/20 text-red-400 hover:bg-red-500/15' :
-                        cfg.color === 'amber' ? 'bg-amber-500/[0.06] border-amber-500/20 text-amber-400 hover:bg-amber-500/15' :
-                        cfg.color === 'cyan' ? 'bg-cyan-500/[0.06] border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/15' :
-                        'bg-white/[0.03] border-white/[0.06] text-slate-400 hover:bg-white/[0.06]'}`}>
-                      {cfg.label}
-                    </button>
-                  ))}
                 </div>
               </div>
             ))}
