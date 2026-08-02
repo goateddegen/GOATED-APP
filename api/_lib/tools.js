@@ -141,6 +141,15 @@ export async function runTool(name, args, ctx = {}) {
       const r = await fetch(`${base}/api/leads?${p}`, { headers, signal: AbortSignal.timeout(25000) });
       const j = await r.json();
 
+      // Asked for no-website businesses without naming a trade, use the
+      // partition the leads endpoint already builds — it runs a targeted hunt
+      // across the trades that actually contain them. Filtering the default
+      // blend instead reported "all 20 already have a website", which is true
+      // of that sample and false of the request.
+      if (args.needsWebsite && !trade && Array.isArray(j?.noWebsiteLeads) && j.noWebsiteLeads.length) {
+        j.leads = j.noWebsiteLeads;
+      }
+
       // Businesses with no website are roughly one in ten, so filtering a
       // single 20-result page leaves one or two. Page once more when the
       // caller asked for them — Places returns a nextPageToken, and this only
@@ -161,7 +170,9 @@ export async function runTool(name, args, ctx = {}) {
       // context and buries the fields that matter on a call.
       return {
         source: j._meta?.dataType,
-        locationUsed: j._meta?.resolvedLocation || args.location || 'caller location',
+        // Null rather than a placeholder string — the renderer title-cases
+        // this and was printing "in Caller Location".
+        locationUsed: j._meta?.resolvedLocation || args.location || null,
         count: (j.leads || []).length,
         note: (j.leads || []).some(l => (l.placeGaps || []).length)
           ? undefined

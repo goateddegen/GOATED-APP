@@ -187,6 +187,81 @@ function sanitizeOutput(text) {
   return clean;
 }
 
+/**
+ * Answers we can give without a model.
+ *
+ * The app suggests these as buttons, so they have to work when the token
+ * allowance is gone — a product that recommends a question and then apologises
+ * for it is worse than one that never offered. Only covers questions with a
+ * single correct answer we already hold; anything requiring judgement still
+ * goes to the model.
+ */
+function staticAnswer(message) {
+  const t = String(message || '').toLowerCase().trim();
+
+  // What we sell and what it costs — fixed facts, straight from PRICING.
+  if (/what (does|do) (goated|we|you) (sell|offer|do)\b|what('| i)?s the (pitch|offer|product)|how much (do|does) (we|you|it) (charge|cost)|what do we charge|pricing/.test(t)) {
+    return 'We sell two things to local service businesses:\n\n'
+      + '**AI receptionist** — $2,000 deposit + $750/mo. Answers missed calls in under 60 seconds, '
+      + 'qualifies the caller, books the job, texts you the transcript.\n\n'
+      + '**Website build** — add $2,000 deposit + $250/mo. For businesses with no site at all, '
+      + 'which is the strongest pitch we have: they are invisible outside Maps and have nowhere to send anyone.\n\n'
+      + 'Both together is $4,000 deposit + $1,000/mo. Deposit up front, retainer monthly.';
+  }
+
+  // "Audit a website for me" — a request to start, not a question. Asking for
+  // the URL is the whole answer; it used to fall through to a generic reply.
+  if (/audit (a|my|the)? ?(website|site|url)( for me)?$|run an audit|can you audit/.test(t)) {
+    return 'Paste the address and I will crawl it live — for example `joesplumbing.com`.\n\n'
+      + 'You get where they are losing enquiries, what each gap is worth, and which of our products '
+      + 'fixes it. That report is what you open the call with.\n\n'
+      + 'The **Audit** page does the same thing with the full breakdown.';
+  }
+
+  // Objection handling. This is our own playbook, not something the model
+  // should improvise differently each time — and it is one of the buttons the
+  // app suggests, so it has to answer when the allowance is gone.
+  if (/price objection|too expensive|handle (an? )?objection|objection handl|cost objection/.test(t)) {
+    return '**"That\'s too expensive"**\n\n'
+      + '1. **Do not defend the price.** "Fair enough — what were you expecting?" Let them say a number.\n'
+      + '2. **Move it off cost, onto cost of doing nothing.** "What is one job worth to you?" '
+      + 'If they say $400, the retainer is under two jobs a month.\n'
+      + '3. **Make inaction the expensive option.** "You are already paying for this — you are just '
+      + 'paying it in jobs that went to whoever picked up."\n\n'
+      + '**"We handle our own calls"** — "Of course. What happens to one that comes in while you are '
+      + 'on a roof?" Nobody answers that with "we get it".\n\n'
+      + '**"Call me next week"** — that is a no with a date on it. "Happy to, but tell me straight: is '
+      + 'this a not-now or a not-interested? Either is fine."';
+  }
+
+  // Cold call opener.
+  if (/cold call (opener|script)|what (should|do) i say (on|during)? ?(a|the)? ?(cold )?call|how do i open the call|opening line/.test(t)) {
+    return '**The opener** (15 seconds, ask by role — you rarely have a name)\n\n'
+      + '"Hi, is the owner or manager around?"\n\n'
+      + 'Once you have them: "I am calling about [their business]. I noticed [the gap — no website, '
+      + 'thin reviews, no after-hours answer]. Worth two minutes?"\n\n'
+      + '**Then stop pitching and diagnose.** One question does the work:\n'
+      + '"What happens to a call that comes in while you are on a job?"\n\n'
+      + 'Follow with "What is a job like that worth to you?" — once they say the number out loud, '
+      + 'the price argument is already over.\n\n'
+      + '**Then quote it on the call.** $2,000 to set up, $750 a month. No proposal, no follow-up deck.\n\n'
+      + 'Best times are mid-morning or mid-afternoon. Never 7-9am — they are loading the van.';
+  }
+
+  // Voicemail.
+  if (/voicemail|voice mail|leave a message|vm script/.test(t)) {
+    return '**Voicemail — 20 seconds, no pitch**\n\n'
+      + '"Hi, this is [your name] calling for the owner at [business]. I had a look at how your calls '
+      + 'are handled and there is money going out the door on the ones nobody picks up. '
+      + 'Give me a call back on [your number]."\n\n'
+      + 'Name the number twice if you can. Do not explain the product — the only job of a voicemail '
+      + 'is to get the callback, and a callback lands warm.\n\n'
+      + 'Leave it on the first no-answer, then text the same number the next day.';
+  }
+
+  return null;
+}
+
 // ─── No-LLM fast path for lead searches ─────────────────────────────────────
 // "hvac leads in dallas" is the single most common thing anyone asks this
 // chat, and it needs no language model: it's a trade and a city. Parsing it
@@ -220,13 +295,26 @@ function fastLeadSearchIntent(message) {
 
   const lower = text.toLowerCase();
 
-  // Must read as a request for businesses, not advice about them.
-  if (/\b(how|why|should i|what should|explain|write|draft|script|objection|pitch|email)\b/.test(lower)) return null;
+  // Must read as a request for businesses, not advice about them. "Who should
+  // I call first?" is a request for businesses and was being caught by the
+  // "should i" clause, so an explicit ask for businesses overrides the guard.
+  const wantsBusinesses = /\b(leads?|businesses|business|prospects?|companies|places?|to call|who (should|can) i call)\b/.test(lower);
+  if (!wantsBusinesses && /\b(how|why|should i|what should|explain|write|draft|script|objection|pitch|email)\b/.test(lower)) return null;
+  // Even when businesses are mentioned, these are still advice.
+  if (/\b(how (do|should) i|what (should|do) i say|explain|write me|draft me|talk track)\b/.test(lower)) return null;
 
   // Allow the plural — people ask for "plumbers", not "plumber".
   const trade = TRADE_WORDS.find(t =>
     new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`).test(lower));
-  if (!trade) return null;
+
+  // A trade is not required. The app's own suggested buttons send "Find leads
+  // near me" and "Businesses with no website" — no trade, and in the second
+  // case no place either. Both used to fall through to the model, so when the
+  // token allowance ran out the buttons the product recommends returned a
+  // canned apology. Anything asking for businesses generally is a valid
+  // request: the default blend already mixes trades.
+  const asksForBusinesses = wantsBusinesses;
+  if (!trade && !asksForBusinesses) return null;
 
   // Location: whatever follows in/near/around, minus trailing qualifiers.
   let location = null;
@@ -242,6 +330,10 @@ function fastLeadSearchIntent(message) {
   if (location === null && /\bnear\s*me\b|\bmy\s*area\b|\baround\s*here\b|\bnearby\b|\blocal\b/.test(lower)) {
     location = '';                                       // caller's own city, resolved server-side
   }
+  // No place named at all. For a plain "businesses with no website" or "who
+  // should I call today" the caller's own city is the obvious answer, and
+  // refusing to guess just sent a working request to a model that was down.
+  if (location === null && asksForBusinesses) location = '';
   if (location === null) return null;                    // no place named — let the model handle it
 
   // "with no website" is the single most valuable filter we have, and it was
@@ -254,7 +346,7 @@ function fastLeadSearchIntent(message) {
   // Filters we genuinely cannot serve — leave those to the model.
   if (/\bbad reviews?\b|\bno reviews?\b|\blow rated\b/.test(lower)) return null;
 
-  return { query: trade, location, needsWebsite };
+  return { query: trade || '', location, needsWebsite };
 }
 
 // ─── Security: Request ID Tracking ──────────────────────────────────────────
@@ -620,6 +712,19 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
     const offeredTools = wantsData
       ? (mentionsDomain ? TOOL_SCHEMAS : TOOL_SCHEMAS.filter(t => t.function?.name === 'search_leads'))
       : [];
+
+    // Fixed-answer questions first — no model, no tokens, always available.
+    const canned = staticAnswer(lastMsg);
+    if (canned) {
+      return res.status(200).json({
+        content: canned,
+        fallback: false,
+        llm: 'deterministic:static',
+        toolsUsed: [],
+        requestId,
+        responseMode: responseMode || 'default',
+      });
+    }
 
     const fastIntent = fastLeadSearchIntent(lastMsg);
     if (fastIntent) {

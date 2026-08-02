@@ -920,9 +920,18 @@ export default function LeadsPage({ onSelect }) {
         <div className="mb-4 px-4 py-2.5 rounded-xl flex items-center gap-3 border bg-emerald-500/10 border-emerald-500/25">
           <Radio size={16} className="text-emerald-400 flex-shrink-0" />
           <span className="text-sm text-emerald-200/90">
-            <span className="font-semibold">Live data</span> &mdash; real local businesses from Google
-            Maps. Names, addresses, phone numbers, ratings and review counts are theirs; revenue is
-            estimated from review volume and shown as a range.
+            <span className="font-semibold">Live data</span>
+            {(market || resolvedMarket) && <> &mdash; <span className="font-semibold text-white">{market || resolvedMarket}</span></>}
+            {' '}&mdash; real local businesses from Google Maps. Names, addresses, phone numbers and
+            review counts are theirs; revenue is estimated from review volume and shown as a range.
+            {/* IP geolocation is approximate, and on a mobile network it often
+                resolves to the carrier's gateway rather than the handset — a
+                Houston phone can come back as Philadelphia. Say which city we
+                used and how to change it, rather than leaving the operator to
+                work it out from the addresses. */}
+            {!market && resolvedMarket && (
+              <span className="text-emerald-200/60"> Not your area? Set the market above.</span>
+            )}
           </span>
         </div>
       ) : (
