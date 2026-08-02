@@ -4,6 +4,9 @@
 
 import { TOOL_SCHEMAS, runTool } from './_lib/tools.js';
 
+// Overridable so a bad day on one model does not need a redeploy.
+const CHAT_MODEL = process.env.GROQ_CHAT_MODEL || 'llama-3.1-8b-instant';
+
 // ─── Security: Input Sanitization ───────────────────────────────────────────
 function sanitizeInput(text) {
   if (typeof text !== 'string') return '';
@@ -302,7 +305,7 @@ function fastLeadSearchIntent(message) {
   if (!wantsBusinesses && /\b(how|why|should i|what should|explain|write|draft|script|objection|pitch|email)\b/.test(lower)) return null;
   // Even when businesses are mentioned, these are still advice. "Coach me on
   // closing this lead" contains "lead" and was running a search.
-  if (/\b(how (do|should) i|what (should|do) i say|explain|write me|draft me|talk track|coach me|help me close|walk me through|advice)\b/.test(lower)) return null;
+  if (/\b(how (do|should) i|what (should|do) i say|what makes|what counts as|what is a|why (is|are|do)|explain|write me|draft me|talk track|coach me|help me close|walk me through|advice)\b/.test(lower)) return null;
 
   // Allow the plural — people ask for "plumbers", not "plumber".
   const trade = TRADE_WORDS.find(t =>
@@ -708,7 +711,11 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
     const lastMsg = contextMessages[contextMessages.length - 1]?.content || '';
     const mentionsDomain = /\b[a-z0-9-]+\.(com|net|org|io|co|us|biz|info)\b/i.test(lastMsg);
     const wantsFetch = /\b(find|show|get|list|search|pull|give me|who (should|can) i call|leads?\b|businesses|prospects|near me|in my area)\b/i.test(lastMsg);
-    const wantsData = mentionsDomain || wantsFetch;
+    // "What makes a good local lead" contains "lead" and is a question about
+    // criteria, not a request for rows. Offered the tool, the model searched
+    // for plumbers in a city it invented.
+    const isAboutRatherThanFor = /\b(what makes|what counts as|what is a|why (is|are|do)|how (do|should) i|explain|difference between)\b/i.test(lastMsg);
+    const wantsData = mentionsDomain || (wantsFetch && !isAboutRatherThanFor);
 
     const offeredTools = wantsData
       ? (mentionsDomain ? TOOL_SCHEMAS : TOOL_SCHEMAS.filter(t => t.function?.name === 'search_leads'))
@@ -804,7 +811,13 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
               Authorization: `Bearer ${groqKey}`,
             },
             body: JSON.stringify({
-              model: 'llama-3.3-70b-versatile',
+              // Groq meters each model separately, so the chat and the audit
+              // no longer compete for one allowance. 8b-instant carries a far
+              // larger daily budget and is more than enough for what reaches
+              // it — lead lists and the common questions are answered
+              // deterministically now, so the model only handles short prose
+              // and the occasional tool decision.
+              model: CHAT_MODEL,
               max_tokens: maxTokens,
               temperature: activeMode.temperature,
               messages: convo,
@@ -895,7 +908,7 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
           }
 
           rawContent = msg?.content || null;
-          llmUsed = 'groq:llama-3.3-70b-versatile';
+          llmUsed = `groq:${CHAT_MODEL}`;
         }
       } catch (e) {
         providerErrors.push(`groq threw: ${e.message}`);

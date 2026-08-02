@@ -404,105 +404,50 @@ function buildPrompt(signals, extraPages, socialData) {
     social_profile_snapshots: socialData || {},
   };
 
-  return `You are GOATED — a ruthless AI revenue-loss auditor for online businesses. Your job: analyze the scraped site + social signals, estimate how much money they are LEAVING ON THE TABLE monthly, and produce a hard, tactical, money-focused audit across every revenue-affecting dimension of an online business.
+  // Prompt kept deliberately tight. It is resent on every audit, so each
+  // paragraph here is a recurring cost against a 100k/day allowance — the old
+  // version spent ~1,500 tokens on instructions before a single signal was
+  // read, enumerated twelve dimensions in prose to then ask for six, and still
+  // listed LinkedIn outreach and a 13% commission we no longer offer.
+  return `You are GOATED, a revenue-loss auditor. Read the scraped signals and report where this business is losing money.
 
-ABSOLUTE RULES:
-- EVERY number you output must be grounded in the signals below. Show the math inline in "reasoning" fields.
-- If a signal is missing (e.g. no traffic data), explicitly note you are estimating from proxy signals (word count, tech stack, brand scale, H1/H2 tone, social presence) and give a confidence band.
-- NO generic advice. Every finding must cite specific observed evidence ("Your H1 says X, CTA is Y, no live chat detected → this costs …").
-- Tone: direct, tactical, numbers-heavy, no marketing fluff. You are a sales engineer + growth operator, not a copywriter.
-- GOATED products you can recommend: AI Voice Agent (Vapi), SMS Reactivation + Missed-Call Rescue (Twilio), LinkedIn Outreach (Unipile), Website Chatbot (site-crawl grounded), Abandoned-Cart Recovery, Review Automation, SEO Content Engine (programmatic), AI Ads Copy Generator, Pricing Optimization, Referral Setup, Managed Service (full stack DFY).
-- Commission is 13% flat on closed revenue sourced through the GOATED stack. Only mention it if the user explicitly asks pricing — otherwise defer to "scoped on the qualification call".
+RULES
+- Ground every number in the signals below and show the arithmetic in the reasoning field.
+- Where a signal is missing, say you are estimating from proxies and give a confidence band.
+- Cite the specific evidence for each finding. No generic advice.
+- Direct and numeric. No marketing voice.
+- Products you may recommend: AI voice agent (answers missed calls, books the job), SMS missed-call rescue, website build + lead capture, review engine, website chatbot, tracking and reporting setup.
+- Do not mention commission or payouts.
 
-ANALYZE EVERY DIMENSION of their online business:
+Cover: traffic and mobile readiness, conversion path, trust and social proof, email capture, SEO basics, local and reviews, checkout or booking friction, outbound readiness.
 
-1. **TRAFFIC**: estimated monthly visitors (from scale cues — brand name, social presence if any, content depth, tech stack), bounce risk signals, mobile-readiness.
-2. **CONVERSION**: H1/H2 clarity, CTA presence + language, form count, friction, checkout path, pricing transparency, trust signals.
-3. **LTV / RETENTION**: recurring model cues, email capture presence, loyalty hooks, upsell mechanics in the content.
-4. **SOCIAL / BRAND**: social profiles detected, reachability, follower hints, off-site authority. If NO social presence → call it out as a trust gap.
-5. **SEO / ORGANIC**: blog present? canonical set? structured data? H1 count + keyword targeting? programmatic SEO opportunity?
-6. **LOCAL / REVIEWS**: Google / Yelp / Trustpilot signals visible? If local-services and NO review integration → huge flag.
-7. **TRUST / SOCIAL PROOF**: testimonials, logos, case studies, press, "trusted by".
-8. **EMAIL CAPTURE**: newsletter forms, lead magnets, exit intent, modals — anything to convert cold traffic to a list.
-9. **CHECKOUT / BOOKING FRICTION**: steps to buy / book, payment processor detected, missing payment options, abandonment rescue presence.
-10. **PRICING STRATEGY**: public pricing page? tier structure? free trial? anchor pricing? "contact us" gatekeeping?
-11. **UPSELL / CROSS-SELL**: bundle offers, order-bumps, post-purchase flows, rev-share / referral mechanics, higher-tier hooks.
-12. **OUTBOUND READINESS**: phones/emails exposed (for a warm outbound angle), booking tech (Calendly/Cal.com), live chat, SMS opt-in.
-
-Return STRICT JSON matching this shape (no markdown, no prose outside JSON):
+Return STRICT JSON only — no markdown, no prose outside it:
 
 {
-  "business": {
-    "name": "extracted or inferred brand name",
-    "type": "one-liner what they do",
-    "stage": "pre-revenue | early-revenue | scaling | enterprise",
-    "modelGuess": "DTC | B2B-SaaS | B2B-Services | Marketplace | Agency | Local-Services | Ecom | Creator | Other",
-    "primaryAudience": "who they sell to, one line",
-    "estimatedMonthlyTrafficBand": "e.g. '<1K', '1K-10K', '10K-50K', '50K-250K', '250K+'",
-    "estimatedMonthlyRevenueBand": "e.g. '<$10K', '$10K-$50K', '$50K-$250K', '$250K-$1M', '$1M+'",
-    "revenueBandReasoning": "1-2 sentences on how you triangulated this from signals"
-  },
-  "scrapedSummary": "2-3 sentence honest description of what's on the site + social presence",
-  "revenueLoss": {
-    "monthlyLowEstimate": number,
-    "monthlyHighEstimate": number,
-    "annualLowEstimate": number,
-    "annualHighEstimate": number,
-    "reasoning": "plain-English math showing each contributor. e.g. 'no live chat at their traffic scale = $X/mo lost, no abandoned cart = $Y/mo, no SMS reactivation = $Z/mo, total $X+Y+Z to $Xmax+Ymax+Zmax'",
-    "confidenceBand": "low | medium | high",
-    "biggestSingleLeak": "one-liner naming the #1 issue and its $ impact"
-  },
-  "dimensions": [
-    {
-      "area": "Traffic | Conversion | LTV | Social | SEO | Local/Reviews | Trust | Email Capture | Checkout | Pricing | Upsell | Outbound Readiness",
-      "score": 0-100,
-      "observed": "what signals you actually saw",
-      "gap": "what's missing or broken",
-      "dollarImpactMonthly": number,
-      "fixProduct": "GOATED product that plugs this hole",
-      "priority": "P0 | P1 | P2"
-    }
-  ],
-  "leaks": [
-    {
-      "title": "short punchy headline",
-      "severity": "high | medium | low",
-      "observed": "exact signals / quotes",
-      "impact": "$ or % cost",
-      "fixProduct": "GOATED product",
-      "expectedLift": "quantified e.g. '+12% conversion' or '+$3K/mo recovered carts'",
-      "timeToImplement": "e.g. '48 hours', '1 week', '30 days'"
-    }
-  ],
-  "upsellOpportunities": [
-    { "name": "product name", "why": "why this target specifically needs it", "priceRangeMonthly": "e.g. '$500-$2000'" }
-  ],
-  "outreachAngles": [
-    { "channel": "voice | sms | linkedin | chatbot", "hook": "the exact opening line referencing specific observed signal", "value": "what you'd offer in 15 seconds" }
-  ],
+  "business": { "name": str, "type": str, "stage": "pre-revenue|early-revenue|scaling|enterprise", "modelGuess": "DTC|B2B-SaaS|B2B-Services|Marketplace|Agency|Local-Services|Ecom|Creator|Other", "primaryAudience": str, "estimatedMonthlyTrafficBand": str, "estimatedMonthlyRevenueBand": str, "revenueBandReasoning": str },
+  "scrapedSummary": "2 sentences on what is on the site",
+  "revenueLoss": { "monthlyLowEstimate": num, "monthlyHighEstimate": num, "annualLowEstimate": num, "annualHighEstimate": num, "reasoning": "the math, contributor by contributor", "confidenceBand": "low|medium|high", "biggestSingleLeak": str },
+  "dimensions": [ { "area": str, "score": 0-100, "observed": str, "gap": str, "dollarImpactMonthly": num, "fixProduct": str, "priority": "P0|P1|P2" } ],
+  "leaks": [ { "title": str, "severity": "high|medium|low", "observed": str, "impact": str, "fixProduct": str, "expectedLift": str, "timeToImplement": str } ],
+  "upsellOpportunities": [ { "name": str, "why": str, "priceRangeMonthly": str } ],
+  "outreachAngles": [ { "channel": "voice|sms|chatbot", "hook": "opening line citing a specific observed signal", "value": str } ],
   "confidenceScore": 0-100,
-  "oneLinePitch": "single cold-call opener referencing something specific from their site"
+  "oneLinePitch": str
 }
 
-IMPORTANT:
-- Return 6-10 entries in "dimensions" (cover every major area even if score is high — a high score is useful signal too).
-- Return 4-7 "leaks" ranked by severity desc, then dollarImpact.
-- Return 3-5 "upsellOpportunities".
-- Return 3 "outreachAngles", one per channel when possible.
-- Cite actual H1/H2/CTA text when relevant — quote them.
-- If the business is too small / early-stage to justify upsells, say so honestly in scrapedSummary and downscale estimates.
+COUNTS: exactly 6 dimensions, 4 leaks ranked by severity, 3 upsells, 2 outreach angles. Quote real H1/CTA text where relevant. If they are too small to justify upsells, say so in scrapedSummary and scale the estimates down.
 
 SIGNALS:
 ${JSON.stringify(compact, null, 2)}`;
 }
 
 // ─── LLM call: Groq (primary) ────────────────────────────────────────────────
-async function callGroq(prompt, apiKey) {
+async function callGroq(prompt, apiKey, model = 'llama-3.3-70b-versatile') {
   const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model,
       messages: [
         { role: 'system', content: 'You are GOATED AI. Always return strict JSON matching the schema specified in the user prompt. No markdown, no prose outside the JSON.' },
         { role: 'user', content: prompt },
@@ -540,6 +485,33 @@ async function callClaude(prompt, apiKey) {
   return JSON.parse(clean);
 }
 
+
+// ─── Result cache ───────────────────────────────────────────────────────────
+// Auditing the same URL twice should not cost twice. This is a public lead
+// magnet: people retry, refresh, and share the link, and each of those repeats
+// was a fresh ~4,700-token spend against a 100k daily allowance.
+//
+// Per-instance only, which on serverless means it helps a warm lambda and does
+// nothing across a cold start. That is still most of the repeat traffic, and
+// it needs no schema change.
+const auditCache = new Map();
+const AUDIT_CACHE_TTL = 60 * 60 * 1000;   // an hour; sites do not change faster
+const AUDIT_CACHE_MAX = 50;
+
+function cacheGet(url) {
+  const hit = auditCache.get(url);
+  if (!hit) return null;
+  if (Date.now() - hit.at > AUDIT_CACHE_TTL) { auditCache.delete(url); return null; }
+  return hit.payload;
+}
+
+function cacheSet(url, payload) {
+  // Never cache a degraded result — it would pin the rule-based fallback in
+  // place for an hour after the allowance resets.
+  if (payload?.degraded) return;
+  if (auditCache.size >= AUDIT_CACHE_MAX) auditCache.delete(auditCache.keys().next().value);
+  auditCache.set(url, { at: Date.now(), payload });
+}
 
 // ─── Deterministic fallback report ───────────────────────────────────────────
 // When every LLM provider is unavailable — most often the daily token cap, not
@@ -721,6 +693,11 @@ export default async function handler(req, res) {
     });
   }
 
+  const cached = cacheGet(url);
+  if (cached) {
+    return res.status(200).json({ ...cached, cached: true, generatedAt: cached.generatedAt });
+  }
+
   const startedAt = Date.now();
 
   let html;
@@ -819,9 +796,26 @@ export default async function handler(req, res) {
   let analysis = null;
   let llmUsed = null;
   let llmError = null;
+
+  // Groq meters each model separately, so an exhausted 70b allowance does not
+  // mean no model is available. Falling straight to the rule-based report was
+  // leaving a whole second budget untouched — 8b writes a visibly thinner
+  // audit than 70b, but a thinner AI audit beats no AI audit, and it beats
+  // the rule-based one comfortably.
+  const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
   if (GROQ_KEY) {
-    try { analysis = await callGroq(prompt, GROQ_KEY); llmUsed = 'groq:llama-3.3-70b'; }
-    catch (e) { llmError = `Groq failed: ${e.message}`; }
+    for (const model of GROQ_MODELS) {
+      try {
+        analysis = await callGroq(prompt, GROQ_KEY, model);
+        llmUsed = `groq:${model}`;
+        break;
+      } catch (e) {
+        llmError = `${llmError ? llmError + ' | ' : ''}${model}: ${e.message.slice(0, 120)}`;
+        // Only worth trying the next model if this one is rate limited;
+        // a malformed prompt or a parse failure will fail identically.
+        if (!/429|rate.?limit|tokens per day|TPD/i.test(e.message)) break;
+      }
+    }
   }
   if (!analysis && CLAUDE_KEY) {
     try { analysis = await callClaude(prompt, CLAUDE_KEY); llmUsed = 'anthropic:haiku-3.5'; }
@@ -837,7 +831,7 @@ export default async function handler(req, res) {
     degraded = true;
   }
 
-  return res.status(200).json({
+  const payload = {
     ok: true,
     url,
     generatedAt: new Date().toISOString(),
@@ -855,5 +849,7 @@ export default async function handler(req, res) {
     extraPages: extraPages.map(p => ({ url: p.url, bytes: p.html?.length || 0 })), // just metadata, not raw HTML
     socialData,  // { instagram: {...}, twitter: {...} } or {} if none
     analysis,
-  });
+  };
+  cacheSet(url, payload);
+  return res.status(200).json(payload);
 }
