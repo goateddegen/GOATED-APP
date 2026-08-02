@@ -336,10 +336,12 @@ export default function AuditPage() {
         <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse 70% 50% at 50% -20%, ${accentBg} 0%, transparent 70%)` }} />
         <div className="max-w-5xl mx-auto relative">
 
-          {/* Top bar */}
-          <div className="flex items-center justify-between mb-6">
-            <button onClick={() => setStep('input')} className="text-xs text-slate-500 hover:text-white transition">← Audit another URL</button>
-            <div className="flex items-center gap-2">
+          {/* Top bar. The hamburger is fixed at 12,8 and 44px square, so on
+              mobile this row starts below it — padding inside the button moved
+              its text but left the box underneath, still swallowing taps. */}
+          <div className="flex items-center justify-between gap-2 mb-6 mt-12 md:mt-0">
+            <button onClick={() => setStep('input')} className="text-xs text-slate-500 hover:text-white transition shrink-0">← Audit another</button>
+            <div className="flex items-center gap-2 shrink-0">
               <a href={r.url} target="_blank" rel="noreferrer noopener"
                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-white/[0.08] bg-black/40 hover:bg-black/60 transition text-slate-400">
                 <ExternalLink size={13} />{r.url.replace(/^https?:\/\//,'').replace(/\/$/,'')}
@@ -353,13 +355,16 @@ export default function AuditPage() {
 
           {/* Business summary */}
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-            <div className="text-[11px] uppercase tracking-[0.25em] text-slate-500 mb-2 flex items-center gap-2">
-              <span>Live audit for</span>
-              <span className="text-white font-semibold">{biz.name || slugify(r.url)}</span>
-              {biz.modelGuess && <><span>·</span><span>{biz.modelGuess}</span></>}
-              {biz.stage && <><span>·</span><span>{biz.stage}</span></>}
+            {/* The wide letter-spacing plus a long site title wrapped into two
+                overlapping columns with the last word running off-screen.
+                Tighter tracking, allowed to wrap, and the business name capped. */}
+            <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.15em] sm:tracking-[0.25em] text-slate-500 mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="shrink-0">Live audit for</span>
+              <span className="text-white font-semibold truncate max-w-[60vw] sm:max-w-none">{biz.name || slugify(r.url)}</span>
+              {biz.modelGuess && <span className="shrink-0">· {biz.modelGuess}</span>}
+              {biz.stage && <span className="shrink-0">· {biz.stage}</span>}
             </div>
-            <div className="text-3xl sm:text-4xl font-black text-white mb-3 leading-tight">{biz.type || 'Company analysis'}</div>
+            <div className="text-2xl sm:text-4xl font-black text-white mb-3 leading-tight line-clamp-3">{biz.type || 'Company analysis'}</div>
             <p className="text-slate-400 text-base leading-relaxed max-w-3xl">{a.scrapedSummary || 'No summary returned.'}</p>
           </motion.div>
 

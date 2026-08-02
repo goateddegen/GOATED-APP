@@ -661,7 +661,9 @@ export default function LeadsPage({ onSelect }) {
     if (!isLive && !isLoadingLeads && !allLeads) getLeads();
   }, [isLive, isLoadingLeads, allLeads, getLeads]);
 
-  const activeLeads = isLive ? liveLeads : (allLeads || []);
+  // While the first live fetch is in flight we show a skeleton, so the
+  // synthetic pool must not render underneath it.
+  const activeLeads = isLive ? liveLeads : (isLoadingLeads ? [] : (allLeads || []));
 
   // ── Who to ring right now ────────────────────────────────────────────────
   // The tables answer "who exists". This answers "who can I actually reach in
@@ -885,14 +887,42 @@ export default function LeadsPage({ onSelect }) {
       {callLead && <CallModal lead={callLead} phone={callPhone} onClose={() => setCallLead(null)} showToast={showToast} />}
       {scheduleLead && <ScheduleModal lead={scheduleLead} onClose={() => setScheduleLead(null)} showToast={showToast} />}
 
+      {/* First load, nothing stored yet. Previously this rendered the synthetic
+          pool under a "Sample data" banner, so a new user's first impression
+          was a screen of companies that do not exist, for the three or four
+          seconds the real fetch takes. A skeleton says the same thing without
+          putting invented businesses in front of them. */}
+      {isLoadingLeads && !isLive && (
+        <div className="mb-4">
+          <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border bg-emerald-500/[0.06] border-emerald-500/20 mb-4">
+            <RefreshCw size={16} className="text-emerald-400 animate-spin flex-shrink-0" />
+            <span className="text-sm text-emerald-200/90">
+              Finding local businesses{market ? ` in ${market}` : ' near you'}…
+            </span>
+          </div>
+          <div className="rounded-2xl border border-white/[0.04] overflow-hidden divide-y divide-white/[0.03]">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="p-4 flex items-center gap-3 animate-pulse" style={{ opacity: 1 - i * 0.13 }}>
+                <div className="w-10 h-10 rounded-full bg-white/[0.05] shrink-0" />
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="h-3 rounded bg-white/[0.05]" style={{ width: `${55 - i * 4}%` }} />
+                  <div className="h-2.5 rounded bg-white/[0.03]" style={{ width: `${38 - i * 3}%` }} />
+                </div>
+                <div className="w-14 h-8 rounded-lg bg-white/[0.04] shrink-0" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Data provenance banner — reflects the ACTUAL source in use ── */}
-      {isLive ? (
+      {isLoadingLeads && !isLive ? null : isLive ? (
         <div className="mb-4 px-4 py-2.5 rounded-xl flex items-center gap-3 border bg-emerald-500/10 border-emerald-500/25">
           <Radio size={16} className="text-emerald-400 flex-shrink-0" />
           <span className="text-sm text-emerald-200/90">
-            <span className="font-semibold">Live data</span> &mdash; real companies from Apollo.io.
-            Company-level records only: names, sites, phones and headcount are real; individual
-            contacts require a paid Apollo plan.
+            <span className="font-semibold">Live data</span> &mdash; real local businesses from Google
+            Maps. Names, addresses, phone numbers, ratings and review counts are theirs; revenue is
+            estimated from review volume and shown as a range.
           </span>
         </div>
       ) : (
