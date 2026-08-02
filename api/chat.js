@@ -43,18 +43,46 @@ function sanitizeInput(text) {
  * common query, and still works when the model is rate limited.
  */
 function renderLeadResults(result, args) {
-  const leads = Array.isArray(result?.leads) ? result.leads : [];
+  let leads = Array.isArray(result?.leads) ? result.leads : [];
+
+  // Apply the no-website constraint here rather than pretending it was met.
+  const wantNoSite = !!args?.needsWebsite;
+  const beforeFilter = leads.length;
+  if (wantNoSite) leads = leads.filter(l => !l.website);
   const titleCase = (t) => String(t || '').replace(/\b[a-z]/g, (c) => c.toUpperCase());
   const where = titleCase(result?.locationUsed || args?.location || '') || 'your area';
   // The tool strips non-trade words like "leads" or "businesses" from the
   // search, but the headline still used them — "12 leads businesses in Tampa",
   // "12 businesses businesses".
-  const rawTrade = String(args?.query || '').trim();
-  const GENERIC = /^(leads?|businesses|business|companies|company|prospects?|clients?|customers?|places?|people|any(thing)?|stuff|multiple\s+\w+|various\s*\w*|all\s*\w*|trades?|services?|local\s+\w+)$/i;
+  // The model hands back whole sentences as the trade — "roofers in Atlanta
+  // with no website" — which rendered as "roofers in Atlanta with no website
+  // businesses in Atlanta GA". Strip the place and the filter clause.
+  const rawTrade = String(args?.query || '')
+    .replace(/\b(?:in|near|around|from)\s+[a-z .'-]+$/i, '')
+    .replace(/\b(?:with|that have|having)\s+no\s+\w+.*$/i, '')
+    .replace(/\b(?:leads?|businesses|companies|prospects)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  // Anything left that isn't a trade name. "who should I call today" was
+  // reaching the renderer as the trade "to call", giving "11 to call
+  // businesses in Houston TX".
+  const GENERIC = /^(leads?|businesses|business|companies|company|prospects?|clients?|customers?|places?|people|any(thing)?|stuff|multiple\s+\w+|various\s*\w*|all\s*\w*|trades?|services?|local\s+\w+|to\s+\w+|\w{1,2})$/i;
   const trade = GENERIC.test(rawTrade) ? '' : rawTrade;
-  const what = trade ? `${trade} businesses` : 'local businesses';
+
+  // Normalise to the singular trade, then let the following noun carry the
+  // number: "hvac businesses", "locksmith businesses", "1 roofer". Pluralising
+  // the trade as well produced "hvacs businesses" and "locksmiths businesses".
+  const base = trade.replace(/\b(\w+?)s\b$/i, '$1');
+  const what = trade
+    ? (leads.length === 1 ? base : `${base} businesses`)
+    : (leads.length === 1 ? 'local business' : 'local businesses');
 
   if (!leads.length) {
+    if (wantNoSite && beforeFilter > 0) {
+      return `All ${beforeFilter} ${what} I found in ${where} already have a website. `
+        + `Businesses with none are roughly one in ten, so try a trade where solo operators are common — `
+        + `locksmiths, lawn care, junk removal, mobile mechanics — or check the No Website section on the Leads page.`;
+    }
     return `No ${what} found in ${where} right now. Try a nearby city, or a broader trade `
       + `(for example "plumber" rather than "emergency drain repair").`;
   }
@@ -77,7 +105,9 @@ function renderLeadResults(result, args) {
   });
 
   const noSite = leads.filter(l => !l.website).length;
-  const head = `${leads.length} ${what} in ${where}, ranked by how closable they are.`;
+  const head = wantNoSite
+    ? `${leads.length} ${what} in ${where} with no website${beforeFilter > leads.length ? ` (of ${beforeFilter} found)` : ''} — the build and the phone cover sell together.`
+    : `${leads.length} ${what} in ${where}, ranked by how closable they are.`;
   const tail = noSite
     ? `\n\n${noSite} ${noSite === 1 ? 'has' : 'have'} no website — lead with the build plus phone cover.`
     : `\n\nAll of them have a site and solid reviews, so there's no obvious gap to open on. `
@@ -193,12 +223,17 @@ function fastLeadSearchIntent(message) {
   }
   if (location === null) return null;                    // no place named — let the model handle it
 
-  // An explicit "with no website" style filter is a real request we cannot
-  // express through the Places query, so hand those to the model instead of
-  // silently ignoring the constraint.
-  if (/\bno website\b|\bwithout a website\b|\bbad reviews?\b|\bno reviews?\b/.test(lower)) return null;
+  // "with no website" is the single most valuable filter we have, and it was
+  // being handed to the model — which then passed the whole sentence through
+  // as the trade and ignored the constraint, answering with businesses that
+  // all had websites. Places cannot filter on it, but we can: fetch the trade
+  // and drop anything with a site.
+  const needsWebsite = /\bno website\b|\bwithout a website\b|\bno site\b|\bnot? online\b/.test(lower);
 
-  return { query: trade, location };
+  // Filters we genuinely cannot serve — leave those to the model.
+  if (/\bbad reviews?\b|\bno reviews?\b|\blow rated\b/.test(lower)) return null;
+
+  return { query: trade, location, needsWebsite };
 }
 
 // ─── Security: Request ID Tracking ──────────────────────────────────────────

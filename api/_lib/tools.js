@@ -140,6 +140,23 @@ export async function runTool(name, args, ctx = {}) {
 
       const r = await fetch(`${base}/api/leads?${p}`, { headers, signal: AbortSignal.timeout(25000) });
       const j = await r.json();
+
+      // Businesses with no website are roughly one in ten, so filtering a
+      // single 20-result page leaves one or two. Page once more when the
+      // caller asked for them — Places returns a nextPageToken, and this only
+      // runs for that filter so the common query costs nothing extra.
+      if (args.needsWebsite && j?._meta?.nextPageToken) {
+        try {
+          const p2 = new URLSearchParams(p);
+          p2.set('pageToken', j._meta.nextPageToken);
+          const r2 = await fetch(`${base}/api/leads?${p2}`, { headers, signal: AbortSignal.timeout(15000) });
+          const j2 = await r2.json();
+          if (Array.isArray(j2?.leads)) {
+            const seen = new Set((j.leads || []).map(l => l._placeId));
+            j.leads = [...(j.leads || []), ...j2.leads.filter(l => !seen.has(l._placeId))];
+          }
+        } catch { /* one page is still an answer */ }
+      }
       // Hand back a compact, decision-useful slice. Sending whole records burns
       // context and buries the fields that matter on a call.
       return {
@@ -150,7 +167,7 @@ export async function runTool(name, args, ctx = {}) {
           ? undefined
           : 'None of these show an obvious gap — they all have sites and solid reviews. '
             + 'Say so honestly and pitch missed-call recovery rather than implying they are weak.',
-        leads: (j.leads || []).slice(0, 12).map(l => ({
+        leads: (j.leads || []).slice(0, args.needsWebsite ? 40 : 12).map(l => ({
           company: l.company,
           location: l.location,
           phone: l.phone,
