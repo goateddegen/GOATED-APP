@@ -300,8 +300,9 @@ function fastLeadSearchIntent(message) {
   // "should i" clause, so an explicit ask for businesses overrides the guard.
   const wantsBusinesses = /\b(leads?|businesses|business|prospects?|companies|places?|to call|who (should|can) i call)\b/.test(lower);
   if (!wantsBusinesses && /\b(how|why|should i|what should|explain|write|draft|script|objection|pitch|email)\b/.test(lower)) return null;
-  // Even when businesses are mentioned, these are still advice.
-  if (/\b(how (do|should) i|what (should|do) i say|explain|write me|draft me|talk track)\b/.test(lower)) return null;
+  // Even when businesses are mentioned, these are still advice. "Coach me on
+  // closing this lead" contains "lead" and was running a search.
+  if (/\b(how (do|should) i|what (should|do) i say|explain|write me|draft me|talk track|coach me|help me close|walk me through|advice)\b/.test(lower)) return null;
 
   // Allow the plural — people ask for "plumbers", not "plumber".
   const trade = TRADE_WORDS.find(t =>

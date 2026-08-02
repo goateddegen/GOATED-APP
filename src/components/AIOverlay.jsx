@@ -79,105 +79,61 @@ function useSignalEngine(leads, currentPage) {
   // Signal generator templates — stable reference, reads from refs
   const generateSignal = useCallback(() => {
     const leads = leadsRef.current;
-    const currentPage = pageRef.current;
     if (!leads || leads.length === 0) return null;
 
-    const negotiating = leads.filter(l => l.status === 'negotiation');
-    const qualified = leads.filter(l => l.status === 'qualified');
-    const hotLeads = leads.filter(l => l.conversionProbability >= 75);
-    const risingLeads = leads.filter(l => l.momentum === 'rising');
-    const commissionRate = 0.12;
+    // Rebuilt on fields a local business record actually has.
+    //
+    // Every signal here used to key off conversionProbability, decisionTimeline
+    // or a 12% commission — the first two are null on every live lead and the
+    // third is money we do not pay. They surfaced as confident notifications:
+    // "42% close prob", "2 weeks timeline", "your commission: $4,800".
+    const candidates = [];
 
-    // Weighted random: more relevant signals based on current page
-    const pool = [];
-
-    // Lead signals
-    if (negotiating.length > 0) {
-      const lead = negotiating[Math.floor(Math.random() * negotiating.length)];
-      pool.push({
-        category: 'LEAD',
-        title: `${lead.name} in negotiation`,
-        description: `${lead.company} — ${fmt(lead.dealValue)} deal moved to negotiation. ${lead.decisionTimeline || '2 weeks'} timeline.`,
-        action: { label: 'View Lead', type: 'viewLead', leadId: lead.id, lead },
-      });
-    }
-    if (hotLeads.length > 0) {
-      const lead = hotLeads[Math.floor(Math.random() * hotLeads.length)];
-      const days = 1 + Math.floor(Math.random() * 5);
-      pool.push({
-        category: 'LEAD',
-        title: `High-prob lead needs contact`,
-        description: `${lead.name} (${lead.conversionProbability}% close prob) hasn't been contacted in ${days} days.`,
-        action: { label: 'View Lead', type: 'viewLead', leadId: lead.id, lead },
-      });
-    }
-    if (qualified.length > 0) {
-      const lead = qualified[Math.floor(Math.random() * qualified.length)];
-      pool.push({
-        category: 'LEAD',
-        title: `Qualified lead ready for demo`,
-        description: `${lead.name} at ${lead.company} — score ${lead.score}/100. Ready for proposal.`,
+    const noSite = leads.filter(l => !l.website && !l.domain);
+    if (noSite.length) {
+      const lead = noSite[0];
+      candidates.push({
+        type: 'opportunity',
+        title: `${lead.company} has no website`,
+        description: `${lead.industry || 'Local business'}${lead.location ? ` in ${lead.location}` : ''} — the build and the phone cover sell together. $4,000 + $1,000/mo.`,
         action: { label: 'View Lead', type: 'viewLead', leadId: lead.id, lead },
       });
     }
 
-    // Crypto MARKET + ALPHA signals removed.
-    // They were fabricated (hardcoded BTC/SOL/ETH prices with Math.random()
-    // deltas presented as live intel), off-brand for a B2B agency product, and
-    // their only action linked to the disabled TrendPulse page. The remaining
-    // signals below are all derived from real lead records.
-
-    // Closing signals
-    if (negotiating.length > 0) {
-      const totalValue = negotiating.reduce((s, l) => s + l.dealValue, 0);
-      const commission = Math.round(totalValue * commissionRate);
-      pool.push({
-        category: 'CLOSING',
-        title: `${negotiating.length} leads ready to close`,
-        description: `Combined pipeline: ${fmt(totalValue)} — your commission: $${commission.toLocaleString()}. Start closing today.`,
-        action: { label: 'Start Closing', type: 'openCoach' },
-      });
-    }
-    if (risingLeads.length > 0) {
-      const top = risingLeads.sort((a, b) => b.dealValue - a.dealValue)[0];
-      pool.push({
-        category: 'CLOSING',
-        title: `Deal momentum rising`,
-        description: `${top.name} at ${top.company} showing positive signals — ${fmt(top.dealValue)} deal worth $${Math.round(top.dealValue * commissionRate).toLocaleString()} commission.`,
-        action: { label: 'Start Closing', type: 'openCoach' },
+    const openNow = leads.filter(l => l.openNow === true && l.phone);
+    if (openNow.length >= 3) {
+      candidates.push({
+        type: 'timing',
+        title: `${openNow.length} businesses open right now`,
+        description: 'Published hours say they are trading and every one has a number. Best window you will get today.',
+        action: { label: 'See the list', type: 'navigate', page: 'leads' },
       });
     }
 
-    // System signal (rare)
-    if (Math.random() < 0.15) {
-      const systemMsgs = [
-        { title: 'Pipeline health check', description: `${leads.filter(l => l.status !== 'won' && l.status !== 'lost').length} active leads in pipeline. ${hotLeads.length} high-probability.` },
-        { title: 'Weekly target update', description: `You need ${Math.max(0, 3 - Math.floor(Math.random() * 2))} more closes this week to hit target.` },
-        { title: 'AI model updated', description: 'GOATED AI predictions recalibrated with latest market data. Recalibrated with latest data.' },
-      ];
-      const sys = systemMsgs[Math.floor(Math.random() * systemMsgs.length)];
-      pool.push({
-        category: 'SYSTEM',
-        title: sys.title,
-        description: sys.description,
-        action: { label: 'Dismiss', type: 'dismiss' },
+    const strong = leads.filter(l => (l.score || 0) >= 85 && l.phone);
+    if (strong.length) {
+      const lead = strong[0];
+      candidates.push({
+        type: 'priority',
+        title: `${lead.company} scores ${lead.score}/100`,
+        description: `${lead.activity?.label || 'Worth a call'}${lead.reviewCount != null ? ` · ${lead.reviewCount} reviews` : ''}${lead.revenueFormatted ? ` · est. ${lead.revenueFormatted}` : ''}.`,
+        action: { label: 'View Lead', type: 'viewLead', leadId: lead.id, lead },
       });
     }
 
-    // Weight selection toward current page context
-    let weights = pool.map(() => 1);
-    pool.forEach((sig, i) => {
-      if (currentPage === 'leads' && (sig.category === 'LEAD' || sig.category === 'CLOSING')) weights[i] = 3;
-      if (currentPage === 'trends' && (sig.category === 'MARKET' || sig.category === 'ALPHA')) weights[i] = 3;
-      if (currentPage === 'dashboard' && sig.category === 'CLOSING') weights[i] = 2;
-    });
-    const totalWeight = weights.reduce((s, w) => s + w, 0);
-    let r = Math.random() * totalWeight;
-    for (let i = 0; i < pool.length; i++) {
-      r -= weights[i];
-      if (r <= 0) return pool[i];
+    const thin = leads.filter(l => typeof l.reviewCount === 'number' && l.reviewCount > 0 && l.reviewCount < 25);
+    if (thin.length >= 3) {
+      candidates.push({
+        type: 'opportunity',
+        title: `${thin.length} businesses with thin reviews`,
+        description: 'Under 25 reviews each. The review engine is an easy second sale once the receptionist is live.',
+        action: { label: 'See the list', type: 'navigate', page: 'leads' },
+      });
     }
-    return pool[pool.length - 1];
+
+    if (!candidates.length) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+
   }, []); // Stable — reads from refs above
 
   useEffect(() => {
@@ -467,34 +423,42 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
   const weeklyCloses = Math.min(wonLeadsAll.length, 3 + Math.floor(Math.random() * 4));
   const streakCount = 2 + Math.floor(Math.random() * 5);
 
-  // ── COACH MODE: Closing guidance with $ amounts ──────────────────
+  // ── COACH MODE ────────────────────────────────────────────────────────────
+  // Rewritten. The previous version quoted a commission we do not pay, a
+  // conversionProbability that is null on every live lead, a decisionTimeline
+  // field that does not exist, a "$25K MRR goal" nobody set, and a closing
+  // streak generated with Math.random(). It congratulated the operator on
+  // numbers that were invented at render time.
   if (coachMode && (lower.includes('coach') || lower.includes('close') || lower.includes('closing') || lower.includes('what should') || lower.includes('next step') || lower.includes('help me'))) {
     if (selectedLead) {
-      const commission = Math.round(selectedLead.dealValue * commissionRate);
-      const daysInStage = 1 + Math.floor(Math.random() * 7);
-      const closeSteps = {
-        'new': { step: 'Discovery Call', next: `Schedule a discovery call with ${selectedLead.name.split(' ')[0]} TODAY. Ask about their ${(selectedLead.painPoints||[])[0]?.toLowerCase() || 'biggest challenge'}.` },
-        'contacted': { step: 'Follow-Up', next: `Send a follow-up to ${selectedLead.name.split(' ')[0]} — reference your last conversation and share a case study from their industry (${selectedLead.industry}).` },
-        'qualified': { step: 'Demo/Proposal', next: `${selectedLead.name.split(' ')[0]} is qualified! Prepare a tailored demo focusing on: ${(selectedLead.painPoints||[]).slice(0, 2).join(' and ')}. Book it THIS WEEK.` },
-        'negotiation': { step: 'Negotiation Close', next: `You should call ${selectedLead.name.split(' ')[0]} NOW — they've been in Negotiation for ${daysInStage} days. Decision timeline is ${selectedLead.decisionTimeline || '2 weeks'} — close TODAY.` },
-        'won': { step: 'Closed Won!', next: `This deal is CLOSED! That's **$${commission.toLocaleString()}** in commission. Time to upsell or get a referral.` },
-        'lost': { step: 'Re-engage', next: `This one slipped — but it's worth **$${commission.toLocaleString()}** in commission. Wait 30 days and re-approach with a new angle.` },
-      };
-      const stageInfo = closeSteps[selectedLead.status] || closeSteps['new'];
-      return `**Closing Coach — ${selectedLead.name}**\n\n---\n\n**Current Stage:** ${stageInfo.step}\n**Deal Value:** ${fmt(selectedLead.dealValue)} | **Your Commission:** $${commission.toLocaleString()}\n**Score:** ${selectedLead.score}/100 | **Conversion Prob:** ${selectedLead.conversionProbability}%\n\n**Next Action:**\n${stageInfo.next}\n\n---\n\n**Revenue Impact:**\n- This lead is worth **$${commission.toLocaleString()} in commission** to you\n- Decision timeline is **${selectedLead.decisionTimeline || '2 weeks'}** — ${selectedLead.decisionTimeline === 'Immediate' ? 'CLOSE NOW' : 'call TODAY'}\n- You need **${Math.ceil(distanceToGoal / (commission || 1))} more closes** like this for your **$25K MRR goal**\n- Your pipeline has **$${Math.round(negotiatingLeads.reduce((s, l) => s + l.dealValue, 0) * commissionRate).toLocaleString()}** in pending commission\n\n**Pro Tips:**\n- Best method for this lead: **${selectedLead.bestMethod || 'Phone call'}**\n- Buying signals: ${(selectedLead.buyingSignals||[]).join(', ') || 'None detected yet'}\n- Competitor using: ${selectedLead.competitorUsing || 'Unknown'}\n\nKeep grinding! You're on a **${streakCount}-day closing streak**.`;
+      const l = selectedLead;
+      const noSite = !l.website && !l.domain;
+      const quote = noSite ? '$4,000 deposit + $1,000/mo' : '$2,000 deposit + $750/mo';
+      const gaps = [];
+      if (noSite) gaps.push('no website at all');
+      if (l.reviewCount === 0) gaps.push('no reviews');
+      else if (typeof l.reviewCount === 'number' && l.reviewCount < 25) gaps.push(`only ${l.reviewCount} reviews`);
+      if (!l.phone) gaps.push('no published number');
+
+      return `**${l.company}** — ${l.industry}${l.location ? ` · ${l.location}` : ''}\n\n`
+        + `Score **${l.score}/100**${l.activity?.label ? ` · ${l.activity.label}` : ''}`
+        + `${l.revenueFormatted ? ` · est. ${l.revenueFormatted}` : ''}\n\n`
+        + `**Open with:** ${gaps.length
+            ? `they have ${gaps.join(' and ')}. Name it in the first sentence.`
+            : `nothing is obviously broken, so open on the missed-call math — "what happens to a call that comes in while you are on a job?"`}\n\n`
+        + `**Then diagnose, do not pitch.** One question: "What is a job like that worth to you?" `
+        + `Once they say the number out loud the price argument is over.\n\n`
+        + `**Quote on the call:** ${quote}. No proposal, no follow-up deck — they decide in one conversation.\n\n`
+        + `${l.phone ? `**Dial:** ${l.phone}` : '**No number published** — walk in, or message the Maps listing.'}`;
     }
-    return `**Closing Coach — Pipeline Overview**\n\n---\n\n**Your Revenue Dashboard:**\n- Current MRR: **$${currentMRR.toLocaleString()}** (from ${wonLeadsAll.length} won deals)\n- Distance to $25K goal: **$${distanceToGoal.toLocaleString()}** remaining\n- Deals in negotiation: **${negotiatingLeads.length}** worth **${fmt(negotiatingLeads.reduce((s, l) => s + l.dealValue, 0))}**\n- Pending commission: **$${Math.round(negotiatingLeads.reduce((s, l) => s + l.dealValue, 0) * commissionRate).toLocaleString()}**\n- Closing streak: **${streakCount} days**\n\n---\n\n**Who to Call RIGHT NOW:**\n${negotiatingLeads.slice(0, 3).map((l, i) => {
-      const comm = Math.round(l.dealValue * commissionRate);
-      return `${i + 1}. **${l.name}** (${l.company}) — $${comm.toLocaleString()} commission | Score: ${l.score}/100 | ${l.decisionTimeline || 'ASAP'}`;
-    }).join('\n')}\n\n**This Week's Goal:**\n- Close **2 more deals** to hit your weekly target\n- Total pipeline commission available: **$${Math.round(leads.reduce((s, l) => s + l.dealValue, 0) * commissionRate).toLocaleString()}**\n- Focus on leads in **Negotiation** stage first\n\nSelect a lead to get personalized coaching!`;
+
+    return `Open a lead and I will coach you through that specific call.\n\n`
+      + `Or ask me directly — "what should I say on a cold call", "handle a price objection", `
+      + `"write me a voicemail script".`;
   }
 
+
   // ── COACH MODE: Celebration after action ─────────────────────────
-  if (coachMode && (lower.includes('called') || lower.includes('sent') || lower.includes('closed') || lower.includes('done') || lower.includes('booked') || lower.includes('scheduled'))) {
-    const topLead = selectedLead || leads[0];
-    const commission = Math.round(topLead.dealValue * commissionRate);
-    return `**Great move! Let's keep the momentum going.**\n\n---\n\nThat's **$${commission.toLocaleString()} in commission** if you close this.\n\n**Your Stats Today:**\n- Deals in progress: **${negotiatingLeads.length}**\n- Revenue this week: **$${Math.round(currentMRR / 4).toLocaleString()}** (estimated)\n- Closing streak: **${streakCount} days**\n- Pipeline health: **${leads.filter(l => l.momentum === 'rising').length} leads rising**\n\n**Next Move:**\n${negotiatingLeads.length > 0 ? `Call **${negotiatingLeads[0].name}** at ${negotiatingLeads[0].company} — they're worth $${Math.round(negotiatingLeads[0].dealValue * commissionRate).toLocaleString()} in commission and their decision timeline is ${negotiatingLeads[0].decisionTimeline || '2 weeks'}.` : 'Focus on qualifying more leads into your pipeline.'}\n\nYou're **${distanceToGoal > 0 ? `$${distanceToGoal.toLocaleString()} away from` : 'CRUSHING'}** your $25K MRR goal!`;
-  }
 
   // ── TRENDPULSE MONETIZATION HELPER ───────────────────────────────
 
@@ -554,7 +518,7 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
     let res = `**Leads in ${searchLocation}** — ${locationLeads.length} found, **${fmt(totalValue)}** total pipeline\n\n---\n\n`;
     top.forEach((l) => {
       res += `[LEAD_CARD:${l.id}]\n`;
-      res += `   Score: **${l.score}**/100 | Value: **${fmt(l.dealValue)}** | ${l.priority.toUpperCase()} | Conv: ${l.conversionProbability}%\n\n`;
+      res += `   Score: **${l.score}**/100${l.reviewCount != null ? ` | ${l.reviewCount} reviews` : ''}${l.website ? '' : ' | **no website**'}${l.phone ? ` | ${l.phone}` : ''}\n\n`;
     });
     if (locationLeads.length > 5) {
       res += `\n...and **${locationLeads.length - 5} more** in ${searchLocation}.\n\n`;
@@ -623,90 +587,70 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
   }
 
   // ── WALK ME THROUGH LEADS — structured walkthrough sorted by close probability ──
-  if (lower.includes('walk me through') || lower.includes('walkthrough') || (lower.includes('walk') && lower.includes('lead'))) {
-    const under20k = leads.filter(l => l.dealValue < 20000).sort((a, b) => b.conversionProbability - a.conversionProbability);
-    const topWalkthrough = (under20k.length > 0 ? under20k : leads.sort((a, b) => b.conversionProbability - a.conversionProbability)).slice(0, 5);
-    const totalValue = topWalkthrough.reduce((s, l) => s + l.dealValue, 0);
-    const nextActions = {
-      'new': 'Send initial outreach via best channel today',
-      'contacted': 'Schedule a discovery call this week',
-      'qualified': 'Prepare and send a tailored proposal',
-      'negotiation': 'Call now — push for verbal commitment today',
-      'proposal': 'Follow up on proposal and handle objections',
-      'won': 'Upsell or request referral',
-      'lost': 'Re-engage in 30 days with new angle',
-    };
-    let res = `**Lead Walkthrough — Top 5 Highest-Probability Leads${under20k.length > 0 ? ' Under $20K' : ''}**\n\nHere are your top 5 highest-probability leads${under20k.length > 0 ? ' under $20K' : ''} — sorted by close probability for speed-to-close:\n\n---\n\n`;
-    topWalkthrough.forEach((l, i) => {
-      const commission = Math.round(l.dealValue * 0.12);
-      const whyCloseable = l.conversionProbability >= 70 ? 'High engagement + strong buying signals' :
-        l.conversionProbability >= 50 ? 'Active interest + pain point alignment' :
-        l.momentum === 'rising' ? 'Rising momentum indicates growing urgency' :
-        'Recent activity shows continued evaluation';
-      res += `[LEAD_CARD:${l.id}]\n`;
-      res += `**${i + 1}. ${l.name}** at ${l.company}\n`;
-      res += `   Deal: **${fmt(l.dealValue)}** | Close Prob: **${l.conversionProbability}%** | Commission: **$${commission.toLocaleString()}**\n`;
-      res += `   Next Action: ${nextActions[l.status] || 'Follow up immediately'}\n`;
-      res += `   Why closeable: ${whyCloseable}\n\n`;
-    });
-    res += `---\n\n**Total pipeline shown:** ${fmt(totalValue)} | **Combined commission:** $${Math.round(totalValue * 0.12).toLocaleString()}\n\n`;
-    res += `**Speed-to-close tactics for sub-$20K deals:**\n- Same-day follow-up on every interaction\n- Simplified one-page proposals (no committee needed)\n- Create urgency: limited-time pricing or pilot window\n- Go direct to decision maker — skip gatekeepers\n\nWant outreach scripts for any of these? Or go to **Leads** for full pipeline.`;
-    return res;
-  }
 
   // ── CLOSABILITY SCORE BREAKDOWN ──
   if (lower.includes('closability') || lower.includes('closability score') || lower.includes('score breakdown') || (lower.includes('score') && lower.includes('break'))) {
     const target = selectedLead || leads[0];
     if (target) {
-      const budgetFit = Math.min(100, Math.round(50 + (target.score || 50) * 0.4 + (target.dealValue < 20000 ? 15 : target.dealValue < 50000 ? 5 : -5)));
-      const timing = target.momentum === 'rising' ? 85 : target.momentum === 'declining' ? 35 : 60;
-      const decisionMaker = target.conversionProbability >= 70 ? 90 : target.conversionProbability >= 50 ? 65 : 40;
-      const painUrgency = (target.painPoints || []).length >= 3 ? 85 : (target.painPoints || []).length >= 2 ? 65 : 45;
-      const competition = target.competitorUsing ? 50 : 75;
-      const overall = Math.round((budgetFit + timing + decisionMaker + painUrgency + competition) / 5);
-      return `**Closability Score Breakdown — ${target.name}**\n\n---\n\n**Overall Closability: ${overall}/100**\n\n| Factor | Score | Assessment |\n|--------|-------|------------|\n| Budget Fit | **${budgetFit}**/100 | ${budgetFit >= 70 ? 'Deal size matches typical spend' : 'May need budget adjustment'} |\n| Timing | **${timing}**/100 | ${timing >= 70 ? 'High engagement, strike now' : timing >= 50 ? 'Moderate — needs nurturing' : 'Low urgency — long cycle'} |\n| Decision Maker Access | **${decisionMaker}**/100 | ${decisionMaker >= 70 ? 'Direct access confirmed' : 'May need to reach higher'} |\n| Pain Urgency | **${painUrgency}**/100 | ${painUrgency >= 70 ? 'Critical pain — they need a solution' : 'Pain exists but not urgent'} |\n| Competition | **${competition}**/100 | ${target.competitorUsing ? `Using ${target.competitorUsing} — displacement needed` : 'No incumbent — greenfield opportunity'} |\n\n---\n\n**Recommendation:** ${overall >= 70 ? 'This lead is highly closeable. Prioritize immediate contact.' : overall >= 50 ? 'Solid opportunity. Focus on building urgency and demonstrating ROI.' : 'Needs more nurturing. Build relationship before pushing for close.'}\n\nWant me to draft outreach for ${target.name}? Or go to **Leads** for more analysis.`;
+      // The old breakdown scored Budget Fit, Timing, Decision Maker Access,
+      // Pain Urgency and Competition off conversionProbability, momentum,
+      // dealValue and competitorUsing. Every one of those is null or constant
+      // on a Places record, so decisionMaker was always 40 and timing always
+      // 60 — five confident-looking numbers that measured nothing.
+      //
+      // These are the signals the score is genuinely built from.
+      const noSite = !target.website && !target.domain;
+      const reviews = target.reviewCount;
+      const rating = target.rating;
+      const rows = [];
+
+      rows.push(noSite
+        ? '| No website | **+25** | Biggest lever we have — nowhere to send anyone, nothing to capture |'
+        : '| Has a website | — | Already online, so lead with the phone instead of the build |');
+
+      if (reviews === 0) rows.push('| No reviews | **+12** | Invisible in local ranking; review engine is an easy second sale |');
+      else if (typeof reviews === 'number' && reviews < 25) rows.push(`| Only ${reviews} reviews | **+12** | Happy customers, nobody asking them to say so |`);
+      else if (typeof reviews === 'number' && reviews > 800) rows.push(`| ${reviews.toLocaleString()} reviews | **−12** | Big enough to have an agency already — harder sale |`);
+      else if (typeof reviews === 'number') rows.push(`| ${reviews} reviews${rating ? ` at ${rating}★` : ''} | **+10** | Established but still owner-run: the sweet spot |`);
+
+      rows.push(target.phone
+        ? `| ${target.phone} | **+10** | Reachable today |`
+        : '| No published number | — | Cannot dial them; walk in or message the listing |');
+
+      const act = target.activity;
+      if (act?.level === 'active') rows.push(`| ${act.label} | **+12** | ${act.why || 'Recent review activity'} |`);
+      else if (act?.level === 'steady') rows.push(`| ${act.label} | **+5** | ${act.why || 'Trading, lower volume'} |`);
+      else if (act?.level === 'slowing') rows.push(`| ${act.label} | **−10** | ${act.why || 'Verify they are still taking work'} |`);
+
+      const quote = noSite ? '$4,000 deposit + $1,000/mo' : '$2,000 deposit + $750/mo';
+
+      return `**${target.company || target.name} — why it scores ${target.score}/100**\n\n`
+        + `| Signal | Weight | What it means |\n|---|---|---|\n${rows.join('\n')}\n\n`
+        + `${target.revenueFormatted ? `Estimated revenue **${target.revenueFormatted}** — from review pace against a typical job value for the trade. Treat it as a range, not a figure.\n\n` : ''}`
+        + `**Quote:** ${quote}\n\n`
+        + `The score ranks how *closable* they are, not how successful. A business with gaps we can fix scores higher than a polished one.`;
     }
   }
 
-  if (lower.includes('lead') || lower.includes('find') || lower.includes('top') || lower.includes('pipeline') || lower.includes('hottest')) {
-    const top = leads.slice(0, 5);
-    const critical = leads.filter(l => l.priority === 'critical');
-    const rising = leads.filter(l => l.momentum === 'rising');
-    const totalValue = leads.reduce((s, l) => s + l.dealValue, 0);
-    let res = `**Pipeline Intelligence Report**\n\n`;
-    res += `Your pipeline: **${leads.length.toLocaleString()} leads** worth **${fmt(totalValue)}**\n`;
-    res += `Critical: **${critical.length}** | Rising momentum: **${rising.length}**\n\n`;
-    res += `---\n\n`;
-    res += `**Top 5 Leads by Score:**\n\n`;
-    top.forEach((l) => {
-      res += `[LEAD_CARD:${l.id}]\n`;
-      res += `   Score: **${l.score}**/100 | Value: **${fmt(l.dealValue)}** | ${l.priority.toUpperCase()}\n`;
-      res += `   Method: ${l.bestMethod} | Timeline: ${l.decisionTimeline} | Conv: ${l.conversionProbability}%\n\n`;
-    });
-    res += `---\n\n`;
-    res += `Go to **Leads** to see all leads, or go to **Dashboard** for full pipeline metrics.\n\n`;
-    res += `Want me to search leads by city or industry?`;
-    return res;
-  }
 
 
 
-  if (lower.includes('outreach') || lower.includes('call') || lower.includes('draft') || lower.includes('message') || lower.includes('sms') || lower.includes('voip') || lower.includes('script')) {
-    const lead = leads[0];
-    return `**Direct Outreach Suite for ${lead.name}**\n\n**Lead Intel:**\n- Company: ${lead.company} (${lead.industry})\n- Score: ${lead.score}/100 | Value: ${fmt(lead.dealValue)}\n- Pain Points: ${lead.painPoints.join(', ')}\n- Buying Signals: ${lead.buyingSignals.join(', ')}\n\n---\n\n**VoIP Call Script:**\n\nOpener: "Hi ${lead.name.split(' ')[0]}, this is your GOATED closer from GOATED Solutions. I noticed ${lead.company} is ${lead.buyingSignals[0]?.toLowerCase() || 'scaling fast'} — congrats on that."\n\nHook: "We've been helping ${lead.industry} companies solve ${lead.painPoints[0]?.toLowerCase() || 'pipeline challenges'}, and I think there's a quick win for you."\n\nAsk: "Do you have 2 minutes? I want to share something specific to ${lead.company}."\n\nValue: "We work with similar companies to accelerate their pipeline using AI-powered lead scoring and direct outreach."\n\nClose: "Can we do a quick 15-minute deep dive Thursday or Friday?"\n\n---\n\n**SMS Sequence (3-touch):**\n\n#1 (Day 0): "Hey ${lead.name.split(' ')[0]}, just left you a VM about ${lead.company}'s growth. Quick question about your ${lead.painPoints[0]?.toLowerCase() || 'outreach'} — mind if I share something?"\n\n#2 (Day 2): "${lead.name.split(' ')[0]}, we just helped a ${lead.industry} company close $${Math.round(lead.dealValue * 0.1 / 1000)}K in 30 days. Thought of ${lead.company}. Worth 5 min?"\n\n#3 (Day 5): "Last ping ${lead.name.split(' ')[0]}! If ${lead.painPoints[0]?.toLowerCase() || 'scaling'} is on your radar, I've got something you'll want to see. Link: goated.solutions/meet"\n\n---\n\n**Voicemail Drop:**\n\n"Hey ${lead.name.split(' ')[0]}, it's your closer from GOATED. Calling because I saw ${lead.company} is ${lead.buyingSignals[0]?.toLowerCase() || 'growing fast'}. We help ${lead.industry} teams solve ${lead.painPoints[0]?.toLowerCase() || 'pipeline issues'} fast. I'll shoot you a text with details. Talk soon."\n\n---\n\nConversion probability: **${lead.conversionProbability}%**\nRecommended channel: **${lead.bestMethod}**\n\nGo to **Leads** for full details, or check **Dashboard** for pipeline metrics.\n\nWant me to adjust the scripts or target a different lead?`;
-  }
 
-  if (lower.includes('forecast') || lower.includes('revenue') || lower.includes('project')) {
-    const totalValue = leads.reduce((s, l) => s + l.dealValue, 0);
-    const wonLeads = leads.filter(l => l.status === 'won');
-    const wonValue = wonLeads.reduce((s, l) => s + l.dealValue, 0);
-    const negotiating = leads.filter(l => l.status === 'negotiation');
-    const negotiatingValue = negotiating.reduce((s, l) => s + l.dealValue, 0);
-    return `**Revenue Forecast**\n\n---\n\n**Current Pipeline:**\n- Total Pipeline: **${fmt(totalValue)}** across ${leads.length.toLocaleString()} leads\n- Won Deals: **${fmt(wonValue)}** (${wonLeads.length} deals)\n- In Negotiation: **${fmt(negotiatingValue)}** (${negotiating.length} deals)\n\n**Projected Close (Next 30 Days):**\n- Conservative: **${fmt(negotiatingValue * 0.3)}** (30% of negotiating)\n- Realistic: **${fmt(negotiatingValue * 0.5)}** (50% of negotiating)\n- Optimistic: **${fmt(negotiatingValue * 0.75)}** (75% of negotiating)\n\n**Key Risks:**\n- ${leads.filter(l => l.momentum === 'declining' && l.status === 'negotiation').length} negotiating leads have declining momentum\n- ${leads.filter(l => l.decisionTimeline === '6 months').length} leads have 6-month timelines\n\n---\n\nGo to **Dashboard** for full revenue charts, or **Wallet** for financials.\n\nWant me to break this down by industry or priority level?`;
-  }
 
   if (lower.includes('help') || lower.includes('command') || lower.includes('what can')) {
-    return `**GOATED AI - Your Sales Copilot**\n\n---\n\nHere's everything I can do:\n\n**Lead Intelligence:**\n- "Find top leads" - Highest-scored leads\n- "Critical priority leads" - Urgent attention needed\n- "Rising momentum leads" - Hot opportunities\n\n**Outreach & Sales:**\n- "Draft outreach for [name]" - Auto-generate multi-channel messages\n- "Objection handling" - Scripts for common pushbacks\n- "Follow-up sequence" - Automated follow-up templates\n\n**Analytics & Trends:**\n- "Market trends" - Real-time market pulse\n- "Revenue forecast" - Pipeline projections\n- "Industry analysis" - Sector deep-dives\n\n**Strategy & Ideas:**\n- "Business idea" - AI business generator\n- "Competitive intel" - Competitor analysis\n- "Pipeline review" - Full health check\n\n---\n\nNavigate: **Dashboard** | **Leads** | **TrendPulse** | **Markets** | **Wallet** | **Admin**\n\nJust type naturally - I understand context from your current page.`;
+    return `**What I can do**\n\n`
+      + `**Find businesses**\n`
+      + `- "hvac in tampa" / "plumbers near me" / "roofers with no website"\n`
+      + `- "who should I call first?"\n\n`
+      + `**Know what to say**\n`
+      + `- "what should I say on a cold call"\n`
+      + `- "handle a price objection"\n`
+      + `- "write me a voicemail script"\n\n`
+      + `**Price it**\n`
+      + `- "what does GOATED sell?" / "what do I quote a plumber with no site?"\n\n`
+      + `**Audit a site**\n`
+      + `- paste any address, for example "audit joesplumbing.com"\n\n`
+      + `Pages: **Home** · **Audit** · **Leads** · **Dashboard**`;
   }
 
   if (lower.includes('competitor') || lower.includes('compet') || lower.includes('intel')) {
@@ -726,7 +670,11 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
   const critical = leads.filter(l => l.priority === 'critical');
   const rising = leads.filter(l => l.momentum === 'rising');
   const won = leads.filter(l => l.status === 'won');
-  return `Got it. Let me pull some context for you.\n\n**Pipeline Snapshot:**\n- **${leads.length.toLocaleString()}** total leads worth **${fmt(totalValue)}**\n- **${critical.length}** critical priority leads need attention\n- **${rising.length}** leads with rising momentum\n- **${won.length}** deals closed won\n\n**Quick Intel:**\n- Top industry: **${leads.filter(l => l.industry === 'SaaS').length > leads.filter(l => l.industry === 'Fintech').length ? 'SaaS' : 'Fintech'}** (${Math.max(leads.filter(l => l.industry === 'SaaS').length, leads.filter(l => l.industry === 'Fintech').length)} leads)\n- Avg deal value: **${fmt(Math.round(totalValue / leads.length))}**\n- Avg conversion prob: **${Math.round(leads.reduce((s, l) => s + l.conversionProbability, 0) / leads.length)}%**\n\n---\n\nCheck **Dashboard** for full metrics, **Leads** for your pipeline, or **Trends** for market data.\n\nWhat would you like me to analyze deeper?`;
+  return `I can pull real businesses or tell you what to say.\n\n`
+    + `**Find businesses** — "hvac in tampa", "plumbers near me", "roofers with no website", "who should I call first?"\n\n`
+    + `**Know what to say** — "what should I say on a cold call", "handle a price objection", "write me a voicemail script"\n\n`
+    + `**Price it** — "what does GOATED sell?"\n\n`
+    + `**Audit a site** — paste any address, for example "audit joesplumbing.com"`;
 }
 
 // ─── PARSE RESPONSE WITH FEATURE LINKS + LEAD LINKING ────────────────
@@ -1015,7 +963,7 @@ function ContextSummaryCard({ currentPage, leads, degenMode, onAction }) {
     if (!leads || leads.length === 0) return null;
     const topCloseable = leads
       .filter(l => l.status !== 'won' && l.status !== 'lost')
-      .sort((a, b) => b.conversionProbability - a.conversionProbability)
+      .sort((a, b) => (b.score || 0) - (a.score || 0))
       .slice(0, 5);
     const negotiating = leads.filter(l => l.status === 'negotiation');
     const rising = leads.filter(l => l.momentum === 'rising');
@@ -1027,8 +975,10 @@ function ContextSummaryCard({ currentPage, leads, degenMode, onAction }) {
           title: 'Top 5 Closeable Leads',
           icon: Target,
           color: 'brand',
-          items: topCloseable.map(l => `${l.name} (${l.conversionProbability}%) — ${fmt(l.dealValue)}`),
-          action: { label: 'Get closing playbook', prompt: 'Build me a closing playbook for my top 5 closeable leads right now. Include specific scripts and commission impact.' },
+          // Was `${l.conversionProbability}%` — null on every live lead, so
+          // this rendered "(undefined%)" next to each company.
+          items: topCloseable.map(l => `${l.company || l.name} — ${l.score}/100${l.website ? '' : ' · no website'}${l.phone ? ` · ${l.phone}` : ''}`),
+          action: { label: 'Who do I call first?', prompt: 'Who should I call first?' },
         };
       case 'trends':
         return {
@@ -1050,7 +1000,7 @@ function ContextSummaryCard({ currentPage, leads, degenMode, onAction }) {
           color: 'purple',
           items: [
             `${negotiating.length} deals in negotiation`,
-            `${topCloseable.filter(l => l.conversionProbability >= 70).length} high-probability closes`,
+            `${topCloseable.filter(l => (l.score || 0) >= 75).length} scoring 75+`,
             `Total pipeline: ${fmt(totalPipeline)}`,
             `Commission potential: ${fmt(Math.round(totalPipeline * 0.12))}`,
           ],
@@ -1320,7 +1270,7 @@ export default function AIOverlay() {
     const cap = Math.min(leads.length, 5000);
     if (currentPage === 'leads') {
       let hot = 0;
-      for (let i = 0; i < cap; i++) if (leads[i].conversionProbability >= 80) hot++;
+      for (let i = 0; i < cap; i++) if ((leads[i].score || 0) >= 85) hot++;
       return hot > 0 ? `${hot} hot leads` : null;
     }
     if (currentPage === 'trends') {
@@ -1346,7 +1296,7 @@ export default function AIOverlay() {
     return {
       name: selectedLead.name,
       company: selectedLead.company,
-      probability: selectedLead.conversionProbability,
+      probability: selectedLead.score,
       nextAction: nextActions[selectedLead.status] || 'Follow up',
     };
   }, [currentPage, selectedLead]);
@@ -1454,9 +1404,8 @@ export default function AIOverlay() {
       ];
     }
     if (selectedLead && currentPage === 'leads') {
-      const firstName = selectedLead.name.split(' ')[0];
       const outreachAction = {
-        label: `Draft outreach for ${firstName}`,
+        label: 'Draft outreach',
         prompt: `Draft a phone-first outreach sequence for ${selectedLead.company}${selectedLead.location ? ` in ${selectedLead.location}` : ''}. Industry: ${selectedLead.industry}. Gaps: ${(selectedLead.painPoints||[]).join(', ') || 'none obvious'}. Cold call opener, voicemail, and an SMS follow-up. No email, no LinkedIn.`,
         icon: Send,
       };
@@ -2262,11 +2211,27 @@ export default function AIOverlay() {
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {[
-                      { label: 'Get Lead Brief', action: `Give me a comprehensive lead brief for ${selectedLead.name} at ${selectedLead.company}. Include: background summary, industry (${selectedLead.industry}), company size, deal value ($${(selectedLead.dealValue||0).toLocaleString()}), pain points (${(selectedLead.painPoints||[]).join(', ')}), buying signals (${(selectedLead.buyingSignals||[]).join(', ')}), competitive landscape (using ${selectedLead.competitorUsing || 'unknown'}), decision timeline (${selectedLead.decisionTimeline || 'unknown'}), closability score breakdown (budget fit, timing, decision maker access, pain urgency, competition), and recommended strategy.` },
-                      { label: 'Analyze Lead', action: `Analyze ${selectedLead.name} at ${selectedLead.company} \u2014 give me a full intelligence report with close probability, best approach, and revenue opportunity` },
-                      { label: `Draft Outreach for ${selectedLead.name.split(' ')[0]}`, action: `Draft a full multi-channel outreach sequence for ${selectedLead.name} at ${selectedLead.company}. Industry: ${selectedLead.industry}, pain points: ${(selectedLead.painPoints||[]).join(', ')}, buying signals: ${(selectedLead.buyingSignals||[]).join(', ')}. Include personalized email, cold call script, and LinkedIn DM.` },
-                      { label: 'Coach Me', action: `Coach me on closing ${selectedLead.name} at ${selectedLead.company}. Status: ${selectedLead.status}, Score: ${selectedLead.score}/100, Deal: $${(selectedLead.dealValue||0).toLocaleString()}. What should I do RIGHT NOW?` },
-                      { label: 'Closability Score', action: `Show me the closability score breakdown for ${selectedLead.name} at ${selectedLead.company}. Break down: Budget Fit, Timing, Decision Maker Access, Pain Urgency, and Competition. Score: ${selectedLead.score}, Conversion: ${selectedLead.conversionProbability}%, Momentum: ${selectedLead.momentum}, Pain Points: ${(selectedLead.painPoints||[]).join(', ')}, Competitor: ${selectedLead.competitorUsing || 'None'}` },
+                      // These addressed the lead by `name` "at" `company` —
+                      // identical strings for a Places record, so the prompt
+                      // read "for ADU Water Fire Mold Storm at ADU Water Fire
+                      // Mold Storm". They also asked about competitorUsing,
+                      // decisionTimeline, buyingSignals and conversionProbability,
+                      // none of which exist on a local business, which invited
+                      // the model to fill the gaps in.
+                      { label: 'Lead Brief', action: `Brief me on ${selectedLead.company}${selectedLead.location ? ` in ${selectedLead.location}` : ''} — ${selectedLead.industry}. `
+                        + `${selectedLead.website ? `Site: ${selectedLead.website}. ` : 'No website. '}`
+                        + `${selectedLead.reviewCount != null ? `${selectedLead.reviewCount} reviews${selectedLead.rating ? ` at ${selectedLead.rating} stars` : ''}. ` : ''}`
+                        + `${selectedLead.activity?.label ? `${selectedLead.activity.label}. ` : ''}`
+                        + `What do I open with and what do I quote?` },
+                      { label: 'Why call them', action: `Why is ${selectedLead.company} worth calling? Score ${selectedLead.score}/100`
+                        + `${selectedLead.website ? '' : ', no website'}`
+                        + `${selectedLead.reviewCount != null ? `, ${selectedLead.reviewCount} reviews` : ''}. Two sentences.` },
+                      { label: 'Cold call script', action: `Write a cold call script for ${selectedLead.company} (${selectedLead.industry}). `
+                        + `I do not have a contact name — ask for the owner by role. Opener, one diagnosing question, the quote, the close.` },
+                      { label: 'Coach Me', action: `Coach me on closing ${selectedLead.company}. Score ${selectedLead.score}/100`
+                        + `${selectedLead.website ? '' : ', no website'}. What is the single best next move?` },
+                      { label: 'What do I quote?', action: `What do I quote ${selectedLead.company}?`
+                        + `${selectedLead.website ? '' : ' They have no website.'}` },
                     ].map(qa => (
                       <button key={qa.label} onClick={() => { setInput(qa.action); }}
                         className="px-2 py-0.5 rounded-full text-[9px] font-medium bg-purple-500/15 text-purple-300 hover:bg-purple-500/25 transition-colors">
