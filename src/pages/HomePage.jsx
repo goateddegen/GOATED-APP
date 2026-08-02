@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, LayoutDashboard, Bot, Users, TrendingUp, Wallet, ArrowRight, Shield, Globe, Rocket, Crown, ChevronRight, BarChart3, Target, Flame, CheckCircle2, ArrowDown, Cpu, Activity, DollarSign, Gauge, Phone, MessageSquare, Mic, Headphones, Send, Radio, Sparkles, Eye, Lock, Crosshair, Layers, Building2, Code2, Star, Briefcase, ShoppingBag, ExternalLink, Trophy, Dice1, Swords, CircleDot, Megaphone, TrendingDown, Award, Gem, Zap as ZapIcon, Calendar } from 'lucide-react';
+import { Zap, LayoutDashboard, Bot, Users, TrendingUp, Wallet, ArrowRight, Shield, Globe, Rocket, Crown, ChevronRight, BarChart3, Target, Flame, CheckCircle2, ArrowDown, Cpu, Activity, DollarSign, Gauge, Phone, MessageSquare, Mic, Headphones, Send, Radio, Sparkles, Eye, Lock, Crosshair, Layers, Building2, Code2, Star, Briefcase, ShoppingBag, ExternalLink, Trophy, Dice1, Swords, CircleDot, Megaphone, TrendingDown, Award, Gem, Zap as ZapIcon, Calendar, Voicemail } from 'lucide-react';
 import GoatLogo from '../components/GoatLogo';
 import { GoatIcon } from '../components/GoatLogo';
 import { useStore } from '../hooks/useStore';
@@ -77,7 +77,10 @@ function StaggeredCards({ children, className = '' }) {
     <div ref={ref} className={className}>
       {React.Children.map(children, (child, i) => (
         <div
-          className="transition-all duration-700 ease-out"
+          /* h-full so the card inside can fill the grid row. Without it the
+             wrapper shrink-wraps its content and `auto-rows-fr` on the grid has
+             nothing to stretch. */
+          className="transition-all duration-700 ease-out h-full"
           style={{
             opacity: isVisible ? 1 : 0,
             transform: isVisible ? 'translateY(0) scale(1)' : 'translateY(40px) scale(0.95)',
@@ -211,9 +214,9 @@ export default function HomePage() {
   const outreachMethods = [
     { icon: Phone, title: 'Warm-Dial Playbook', desc: 'We write the scripts + objection maps + dial windows. You bring your own number (OpenPhone, Dialpad, Google Voice) — we route you through our close-flow with real-time AI coaching in-app.', color: '#10b981' },
     { icon: MessageSquare, title: 'SMS Sequences', desc: 'AI-personalized sequences with send-window optimization. Plug in your own A2P-registered Twilio/OpenPhone number — we generate the copy, track replies, and auto-advance the pipeline.', color: '#06b6d4' },
-    { icon: Mic, title: 'LinkedIn Outreach', desc: 'Connection requests, follow-ups, and reply triggers — all AI-personalized per lead. Wire your own LinkedIn via Unipile. We keep you under daily action caps so your account never gets flagged.', color: '#a855f7' },
+    { icon: Voicemail, title: 'Voicemail Drops', desc: 'A twenty-second script that names the number and skips the pitch. Left on the first no-answer, so the callback lands warm instead of cold.', color: '#a855f7' },
     { icon: Headphones, title: 'Call Analysis', desc: 'Real-time transcription, objection detection, and coaching. AI scores every call and tells you exactly how to close harder.', color: '#f59e0b' },
-    { icon: Send, title: 'Social DMs', desc: 'Automated LinkedIn and Twitter outreach with personalized messaging at scale. Skip the gatekeeper, go straight to the whale.', color: '#ec4899' },
+    { icon: Send, title: 'Follow-Up Cadence', desc: 'Dial, voicemail, text, then a second dial at a different hour. Five touches over seven days, ending with a call that gives them a graceful out.', color: '#ec4899' },
     { icon: Radio, title: 'Network Signals', desc: 'Real-time job change alerts, funding announcements, and trigger events. Ape into the deal at the perfect moment.', color: '#ef4444' },
   ];
 
@@ -251,7 +254,7 @@ export default function HomePage() {
             <div className="flex flex-wrap items-center gap-3 mb-6">
               <motion.div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-slate-400 text-xs" whileHover={{ scale: 1.05 }}>
                 <Phone size={12} />
-                <span className="font-semibold">Voice · SMS · LinkedIn · Zero Email</span>
+                <span className="font-semibold">Voice · SMS · Zero Email</span>
               </motion.div>
             </div>
 
@@ -288,7 +291,7 @@ export default function HomePage() {
               </GlowButton>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 pt-8 border-t border-white/[0.03]">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 pt-8 border-t border-white/[0.03] auto-rows-fr">
               {stats.map((s, i) => (
                 <motion.div key={i} variants={fadeUp} className="group">
                   <div className="text-2xl lg:text-3xl font-black text-brand group-hover:text-emerald-300 transition-colors">{s.prefix || ''}{s.value}{s.suffix}</div>
@@ -351,7 +354,7 @@ export default function HomePage() {
           {[
             { icon: Phone,    label: 'AI voice calls (Vapi)' },
             { icon: MessageSquare, label: 'SMS follow-up (Twilio)' },
-            { icon: Users,    label: 'LinkedIn DMs (compliance-aware)' },
+            { icon: Users,    label: 'Owner-direct, not the front desk' },
             { icon: Shield,   label: 'TCPA + DNC baked in' },
             { icon: Wallet,   label: 'Stripe Connect — instant payouts' },
           ].map((t, i) => {
@@ -363,80 +366,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══ DEGEN MODE — default-on ═══ */}
-      {/* NOTE: keep this section in sync with Sidebar toggle name and TrendsPage copy */}
-      <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.03) 0%, rgba(239,68,68,0.02) 50%, rgba(0,0,0,0) 100%)' }} />
-        <div className="absolute top-10 right-10 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-10 left-10 w-48 h-48 bg-red-500/5 rounded-full blur-3xl" style={{ animation: 'pulse 4s ease-in-out infinite 1s' }} />
-
-        <div className="max-w-6xl mx-auto relative">
-          <motion.div
-            className="rounded-2xl border border-orange-500/30 p-8 sm:p-10 lg:p-12 relative overflow-hidden"
-            style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.06) 0%, rgba(0,0,0,0.95) 40%, rgba(239,68,68,0.04) 100%)' }}
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-          >
-            <div className="absolute inset-0 rounded-2xl" style={{ boxShadow: '0 0 60px rgba(249,115,22,0.1), inset 0 0 60px rgba(249,115,22,0.02)' }} />
-
-            <div className="relative">
-              {/* Header */}
-              <div className="flex flex-wrap items-center gap-3 mb-2">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/15 border border-orange-500/30">
-                  <Flame size={16} className="text-orange-400" />
-                  <span className="text-orange-400 text-xs font-black uppercase tracking-widest">DEGEN MODE</span>
-                </div>
-                <div className="px-3 py-1.5 rounded-full bg-white/[0.02] border border-white/[0.05]">
-                  <span className="text-slate-400 text-xs font-mono">Press <kbd className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-bold mx-0.5">Shift+D</kbd> to activate</span>
-                </div>
-                <div className="px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20">
-                  <span className="text-orange-300 text-[10px] font-black uppercase tracking-widest">Free with account</span>
-                </div>
-              </div>
-
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mt-4 mb-4">
-                <span className="bg-gradient-to-r from-orange-400 via-red-400 to-orange-500 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text' }}>
-                  Wolf mode is on by default.
-                </span>
-              </h2>
-              <p className="text-lg text-slate-400 max-w-3xl mb-8">
-                You showed up, you&apos;re already a wolf. Every push notification, every play, every script is tuned for aggression. Need a breather? Flip to CHILL and the same engine runs — quieter. Most never touch it.
-              </p>
-
-              {/* Wolf toolkit row */}
-              <div className="mb-8">
-                <h3 className="text-sm font-black text-orange-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Eye size={14} />What&apos;s always on in Wolf</h3>
-                <StaggeredCards className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {[
-                    { icon: Crosshair, label: 'AI Alpha Plays', desc: 'Market moves get turned into entry / target / stop, pushed live to your radar.', color: '#f97316' },
-                    { icon: Activity, label: 'Live Close Feed', desc: 'Real-time ticker of deals being closed across the OS. Watch the money move.', color: '#10b981' },
-                    { icon: Trophy, label: 'Closer Leaderboard', desc: 'Top earners ranked live. Community-driven fire under every login.', color: '#f59e0b' },
-                    { icon: Eye, label: 'Push Alerts', desc: 'Browser + mobile notifications the second a play or a lead heats up.', color: '#ef4444' },
-                  ].map((item, i) => (
-                    <div key={i} className="bg-black/60 backdrop-blur rounded-xl p-4 border border-orange-500/10 group hover:border-orange-500/30 transition-all duration-300 hover:-translate-y-1">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: `${item.color}15`, color: item.color }}>
-                        <item.icon size={20} />
-                      </div>
-                      <div className="font-bold text-white text-sm mb-1 group-hover:text-orange-400 transition-colors">{item.label}</div>
-                      <div className="text-xs text-slate-500 leading-relaxed">{item.desc}</div>
-                    </div>
-                  ))}
-                </StaggeredCards>
-              </div>
-
-              {/* CTA */}
-              <div className="flex flex-wrap items-center gap-4">
-                <GlowButton onClick={() => setPage('leads')} color="orange">
-                  <Flame size={20} />Start Closing<ArrowRight size={18} />
-                </GlowButton>
-                <span className="text-sm text-slate-500">Toggle Wolf / Chill with <kbd className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-bold text-xs mx-1">Shift+D</kbd></span>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
+      {/* The DEGEN MODE section stood here: a full-width panel promoting
+          "Wolf mode is on by default" and "Press Shift+D to activate". The
+          toggle and the keybind were both removed, so it advertised a feature
+          the visitor could not find and a shortcut that did nothing. */}
 
       {/* ═══ 3 PILLARS / ELEVATOR PITCH ═══ */}
       <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
@@ -452,24 +385,28 @@ export default function HomePage() {
             </p>
           </motion.div>
 
-          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <button onClick={() => setPage('trends')} className="text-left p-6 rounded-2xl bg-black/40 border border-orange-500/20 hover:border-orange-500/50 transition-all duration-300 group hover:-translate-y-1">
-              <div className="flex items-center gap-2 mb-2"><Flame size={16} className="text-orange-400" /><span className="text-[10px] font-black uppercase tracking-widest text-orange-400">Pillar 01</span></div>
-              <div className="text-2xl font-black text-orange-400 mb-1">ALPHA RADAR</div>
-              <div className="text-sm text-slate-400 leading-snug">Globe view of every market. AI turns moves into plays — entry, target, stop. Push alerts when the opportunity hits.</div>
-              <div className="text-[11px] text-orange-300/70 mt-3 flex items-center gap-1 group-hover:translate-x-1 transition-transform">Scan live <ArrowRight size={12} /></div>
+          {/* Two of these pointed at Trends and Wallet, both disabled — the
+              store's gate bounced the visitor straight back and the card read
+              as broken. All three now go somewhere that exists, and describe
+              what the product actually does rather than a markets dashboard. */}
+          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto auto-rows-fr">
+            <button onClick={() => setPage('audit')} className="h-full flex flex-col text-left p-6 rounded-2xl bg-black/40 border border-emerald-500/20 hover:border-emerald-500/50 transition-all duration-300 group hover:-translate-y-1">
+              <div className="flex items-center gap-2 mb-2"><Award size={16} className="text-emerald-400" /><span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Pillar 01</span></div>
+              <div className="text-2xl font-black text-emerald-400 mb-1">FREE AUDIT</div>
+              <div className="text-sm text-slate-400 leading-snug flex-1">Paste any URL. We crawl it live and price what the gaps are costing — the ammunition you open the call with.</div>
+              <div className="flex items-center gap-1 text-xs text-emerald-400/70 mt-4 group-hover:text-emerald-400 transition-colors"><span>Run one now</span><ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" /></div>
             </button>
-            <button onClick={() => setPage('leads')} className="text-left p-6 rounded-2xl bg-black/40 border border-brand/20 hover:border-brand/50 transition-all duration-300 group hover:-translate-y-1">
+            <button onClick={() => setPage('leads')} className="h-full flex flex-col text-left p-6 rounded-2xl bg-black/40 border border-brand/20 hover:border-brand/50 transition-all duration-300 group hover:-translate-y-1">
               <div className="flex items-center gap-2 mb-2"><Target size={16} className="text-brand" /><span className="text-[10px] font-black uppercase tracking-widest text-brand">Pillar 02</span></div>
-              <div className="text-2xl font-black text-brand mb-1">CLOSER OS</div>
-              <div className="text-sm text-slate-400 leading-snug">Per-vertical playbooks for HVAC, dental, plumbing, med spa, roofing, chiro. Scripts, objection handlers, audit ammunition. Built for solo dialers and small agency teams.</div>
-              <div className="text-[11px] text-emerald-300/70 mt-3 flex items-center gap-1 group-hover:translate-x-1 transition-transform">Open pipeline <ArrowRight size={12} /></div>
+              <div className="text-2xl font-black text-brand mb-1">LIVE LEADS</div>
+              <div className="text-sm text-slate-400 leading-snug flex-1">Real local businesses near you, ranked by how closable they are. Who has no website, who is open right now, who to ring first.</div>
+              <div className="flex items-center gap-1 text-xs text-brand/70 mt-4 group-hover:text-brand transition-colors"><span>See today\'s list</span><ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" /></div>
             </button>
-            <button onClick={() => setPage('wallet')} className="text-left p-6 rounded-2xl bg-black/40 border border-cyan-400/20 hover:border-cyan-400/50 transition-all duration-300 group hover:-translate-y-1">
-              <div className="flex items-center gap-2 mb-2"><Wallet size={16} className="text-cyan-400" /><span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">Pillar 03</span></div>
-              <div className="text-2xl font-black text-cyan-400 mb-1">STRIPE PAYMENTS</div>
-              <div className="text-sm text-slate-400 leading-snug">Every deposit and retainer collected via Stripe Payment Links. Funds in your bank in 2 days. No long-term contracts. Tier 1: $2K + $750/mo. Tier 2: $10-20K + $2.5-5K/mo.</div>
-              <div className="text-[11px] text-cyan-300/70 mt-3 flex items-center gap-1 group-hover:translate-x-1 transition-transform">See payouts <ArrowRight size={12} /></div>
+            <button onClick={() => setAiOpen(true)} className="h-full flex flex-col text-left p-6 rounded-2xl bg-black/40 border border-cyan-400/20 hover:border-cyan-400/50 transition-all duration-300 group hover:-translate-y-1">
+              <div className="flex items-center gap-2 mb-2"><Bot size={16} className="text-cyan-400" /><span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">Pillar 03</span></div>
+              <div className="text-2xl font-black text-cyan-400 mb-1">CLOSER AI</div>
+              <div className="text-sm text-slate-400 leading-snug flex-1">Ask for businesses in any city and get them back instantly. Scripts, objection handling and the exact quote, on demand.</div>
+              <div className="flex items-center gap-1 text-xs text-cyan-400/70 mt-4 group-hover:text-cyan-400 transition-colors"><span>Open the assistant</span><ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" /></div>
             </button>
           </StaggeredCards>
         </div>
@@ -481,12 +418,12 @@ export default function HomePage() {
           <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
             <span className="text-brand text-sm font-bold uppercase tracking-widest">Core Platform</span>
             <h2 className="text-3xl lg:text-4xl font-black mt-2 mb-3">8 Modules. <span className="text-brand">All Killer. No Filler.</span></h2>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">Every weapon you need to find whales, reach decision makers, and close fat bags — in one AI-native platform. This is the whole goddamn arsenal.</p>
+            <p className="text-slate-400 text-lg max-w-2xl mx-auto">Everything you need to find local businesses losing calls, get the owner on the phone, and close them in one conversation.</p>
           </motion.div>
-          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-fr">
             {features.map((f, i) => (
               <motion.button key={i} onClick={() => f.action ? f.action() : f.page && setPage(f.page)}
-                className="bg-black/40 backdrop-blur-sm rounded-xl p-5 text-left border border-white/[0.03] group relative overflow-hidden hover:border-white/[0.08] transition-all duration-300 hover:-translate-y-1 min-h-[200px] flex flex-col"
+                className="bg-black/40 backdrop-blur-sm rounded-xl p-5 text-left border border-white/[0.03] group relative overflow-hidden hover:border-white/[0.08] transition-all duration-300 hover:-translate-y-1 min-h-[200px] h-full flex flex-col"
                 onMouseEnter={() => setHoveredFeature(i)} onMouseLeave={() => setHoveredFeature(null)}
                 whileTap={{ scale: 0.98 }}>
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(circle at 50% 0%, ${f.color}10 0%, transparent 70%)` }} />
@@ -511,11 +448,11 @@ export default function HomePage() {
           <motion.div className="text-center mb-12" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
             <span className="text-yellow-400 text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2"><Phone size={16} />Outreach Playbook</span>
             <h2 className="text-3xl lg:text-4xl font-black mt-2 mb-3">Email is Dead. <span className="text-yellow-400">Go Direct.</span></h2>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">Scripts, sequences, coaching. You bring your own number + LinkedIn — we run the play. Warm dials, AI-written SMS, LinkedIn triggers. Skip the gatekeeper, talk to the decision-maker.</p>
+            <p className="text-slate-400 text-lg max-w-2xl mx-auto">Scripts, sequences, coaching. You bring your own number — we run the play. Warm dials, voicemail drops, AI-written SMS. Ask for the owner, skip the gatekeeper, get an answer on the first call.</p>
           </motion.div>
-          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
             {outreachMethods.map((m, i) => (
-              <div key={i} className="bg-black/40 backdrop-blur rounded-xl p-6 border border-white/[0.03] group hover:border-white/[0.06] hover:-translate-y-1 transition-all duration-300">
+              <div key={i} className="bg-black/40 backdrop-blur rounded-xl p-6 border border-white/[0.03] group hover:border-white/[0.06] hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110" style={{ background: `${m.color}15`, color: m.color }}><m.icon size={20} /></div>
                   <h3 className="font-bold text-white group-hover:text-brand transition-colors">{m.title}</h3>
@@ -527,7 +464,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══ DEGEN ALPHA SECTION ═══ */}
+      {/* ═══ WHY GOATED WINS ═══ */}
       <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
         <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.02) 0%, rgba(239,68,68,0.02) 50%, rgba(168,85,247,0.02) 100%)' }} />
         <div className="max-w-7xl mx-auto relative">
@@ -537,16 +474,16 @@ export default function HomePage() {
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">Most AI agencies sell vapor. We deliver in 14 days, guarantee results in 30, and align our incentives with yours. Texas-built, owner-operated, brand-first.</p>
           </motion.div>
 
-          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
+          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12 auto-rows-fr">
             {[
               { emoji: '\u{1F4DE}', title: 'Sub-60s Pickup', desc: 'AI answers your missed calls in under 60 seconds. Customer hears a natural voice, gets qualified, books appointment. Owner gets a transcript. No more voicemail black hole.', stat: '<60s', label: 'AI pickup time' },
               { emoji: '\u{1F4B5}', title: '14-Day Deploy', desc: 'Most AI agencies promise the moon and ship in 6 months. We deliver Tier 1 in 14 days — voice agent live, SMS automation running, review engine seeded. ROI before the next bill.', stat: '14d', label: 'To live' },
               { emoji: '\u{1F4DD}', title: '30-Day Refund', desc: 'No long-term contracts. If we don\'t deliver measurable results in 30 days, every dollar back. Real risk-reversal. We only stay paid if we keep performing.', stat: '30d', label: 'Money-back' },
               { emoji: '\u{1F4CA}', title: 'Vertical Playbooks', desc: 'HVAC, dental, plumbing, med spa, roofing, chiro. Each has a tailored voice script, objection handlers, integration patterns. We don\'t generalize. We specialize.', stat: '6+', label: 'Verticals deep' },
               { emoji: '\u{1F4C8}', title: 'Compounding Wins', desc: 'Tier 1 captures the calls. Day 30 upsell adds review engine, GMB, reactivation. Day 90 owner copilot. Average client grows from $750/mo to $2,200/mo by month 6.', stat: '3x', label: 'Revenue/client by m6' },
-              { emoji: '\u26A1', title: 'Owner-Operated', desc: 'Texas-built. Bootstrapped. Single founder dialing 100x/day. The brand speaks. We deliver what other agencies promise. No fluff, no LinkedIn theater, no monthly drain.', stat: '0%', label: 'VC funded' },
+              { emoji: '\u26A1', title: 'Owner-Operated', desc: 'Texas-built. Bootstrapped. Single founder dialing 100x/day. The brand speaks. We deliver what other agencies promise. No fluff, no theater, no monthly drain.', stat: '0%', label: 'VC funded' },
             ].map((item, i) => (
-              <div key={i} className="bg-black/40 backdrop-blur rounded-xl p-6 border border-white/[0.03] group hover:border-orange-500/20 transition-all duration-300 relative overflow-hidden hover:-translate-y-1">
+              <div key={i} className="bg-black/40 backdrop-blur rounded-xl p-6 border border-white/[0.03] group hover:border-orange-500/20 transition-all duration-300 relative overflow-hidden hover:-translate-y-1 h-full flex flex-col">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(249,115,22,0.05) 0%, transparent 70%)' }} />
                 <div className="relative">
                   <div className="flex items-start justify-between mb-3">
@@ -566,7 +503,7 @@ export default function HomePage() {
           <motion.div className="text-center" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
             <div className="inline-flex flex-col items-center gap-4 p-6 rounded-2xl border border-orange-500/20 bg-orange-500/5">
               <p className="text-xl sm:text-2xl font-black text-white">The alpha is free. <span className="text-orange-400">The bags are yours. LFG.</span></p>
-              <p className="text-sm text-slate-400 max-w-md">While other platforms charge $14K+/yr for basic features, GOATED gives you everything — AI, leads, market intel, predictions, direct outreach — for absolutely nothing upfront. This is the degen play of the century.</p>
+              <p className="text-sm text-slate-400 max-w-md">Other platforms charge $14K a year before you've spoken to anyone. GOATED gives you the leads, the audit, the scripts and the coaching for nothing upfront — you pay when a deal actually closes.</p>
               <GlowButton onClick={() => setPage('leads')} color="orange">
                 <Flame size={20} />Let's Fucking Go<ArrowRight size={18} />
               </GlowButton>
@@ -583,7 +520,7 @@ export default function HomePage() {
             <h2 className="text-3xl lg:text-4xl font-black mt-2 mb-3">Know Their Shit Better <span className="text-cyan-400">Than They Do</span></h2>
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">Every lead gets AI-scored rankings, pain point breakdowns, revenue estimates, buying signals, and custom close scripts. Walk into every call knowing exactly where they're bleeding money and how you're gonna fix it.</p>
           </motion.div>
-          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-fr">
             {[
               { icon: Target, title: 'AI Lead Scoring', desc: '0-100 composite score with fit, intent, engagement, and timing signals. The cream rises to the top.', stat: '94', label: 'Top Score', color: '#10b981' },
               { icon: BarChart3, title: 'Deep Research', desc: 'Company financials, tech stack, hiring signals, and competitive landscape per lead. Total intel dominance.', stat: '20+', label: 'Data Sources', color: '#06b6d4' },
@@ -624,7 +561,7 @@ export default function HomePage() {
             <div className="absolute inset-0 bg-gradient-to-r from-brand/5 to-transparent" />
             <div className="relative">
               <h3 className="text-xl font-black text-brand mb-4 flex items-center gap-2"><Crown size={20} /> Why it hits different</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 auto-rows-fr">
                 <div>
                   <div className="font-bold text-white mb-1">Zero rent, all outcome</div>
                   <p className="text-sm text-slate-400">$0 upfront. You keep the majority of every closed deal — we take a small cut only when money actually moves. Exact split scoped on the audit call. Incentives are stapled to yours.</p>
@@ -654,7 +591,7 @@ export default function HomePage() {
           </motion.div>
 
           {/* Outcome tracks — Local Engine vs Growth Engine */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto mb-10 auto-rows-fr">
             {[
               { icon: Target,    title: 'Local Engine',  headline: '$2K + $750/mo', desc: 'For HVAC, dental, med spas, plumbing, roofing — anyone who loses revenue when the phone goes unanswered. AI agent answers in 60 sec, books, follows up. Setup pays for itself inside month one or we refund.', color: '#10b981', cta: { label: 'Run free audit', page: 'audit' } },
               { icon: DollarSign, title: 'Growth Engine', headline: '$10–20K + $2.5–5K/mo', desc: 'For online businesses, agencies, $1M+ SMBs. Full audit + outbound SDR + voice agent + custom build. Optional rev share on attributed revenue. Application-only — we limit slots.', color: '#f59e0b', cta: { label: 'Apply', page: 'audit' } },
