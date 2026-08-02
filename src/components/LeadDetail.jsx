@@ -6,7 +6,7 @@ import {
   Cpu, Eye, MessageSquare, Send, Package, Calculator, Flame, Crosshair,
   Brain, Timer, AlertTriangle, Keyboard, ExternalLink, Search, UserSearch,
   Crown, Sparkles, PhoneCall, FileText, CreditCard, Trophy, Rocket, ChevronUp,
-  MapPin, Linkedin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight, Voicemail,
+  MapPin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight, Voicemail,
 } from 'lucide-react';
 import { useStore, fmt, enrichLead, initialsOf } from '../hooks/useStore';
 import { buildCallSheet, buildPackage } from '../lib/outreach';
@@ -881,7 +881,7 @@ Best channel: ${el.bestMethod || 'phone'}.`;
 2) **Voicemail** — 20-second script, drop the numbers + a callback hook
 3) **Follow-up Call** — for the second attempt, assume they half-remember you
 4) **SMS** — 2 lines max, one question that gets a reply
-5) **LinkedIn DM** — 3 lines max, pattern-interrupt opener
+5) **Breakup Call** — 20 seconds, give them a graceful out
 
 Rules:
 - Phone-first. Do NOT write email of any kind — we do not run email outreach.
@@ -912,13 +912,41 @@ Context:\n${ctx}`;
   // ── GOATED Close Guide — step-by-step closing system ──────────────────────
   // NOTE: Demo data never auto-ticks. Step 1 is the anchor, rest are pending until
   // the operator actually works the deal. No gamification on seeded leads.
+  // Quoted figures are used by the close steps below, so this has to be
+  // declared before them — referencing it later was a temporal dead zone.
+  const recQuote = recommendedPkgQuote(safePackages);
+  // The close, as it actually runs for a local operator. The previous version
+  // was enterprise-sales language — "Value Demonstration", "battle cards",
+  // "competitor displacement", a proposal and a negotiation phase — for a call
+  // to a plumber who decides in one conversation and has no procurement
+  // process. Six steps, all of which happen on the phone.
   const closeSteps = [
-    { step: 1, name: 'Research & Prep', status: 'current', desc: 'AI deep research on company, pain points, decision makers, and competitive landscape', check: 'Review AI Executive Summary above', action: 'Read the full intelligence report and pain point analysis' },
-    { step: 2, name: 'Initial Outreach', status: 'pending', desc: 'Multi-channel first touch — personalized based on AI analysis of best method', check: `Use ${el.bestMethod || 'phone'} as primary channel`, action: 'Send personalized outreach using AI-generated scripts' },
-    { step: 3, name: 'Discovery Call', status: 'pending', desc: 'Guided discovery with real-time AI coaching and objection handling', check: 'Confirm pain points and budget authority', action: 'Schedule and conduct discovery call with AI coaching enabled' },
-    { step: 4, name: 'Value Demonstration', status: 'pending', desc: 'Custom proposal with ROI projections tailored to their specific pain points', check: 'Present personalized packages from Packages tab', action: 'Send proposal with custom pricing and ROI analysis' },
-    { step: 5, name: 'Negotiation', status: 'pending', desc: 'AI-powered negotiation support with real-time battle cards and competitor displacement strategies', check: 'Handle objections using AI battle cards', action: 'Navigate objections and align on terms' },
-    { step: 6, name: 'Close & Onboard', status: 'pending', desc: 'Secure commitment, process payment, and begin onboarding sequence', check: 'Confirm deal value and payment terms', action: 'Close the deal and initiate client onboarding' },
+    { step: 1, name: 'Two minutes of prep', status: 'current',
+      desc: 'Read the listing before you dial. Their reviews tell you what to open with.',
+      check: safePainPoints.length ? `Lead with: ${safePainPoints[0]}` : 'No obvious gap — open on missed-call math',
+      action: el.mapsUrl ? 'Skim their recent reviews for complaints about reach or response time' : 'Check what they do and how big they are' },
+    { step: 2, name: 'Dial and get the owner', status: 'pending',
+      desc: 'Whoever answers is not who signs. Ask for the owner by role, not by name.',
+      check: el.phone ? `Call ${el.phone} — mid-morning or mid-afternoon` : 'No published number — walk in or message the listing',
+      action: '"Hi, is the owner or manager around?" If not, ask when they are in and call back then.' },
+    { step: 3, name: 'Make them say the number', status: 'pending',
+      desc: 'Do not pitch. Ask questions until they tell you what a missed call costs them.',
+      check: 'Get them to state their average job value out loud',
+      action: '"What happens to a call that comes in while you are on a roof?" then "What is a job like that worth to you?"' },
+    { step: 4, name: 'Quote it on the call', status: 'pending',
+      desc: 'No proposal, no follow-up deck. They decide while you are on the phone.',
+      check: `${fmt(recQuote.deposit)} deposit + ${fmt(recQuote.monthly)}/mo`,
+      action: `"It is ${fmt(recQuote.deposit)} to set up and ${fmt(recQuote.monthly)} a month. If it books you one extra job a month it has paid for itself."` },
+    { step: 5, name: 'Handle the one objection', status: 'pending',
+      desc: 'It is almost always price, or "we already handle our calls fine".',
+      check: 'Reframe against the cost of doing nothing, not against a competitor',
+      action: safeObjections?.[0]?.response
+        ? `Use: "${String(safeObjections[0].response).slice(0, 160)}"`
+        : '"You are already paying for this — you are just paying it in jobs that went to whoever picked up."' },
+    { step: 6, name: 'Book the setup', status: 'pending',
+      desc: 'Get a date and a deposit while you are still on the phone. A "call me next week" is a no.',
+      check: 'Card details taken and install date agreed',
+      action: 'Then ask: "Who else in the trade should I be talking to?" Every close should produce two referrals.' },
   ];
 
   const completedSteps = 0; // demo data never auto-completes steps
@@ -1020,7 +1048,6 @@ Context:\n${ctx}`;
 
   // ROI calculations
   const recommendedPkg = safePackages.find(p => p.recommended) || safePackages[1];
-  const recQuote = recommendedPkgQuote(safePackages);
   const mapsLink = mapsLinkFor(el);
   // Annual and ROI are both retainer-based: the deposit is a one-time build
   // cost, so folding it into a recurring-return multiple would overstate it.
@@ -1332,20 +1359,28 @@ Context:\n${ctx}`;
                 <CopyBtn text={lead.email} />
               </a>
             )}
-            {/* LinkedIn */}
-            <a href={lead.linkedin_url || `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(lead.name + ' ' + lead.company)}`}
-              target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-4 p-4 rounded-xl bg-blue-500/[0.08] border-2 border-blue-500/25 hover:bg-blue-500/15 hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10 transition-all group">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0">
-                <Linkedin size={22} className="text-blue-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-[10px] text-blue-400 uppercase tracking-wider font-bold mb-1">LinkedIn</div>
-                <div className="text-base font-medium text-white truncate group-hover:text-blue-300 transition-colors">{lead.name}</div>
-                {lead.linkedin_company_url && <div className="text-[10px] text-blue-400/60 truncate">{lead.linkedin_company_url}</div>}
-              </div>
-              <ExternalLink size={14} className="text-blue-400/50 shrink-0" />
-            </a>
+            {/* Was a LinkedIn card. For a local owner-operator it linked to a
+                people-search URL that almost never resolves to the right
+                person, and LinkedIn is not a channel we run. Their reviews are
+                what actually prepares you for the call — recent complaints are
+                the opening. */}
+            {el.mapsUrl && (
+              <a href={`${el.mapsUrl}${el.mapsUrl.includes('?') ? '&' : '?'}hl=en`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-4 p-4 rounded-xl bg-blue-500/[0.08] border-2 border-blue-500/25 hover:bg-blue-500/15 hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10 transition-all group">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0">
+                  <Star size={22} className="text-blue-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] text-blue-400 uppercase tracking-wider font-bold mb-1">Read Their Reviews</div>
+                  <div className="text-base font-medium text-white truncate group-hover:text-blue-300 transition-colors">
+                    {el.reviewCount != null ? `${el.reviewCount} reviews${el.rating ? ` · ${el.rating}★` : ''}` : 'On Google Maps'}
+                  </div>
+                  <div className="text-[10px] text-blue-400/60 truncate">Complaints are the opening line</div>
+                </div>
+                <ExternalLink size={14} className="text-blue-400/50 shrink-0" />
+              </a>
+            )}
           </div>
 
           {/* Secondary Contact Info */}
@@ -1424,18 +1459,33 @@ Context:\n${ctx}`;
 
         {/* Outreach Quick Actions */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {/* Send LinkedIn Connection */}
+          {/* Was "LinkedIn Connect", which copied a message for a profile most
+              of these owner-operators do not have. A brief they can paste into
+              notes or a CRM is worth more. */}
           <button onClick={() => {
-            const msg = `Hi ${(lead.name || '').split(' ')[0]}, I came across your profile and was impressed by your work at ${lead.company}. I'd love to connect and share some ideas about ${safePainPoints[0]?.toLowerCase() || 'growth opportunities'} in ${lead.industry}. Looking forward to connecting!`;
-            navigator.clipboard.writeText(msg);
-            alert('LinkedIn connection request copied to clipboard!');
+            const brief = [
+              `${lead.company}${lead.location ? ` — ${lead.location}` : ''}`,
+              el.phone ? `Phone: ${el.phone}` : 'Phone: none published',
+              el.website ? `Site: ${el.website}` : 'Site: NONE — lead with the build',
+              el.rating != null ? `Reviews: ${el.reviewCount ?? 0} at ${el.rating}★` : null,
+              el.activity?.label ? `Activity: ${el.activity.label} — ${el.activity.why}` : null,
+              el.revenueFormatted ? `Est. revenue: ${el.revenueFormatted} (${el.revenueEstimate?.basis || 'estimated'})` : null,
+              ``,
+              `Gaps: ${safePainPoints.join(' · ') || 'none obvious — open on missed-call math'}`,
+              `Quote: ${fmt(recQuote.deposit)} deposit + ${fmt(recQuote.monthly)}/mo`,
+              ``,
+              `Opener: ${safeCallScript.opener}`,
+              el.mapsUrl ? `Maps: ${el.mapsUrl}` : null,
+            ].filter(l => l !== null).join('\n');
+            navigator.clipboard.writeText(brief);
+            alert('Lead brief copied to clipboard!');
           }}
             className="flex flex-col items-center gap-2 p-4 rounded-xl bg-blue-500/[0.06] border border-blue-500/15 hover:bg-blue-500/10 transition-colors group cursor-pointer">
             <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Send size={18} className="text-blue-400" />
+              <FileText size={18} className="text-blue-400" />
             </div>
-            <span className="text-xs font-semibold text-blue-400">LinkedIn Connect</span>
-            <span className="text-[10px] text-slate-500">Copy request message</span>
+            <span className="text-xs font-semibold text-blue-400">Copy Lead Brief</span>
+            <span className="text-[10px] text-slate-500">Everything in one paste</span>
           </button>
           {/* Voicemail — replaces the old cold-email drafter. We don't run
               email outreach, and that button wrote a generic template that
@@ -1506,16 +1556,16 @@ Context:\n${ctx}`;
             <div className="absolute left-[19px] top-8 bottom-4 w-0.5 bg-purple-500/15" />
             <div className="space-y-4">
               {[
-                { day: 1, channel: 'LinkedIn', action: 'Send Connection Request', icon: Linkedin, color: 'blue',
-                  detail: `"Hi ${(lead.name || '').split(' ')[0]}, I came across ${lead.company} and was impressed by your work in ${lead.industry}. Would love to connect and exchange ideas."` },
-                { day: 3, channel: 'Cold Email', action: 'Personalized Email', icon: Mail, color: 'purple',
-                  detail: `Subject: Quick idea for ${lead.company}\n\nHi ${(lead.name || '').split(' ')[0]}, I work with ${lead.industry} companies facing ${safePainPoints[0]?.toLowerCase() || 'growth challenges'}. Worth a 15-min chat?` },
-                { day: 5, channel: 'Follow-up Email', action: 'Value-Add Follow-up', icon: Mail, color: 'cyan',
-                  detail: `Hi ${(lead.name || '').split(' ')[0]}, sharing a case study of how we helped a similar ${lead.industry} company generate ${fmt(Math.round(dv * 0.15))} in 90 days. Thought it might be relevant.` },
-                { day: 7, channel: 'Phone Call', action: 'Direct Call', icon: PhoneCall, color: 'emerald',
-                  detail: `"${(lead.name || '').split(' ')[0]}, I sent a couple messages about how we're helping ${lead.industry} companies. Did you get a chance to look? I only need 2 minutes."` },
-                { day: 10, channel: 'LinkedIn DM', action: 'LinkedIn Follow-up', icon: MessageSquare, color: 'blue',
-                  detail: `"Hey ${(lead.name || '').split(' ')[0]}, following up on my connection request. I have some specific insights on ${safePainPoints[0]?.toLowerCase() || 'growth'} for ${lead.company}. Open to a quick chat?"` },
+                { day: 1, channel: 'Call', action: 'First dial — mid-morning', icon: PhoneCall, color: 'emerald',
+                  detail: `Between jobs is when they pick up: 9-11am or 2-4pm, never 7-9am. "Hi, is the owner around? I'm calling about ${lead.company} — ${(safePainPoints[0] || 'the calls coming in after hours').toLowerCase()}. Worth two minutes?"` },
+                { day: 1, channel: 'Voicemail', action: 'If no answer, leave one', icon: Voicemail, color: 'purple',
+                  detail: `Twenty seconds, name the number, no pitch. "This is [name] — I looked at ${lead.company} and there's money going out the door on calls nobody picks up. Call me back on [number]."` },
+                { day: 2, channel: 'SMS', action: 'Text the same number', icon: MessageSquare, color: 'cyan',
+                  detail: `Texts get read when calls don't. "Hi — left you a voicemail about ${lead.company}. We stop missed calls turning into lost jobs. Want the two-minute version?"` },
+                { day: 4, channel: 'Call', action: 'Second dial — different time', icon: PhoneCall, color: 'emerald',
+                  detail: `If mid-morning failed, try late afternoon. Different hour, different person answering. Reference the voicemail: "I left a message Tuesday — did it reach you?"` },
+                { day: 7, channel: 'Call', action: 'Last dial + close the loop', icon: PhoneCall, color: 'orange',
+                  detail: `Give them the out. "I've tried a couple of times and I don't want to be a nuisance — if handling calls isn't a priority right now, just say so and I'll leave it." Permission-to-close often gets the real answer.` },
               ].map((step, i) => {
                 const StepIcon = step.icon;
                 return (
@@ -1825,11 +1875,11 @@ Context:\n${ctx}`;
                   <span className="text-xs font-semibold text-slate-400">People Search & Social</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <a href={`https://www.linkedin.com/search/results/all/?keywords=${encodeURIComponent(`${lead.name} ${lead.company}`)}`}
+                  <a href={`https://www.google.com/search?q=${encodeURIComponent(`"${el.company}" owner OR president ${el.location || ''}`)}`}
                     target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 text-xs font-medium hover:bg-blue-500/20 transition-colors">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                    LinkedIn
+                    <Search size={12} />
+                    Find the owner
                   </a>
                   <a href={`https://twitter.com/search?q=${encodeURIComponent(`${lead.name} ${lead.company}`)}`}
                     target="_blank" rel="noopener noreferrer"
@@ -2747,7 +2797,7 @@ Context:\n${ctx}`;
               <div className="space-y-3">
                 {[
                   {
-                    action: `Send personalized ${(lead.bestMethod || 'Cold Email') === 'Cold Email' ? 'email' : (lead.bestMethod || '') === 'LinkedIn DM' ? 'LinkedIn message' : 'outreach'} based on "${safePainPoints[0] || 'key pain point'}"`,
+                    action: `Call and ask for the owner — open on "${safePainPoints[0] || 'the calls going unanswered'}"`,
                     priority: 'High',
                     timing: 'Today',
                   },

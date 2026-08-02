@@ -23,14 +23,9 @@ export function deriveGaps(lead) {
   if (!lead.website && !lead.domain) {
     gaps.push({ key: 'no-site', label: 'No website on file', angle: 'They are invisible to search — every lead comes from referral or luck.' });
   }
-  // Only meaningful for a company that would plausibly have one. A two-truck
-  // plumber has no LinkedIn and does not care, so this fired on every local
-  // lead and buried the gaps that actually matter.
-  const isLocalOperator = lead.lead_source === 'Google Places' || lead._source === 'places'
-    || (!lead.employees && lead.reviewCount != null);
-  if (!lead.linkedin_url && !isLocalOperator) {
-    gaps.push({ key: 'no-linkedin', label: 'No LinkedIn presence', angle: 'No employer brand — hiring and credibility both suffer.' });
-  }
+  // LinkedIn is gone as a signal and as a channel. We sell to owner-operators
+  // who answer their own phone; whether they have a profile tells us nothing
+  // about whether they're losing calls, and it fired on nearly every lead.
   if (!lead.phone) {
     gaps.push({ key: 'no-phone', label: 'No published phone', angle: 'If we cannot find a number quickly, neither can their customers.' });
   }
@@ -101,7 +96,7 @@ export function buildOutreachStrategy(lead) {
   const channels = [];
   if (lead.phone) channels.push('call');
   channels.push('sms');
-  if (lead.linkedin_url) channels.push('linkedin');
+
 
   const hook = lead_gap
     ? lead_gap.angle
@@ -120,10 +115,6 @@ export function buildOutreachStrategy(lead) {
       + `Worth two minutes?`,
     sms: `Hi — reaching out about ${biz}. ${hook} `
       + `We can have missed calls answered and booked automatically within 14 days. Want the details?`,
-    linkedin: lead.linkedin_url
-      ? `Hi — I work with ${industry ? `${industry} businesses` : 'local service businesses'}${where}. `
-        + `${hook} Happy to share what we did for similar operators. Worth a conversation?`
-      : null,
     // What to actually say once they engage.
     talkingPoints: [
       lead.employees ? `Team of ${lead.employees} — ask who covers the phone after hours.` : 'Ask how calls are handled after hours.',

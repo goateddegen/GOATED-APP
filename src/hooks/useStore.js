@@ -850,6 +850,44 @@ function computePipelineAnalytics(leads) {
 // ===========================================================================
 // ZUSTAND STORE
 // ===========================================================================
+// ─── Call outcomes ──────────────────────────────────────────────────────────
+// The page could show you who to call but had nowhere to record what happened,
+// so a second day of work meant re-dialling people you already spoke to. Now
+// that leads accumulate into the hundreds that stops being a nuisance and
+// starts being the reason the page is unusable.
+//
+// Keyed by Places id rather than the row id, because row ids are reassigned on
+// every merge — an outcome has to follow the business, not its position.
+const CALL_OUTCOMES_KEY = 'goated_call_outcomes';
+
+export const OUTCOMES = {
+  'no-answer':      { label: 'No answer',      retryDays: 2, color: 'slate' },
+  'gatekeeper':     { label: 'Gatekeeper',     retryDays: 3, color: 'amber' },
+  'callback':       { label: 'Call back',      retryDays: 1, color: 'cyan' },
+  'interested':     { label: 'Interested',     retryDays: 1, color: 'emerald' },
+  'booked':         { label: 'Booked',         retryDays: null, color: 'emerald' },
+  'not-interested': { label: 'Not interested', retryDays: null, color: 'red' },
+};
+
+function loadOutcomes() {
+  if (typeof window === 'undefined') return {};
+  try { return JSON.parse(localStorage.getItem(CALL_OUTCOMES_KEY) || '{}') || {}; }
+  catch { return {}; }
+}
+
+export const leadCallKey = (l) =>
+  l?._placeId || l?._apolloId || l?.external_id
+  || `${(l?.company || '').toLowerCase()}|${(l?.location || '').toLowerCase()}`;
+
+/** Is this lead due for a call right now? */
+export function isDue(outcome) {
+  if (!outcome) return true;                       // never called
+  const cfg = OUTCOMES[outcome.outcome];
+  if (!cfg || cfg.retryDays == null) return false; // booked or dead — leave it
+  const days = (Date.now() - Date.parse(outcome.at)) / 86_400_000;
+  return days >= cfg.retryDays;
+}
+
 // ─── Persisted lead pool ────────────────────────────────────────────────────
 // Leaving a lead and coming back used to replace the whole list, so the row you
 // were just looking at could vanish and the page you had worked through was
@@ -1040,6 +1078,26 @@ export const useStore = create((set, get) => ({
   // we have.
   noWebsiteLeads: loadStoredLeads(NO_WEBSITE_KEY),
   lastAddedLeadCount: 0,
+
+  // { [placesId]: { outcome, at, note } }
+  callOutcomes: loadOutcomes(),
+  recordCallOutcome: (lead, outcome, note = '') => {
+    const key = leadCallKey(lead);
+    if (!key) return;
+    const next = {
+      ...get().callOutcomes,
+      [key]: { outcome, at: new Date().toISOString(), note, company: lead.company || null },
+    };
+    try { localStorage.setItem(CALL_OUTCOMES_KEY, JSON.stringify(next)); } catch { /* quota */ }
+    set({ callOutcomes: next });
+  },
+  clearCallOutcome: (lead) => {
+    const key = leadCallKey(lead);
+    const next = { ...get().callOutcomes };
+    delete next[key];
+    try { localStorage.setItem(CALL_OUTCOMES_KEY, JSON.stringify(next)); } catch { /* quota */ }
+    set({ callOutcomes: next });
+  },
   liveTrends: [],
   liveMarketData: {},
   livePlays: [],
