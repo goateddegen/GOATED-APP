@@ -189,6 +189,19 @@ export async function runTool(name, args, ctx = {}) {
 
     if (name === 'find_contact') {
       const host = String(args.website || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+      // Same trap as audit_website: asked "what should I say on a cold call",
+      // the model picked a business out of the air and looked up its contacts,
+      // answering about a company the user never mentioned.
+      if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(host)
+          || /\b(example|placeholder|their|the site|unknown)\b/i.test(host)) {
+        return {
+          ok: false,
+          reason: 'no-real-domain',
+          instruction: 'No specific business was named. Answer the question generally, '
+            + 'from what you know about cold-calling local service businesses. '
+            + 'Do not invent a company to illustrate it.',
+        };
+      }
       const r = await fetch(`${base}/api/leads?action=enrich&website=${encodeURIComponent(host)}`, {
         headers, signal: AbortSignal.timeout(25000),
       });
@@ -204,10 +217,28 @@ export async function runTool(name, args, ctx = {}) {
     }
 
     if (name === 'audit_website') {
+      // The model reaches for this on advice questions and passes a
+      // placeholder — "roofer's website (if any)", or nothing at all. The audit
+      // then failed and its error became the whole answer: asked how to handle
+      // a price objection, the assistant replied "No website provided."
+      // Refuse here and tell it to answer from its own knowledge instead.
+      const url = String(args.url || '').trim();
+      const looksReal = /^(https?:\/\/)?[a-z0-9-]+(\.[a-z0-9-]+)+/i.test(url)
+        && !/\b(if any|similar|example|placeholder|their|the (site|website)|n\/?a|unknown)\b/i.test(url);
+      if (!looksReal) {
+        return {
+          ok: false,
+          reason: 'no-real-url',
+          instruction: 'No specific website was named, so there is nothing to audit. '
+            + 'Answer the question directly from what you know about the product. '
+            + 'Do not mention the missing URL.',
+        };
+      }
+
       const r = await fetch(`${base}/api/audit`, {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: args.url }),
+        body: JSON.stringify({ url }),
         signal: AbortSignal.timeout(28000),
       });
       const j = await r.json();

@@ -128,6 +128,27 @@ function stripUngroundedFigures(text, toolResultsJson) {
   // Placeholder maths — "$X/year", "$Y return". No digits, so the grounding
   // check below never sees them, and they read as a broken template.
   out = out.replace(/\$[A-Z]\b\/?\w*/g, '');
+  // Fill-in-the-blank brackets: "[key benefits]", "[desirable outcome]". The
+  // model is told not to write these and does anyway.
+  //
+  // Deleting just the bracket leaves broken grammar — "Our solution offers
+  // that can ." — so the whole sentence goes. A sentence built around a blank
+  // carries no information once the blank is gone.
+  const TEMPLATE_SLOT = /\[[a-z][a-z0-9 '\/-]{2,40}\]/i;
+  const isNavToken = (m) => /^\[(NAVIGATE|LEAD_CARD)/i.test(m);
+  out = out
+    .split('\n')
+    .map(line => {
+      if (!TEMPLATE_SLOT.test(line)) return line;
+      const kept = line
+        .split(/(?<=[.!?])\s+/)
+        .filter(sentence => {
+          const m = sentence.match(TEMPLATE_SLOT);
+          return !m || isNavToken(m[0]);
+        });
+      return kept.join(' ');
+    })
+    .join('\n');
   // Dollar amounts: $10K, $8,500, $2000
   out = out.replace(/\$\s?[\d,]+(?:\.\d+)?\s?[KkMm]?\b/g, (m) => (isGrounded(m) ? m : ''));
   // Percentages presented as close/conversion rates. Digit-matching alone is
@@ -431,6 +452,9 @@ RULES — OBEY EVERY ONE:
 - NEVER mention commission, payouts or splits. We do not pay them and the UI does not show them.
 - Never write placeholder maths like "$X/year" or "$Y return". Either use a real figure or
   describe the benefit in words.
+- Never leave a fill-in-the-blank bracket like [key benefits], [company name] or
+  [desirable outcome]. Write the actual words — if you do not know the specific, say the
+  general thing plainly instead of leaving a slot.
 - Our pricing is a one-time deposit plus a monthly retainer: $2,000 + $750/mo for the AI
   receptionist, $2,000 + $250/mo to add a website build. Quote those when asked what to sell.
 - 60 words MAX unless the user explicitly asks for a report / breakdown / deep dive.
@@ -572,7 +596,29 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
       ? `${cityHdr}${regionHdr ? ' ' + regionHdr : ''}`
       : '';
 
-    const fastIntent = fastLeadSearchIntent(contextMessages[contextMessages.length - 1]?.content || '');
+    // Offer data tools only when the user is actually asking for data.
+    //
+    // Blocklisting advice phrasings lost repeatedly. "How do I handle a price
+    // objection" ran a search for businesses named "with price objection".
+    // "What should I say on a cold call" looked up contacts for a plumber in
+    // Phoenix the user had never mentioned — the model invents a plausible
+    // domain, which passes any is-this-a-real-domain check. "Write me a
+    // voicemail script" pulled twelve leads.
+    //
+    // Inverting it is reliable: a tool is offered only on positive evidence
+    // that data is wanted — a domain, or a fetch verb, or a place. Everything
+    // else is answered from what the model knows, which is what those
+    // questions were asking for anyway.
+    const lastMsg = contextMessages[contextMessages.length - 1]?.content || '';
+    const mentionsDomain = /\b[a-z0-9-]+\.(com|net|org|io|co|us|biz|info)\b/i.test(lastMsg);
+    const wantsFetch = /\b(find|show|get|list|search|pull|give me|who (should|can) i call|leads?\b|businesses|prospects|near me|in my area)\b/i.test(lastMsg);
+    const wantsData = mentionsDomain || wantsFetch;
+
+    const offeredTools = wantsData
+      ? (mentionsDomain ? TOOL_SCHEMAS : TOOL_SCHEMAS.filter(t => t.function?.name === 'search_leads'))
+      : [];
+
+    const fastIntent = fastLeadSearchIntent(lastMsg);
     if (fastIntent) {
       try {
         const result = await runTool('search_leads', fastIntent, {
@@ -655,7 +701,7 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
               messages: convo,
               // Only offer tools on the first round. After results are in, the
               // model should be writing an answer, not calling again.
-              ...(round === 0 ? { tools: TOOL_SCHEMAS, tool_choice: 'auto' } : {}),
+              ...(round === 0 && offeredTools.length ? { tools: offeredTools, tool_choice: 'auto' } : {}),
             }),
             signal: AbortSignal.timeout(30000),
           });
