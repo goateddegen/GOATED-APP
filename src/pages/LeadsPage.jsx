@@ -281,8 +281,8 @@ function parseAIPrompt(prompt) {
   if (text.includes('hot') || text.includes('best') || text.includes('top') || text.includes('highest score') || text.includes('strongest')) {
     filters.minScore = Math.max(filters.minScore, 80); if (!understood.some(u => u.startsWith('Score'))) understood.push('Score >= 80 (hot leads)');
   }
-  if (text.includes('whale') || text.includes('enterprise') || text.includes('big fish') || text.includes('largest')) {
-    filters.minDeal = Math.max(filters.minDeal, 50000); if (!understood.some(u => u.startsWith('Deal'))) understood.push('Deal >= $50K (whales)');
+  if (text.includes('biggest') || text.includes('largest') || text.includes('best')) {
+    filters.minScore = Math.max(filters.minScore || 0, 75); if (!understood.some(u => u.startsWith('Score'))) understood.push('Score >= 75');
     filters.sort = 'dealValue'; filters.order = 'desc';
   }
   if (text.includes('quick win') || text.includes('easy close') || text.includes('low hanging') || text.includes('ready to buy')) {
@@ -313,13 +313,17 @@ function parseAIPrompt(prompt) {
 // v7.5.4 — Two-tier targeting:
 //   Local Engine (Tier 1): brick & mortar, deal $5-25K, deposit $2K + $750/mo
 //   Growth Engine (Tier 2): online/agency/SMB, deal $25K+, deposit $10-20K + $2.5-5K/mo
+// Filters for the businesses we actually list. The previous set was written
+// for an Apollo-shaped pipeline — "SaaS or MarTech founders above $25K",
+// "whale enterprise deals above $50K" — and returned nothing, because every
+// lead here is a local operator with a $2,000 deposit.
 const PRESET_PROMPTS = [
-  { label: 'Hot to close',   prompt: 'Show me quick wins ready to close with high scores', icon: Flame },
-  { label: 'Tier 1 · Local', prompt: 'Healthcare and Construction with deal value $5K to $25K and owner title',  icon: Target },
-  { label: 'Tier 2 · Growth',prompt: 'SaaS or MarTech founders with deal value above $25K and surging momentum', icon: Crown },
-  { label: 'Home services',  prompt: 'Construction, Healthcare or Logistics with deal value above $10K',         icon: Target },
-  { label: 'Whales',         prompt: 'Show me whale enterprise deals above $50K',                                 icon: DollarSign },
-  { label: 'Fresh signal',   prompt: 'Newest leads with surging momentum',                                        icon: UserSearch },
+  { label: 'Open right now',  prompt: 'Businesses that are open right now and have a phone number',        icon: Flame },
+  { label: 'No website',      prompt: 'Businesses with no website at all',                                 icon: Globe },
+  { label: 'Thin reviews',    prompt: 'Businesses with fewer than 25 reviews',                             icon: Star },
+  { label: 'Emergency trades',prompt: 'HVAC, plumbing, electrical and water damage businesses',            icon: Target },
+  { label: 'Actively trading',prompt: 'Businesses with a review in the last month',                        icon: UserSearch },
+  { label: 'Best scores',     prompt: 'Highest closability scores first',                                  icon: Crown },
 ];
 
 // ---------------------------------------------------------------------------

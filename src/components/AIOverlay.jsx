@@ -359,50 +359,34 @@ const FEATURE_LINKS = {
 // Snap modes removed — AI overlay is always right panel
 
 // ─── CONTEXT-AWARE SUGGESTED PROMPTS ───────────────────────────────────
+// Suggested prompts, per page. The old set asked for "$50K+ deals" and
+// "$20K+ deals" against a book where every deposit is $2,000, and pointed at
+// Trends and Market, which are disabled.
 const PAGE_PROMPTS = {
   home: [
-    { label: 'Find leads in Miami', icon: Globe },
-    { label: 'Walk Me Through Leads', icon: ClipboardList },
-    { label: 'Show $50K+ deals', icon: DollarSign },
-    { label: 'Market trends today', icon: TrendingUp },
+    { label: 'Find leads near me', icon: Globe },
+    { label: 'What does GOATED sell?', icon: ClipboardList },
+    { label: 'Businesses with no website', icon: Target },
+    { label: 'Audit a website for me', icon: Sparkles },
   ],
   dashboard: [
-    { label: 'Pipeline review', icon: BarChart3 },
-    { label: 'Performance brief', icon: TrendingUp },
-    { label: 'Which leads need follow-up?', icon: Users },
-    { label: 'Show me win/loss trends', icon: Target },
+    { label: 'Who should I call today?', icon: Users },
+    { label: 'What do I quote them?', icon: DollarSign },
+    { label: 'Handle a price objection', icon: Target },
+    { label: 'Write me a voicemail', icon: ClipboardList },
   ],
   leads: [
-    { label: 'Walk me through top leads', icon: ClipboardList },
+    { label: 'Who should I call first?', icon: Users },
     { label: 'Close strategy for lead', icon: Target },
-    { label: 'Find $20K+ deals', icon: DollarSign },
-    { label: 'Best leads to close this week', icon: Sparkles },
+    { label: 'Businesses with no website', icon: Globe },
+    { label: 'Cold call opener', icon: ClipboardList },
   ],
-  trends: [
-    { label: 'Market pulse', icon: TrendingUp },
-    { label: 'Best alpha plays', icon: Zap },
-    { label: 'Deep research trends', icon: Lightbulb },
-    { label: 'Compare fintech vs SaaS', icon: Globe },
-  ],
-  market: [
-    { label: 'Global market pulse', icon: Globe },
-    { label: 'Competitor landscape', icon: Target },
-    { label: 'Emerging opportunities', icon: Lightbulb },
-    { label: 'Investment signals', icon: Zap },
-  ],
-  admin: [
-    { label: 'System health overview', icon: BarChart3 },
-    { label: 'User analytics summary', icon: Users },
-    { label: 'Revenue performance', icon: TrendingUp },
-    { label: 'Platform optimization tips', icon: Lightbulb },
-  ],
-  wallet: [
-    { label: 'Revenue breakdown', icon: Wallet },
-    { label: 'Spending analysis', icon: BarChart3 },
-    { label: 'Projected earnings', icon: TrendingUp },
-    { label: 'Cost optimization tips', icon: Lightbulb },
+  audit: [
+    { label: 'What do I sell them?', icon: DollarSign },
+    { label: 'Turn this into an opener', icon: ClipboardList },
   ],
 };
+
 
 // COACH MODE prompts — tactical closing advice
 const COACH_PROMPTS = {
@@ -426,51 +410,10 @@ const COACH_PROMPTS = {
   ],
 };
 
-// DEGEN MODE prompts — aggressive, Wolf of Wall Street style
-const DEGEN_PROMPTS = {
-  home: [
-    { label: 'Show me the money plays', icon: Zap },
-    { label: 'Who should I ape into?', icon: Users },
-    { label: "What's pumping today?", icon: TrendingUp },
-    { label: 'Give me a 100x idea', icon: Lightbulb },
-  ],
-  dashboard: [
-    { label: 'Am I winning or losing?', icon: BarChart3 },
-    { label: 'Which deals are mooning?', icon: TrendingUp },
-    { label: 'Who do I need to call NOW?', icon: Users },
-    { label: 'Show me the bag tracker', icon: Target },
-  ],
-  leads: [
-    { label: 'Find me a whale to close', icon: Target },
-    { label: 'Write me killer cold call script', icon: Send },
-    { label: 'Who has the biggest bags?', icon: Zap },
-    { label: 'Speed run: close in 24hrs', icon: Sparkles },
-  ],
-  trends: [
-    { label: "What's the alpha play right now?", icon: TrendingUp },
-    { label: 'Show me pump signals', icon: BarChart3 },
-    { label: 'Which sector is about to moon?', icon: Lightbulb },
-    { label: 'Degen market analysis', icon: Globe },
-  ],
-  market: [
-    { label: 'Full degen market scan', icon: Globe },
-    { label: 'Who are we conquering?', icon: Target },
-    { label: 'Find me asymmetric bets', icon: Lightbulb },
-    { label: 'Whale movement alerts', icon: Zap },
-  ],
-  admin: [
-    { label: 'Show me the revenue matrix', icon: BarChart3 },
-    { label: 'Who are the power users?', icon: Users },
-    { label: 'Revenue machine status', icon: TrendingUp },
-    { label: 'How do we 10x this?', icon: Lightbulb },
-  ],
-  wallet: [
-    { label: 'How fat are my bags?', icon: Wallet },
-    { label: 'Revenue go BRRR analysis', icon: BarChart3 },
-    { label: 'When do I hit $1M?', icon: TrendingUp },
-    { label: 'Maximize my earnings', icon: Lightbulb },
-  ],
-};
+// The aggressive "Wolf of Wall Street" prompt set lived here — ape into,
+// mooning, bag tracker, whale to close, 100x ideas. It was the set that
+// rendered, so the suggestions under the chat were offering crypto plays to
+// someone prospecting plumbers. Aliased to the real prompts rather than kept.
 
 // ─── QUICK INSIGHT BUTTONS ─────────────────────────────────────────────
 const QUICK_INSIGHTS = [
@@ -554,13 +497,6 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
   }
 
   // ── TRENDPULSE MONETIZATION HELPER ───────────────────────────────
-  if (lower.includes('monetize') || lower.includes('make money') || lower.includes('trade') || lower.includes('play') || lower.includes('bet') || lower.includes('prediction') || lower.includes('best plays') || lower.includes('money play')) {
-    const pipelineCommission = Math.round(leads.reduce((s, l) => s + l.dealValue, 0) * commissionRate);
-    const top3Commission = Math.round(leads.slice(0, 3).reduce((s, l) => s + l.dealValue, 0) * commissionRate);
-    const lostLeads = leads.filter(l => l.status === 'lost');
-    const lostRevenue = fmt(lostLeads.reduce((s, l) => s + l.dealValue, 0));
-    return `**TrendPulse Money Plays**\n\nBased on current signals, here are your top plays:\n\n---\n\n**1. BTC Prediction Play** (Kalshi)\n- BTC above $100K by June → YES at $0.42 (58% implied)\n- GOATED AI confidence: 72% → **+30% alpha edge**\n- Bet $100 → Win $238 if YES | Risk: $100\n- [Place Bet on Kalshi →]\n\n**2. SOL Momentum Trade**\n- SOL showing rising momentum (+6.3% 24h)\n- Entry: $198 | Target: $220 | Stop: $185\n- Risk/Reward: 1:1.7\n- [Copy Trade Setup →]\n\n**3. B2B Revenue Play**\n- Your pipeline has **${lostRevenue}** in lost revenue leads\n- Close just 3 of your top 10 → **$${top3Commission.toLocaleString()} in commission**\n- [Call Top Lead Now →]\n\n---\n\n**Strategy: Split your time 70/30**\n- 70% → B2B closing (guaranteed commission)\n- 30% → Prediction markets (alpha plays)\n- Target: **$25K MRR** from closing + **$5K/mo** from trading\n\n**Your Edge:**\n- Total pipeline commission: **$${pipelineCommission.toLocaleString()}**\n- Current MRR: **$${currentMRR.toLocaleString()}**\n- ${negotiatingLeads.length} deals in negotiation ready to close\n\nGo to **Markets** for live prediction data, or **Leads** to start closing.`;
-  }
 
   // Navigation intent detection — short-circuits LLM for "go to X" / "open X" commands
   // Exception: if the user is asking to SEARCH leads ("leads in austin", "show me $100k deals"),
@@ -753,13 +689,7 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
     return res;
   }
 
-  if (lower.includes('business') || lower.includes('idea') || lower.includes('start')) {
-    return `**Business Idea Generator**\n\nBased on current market trends and your pipeline data:\n\n---\n\n**1. AI Sales Automation SaaS**\nMarket Size: **$12B by 2028** | Growth: +42% YoY\nEntry: Build on GOATED's lead scoring engine\nMonetize: $99-499/mo SaaS + per-transaction fees\nCompetitive edge: Real-time lead intelligence + auto-outreach\n\n**2. Creator Deal Marketplace**\nMarket Size: **$104B** creator economy\nEntry: Launch marketplace on GOATED platform\nMonetize: 15% commission on closed deals\nCompetitive edge: AI-powered deal matching\n\n**3. Prediction Market Platform**\nMarket Size: **$50B+** and growing\nEntry: Extend GOATED **Markets** module\nMonetize: Platform fees + premium analytics subscriptions\nCompetitive edge: AI-driven probability models\n\n**4. Revenue Intelligence API**\nMarket Size: **$8B by 2027**\nEntry: Productize GOATED's analytics as an API\nMonetize: Usage-based pricing, $0.01 per enrichment\nCompetitive edge: 2,500+ lead dataset for training\n\n---\n\nCheck out **Trends** for real-time market data, or go to **Market** for competitive landscape.\n\nWhich idea should we deep-dive on? I can build a full business plan.`;
-  }
 
-  if (lower.includes('trend') || lower.includes('market') || lower.includes('pulse') || lower.includes('sector')) {
-    return `**Market Pulse Update**\n\n---\n\n**Surging Sectors:**\n- **AI Sales Automation** — +42% this month [BLAZING]\n- **Revenue Intelligence** — +38% [HOT]\n- **Creator Economy B2B** — +35% [HOT]\n- **Prediction Markets** — +28% [RISING]\n\n**Declining Sectors:**\n- **Traditional Cold Outreach** — -8% [DECLINING]\n- **Manual CRM Tools** — -12% [COOLING]\n\n---\n\n**Key Insights:**\n1. AI-powered outreach is replacing traditional cold email. Companies using AI SDR tools see **3x higher reply rates**.\n2. Revenue intelligence platforms are consolidating - expect M&A activity.\n3. Creator economy B2B tools are the fastest-growing niche.\n\n**Your Pipeline Impact:**\n- ${leads.filter(l => l.industry === 'AI/ML').length} leads in AI/ML sector (hottest)\n- ${leads.filter(l => l.industry === 'SaaS').length} leads in SaaS (steady growth)\n- ${leads.filter(l => l.industry === 'Fintech').length} leads in Fintech (watch for regulation)\n\n---\n\nGo to **Trends** for live charts, or check **Market** for full global pulse.\n\nWant me to analyze how these trends impact your specific pipeline?`;
-  }
 
   if (lower.includes('outreach') || lower.includes('call') || lower.includes('draft') || lower.includes('message') || lower.includes('sms') || lower.includes('voip') || lower.includes('script')) {
     const lead = leads[0];
@@ -784,11 +714,11 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats
     return `**Competitive Intelligence Report**\n\n---\n\n**Top Competitor Mentions Across Your Pipeline:**\n${topCompanies.map((c, i) => `${i + 1}. **${c}** - mentioned by ${leads.filter(l => l.competitorUsing.includes(c)).length} leads`).join('\n')}\n\n**Key Observations:**\n- Most leads are evaluating **2-3 competitors** simultaneously\n- ${leads.filter(l => l.techStack.includes('Salesforce')).length} leads currently use Salesforce (prime displacement opportunity)\n- ${leads.filter(l => l.techStack === 'None - manual process').length} leads have no CRM (greenfield opportunity)\n\n**Displacement Strategy:**\n1. Target leads with manual processes first (lowest switching cost)\n2. Focus on Salesforce users experiencing pain points\n3. Offer migration packages for HubSpot users\n\n---\n\nGo to **Market** for full competitive landscape, or **Dashboard** for displacement scripts.\n\nWant me to build a specific battle card against any competitor?`;
   }
 
-  // DEGEN mode catch-all
+  // Catch-all when nothing else matched. The DEGEN variant that used to live
+  // here opened with a random "LFG. / WAGMI. / Ape in." and suggested whale
+  // leads and $50K+ deals — neither of which this product has.
   if (degenMode) {
-    const degenPrefixes = ['LFG.', 'WAGMI.', 'No cap.', 'Ape in.', 'Send it.'];
-    const prefix = degenPrefixes[Math.floor(Math.random() * degenPrefixes.length)];
-    return `**${prefix}** Ask me something specific:\n\n- "Find me whale leads to close"\n- "Best alpha play RIGHT NOW"\n- "Coach me on closing [lead name]"\n- "Show me $50K+ deals"\n- "Degen market scan"\n\nI'm your AI closing weapon. Use me. 🔥`;
+    return `Ask me for a trade and a city and I will pull them live:\n\n- "plumbers in tampa"\n- "hvac near me"\n- "roofers with no website"\n- "what do I quote a plumber with no site?"\n- "handle a price objection"`;
   }
 
   // Default / catch-all response
@@ -1043,41 +973,41 @@ const ORB_CONTEXT = {
   admin: { badge: null, modeLabel: 'Admin Console', icon: Shield },
 };
 
-const PROACTIVE_SUGGESTIONS = {
-  leads: [
-    'I found 3 leads with 80%+ close probability',
-    'Hot lead alert: 2 deals in negotiation need follow-up',
-    'Your top lead score just jumped — check pipeline',
-  ],
-  trends: [
-    'BTC breaking resistance — check alpha plays',
-    'New sector surge detected: AI/ML up 42%',
-    '2 prediction market edges found',
-  ],
-  dashboard: [
-    'Pipeline health: 3 deals need attention today',
-    'Revenue is trending up — keep the momentum',
-    'Weekly target: 2 more closes to hit goal',
-  ],
-};
+// Proactive tips, computed from what is actually on the page.
+//
+// These used to be fixed strings fired every thirty seconds as if they were
+// findings: "I found 3 leads with 80%+ close probability", "Revenue is
+// trending up", "BTC breaking resistance — check alpha plays". None of it was
+// measured, and the degen variant claimed "$45K bag incoming" against a book
+// where the deposit is $2,000. A tip that invents a number is worse than no
+// tip, so anything we cannot count is simply not offered.
+function buildProactiveTips(state, page) {
+  const leads = state.liveLeads || [];
+  const noSite = state.noWebsiteLeads || [];
+  const tips = [];
 
-const DEGEN_PROACTIVE_SUGGESTIONS = {
-  leads: [
-    '3 leads about to close — $45K bag incoming. Don\'t fumble this. LFG',
-    'Whale alert: 2 deals in negotiation are mooning. Ape in NOW',
-    'Your top lead just went parabolic — send it before someone else does',
-  ],
-  trends: [
-    'BTC breaking resistance — alpha play detected. Send it',
-    'AI/ML sector pumping +42% — massive bag potential. WAGMI',
-    '2 prediction market edges with fat risk-reward. NFA but ape-worthy',
-  ],
-  dashboard: [
-    '3 deals need your attention — don\'t be paper hands on these bags',
-    'Revenue pumping — keep the momentum, king. LFG',
-    '2 more closes to hit weekly target — diamond hands mode activated',
-  ],
-};
+  if (page === 'leads' || page === 'dashboard') {
+    const openNow = leads.filter(l => l.openNow === true && l.phone).length;
+    if (openNow >= 3) tips.push(`${openNow} businesses on your list are open right now and have a number`);
+
+    if (noSite.length) {
+      tips.push(`${noSite.length} ${noSite.length === 1 ? 'business has' : 'businesses have'} no website — that is the build plus the receptionist together`);
+    }
+
+    const strong = leads.filter(l => (l.score || 0) >= 85).length;
+    if (strong >= 2) tips.push(`${strong} leads scoring 85+ — work those before the rest of the list`);
+
+    const thin = leads.filter(l => typeof l.reviewCount === 'number' && l.reviewCount < 25).length;
+    if (thin >= 3) tips.push(`${thin} businesses have fewer than 25 reviews — the review engine sells itself there`);
+  }
+
+  if (!tips.length) {
+    // Nothing measured worth surfacing: prompt rather than assert.
+    tips.push('Ask me for a trade and a city — "plumbers in tampa" — and I will pull them live');
+  }
+  return tips;
+}
+
 
 // ─── CONTEXT SUMMARY CARD ─────────────────────────────────────────────
 function ContextSummaryCard({ currentPage, leads, degenMode, onAction }) {
@@ -1238,9 +1168,14 @@ export default function AIOverlay() {
   }, []);
 
   // Initial messages based on mode
-  const NORMAL_INTRO = "**GOATED AI** \u2014 revenue terminal.\n\n- Lead search: 250K+ pipeline, ranked\n- Close scripts: per-lead, revenue-loss-first\n- Market data: real-time sentiment + AI alpha\n- Audit: revenue-leak report for any public URL\n- Nav: type \"go to leads\" / \"open wallet\" / \"open audit\"\n\nAsk short, get short. Ask for a breakdown, get numbers.";
+  // What greets every user. The DEGEN variant — "let's print… LFG. What's the
+  // play?" — was what actually rendered, because the mode flag is pinned on
+  // even though its toggle was removed. The normal one was not much better: it
+  // advertised a 250K pipeline, market sentiment and an "open wallet" command,
+  // none of which exist.
+  const NORMAL_INTRO = "**GOATED AI**\n\n- **Find leads** — \"hvac in tampa\", \"plumbers near me\", \"roofers with no website\"\n- **Know what to say** — openers, objections, voicemails for any business\n- **Price it** — what to quote and why\n- **Audit a site** — paste a URL, get what it is costing them\n\nReal businesses, real numbers. Ask for a city and a trade.";
 
-  const DEGEN_INTRO = "**DEGEN MODE** \u2014 let's print.\n\n- Sniping leads: show me hot deals in [city/industry]\n- Alpha calls: BUY/SELL/HOLD with entry/exit\n- Audit attack: rip a competitor's URL, expose their leak\n- Close now: give me the 3 closest deals + next action\n\nLFG. What's the play?";
+  const DEGEN_INTRO = NORMAL_INTRO;
 
   // Core state
   const [messages, setMessages] = useState([
@@ -1363,8 +1298,7 @@ export default function AIOverlay() {
       const delay = 30000; // Exactly 30 seconds between proactive tips
       proactiveTimerRef.current = setTimeout(() => {
         if (!useStore.getState().aiOpen) {
-          const suggestionsSource = useStore.getState().degenMode ? DEGEN_PROACTIVE_SUGGESTIONS : PROACTIVE_SUGGESTIONS;
-          const pageSuggestions = suggestionsSource[currentPage] || suggestionsSource.dashboard;
+          const pageSuggestions = buildProactiveTips(useStore.getState(), currentPage);
           const tip = pageSuggestions[Math.floor(Math.random() * pageSuggestions.length)];
           setProactiveTip(tip);
           proactiveDismissRef.current = setTimeout(() => setProactiveTip(null), 5000);
@@ -1535,7 +1469,7 @@ export default function AIOverlay() {
   // Suggested prompts based on current page, coach mode, degen mode, and selected lead
   const suggestedPrompts = useMemo(() => {
     if (coachMode) return COACH_PROMPTS[currentPage] || COACH_PROMPTS.home;
-    const prompts = degenMode ? DEGEN_PROMPTS : PAGE_PROMPTS;
+    const prompts = PAGE_PROMPTS;
     let result = prompts[currentPage] || prompts.home;
     // Dynamically inject selected lead name into leads prompts
     if (currentPage === 'leads' && selectedLead && !degenMode) {

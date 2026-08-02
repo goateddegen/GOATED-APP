@@ -217,7 +217,7 @@ export default function HomePage() {
     { icon: Voicemail, title: 'Voicemail Drops', desc: 'A twenty-second script that names the number and skips the pitch. Left on the first no-answer, so the callback lands warm instead of cold.', color: '#a855f7' },
     { icon: Headphones, title: 'Call Analysis', desc: 'Real-time transcription, objection detection, and coaching. AI scores every call and tells you exactly how to close harder.', color: '#f59e0b' },
     { icon: Send, title: 'Follow-Up Cadence', desc: 'Dial, voicemail, text, then a second dial at a different hour. Five touches over seven days, ending with a call that gives them a graceful out.', color: '#ec4899' },
-    { icon: Radio, title: 'Network Signals', desc: 'Real-time job change alerts, funding announcements, and trigger events. Ape into the deal at the perfect moment.', color: '#ef4444' },
+    { icon: Radio, title: 'Timing Signals', desc: 'Who is open right now, whose reviews just went quiet, who never got a website. Call the ones where something is actually wrong today.', color: '#ef4444' },
   ];
 
   // Competitor comparison removed — we don't name-drop. The OS stands on its own.
@@ -502,7 +502,7 @@ export default function HomePage() {
 
           <motion.div className="text-center" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
             <div className="inline-flex flex-col items-center gap-4 p-6 rounded-2xl border border-orange-500/20 bg-orange-500/5">
-              <p className="text-xl sm:text-2xl font-black text-white">The alpha is free. <span className="text-orange-400">The bags are yours. LFG.</span></p>
+              <p className="text-xl sm:text-2xl font-black text-white">The leads are free. <span className="text-orange-400">The revenue is yours.</span></p>
               <p className="text-sm text-slate-400 max-w-md">Other platforms charge $14K a year before you've spoken to anyone. GOATED gives you the leads, the audit, the scripts and the coaching for nothing upfront — you pay when a deal actually closes.</p>
               <GlowButton onClick={() => setPage('leads')} color="orange">
                 <Flame size={20} />Let's Fucking Go<ArrowRight size={18} />
@@ -522,10 +522,10 @@ export default function HomePage() {
           </motion.div>
           <StaggeredCards className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-fr">
             {[
-              { icon: Target, title: 'AI Lead Scoring', desc: '0-100 composite score with fit, intent, engagement, and timing signals. The cream rises to the top.', stat: '94', label: 'Top Score', color: '#10b981' },
-              { icon: BarChart3, title: 'Deep Research', desc: 'Company financials, tech stack, hiring signals, and competitive landscape per lead. Total intel dominance.', stat: '20+', label: 'Data Sources', color: '#06b6d4' },
-              { icon: Phone, title: 'Call Scripts', desc: 'AI-generated personalized scripts, objection handling, and closing frameworks. Never wing it again.', stat: '3', label: 'Approaches', color: '#a855f7' },
-              { icon: Gauge, title: 'Real-time Signals', desc: 'Job changes, funding rounds, tech adoptions — ape into the deal at the perfect moment.', stat: 'LIVE', label: 'Signals', color: '#f59e0b' },
+              { icon: Target, title: 'Closability Score', desc: 'Ranked by how easy they are to close, not how impressive they look. No website, thin reviews and no after-hours answer all push a business up the list.', stat: '0-99', label: 'Per business', color: '#10b981' },
+              { icon: BarChart3, title: 'Revenue Estimate', desc: 'Review volume and pace against a typical job value for their trade, shown as a range with the arithmetic attached so you can defend it on the call.', stat: 'Est.', label: 'Monthly revenue', color: '#06b6d4' },
+              { icon: Phone, title: 'Call Scripts', desc: 'Opener, one diagnosing question, the quote and the close — written from that business\'s own gaps. Plus the four objections you actually hear.', stat: '4', label: 'Objections mapped', color: '#a855f7' },
+              { icon: Gauge, title: 'Still Trading?', desc: 'Their most recent review dates the business. No review in eighteen months and it drops off the page, so you are not dialling a listing that closed two years ago.', stat: 'LIVE', label: 'Open right now', color: '#f59e0b' },
             ].map((item, i) => (
               <div key={i} className="bg-black/40 backdrop-blur rounded-xl p-5 border border-white/[0.03] group hover:border-white/[0.05] hover:-translate-y-1 transition-all duration-300">
                 <div className="flex items-center justify-between mb-3">
@@ -669,7 +669,6 @@ export default function HomePage() {
               </GlowButton>
             </div>
             <div className="flex flex-wrap justify-center gap-4 text-xs text-slate-600">
-              <span className="flex items-center gap-1"><Flame size={12} className="text-orange-400" />Wolf / Chill: Shift+D</span>
               <span className="flex items-center gap-1"><Bot size={12} className="text-brand" />AI Chat: G</span>
               <span className="flex items-center gap-1"><Zap size={12} className="text-cyan-400" />Search: Cmd+K</span>
             </div>
