@@ -99,17 +99,7 @@ export const TOOL_SCHEMAS = [
  */
 export async function runTool(name, args, ctx = {}) {
   const base = ctx.origin || '';
-  // Forward the caller's edge geo headers on internal calls.
-  //
-  // This is a server-to-server fetch from one Vercel function to another, so
-  // the original request's geo headers are lost unless we carry them. Without
-  // them /api/leads sees no location and Places geolocates the *function's*
-  // IP — "find me hvac leads" was returning Ashburn, Virginia, which is the
-  // datacenter, not anywhere near the user.
-  const headers = {
-    ...(ctx.authorization ? { Authorization: ctx.authorization } : {}),
-    ...(ctx.geo || {}),
-  };
+  const headers = ctx.authorization ? { Authorization: ctx.authorization } : {};
 
   // "near me", "my area" and friends are not places. The model passes them
   // through as literal location strings, which produced a search for
@@ -128,6 +118,15 @@ export async function runTool(name, args, ctx = {}) {
   try {
     if (name === 'search_leads') {
       const p = new URLSearchParams();
+      // The caller's city has to travel as a parameter, not a header.
+      //
+      // Forwarding x-vercel-ip-* looked right and failed in production: this
+      // is a fetch from one Vercel function to another, and the edge rewrites
+      // those headers on every request it handles — including this one — with
+      // the geo of whatever made it. That is the datacenter, so lead search
+      // resolved to Ashburn, Virginia for every user regardless of where they
+      // actually were. Same mechanism that makes the headers unspoofable.
+      if (!args.location && ctx.callerCity) p.set('location', ctx.callerCity);
       // "leads", "businesses", "prospects" are not trades. The model passes
       // them straight through from phrasing like "leads in my area", which
       // searched Places for companies literally named that and returned

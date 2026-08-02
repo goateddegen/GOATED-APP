@@ -528,11 +528,14 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
       || (/^(localhost|127\.0\.0\.1)/.test(selfHost) ? 'http' : 'https');
     const selfOrigin = `${selfProto}://${selfHost}`;
 
-    // Carried into internal tool calls so lead search resolves to the caller's
-    // city rather than the datacenter's.
-    const GEO_HEADERS = ['x-vercel-ip-city', 'x-vercel-ip-country', 'x-vercel-ip-country-region', 'x-forwarded-for'];
-    const geo = {};
-    for (const h of GEO_HEADERS) if (req.headers[h]) geo[h] = req.headers[h];
+    // Resolve the caller's city here, where the edge headers are genuine, and
+    // hand it to tools as a value. Forwarding the headers themselves does not
+    // survive the hop — see the note in tools.js.
+    const cityHdr = req.headers['x-vercel-ip-city'] ? decodeURIComponent(req.headers['x-vercel-ip-city']) : '';
+    const regionHdr = req.headers['x-vercel-ip-country-region'] || '';
+    const callerCity = (req.headers['x-vercel-ip-country'] === 'US' && cityHdr)
+      ? `${cityHdr}${regionHdr ? ' ' + regionHdr : ''}`
+      : '';
 
     const fastIntent = fastLeadSearchIntent(contextMessages[contextMessages.length - 1]?.content || '');
     if (fastIntent) {
@@ -540,7 +543,7 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
         const result = await runTool('search_leads', fastIntent, {
           origin: selfOrigin,
           authorization: req.headers.authorization,
-          geo,
+          callerCity,
         });
         if (result && !result.error) {
           return res.status(200).json({
@@ -668,7 +671,7 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
               const result = await runTool(c.function?.name, args, {
                 origin: selfOrigin,
                 authorization: req.headers.authorization,
-                geo,
+                callerCity,
               });
               toolsUsed.push({ name: c.function?.name, args });
 
