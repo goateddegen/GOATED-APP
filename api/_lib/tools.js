@@ -99,12 +99,42 @@ export const TOOL_SCHEMAS = [
  */
 export async function runTool(name, args, ctx = {}) {
   const base = ctx.origin || '';
-  const headers = ctx.authorization ? { Authorization: ctx.authorization } : {};
+  // Forward the caller's edge geo headers on internal calls.
+  //
+  // This is a server-to-server fetch from one Vercel function to another, so
+  // the original request's geo headers are lost unless we carry them. Without
+  // them /api/leads sees no location and Places geolocates the *function's*
+  // IP — "find me hvac leads" was returning Ashburn, Virginia, which is the
+  // datacenter, not anywhere near the user.
+  const headers = {
+    ...(ctx.authorization ? { Authorization: ctx.authorization } : {}),
+    ...(ctx.geo || {}),
+  };
+
+  // "near me", "my area" and friends are not places. The model passes them
+  // through as literal location strings, which produced a search for
+  // "plumbers in near me" and returned businesses in Anaheim. Blank them so
+  // the caller's own city is used instead.
+  // Enumerating phrasings loses: the model produced "near me", then
+  // "user's area", then "user's city and state". Anything that describes the
+  // caller instead of naming a place is not a location, so blank it and let
+  // the caller's own city resolve server-side.
+  const PLACEHOLDER_PLACE = /\b(near\s*me|nearby|my|mine|user'?s?|your|current|local|here|around|area|surrounding|city\s+and\s+state|unspecified|unknown|n\/?a)\b/i;
+  if (args && typeof args.location === 'string') {
+    const loc = args.location.trim();
+    if (!loc || PLACEHOLDER_PLACE.test(loc)) args = { ...args, location: '' };
+  }
 
   try {
     if (name === 'search_leads') {
       const p = new URLSearchParams();
-      if (args.query) p.set('search', args.query);
+      // "leads", "businesses", "prospects" are not trades. The model passes
+      // them straight through from phrasing like "leads in my area", which
+      // searched Places for companies literally named that and returned
+      // "LeadsNearby". Fall through to the default trade rotation instead.
+      const NOT_A_TRADE = /^(leads?|businesses|business|companies|company|prospects?|clients?|customers?|places?|people|any(thing)?|stuff|multiple\s+\w+|various\s*\w*|all\s*\w*|trades?|services?|local\s+\w+)$/i;
+      const trade = String(args.query || '').trim();
+      if (trade && !NOT_A_TRADE.test(trade)) p.set('search', trade);
       if (args.location) p.set('location', args.location);
       if (args.minDeal) p.set('minDeal', String(args.minDeal));
       p.set('limit', '20');   // Places caps here; the API sorts by closability

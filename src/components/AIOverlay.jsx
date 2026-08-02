@@ -8,7 +8,7 @@ import {
   MessageSquare, Sparkles, LayoutDashboard, ExternalLink, Phone, UserSearch,
   Trophy, Flame, DollarSign, Clock, Activity, Shield, ClipboardList, FileText,
   Brain, Newspaper, BookOpen, Crosshair,
-  Bell, Copy, Eye, AlertTriangle, Award
+  Bell, Copy, Eye, AlertTriangle, Award, Voicemail
 } from 'lucide-react';
 import { useStore, fmt, initialsOf } from '../hooks/useStore';
 import { GoatIcon } from './GoatLogo';
@@ -474,71 +474,39 @@ const DEGEN_PROMPTS = {
 
 // ─── QUICK INSIGHT BUTTONS ─────────────────────────────────────────────
 const QUICK_INSIGHTS = [
-  { label: 'Daily Brief', prompt: 'Give me a daily brief: top 3 pipeline priorities, market conditions affecting my deals, and the single most important action I should take today. Keep it tight.', icon: Newspaper },
-  { label: 'Market Pulse', prompt: 'Research the current market pulse: macro conditions, sector momentum, crypto sentiment, and how it all impacts B2B sales right now. Deep research mode.', icon: TrendingUp },
-  { label: 'Pipeline Review', prompt: 'Analyze my full pipeline: deals at risk, biggest opportunities, conversion bottlenecks, and revenue forecast for next 30 days. Be specific with names and numbers.', icon: ClipboardList },
-  { label: 'Close Playbook', prompt: 'Build me a closing playbook for today: which leads to call first, what to say, objection handling for each, and commission impact. Make it actionable.', icon: Crosshair },
+  { label: "Who to call now", prompt: 'Which businesses should I call in the next hour? Prioritise ones that are open right now, have a phone number, and have an obvious gap I can open on.', icon: Phone },
+  { label: 'No-website leads', prompt: 'Find local service businesses near me with no website. Those are the ones I can sell a site build and the AI receptionist to together.', icon: Globe },
+  { label: 'What do I say?', prompt: 'Give me a 15-second cold call opener for a local service business that is losing calls after hours. No fluff, no email.', icon: ClipboardList },
+  { label: 'Handle the price push', prompt: 'A plumber just said "that is too expensive" to $2,000 setup plus $750 a month. Give me three ways to reframe it on the call.', icon: Crosshair },
 ];
 
-// ─── DEGEN ALPHA INSIGHT BUTTONS ─────────────────────────────────────────
-const DEGEN_INSIGHTS = [
-  { label: 'Best Alpha Plays', prompt: 'Research the best alpha plays right now — crypto, prediction markets, and B2B deals. What has the highest asymmetric upside? Deep research mode.', icon: Zap },
-  { label: 'Whale Movements', prompt: 'Analyze whale movements and smart money flow: what are institutions buying, what sectors are seeing unusual volume, and where is the smart money positioning? Deep dive.', icon: Globe },
-  { label: 'Sentiment Shifts', prompt: 'Research sentiment shifts across markets: what narratives are gaining momentum, what is losing steam, and what contrarian plays have the best risk/reward? Analyze everything.', icon: Brain },
-  { label: 'Degen Playbook', prompt: 'Build me a full degen playbook: highest conviction trades, prediction market edges, and pipeline deals I can speed-close today. Go aggressive. NFA.', icon: Flame },
-];
-
-// ─── DEGEN QUICK ACTION BUTTONS (below chat input) ──────────────────
-const DEGEN_QUICK_ACTIONS = {
-  leads: [
-    { label: 'Best Alpha RN', prompt: 'What are the highest-conviction leads I should ape into RIGHT NOW? Show me the best risk-reward ratios in my pipeline. LFG.', icon: Zap },
-    { label: 'Who to Ape Into', prompt: 'Which leads have whale-level potential? Show me the biggest bags I can close today. Send it.', icon: Target },
-    { label: 'Whale Alert', prompt: 'Whale alert mode: show me the largest deal values in my pipeline with momentum signals. Who is about to close?', icon: Globe },
-    { label: 'Degen Playbook', prompt: 'Build me a full degen closing playbook: speed-close strategies, aggressive scripts, and commission moonshots. NFA.', icon: Flame },
-    { label: 'Send It Analysis', prompt: 'Send it analysis: which deals should I go all-in on today? Give me conviction scores and exact next moves. WAGMI.', icon: Sparkles },
-  ],
-  trends: [
-    { label: 'Best Alpha RN', prompt: 'What is the absolute best alpha play right now across all markets? High conviction only. Send it.', icon: Zap },
-    { label: 'Whale Movements', prompt: 'Track whale movements: what are institutions and smart money doing right now? Where is volume spiking?', icon: Globe },
-    { label: 'Degen Market Scan', prompt: 'Full degen market scan: momentum trades, pump signals, sector rotation, and asymmetric bets. Go aggressive.', icon: Flame },
-    { label: 'Send It Analysis', prompt: 'Send it analysis on current market conditions: what has the best risk-reward ratio right now? NFA.', icon: Sparkles },
-  ],
-  market: [
-    { label: 'Best Alpha RN', prompt: 'Best alpha right now across prediction markets, crypto, and B2B. Highest conviction plays only.', icon: Zap },
-    { label: 'Whale Alert', prompt: 'Whale alert: show me unusual volume, smart money flow, and institutional positioning across all markets.', icon: Globe },
-    { label: 'Degen Playbook', prompt: 'Build me a full degen playbook: prediction market edges, asymmetric bets, and speed-close pipeline plays.', icon: Flame },
-    { label: 'Send It Analysis', prompt: 'Send it analysis: where should I deploy capital right now for maximum asymmetric upside? Go aggressive. NFA.', icon: Sparkles },
-  ],
-  dashboard: [
-    { label: 'Best Alpha RN', prompt: 'What are my highest-alpha pipeline plays right now? Show me where the money is. LFG.', icon: Zap },
-    { label: 'Who to Ape Into', prompt: 'Which deals should I ape into today? Rank by close probability x deal size. Send it.', icon: Target },
-    { label: 'Degen Playbook', prompt: 'Degen pipeline playbook: aggressive close strategies for every deal in negotiation. No paper hands allowed.', icon: Flame },
-    { label: 'Send It Analysis', prompt: 'Full send it analysis on my pipeline: what is mooning, what is dumping, and where do I double down?', icon: Sparkles },
-  ],
-};
+// The DEGEN insight and quick-action sets lived here: "Best Alpha RN", "Who to
+// Ape Into", "Whale Alert", "Send It Analysis", prediction-market spreads and
+// Kalshi/Polymarket comparisons. They were still what rendered, because the
+// DEGEN toggle was removed but the flag it read is pinned on — so the buttons
+// under the chat were offering crypto plays to someone prospecting plumbers.
 
 // ─── CONTEXTUAL QUICK ACTION BUTTONS (below chat input) ──────────────
 const QUICK_ACTIONS = {
   leads: [
-    { label: 'Walk Me Through Leads', prompt: 'Walk me through my top leads sorted by close probability. Show my top 5 highest-probability leads under $20K with name, company, deal value, close probability, recommended next action, and why each lead is closeable.', icon: ClipboardList },
-    { label: 'Leads in Austin', prompt: 'Show me leads in Austin', icon: Globe },
-    { label: 'Leads in NYC', prompt: 'Show me leads in New York', icon: Globe },
-    { label: '$50K+ Deals', prompt: 'Show me leads with $50K+ deal values', icon: DollarSign },
-    { label: 'SaaS Leads', prompt: 'Find SaaS companies in my pipeline', icon: Target },
-    { label: 'Coach Me', prompt: 'Coach me on closing my current lead — what should I do right now?', icon: Trophy },
-    { label: 'Who to Call?', prompt: 'Based on my pipeline, who should I call right now for the highest chance of closing?', icon: Phone },
+    { label: 'Who to call now', prompt: 'Which businesses should I call in the next hour? Open right now, reachable by phone, best score first.', icon: Phone },
+    { label: 'No website', prompt: 'Find local service businesses near me with no website at all.', icon: Globe },
+    { label: 'HVAC near me', prompt: 'Find HVAC contractors near me.', icon: Target },
+    { label: 'Plumbers near me', prompt: 'Find plumbers near me.', icon: Target },
+    { label: 'Coach me', prompt: 'Coach me on closing the lead I have open — what do I say first?', icon: Trophy },
   ],
-  trends: [
-    { label: 'Best Plays Right Now', prompt: 'What are the best money plays right now based on current trends and prediction markets?', icon: Zap },
-    { label: 'Monetize This Trend', prompt: 'How do I monetize the current trending sectors? Give me specific plays with dollar amounts.', icon: DollarSign },
-    { label: 'Risk Analysis', prompt: 'Run a risk analysis on current market conditions — what should I avoid?', icon: Shield },
-    { label: 'Portfolio Strategy', prompt: 'Build me an optimal portfolio strategy splitting between B2B closing and prediction markets', icon: Target },
+  dashboard: [
+    { label: 'Who to call now', prompt: 'Which businesses should I call in the next hour? Open right now and reachable by phone.', icon: Phone },
+    { label: "What's the pitch?", prompt: 'What exactly am I selling and what does it cost? Give me the one-line version I can say on a call.', icon: ClipboardList },
+    { label: 'Handle an objection', prompt: 'Give me three ways to handle "we already handle our own calls" on a cold call.', icon: Shield },
   ],
-  market: [
-    { label: 'Alpha Scan', prompt: 'Run an alpha scan — find me asymmetric bets and prediction market edges right now', icon: Activity },
-    { label: 'Best Bets', prompt: 'What are the best prediction market bets right now? Show me odds, edge, and expected value.', icon: Flame },
-    { label: 'Spread Comparison', prompt: 'Compare spreads across Kalshi and Polymarket — where are the pricing inefficiencies?', icon: BarChart3 },
-    { label: 'DEGEN Mode Picks', prompt: 'Give me your highest conviction DEGEN plays — high risk, high reward. I want 10x potential.', icon: Zap },
+  audit: [
+    { label: 'What do I sell them?', prompt: 'Based on a site audit, how do I turn the findings into a package I can quote on the phone?', icon: DollarSign },
+    { label: 'Open the call', prompt: 'I just audited a prospect site. Give me a 15-second opener that references what I found.', icon: Phone },
+  ],
+  home: [
+    { label: 'Find me leads', prompt: 'Find local service businesses near me worth calling today.', icon: Target },
+    { label: "What's the pitch?", prompt: 'What exactly does GOATED sell and what does it cost?', icon: ClipboardList },
   ],
 };
 
@@ -1542,22 +1510,20 @@ export default function AIOverlay() {
 
   // Quick action buttons based on current page, coach mode, and selected lead
   const quickActions = useMemo(() => {
-    const base = degenMode
-      ? (DEGEN_QUICK_ACTIONS[currentPage] || DEGEN_QUICK_ACTIONS.leads || [])
-      : (QUICK_ACTIONS[currentPage] || []);
+    const base = QUICK_ACTIONS[currentPage] || QUICK_ACTIONS.home;
     if (coachMode && currentPage === 'leads') {
       return [
-        { label: 'Call Script', prompt: selectedLead ? `Write a word-for-word cold call script for ${selectedLead.name} at ${selectedLead.company}. Include opener, hook, value prop, and close.` : 'Write a cold call script for my top lead. Include opener, hook, value prop, and close.', icon: Phone },
-        { label: 'Handle Objections', prompt: selectedLead ? `Give me objection handling scripts for ${selectedLead.name} at ${selectedLead.company} in ${selectedLead.industry}. Cover: price, timing, competitor, and "not interested" objections.` : 'Give me objection handling scripts for common B2B objections: price, timing, competitor, and "not interested".', icon: Shield },
-        { label: 'Email Template', prompt: selectedLead ? `Write a follow-up email template for ${selectedLead.name} at ${selectedLead.company}. Pain points: ${(selectedLead.painPoints||[]).join(', ')}. Make it personal and compelling.` : 'Write a follow-up email template for a qualified lead that creates urgency and drives a meeting.', icon: Send },
-        { label: 'Next Best Action', prompt: selectedLead ? `What is the single best action I should take RIGHT NOW to close ${selectedLead.name} at ${selectedLead.company}? They are in ${selectedLead.status} stage, score ${selectedLead.score}/100. Be specific.` : 'What is the single best action I should take right now to close more deals? Look at my pipeline and be specific.', icon: Target },
+        { label: 'Call Script', prompt: selectedLead ? `Write a word-for-word cold call script for ${selectedLead.company}${selectedLead.location ? ` in ${selectedLead.location}` : ''}. Ask for the owner by role — I do not have a name. Opener, one diagnosing question, the quote, and the close.` : 'Write a cold call script for a local service business. Ask for the owner by role. Opener, one diagnosing question, the quote, the close.', icon: Phone },
+        { label: 'Handle Objections', prompt: selectedLead ? `Objection handling for ${selectedLead.company} (${selectedLead.industry}). Cover the four I actually hear: "too expensive", "we handle our own calls", "call me next week", "not interested".` : 'Objection handling for a cold call to a local service business: "too expensive", "we handle our own calls", "call me next week", "not interested".', icon: Shield },
+        { label: 'Voicemail', prompt: selectedLead ? `Write a 20-second voicemail for ${selectedLead.company}. Gaps: ${(selectedLead.painPoints||[]).join(', ') || 'none obvious — use missed-call math'}. Name a callback number, no pitch.` : 'Write a 20-second cold voicemail for a local service business. Name a callback number, no pitch.', icon: Voicemail },
+        { label: 'Next Best Action', prompt: selectedLead ? `Single best next move on ${selectedLead.company}? Score ${selectedLead.score}/100${selectedLead.website ? '' : ', no website'}${selectedLead.reviewCount != null ? `, ${selectedLead.reviewCount} reviews` : ''}. One action, be specific.` : 'What is the single best action I should take right now to book more jobs? Be specific.', icon: Target },
       ];
     }
     if (selectedLead && currentPage === 'leads') {
       const firstName = selectedLead.name.split(' ')[0];
       const outreachAction = {
         label: `Draft outreach for ${firstName}`,
-        prompt: `Draft a multi-channel outreach sequence for ${selectedLead.name} at ${selectedLead.company}. Industry: ${selectedLead.industry}. Pain points: ${(selectedLead.painPoints||[]).join(', ')}. Include email, call script, and LinkedIn DM.`,
+        prompt: `Draft a phone-first outreach sequence for ${selectedLead.company}${selectedLead.location ? ` in ${selectedLead.location}` : ''}. Industry: ${selectedLead.industry}. Gaps: ${(selectedLead.painPoints||[]).join(', ') || 'none obvious'}. Cold call opener, voicemail, and an SMS follow-up. No email, no LinkedIn.`,
         icon: Send,
       };
       const filtered = base.filter(a => !a.label.includes('Draft outreach'));
@@ -2316,7 +2282,7 @@ export default function AIOverlay() {
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-1">
-                    {(degenMode ? DEGEN_INSIGHTS : QUICK_INSIGHTS).map(qi => (
+                    {QUICK_INSIGHTS.map(qi => (
                       <button
                         key={qi.label}
                         onClick={() => handleQuickAction(qi.prompt)}

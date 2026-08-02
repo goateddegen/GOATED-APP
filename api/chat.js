@@ -46,9 +46,13 @@ function renderLeadResults(result, args) {
   const leads = Array.isArray(result?.leads) ? result.leads : [];
   const titleCase = (t) => String(t || '').replace(/\b[a-z]/g, (c) => c.toUpperCase());
   const where = titleCase(result?.locationUsed || args?.location || '') || 'your area';
-  const trade = String(args?.query || '').trim();
-  // "12 hvac in dallas" reads like a typo; name the unit.
-  const what = trade ? `${trade} businesses` : 'businesses';
+  // The tool strips non-trade words like "leads" or "businesses" from the
+  // search, but the headline still used them — "12 leads businesses in Tampa",
+  // "12 businesses businesses".
+  const rawTrade = String(args?.query || '').trim();
+  const GENERIC = /^(leads?|businesses|business|companies|company|prospects?|clients?|customers?|places?|people|any(thing)?|stuff|multiple\s+\w+|various\s*\w*|all\s*\w*|trades?|services?|local\s+\w+)$/i;
+  const trade = GENERIC.test(rawTrade) ? '' : rawTrade;
+  const what = trade ? `${trade} businesses` : 'local businesses';
 
   if (!leads.length) {
     return `No ${what} found in ${where} right now. Try a nearby city, or a broader trade `
@@ -179,7 +183,12 @@ function fastLeadSearchIntent(message) {
   if (m) {
     location = m[1].trim().replace(/\s+/g, ' ');
     if (/^(the|my|me|us|here|town|city|area)$/.test(location)) location = null;
-  } else if (/\bnear me\b|\bmy area\b|\baround here\b/.test(lower)) {
+  }
+  // "near me" matches the in/near/around regex above and captures "me", which
+  // then nulls out — so this check has to run afterwards, not as an else. It
+  // previously never fired, and "plumbers near me" fell through to the model,
+  // which passed "near me" on as a literal place and searched Anaheim.
+  if (location === null && /\bnear\s*me\b|\bmy\s*area\b|\baround\s*here\b|\bnearby\b|\blocal\b/.test(lower)) {
     location = '';                                       // caller's own city, resolved server-side
   }
   if (location === null) return null;                    // no place named — let the model handle it
@@ -519,12 +528,19 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
       || (/^(localhost|127\.0\.0\.1)/.test(selfHost) ? 'http' : 'https');
     const selfOrigin = `${selfProto}://${selfHost}`;
 
+    // Carried into internal tool calls so lead search resolves to the caller's
+    // city rather than the datacenter's.
+    const GEO_HEADERS = ['x-vercel-ip-city', 'x-vercel-ip-country', 'x-vercel-ip-country-region', 'x-forwarded-for'];
+    const geo = {};
+    for (const h of GEO_HEADERS) if (req.headers[h]) geo[h] = req.headers[h];
+
     const fastIntent = fastLeadSearchIntent(contextMessages[contextMessages.length - 1]?.content || '');
     if (fastIntent) {
       try {
         const result = await runTool('search_leads', fastIntent, {
           origin: selfOrigin,
           authorization: req.headers.authorization,
+          geo,
         });
         if (result && !result.error) {
           return res.status(200).json({
@@ -652,6 +668,7 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
               const result = await runTool(c.function?.name, args, {
                 origin: selfOrigin,
                 authorization: req.headers.authorization,
+                geo,
               });
               toolsUsed.push({ name: c.function?.name, args });
 
