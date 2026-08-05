@@ -263,18 +263,22 @@ export default function HomePage() {
                 below sits 8px under its inline box and landed on top of "in
                 revenue you'll never see". A slightly looser line on small
                 screens only; the sm+ rendering is unchanged. */}
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.28] sm:leading-[1.05] mb-6 tracking-tight">
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.32] sm:leading-[1.05] mb-6 tracking-tight">
               <span className="text-white">You're losing</span>
               <br />
               <span className="relative">
                 <span className="bg-gradient-to-r from-brand via-emerald-300 to-cyan-400 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text' }}>
                   $18K a month
                 </span>
-                {/* Sits closer to the text on mobile, and pointer-events-none
-                    so a decoration can never swallow a tap. */}
+                {/* Offsets are in em so they track type size, and differ per
+                    breakpoint because the two line-heights put the inline box
+                    bottom at different distances from the glyphs — the same
+                    value produced a clean gap at 72px/1.05 and a strikethrough
+                    at mobile/1.32. Both are tuned to land ~0.045em under the
+                    glyph bottom, which is what the desktop version measures. */}
                 <motion.span
                   aria-hidden="true"
-                  className="pointer-events-none absolute bottom-1 sm:-bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-brand to-cyan-400 rounded-full"
+                  className="hero-rule pointer-events-none absolute left-0 right-0 h-1 bg-gradient-to-r from-brand to-cyan-400 rounded-full"
                   initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.8, duration: 0.6 }} />
               </span>
               <br />

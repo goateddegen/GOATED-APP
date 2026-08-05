@@ -412,3 +412,15 @@ body {
   box-shadow: 0 0 15px rgba(234,179,8,0.15);
 }
 
+/* ── Hero underline ─────────────────────────────────────────────────────────
+   The gradient rule under the highlighted headline line. Positioned in em so
+   it tracks type size, but the two breakpoints need different values: the
+   mobile headline uses looser leading, which pushes the inline box bottom
+   further from the glyphs, so an identical offset that reads correctly at
+   72px/1.05 became a strikethrough at mobile size. Both are tuned to sit
+   roughly 0.045em under the glyph bottom, matching what desktop measures. */
+.hero-rule { bottom: -0.21em; }
+
+@media (min-width: 640px) {
+  .hero-rule { bottom: -0.1em; }
+}
