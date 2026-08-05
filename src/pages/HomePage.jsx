@@ -258,14 +258,24 @@ export default function HomePage() {
               </motion.div>
             </div>
 
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.05] mb-6 tracking-tight">
+            {/* leading-[1.05] is deliberate on desktop, but at mobile size it
+                leaves no room under the highlighted line — the gradient rule
+                below sits 8px under its inline box and landed on top of "in
+                revenue you'll never see". A slightly looser line on small
+                screens only; the sm+ rendering is unchanged. */}
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.28] sm:leading-[1.05] mb-6 tracking-tight">
               <span className="text-white">You're losing</span>
               <br />
               <span className="relative">
                 <span className="bg-gradient-to-r from-brand via-emerald-300 to-cyan-400 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text' }}>
                   $18K a month
                 </span>
-                <motion.span className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-brand to-cyan-400 rounded-full" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.8, duration: 0.6 }} />
+                {/* Sits closer to the text on mobile, and pointer-events-none
+                    so a decoration can never swallow a tap. */}
+                <motion.span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute bottom-1 sm:-bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-brand to-cyan-400 rounded-full"
+                  initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.8, duration: 0.6 }} />
               </span>
               <br />
               <span className="text-white">in revenue you'll never see.</span>
