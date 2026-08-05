@@ -7,7 +7,11 @@ import Sidebar from './components/Sidebar';
 // NotchBar removed v7.4 — conflicted with AI overlay. AI overlay is the one AI surface.
 import SearchModal from './components/SearchModal';
 import KeybindsModal from './components/KeybindsModal';
-import LeadDetail from './components/LeadDetail';
+// Lazy: at 188 kB this is the largest module in the app and it renders only
+// after someone opens a specific lead, yet it was in the entry bundle for
+// every visitor including anyone who never signs in. It already sits inside
+// the Suspense boundary below, so nothing about the UI changes.
+const LeadDetail = React.memo(lazy(() => import('./components/LeadDetail')));
 // AIOverlay is 2600+ LOC + framer-motion + voice synth imports — lazy-load so first-paint stays thin.
 const AIOverlay = lazy(() => import('./components/AIOverlay'));
 import AccountModal from './components/AccountModal';

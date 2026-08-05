@@ -24,9 +24,16 @@ export default defineConfig(({ mode }) => {
           // (reading '__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED')").
           // Bare `three` has no React dependency, so it stays split out — it's
           // ~950KB and only needed by the globe.
+          // `three` and the react-three bindings are only reachable from the
+          // Trends page, which is disabled. Naming them here put a 666 kB chunk
+          // (171 kB gzipped) into the entry's modulepreload list, so every
+          // visitor downloaded a 3D engine for a page they cannot open — most
+          // of the payload on a phone, for nothing.
+          //
+          // Left unnamed, Rollup keeps them inside the lazily-imported page
+          // chunk and they are fetched only if that page is ever reached.
           manualChunks: {
-            three: ['three'],
-            vendor: ['react', 'react-dom', '@react-three/fiber', '@react-three/drei', 'framer-motion', 'zustand'],
+            vendor: ['react', 'react-dom', 'framer-motion', 'zustand'],
           }
         }
       }

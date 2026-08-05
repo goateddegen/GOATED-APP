@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <!-- No maximum-scale / user-scalable=no: blocking pinch zoom is the single
+       most common mobile accessibility failure, and in-app browsers (LinkedIn,
+       Instagram) sometimes hand us an odd initial scale that the user then
+       cannot correct. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="GOATED" />
@@ -183,7 +187,44 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <!-- Inter (body) + Unbounded (display wordmark, used on cover page) + Space Grotesk (alt headers) -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Unbounded:wght@400;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Non-blocking, Inter only. Unbounded and Space Grotesk were downloaded on
+       every visit and are referenced from one page that is not in the nav flow;
+       its fallback chain already ends in system-ui. Trimmed from twenty weights
+       to the five actually used;
+       every extra weight is another font file on a phone. `media="print"` keeps
+       it out of the critical path, and the onload handler promotes it once it
+       has arrived. Text paints immediately in the system stack and swaps. -->
+  <link rel="preload" as="style"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" />
+  <link rel="stylesheet" media="print" onload="this.media='all';this.onload=null"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" />
+  <noscript>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" />
+  </noscript>
+
+  <!-- Critical shell styles, inline so first paint is correct even before the
+       app stylesheet lands. Without these the page rendered raw for as long as
+       the CSS took — on a slow in-app browser that read as a broken header
+       shoved to one side. -->
+  <style>
+    :root { color-scheme: dark; }
+    html, body {
+      margin: 0; padding: 0;
+      background: #030712; color: #e2e8f0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* Nothing should ever scroll sideways on a phone. */
+      overflow-x: hidden;
+      /* iOS in-app browsers report a viewport taller than the visible area. */
+      min-height: 100%;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    img, svg, video { max-width: 100%; height: auto; }
+    #root { min-height: 100vh; background: #030712; }
+    /* Until the app paints, show the background rather than a white flash. */
+    #root:empty { background: #030712; }
+  </style>
 </head>
 <body>
   <div id="root"></div>
