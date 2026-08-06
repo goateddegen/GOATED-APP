@@ -865,6 +865,20 @@ function loadMarket() {
   try { return localStorage.getItem(MARKET_KEY) || ''; } catch { return ''; }
 }
 
+/**
+ * City for a lead, taken from the tail of its formatted address —
+ * "5050 Quorum Dr Ste 700, Dallas" -> "Dallas". Places gives us no separate
+ * city field, and the tail segment is reliably the locality.
+ */
+export const cityOf = (l) => {
+  const loc = String(l?.location || l?.address || '').trim();
+  if (!loc) return null;
+  const tail = loc.split(',').pop().trim();
+  // Strip a trailing state/ZIP if the address carried one.
+  const cleaned = tail.replace(/\s+[A-Z]{2}\s*\d{5}(-\d{4})?$/, '').replace(/\s+\d{5}(-\d{4})?$/, '').trim();
+  return cleaned.length > 1 ? cleaned : null;
+};
+
 // ─── Persisted lead pool ────────────────────────────────────────────────────
 // Leaving a lead and coming back used to replace the whole list, so the row you
 // were just looking at could vanish and the page you had worked through was
@@ -1060,6 +1074,76 @@ export const useStore = create((set, get) => ({
   // caller is", which is the default and right most of the time — but it is
   // pinned to one city with no way out, and an operator working a different
   // metro (or behind a VPN that lands them somewhere else) had no override.
+  // Cities ticked in the leads filter. Empty means every city.
+  selectedCities: [],
+  setSelectedCities: (cities) => set({ selectedCities: cities }),
+  toggleCity: (city) => {
+    const cur = get().selectedCities;
+    set({ selectedCities: cur.includes(city) ? cur.filter(c => c !== city) : [...cur, city] });
+  },
+
+  /**
+   * Pull fresh leads for specific cities.
+   *
+   * Ticking a city should not just hide rows — the point is to work that
+   * market, so we go and get more of it. One request per city, in parallel,
+   * merged through the same dedupe as a normal fetch.
+   */
+  fetchLeadsForCities: async (cities) => {
+    if (!cities || !cities.length) return get().fetchLiveLeads();
+    set({ isLoadingLeads: true, leadsError: null });
+    try {
+      const held = [...get().liveLeads, ...get().noWebsiteLeads];
+      const exclude = held.slice(-120).map(l => l._placeId).filter(Boolean).join(',');
+      const results = await Promise.allSettled(
+        cities.slice(0, 4).map(city => {
+          const qs = new URLSearchParams({ limit: '25', location: city });
+          if (exclude) qs.set('exclude', exclude);
+          return authedFetch(`/api/leads?${qs}`).then(r => (r.ok ? r.json() : null));
+        })
+      );
+
+      let merged = get().liveLeads;
+      let nwMerged = get().noWebsiteLeads;
+      let added = 0;
+      for (const r of results) {
+        if (r.status !== 'fulfilled' || !r.value) continue;
+        const out = mergeLeads(merged, r.value.leads || []);
+        merged = out.merged;
+        added += out.addedCount;
+
+        const nwIncoming = r.value.noWebsiteLeads || [];
+        if (nwIncoming.length) {
+          const seen = new Set(nwMerged.map(l => l._placeId || `${l.company}|${l.address}`));
+          let nextId = Math.max(100_000, nwMerged.reduce((m, l) => Math.max(m, Number(l.id) || 0), 0) + 1);
+          const fresh = [];
+          for (const l of nwIncoming) {
+            const k = l._placeId || `${l.company}|${l.address}`;
+            if (seen.has(k)) continue;
+            seen.add(k);
+            fresh.push({ ...l, id: nextId++, _addedAt: new Date().toISOString() });
+          }
+          nwMerged = [...nwMerged, ...fresh].slice(-MAX_STORED_LEADS);
+          added += fresh.length;
+        }
+      }
+
+      persistLeads(merged);
+      persistLeads(nwMerged, NO_WEBSITE_KEY);
+      set({
+        liveLeads: merged,
+        noWebsiteLeads: nwMerged,
+        lastAddedLeadCount: added,
+        isLoadingLeads: false,
+        dataMode: 'live',
+      });
+      return merged;
+    } catch (err) {
+      set({ isLoadingLeads: false, leadsError: err.message });
+      return get().liveLeads;
+    }
+  },
+
   market: loadMarket(),
   // What the server actually resolved for the last fetch. Shown in the header
   // so the operator can see which metro they are being served rather than

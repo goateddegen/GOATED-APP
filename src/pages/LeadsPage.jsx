@@ -4,11 +4,11 @@ import {
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   Loader2, DollarSign, TrendingUp, Building2, Zap, Send, Sparkles,
   Linkedin, Clock, Flame, Brain, MessageSquare, Bot, Wand2, Filter,
-  Target, Star, Eye, Copy, X, Activity, CheckCircle,
-  Crown, PhoneCall, CalendarClock, Timer, UserSearch, Table2,
+  Target, Star, Eye, Copy, X, Activity, CheckCircle, Check,
+  Crown, PhoneCall, Timer, UserSearch, Table2,
   ExternalLink, MapPin, Crosshair, AlertTriangle, Radio, RefreshCw, Globe,
 } from 'lucide-react';
-import { useStore, fmt, priorities, statuses, industries, initialsOf } from '../hooks/useStore';
+import { useStore, fmt, priorities, statuses, industries, initialsOf, cityOf } from '../hooks/useStore';
 import { buildOutreachStrategy, deriveGaps, recommendTier, buildPackage } from '../lib/outreach';
 
 // ---------------------------------------------------------------------------
@@ -412,29 +412,6 @@ function CallModal({ lead, phone, onClose, showToast }) {
 // ---------------------------------------------------------------------------
 // Schedule Modal (simplified)
 // ---------------------------------------------------------------------------
-function ScheduleModal({ lead, onClose, showToast }) {
-  const [date, setDate] = useState('');
-  const [note, setNote] = useState('');
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-sm mx-4 bg-[#0a0a0a] rounded-2xl border border-white/[0.08] shadow-2xl p-5" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-sm font-bold text-white">Schedule Follow-up</div>
-          <button onClick={onClose} className="text-slate-500 hover:text-white"><X size={16} /></button>
-        </div>
-        <div className="text-xs text-slate-400 mb-3">{lead.name} &middot; {lead.company}</div>
-        <input type="datetime-local" value={date} onChange={e => setDate(e.target.value)}
-          className="w-full px-3 py-2.5 mb-3 bg-surface-2 border border-white/[0.06] rounded-xl text-sm text-white outline-none focus:border-brand/40" />
-        <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Note (optional)"
-          className="w-full px-3 py-2.5 mb-4 bg-surface-2 border border-white/[0.06] rounded-xl text-sm text-white placeholder-slate-500 outline-none focus:border-brand/40" />
-        <button onClick={() => { if (!date) return; showToast(`Follow-up scheduled for ${lead.name}`); onClose(); }}
-          className="w-full py-2.5 rounded-xl bg-brand text-black font-bold text-sm disabled:opacity-40" disabled={!date}>
-          Schedule
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Close Coach Panel (inline per-lead)
@@ -626,6 +603,10 @@ export default function LeadsPage({ onSelect }) {
   const setDetailOpen = useStore(s => s.setDetailOpen);
   const market = useStore(s => s.market);
   const setMarket = useStore(s => s.setMarket);
+  const selectedCities = useStore(s => s.selectedCities);
+  const toggleCity = useStore(s => s.toggleCity);
+  const setSelectedCities = useStore(s => s.setSelectedCities);
+  const fetchLeadsForCities = useStore(s => s.fetchLeadsForCities);
   const [marketDraft, setMarketDraft] = useState(market);
   const resolvedMarket = useStore(s => s.resolvedMarket);
 
@@ -668,6 +649,19 @@ export default function LeadsPage({ onSelect }) {
   // The tables answer "who exists". This answers "who can I actually reach in
   // the next ten minutes": open at this moment (Places publishes hours, and
   // roughly half a sample is shut at any given time) and with a number to dial.
+  // Only offer cities we actually have leads in — a filter listing places
+  // with nothing behind it is just a dead end.
+  const availableCities = useMemo(() => {
+    const counts = new Map();
+    for (const l of [...(liveLeads || []), ...(noWebsiteLeads || [])]) {
+      const c = cityOf(l);
+      if (c) counts.set(c, (counts.get(c) || 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([city, count]) => ({ city, count }));
+  }, [liveLeads, noWebsiteLeads]);
+
   const callQueue = useMemo(() => {
     const pool = [...(liveLeads || []), ...(noWebsiteLeads || [])];
     return pool
@@ -689,7 +683,6 @@ export default function LeadsPage({ onSelect }) {
   // We intentionally hand off to the user's OS dialer / their own BYO number (OpenPhone, Dialpad, etc).
   const [callLead, setCallLead] = useState(null);
   const [callPhone, setCallPhone] = useState('');
-  const [scheduleLead, setScheduleLead] = useState(null);
 
   // AI Chat
   const [aiChatOpen, setAiChatOpen] = useState(false);
@@ -791,7 +784,8 @@ export default function LeadsPage({ onSelect }) {
       const matchSearch = !search || l.name.toLowerCase().includes(searchLower) || l.company.toLowerCase().includes(searchLower) || l.industry.toLowerCase().includes(searchLower);
       const matchPriority = filterPriority === 'all' || l.priority === filterPriority;
       const matchStatus = filterStatus === 'all' || l.status === filterStatus;
-      return matchSearch && matchPriority && matchStatus;
+      const matchCity = !selectedCities.length || selectedCities.includes(cityOf(l));
+      return matchSearch && matchPriority && matchStatus && matchCity;
     });
 
     if (aiFilters) {
@@ -822,7 +816,7 @@ export default function LeadsPage({ onSelect }) {
     });
 
     return filtered;
-  }, [activeLeads, search, filterPriority, filterStatus, aiFilters, sortField, sortDirection]);
+  }, [activeLeads, search, filterPriority, filterStatus, aiFilters, sortField, sortDirection, selectedCities]);
 
   const filteredLeads = useMemo(() => allFilteredLeads.slice(0, visibleCount), [allFilteredLeads, visibleCount]);
   const totalFiltered = allFilteredLeads.length;
@@ -884,7 +878,6 @@ export default function LeadsPage({ onSelect }) {
 
       {/* Modals */}
       {callLead && <CallModal lead={callLead} phone={callPhone} onClose={() => setCallLead(null)} showToast={showToast} />}
-      {scheduleLead && <ScheduleModal lead={scheduleLead} onClose={() => setScheduleLead(null)} showToast={showToast} />}
 
       {/* First load, nothing stored yet. Previously this rendered the synthetic
           pool under a "Sample data" banner, so a new user's first impression
@@ -1007,6 +1000,54 @@ export default function LeadsPage({ onSelect }) {
           </button>
         </div>
       </div>
+
+      {/* ── Filter by city ───────────────────────────────────────────────────
+          Options come from the leads actually held, with counts, so the list
+          never offers a city with nothing behind it. Ticking one also goes and
+          fetches more of that market rather than only hiding rows — the point
+          of picking a city is to work it. */}
+      {availableCities.length > 1 && (
+        <div className="mb-4 rounded-xl border border-white/[0.05] bg-surface-3/50 p-3">
+          <div className="flex items-center gap-2 mb-2.5">
+            <MapPin size={13} className="text-slate-500 shrink-0" />
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Cities</span>
+            {selectedCities.length > 0 && (
+              <button
+                onClick={() => { setSelectedCities([]); }}
+                className="ml-auto text-[11px] text-slate-500 hover:text-white transition-colors">
+                Clear ({selectedCities.length})
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {availableCities.map(({ city, count }) => {
+              const on = selectedCities.includes(city);
+              return (
+                <button
+                  key={city}
+                  onClick={() => {
+                    toggleCity(city);
+                    // Read the next selection off the store so the fetch uses
+                    // the value after this toggle, not the stale render value.
+                    const next = useStore.getState().selectedCities;
+                    if (next.length) fetchLeadsForCities(next);
+                  }}
+                  aria-pressed={on}
+                  className={`flex items-center gap-1.5 h-9 pl-2 pr-2.5 rounded-lg border text-xs font-medium transition-colors ${
+                    on ? 'bg-brand/15 border-brand/40 text-brand'
+                       : 'bg-white/[0.02] border-white/[0.06] text-slate-400 hover:text-white hover:border-white/[0.12]'}`}>
+                  <span className={`w-3.5 h-3.5 rounded flex items-center justify-center border shrink-0 ${
+                    on ? 'bg-brand border-brand' : 'border-white/20'}`}>
+                    {on && <Check size={10} className="text-black" strokeWidth={3} />}
+                  </span>
+                  {city}
+                  <span className={on ? 'text-brand/60' : 'text-slate-600'}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Call Now ─────────────────────────────────────────────────────────
           The tables answer "who exists". This answers "who can I actually
@@ -1297,7 +1338,6 @@ export default function LeadsPage({ onSelect }) {
                 <SortHeader field="deposit" label="Deposit" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                 <th className="px-3 py-3 text-left text-xs text-emerald-400 font-medium uppercase tracking-wider">Close %</th>
                 <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider">Status</th>
-                <th className="px-3 py-3 text-left text-xs text-slate-500 font-medium uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -1366,30 +1406,13 @@ export default function LeadsPage({ onSelect }) {
                       </td>
 
 
-                      {/* Actions */}
-                      <td className="px-3 py-2.5">
-                        <div className="flex gap-0.5">
-                          <button onClick={e => { e.stopPropagation(); const intel = getContactIntel(l, i); intel.phone ? handleCallClick(l, intel.phone) : showToast('Connect Apollo.io to unlock contact data'); }}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors" title={l.phone ? 'Call' : 'Enrich to unlock'}>
-                            <Phone size={13} />
-                          </button>
-                          <button onClick={e => { e.stopPropagation(); setScheduleLead(l); }}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors" title="Schedule">
-                            <CalendarClock size={13} />
-                          </button>
-                          <button onClick={e => { e.stopPropagation(); toggleRow(l.id); }}
-                            className={`p-1.5 rounded-lg transition-colors ${isExpanded ? 'text-brand bg-brand/10' : 'text-slate-500 hover:text-brand hover:bg-brand/10'}`} title="Close Coach">
-                            <Crosshair size={13} />
-                          </button>
-                        </div>
-                      </td>
                     </tr>
-                    {isExpanded && <CloseCoachRow lead={l} index={i} colSpan={8} onCallClick={handleCallClick} showToast={showToast} />}
+                    {isExpanded && <CloseCoachRow lead={l} index={i} colSpan={6} onCallClick={handleCallClick} showToast={showToast} />}
                   </React.Fragment>
                 );
               })}
               {leads.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-500 text-sm">
+                <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-500 text-sm">
                   {aiFilters ? 'No leads match your AI query. Try different criteria.' : 'No leads match your filters.'}
                 </td></tr>
               )}
