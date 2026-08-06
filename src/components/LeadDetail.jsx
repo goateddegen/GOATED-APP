@@ -9,7 +9,7 @@ import {
   MapPin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight, Voicemail,
 } from 'lucide-react';
 import { useStore, fmt, enrichLead, initialsOf } from '../hooks/useStore';
-import { buildCallSheet, buildPackage } from '../lib/outreach';
+import { buildCallSheet, buildPackage, recommendStack } from '../lib/outreach';
 
 // ─── Color Maps ────────────────────────────────────────────────────────────────
 const priorityColors = {
@@ -1050,6 +1050,7 @@ Context:\n${ctx}`;
   // ROI calculations
   const recommendedPkg = safePackages.find(p => p.recommended) || safePackages[1];
   const mapsLink = mapsLinkFor(el);
+  const stack = recommendStack(el);
   // Annual and ROI are both retainer-based: the deposit is a one-time build
   // cost, so folding it into a recurring-return multiple would overstate it.
   const recAnnualRetainer = recQuote.monthly * 12;
@@ -1204,6 +1205,42 @@ Context:\n${ctx}`;
           CONTACT INTEL + OUTREACH ACTIONS
       ═══════════════════════════════════════════════════════════════════════ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-4">
+        {/* ── What to sell them ────────────────────────────────────────────────
+            A plain-English read of this specific business, assembled from the
+            signals the record actually carries: published hours, whether a site
+            exists, review volume and rating, whether a number is listed. Where
+            we genuinely cannot tell — no hours published — it says so instead
+            of filling the gap. */}
+        <div className="rounded-2xl border border-brand/25 bg-brand/[0.04] p-5 mb-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 rounded-xl bg-brand/15 flex items-center justify-center shrink-0">
+              <Lightbulb size={18} className="text-brand" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-brand">{stack.headline}</h3>
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider">
+                {stack.confident ? 'From their listing' : 'Nothing obvious — open on the math'}
+              </span>
+            </div>
+          </div>
+
+          <p className="text-sm text-slate-300 leading-relaxed">{stack.summary}</p>
+
+          {stack.products.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-white/[0.06] flex flex-wrap items-center gap-2">
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider shrink-0">Sell</span>
+              {stack.products.map(prod => (
+                <span key={prod} className="text-[11px] px-2 py-1 rounded-lg bg-brand/10 text-brand border border-brand/20">
+                  {prod}
+                </span>
+              ))}
+              <span className="ml-auto text-[11px] text-slate-400 shrink-0">
+                <span className="text-white font-semibold">{fmt(recQuote.deposit)}</span> + <span className="text-white font-semibold">{fmt(recQuote.monthly)}</span>/mo
+              </span>
+            </div>
+          )}
+        </div>
+
         {/* ── Can we sell them a receptionist? ─────────────────────────────────
             Qualified from published opening hours, not assumed. Places returns
             structured open/close times, so the hours nobody is answering are

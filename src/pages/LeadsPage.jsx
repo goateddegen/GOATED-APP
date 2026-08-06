@@ -1126,6 +1126,11 @@ export default function LeadsPage({ onSelect }) {
                       {l.industry}{l.location ? ` · ${l.location}` : ''}
                       {l.revenueFormatted ? ` · est. ${l.revenueFormatted}` : ''}
                     </div>
+                    {l.receptionist?.qualified && (
+                      <div className="text-[10px] text-emerald-400 mt-0.5">
+                        Unreachable {l.receptionist.uncoveredHoursPerWeek}h a week — open on that
+                      </div>
+                    )}
                   </div>
                   <a href={`tel:${(l.phone || '').replace(/[^+\d]/g, '')}`}
                     className="shrink-0 flex items-center gap-1.5 px-3 h-10 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/25 active:bg-emerald-500/30">
@@ -1344,6 +1349,11 @@ export default function LeadsPage({ onSelect }) {
                         {act.label}{l.revenueFormatted ? ` · est. ${l.revenueFormatted}` : ''}
                       </div>
                     )}
+                    {l.receptionist?.qualified && (
+                      <div className="text-[10px] mt-0.5 text-emerald-400">
+                        {l.receptionist.uncoveredHoursPerWeek}h/week nobody answers
+                      </div>
+                    )}
                   </div>
                   <div className="text-right shrink-0">
                     <div className={`text-lg font-bold ${isHot ? 'text-emerald-400' : 'text-brand'}`}>{l.score}</div>
@@ -1413,7 +1423,22 @@ export default function LeadsPage({ onSelect }) {
                               <span className="font-medium text-sm truncate">{l.name}</span>
                               {isHot && <span className="px-1 py-0 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"><Flame size={8} className="inline" /> HOT</span>}
                             </div>
-                            <div className="text-[11px] text-slate-500 truncate">{l.title}</div>
+                            {/* The receptionist verdict was computed for every
+                                lead but only visible after opening one. It is
+                                the difference between a call worth making and
+                                one that opens with a claim they can disprove,
+                                so it belongs in the scan. */}
+                            <div className="text-[11px] text-slate-500 truncate flex items-center gap-1.5">
+                              {l.receptionist?.qualified ? (
+                                <span className="text-emerald-400/90 shrink-0">
+                                  {l.receptionist.uncoveredHoursPerWeek}h unreachable
+                                </span>
+                              ) : l.receptionist?.label === 'Listed as open 24/7' ? (
+                                <span className="text-slate-600 shrink-0">24/7 — no phone gap</span>
+                              ) : (
+                                <span className="truncate">{l.title || l.industry}</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>

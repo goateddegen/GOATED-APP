@@ -335,3 +335,76 @@ export function buildPackage(lead) {
       : 'Missed-call recovery, live in 14 days',
   };
 }
+
+/**
+ * What to sell this specific business, in a sentence you could read aloud.
+ *
+ * Every clause is conditional on a signal we actually hold — published hours,
+ * whether a site exists, review volume and rating, whether a number is listed.
+ * Nothing is asserted from a field a Places record does not carry, and when we
+ * genuinely cannot tell, it says so rather than filling the gap.
+ */
+export function recommendStack(lead) {
+  const noSite = !lead.website && !lead.domain;
+  const rec = lead.receptionist;
+  const reviews = lead.reviewCount;
+  const rating = lead.rating;
+
+  const parts = [];
+  const products = [];
+
+  if (noSite) {
+    products.push('website build');
+    parts.push('They have no website at all, so every enquiry has to arrive by phone or through Maps — there is nowhere to send anyone and nothing working while they sleep');
+  }
+
+  if (rec?.qualified) {
+    products.push('AI receptionist');
+    parts.push(`their listing says they are open ${rec.openHoursPerWeek} hours a week, which leaves ${rec.uncoveredHoursPerWeek} hours with nobody answering`
+      + (rec.isEmergency ? ' — and in this trade the customer rings the next name on the list rather than waiting' : ''));
+  } else if (rec?.label === 'Listed as open 24/7') {
+    parts.push('they advertise 24/7 cover, so do not open on missed calls — ask who actually picks up at 2am, because an answering service is a cost we replace and a mobile in someone\'s pocket is an evening we give back');
+  } else if (rec?.confidence === 'none') {
+    parts.push('they publish no opening hours, so ask how calls are handled after hours rather than assuming a gap');
+  }
+
+  if (reviews === 0) {
+    products.push('review engine');
+    parts.push('they have no reviews at all, which is close to invisible in local ranking');
+  } else if (typeof reviews === 'number' && reviews < 25) {
+    products.push('review engine');
+    parts.push(`they have only ${reviews} reviews${rating ? ` at ${rating}★` : ''}, so customers are happy but nobody is asking them to say so`);
+  } else if (typeof rating === 'number' && rating > 0 && rating < 4 && reviews > 5) {
+    products.push('review engine');
+    parts.push(`they sit at ${rating}★, which is actively costing them calls before anyone dials`);
+  }
+
+  if (!lead.phone) {
+    parts.push('there is no published number, so a customer who wants to book cannot');
+  }
+
+  if (!parts.length) {
+    return {
+      headline: 'No obvious gap — open on the missed-call math',
+      products: ['AI receptionist'],
+      summary: 'Their listing is in good shape: a website, solid reviews, and hours that cover most of the week. '
+        + 'There is nothing here to lead with, so open on the arithmetic instead — ask what a job is worth and what happens '
+        + 'to the calls that come in while they are on one.',
+      confident: false,
+    };
+  }
+
+  const headline = noSite && rec?.qualified
+    ? 'No website and nobody answering — sell the build and the phone cover together'
+    : noSite
+      ? 'No website — lead with the build'
+      : rec?.qualified
+        ? 'Losing calls out of hours — lead with the receptionist'
+        : 'Lead with what their listing is not doing for them';
+
+  const summary = parts.length === 1
+    ? `${parts[0]}.`
+    : `${parts.slice(0, -1).join('; ')}; and ${parts[parts.length - 1]}.`;
+
+  return { headline, products, summary, confident: true };
+}
