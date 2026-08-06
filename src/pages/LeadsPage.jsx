@@ -334,7 +334,7 @@ const PRESET_PROMPTS = [
 // from the leads actually held so it never lists a place with nothing behind
 // it, and it carries its own search box because a working session can
 // accumulate dozens of cities.
-function CityFilter({ options, selected, onToggle, onClear, onApply }) {
+function CityFilter({ options, selected, onToggle, onClear, onApply, onSearchNew }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const ref = useRef(null);
@@ -408,8 +408,23 @@ function CityFilter({ options, selected, onToggle, onClear, onApply }) {
                 </button>
               );
             })}
-            {!shown.length && (
-              <div className="px-3 py-4 text-center text-[11px] text-slate-500">No city matches “{q}”.</div>
+            {/* Nothing local matches, so offer to go and fetch it. This is
+                where the separate market box used to live — folding it in here
+                means one control for "which city", whether you already have
+                leads there or not. */}
+            {!shown.length && q.trim().length > 1 && (
+              <button
+                onClick={() => { onSearchNew(q.trim()); setQ(''); setOpen(false); }}
+                className="w-full px-3 py-3 text-left hover:bg-white/[0.04] transition-colors">
+                <div className="flex items-center gap-2">
+                  <Search size={12} className="text-brand shrink-0" />
+                  <span className="text-xs text-brand truncate">Find leads in “{q.trim()}”</span>
+                </div>
+                <div className="text-[10px] text-slate-500 mt-0.5 pl-5">No leads here yet — pull some</div>
+              </button>
+            )}
+            {!shown.length && q.trim().length <= 1 && (
+              <div className="px-3 py-4 text-center text-[11px] text-slate-500">Type a city to search.</div>
             )}
           </div>
 
@@ -711,7 +726,6 @@ export default function LeadsPage({ onSelect }) {
   const toggleCity = useStore(s => s.toggleCity);
   const setSelectedCities = useStore(s => s.setSelectedCities);
   const fetchLeadsForCities = useStore(s => s.fetchLeadsForCities);
-  const [marketDraft, setMarketDraft] = useState(market);
   const resolvedMarket = useStore(s => s.resolvedMarket);
 
   const liveLeads = useStore(s => s.liveLeads);
@@ -1026,7 +1040,7 @@ export default function LeadsPage({ onSelect }) {
                 used and how to change it, rather than leaving the operator to
                 work it out from the addresses. */}
             {!market && resolvedMarket && (
-              <span className="text-emerald-200/60"> Not your area? Set the market above.</span>
+              <span className="text-emerald-200/60"> Not your area? Pick or search a city in the filter bar.</span>
             )}
           </span>
         </div>
@@ -1062,37 +1076,6 @@ export default function LeadsPage({ onSelect }) {
         <div className="flex items-center gap-2 flex-wrap">
           {/* Leads accumulate rather than being replaced, so there has to be a
               way to pull more without reloading the whole page. */}
-          {/* Market. Defaults to whatever the edge geolocates the caller to,
-              which is right most of the time but pinned to a single city with
-              no way out — an operator working a different metro, or behind a
-              VPN that lands them elsewhere, was stuck with it. Blank returns
-              to automatic. */}
-          <form onSubmit={(e) => { e.preventDefault(); setMarket(marketDraft); fetchLiveLeads(); }}
-            className="flex items-center gap-1.5">
-            <div className="relative">
-              <MapPin size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-              <input
-                value={marketDraft}
-                onChange={(e) => setMarketDraft(e.target.value)}
-                placeholder={market || (resolvedMarket ? `Auto — ${resolvedMarket}` : 'Auto (your city)')}
-                aria-label="Market to prospect in"
-                className="w-[150px] h-10 pl-8 pr-2 rounded-lg bg-surface-2 border border-white/[0.05] text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-brand/40"
-              />
-            </div>
-            {(marketDraft !== market) && (
-              <button type="submit"
-                className="h-10 px-3 rounded-lg bg-brand/15 border border-brand/30 text-brand text-xs font-semibold hover:bg-brand/25">
-                Go
-              </button>
-            )}
-            {market && marketDraft === market && (
-              <button type="button" onClick={() => { setMarketDraft(''); setMarket(''); fetchLiveLeads(); }}
-                aria-label="Reset to automatic location"
-                className="h-10 w-10 rounded-lg bg-surface-2 border border-white/[0.05] text-slate-500 hover:text-white flex items-center justify-center">
-                <X size={14} />
-              </button>
-            )}
-          </form>
           <button onClick={() => fetchLiveLeads()} disabled={isLoadingLeads}
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border bg-surface-2 border-white/[0.05] text-slate-400 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed">
             <RefreshCw size={14} className={isLoadingLeads ? 'animate-spin' : ''} />
@@ -1319,6 +1302,7 @@ export default function LeadsPage({ onSelect }) {
           onToggle={(city) => { toggleCity(city); setVisibleCount(50); }}
           onClear={() => { setSelectedCities([]); setVisibleCount(50); }}
           onApply={(cities) => fetchLeadsForCities(cities)}
+          onSearchNew={(city) => { setMarket(city); fetchLeadsForCities([city]); setVisibleCount(50); }}
         />
       </div>
 
