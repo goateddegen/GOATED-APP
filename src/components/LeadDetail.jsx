@@ -729,6 +729,7 @@ export default function LeadDetail() {
   const previousPage = useStore(s => s.previousPage);
   const setPreviousPage = useStore(s => s.setPreviousPage);
   const setPage = useStore(s => s.setPage);
+  const setAuditPrefill = useStore(s => s.setAuditPrefill);
   const getLeadAlpha = useStore(s => s.getLeadAlpha);
   const [tab, setTab] = useState('intelligence');
   const [coachingOutput, setCoachingOutput] = useState(null);
@@ -1203,6 +1204,83 @@ Context:\n${ctx}`;
           CONTACT INTEL + OUTREACH ACTIONS
       ═══════════════════════════════════════════════════════════════════════ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-4">
+        {/* ── Can we sell them a receptionist? ─────────────────────────────────
+            Qualified from published opening hours, not assumed. Places returns
+            structured open/close times, so the hours nobody is answering are
+            arithmetic — we never have to ring the number to find out, and we
+            never have to guess.
+
+            When the listing says 24/7 we say so and turn it into a question
+            rather than pretending the gap exists. */}
+        {el.receptionist && (
+          <div className={`rounded-2xl border p-5 mb-4 ${
+            el.receptionist.qualified
+              ? 'border-emerald-500/25 bg-emerald-500/[0.04]'
+              : 'border-white/[0.06] bg-white/[0.02]'}`}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                el.receptionist.qualified ? 'bg-emerald-500/15' : 'bg-white/[0.04]'}`}>
+                <PhoneCall size={18} className={el.receptionist.qualified ? 'text-emerald-400' : 'text-slate-500'} />
+              </div>
+              <div className="min-w-0">
+                <h3 className={`text-sm font-bold ${el.receptionist.qualified ? 'text-emerald-400' : 'text-slate-400'}`}>
+                  AI Receptionist
+                </h3>
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider">
+                  {el.receptionist.qualified ? 'Qualified from their published hours' : 'Not supported by their hours'}
+                </span>
+              </div>
+              {el.receptionist.qualified && (
+                <span className="ml-auto shrink-0 text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                  {el.receptionist.isEmergency ? 'P0 · EMERGENCY TRADE' : 'P1'}
+                </span>
+              )}
+            </div>
+
+            {el.receptionist.qualified && el.receptionist.uncoveredHoursPerWeek != null && (
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="p-2.5 rounded-lg bg-black/30 border border-white/[0.04] text-center">
+                  <div className="text-lg font-bold text-white">{el.receptionist.openHoursPerWeek}h</div>
+                  <div className="text-[9px] text-slate-500 uppercase tracking-wider">Open / week</div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/20 text-center">
+                  <div className="text-lg font-bold text-emerald-400">{el.receptionist.uncoveredHoursPerWeek}h</div>
+                  <div className="text-[9px] text-slate-500 uppercase tracking-wider">Nobody answers</div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-black/30 border border-white/[0.04] text-center">
+                  <div className="text-lg font-bold text-white">{el.receptionist.pctUncovered}%</div>
+                  <div className="text-[9px] text-slate-500 uppercase tracking-wider">Of the week</div>
+                </div>
+              </div>
+            )}
+
+            <p className="text-xs text-slate-300 leading-relaxed">{el.receptionist.why}</p>
+
+            {el.receptionist.qualified ? (
+              <div className="mt-3 pt-3 border-t border-white/[0.06] flex flex-wrap items-center gap-2">
+                <span className="text-[11px] text-slate-400">
+                  Quote <span className="text-white font-semibold">{fmt(2000)}</span> + <span className="text-white font-semibold">{fmt(750)}</span>/mo
+                </span>
+                <button
+                  onClick={() => {
+                    const line = `"You're open ${el.receptionist.openHoursPerWeek} hours a week. What happens to the calls that come in during the other ${el.receptionist.uncoveredHoursPerWeek}?"`;
+                    navigator.clipboard.writeText(line);
+                    alert('Opening line copied to clipboard!');
+                  }}
+                  className="ml-auto flex items-center gap-1.5 px-3 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold hover:bg-emerald-500/25">
+                  <Copy size={12} /> Copy the opener
+                </button>
+              </div>
+            ) : (
+              <p className="mt-3 pt-3 border-t border-white/[0.06] text-[11px] text-slate-500">
+                {el.website || el.domain
+                  ? 'Lead with the review engine or their web presence instead.'
+                  : 'Lead with the website build instead — that gap is real regardless of who answers the phone.'}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* ── Points of contact inside the business ──────────────────────────
             The Maps number reaches the front desk. This surfaces named people
             and direct lines published on the prospect's own site, so the call
@@ -1491,6 +1569,24 @@ Context:\n${ctx}`;
             <span className="text-xs font-semibold text-blue-400">Copy Lead Brief</span>
             <span className="text-[10px] text-slate-500">Everything in one paste</span>
           </button>
+          {/* The audit and the leads page never spoke to each other, so arming
+              a call with a report meant copying the URL and retyping it on
+              another page. Only offered when they have a site to crawl. */}
+          {(el.website || el.domain) && (
+            <button onClick={() => {
+              setAuditPrefill(el.website || el.domain);
+              setPreviousPage('leads');
+              setDetailOpen(false);
+              setPage('audit');
+            }}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-amber-500/[0.06] border border-amber-500/15 hover:bg-amber-500/10 transition-colors group cursor-pointer">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Award size={18} className="text-amber-400" />
+              </div>
+              <span className="text-xs font-semibold text-amber-400">Audit Their Site</span>
+              <span className="text-[10px] text-slate-500">Crawl it, price the gaps</span>
+            </button>
+          )}
           {/* Voicemail — replaces the old cold-email drafter. We don't run
               email outreach, and that button wrote a generic template that
               named no real signal from this business. */}

@@ -69,6 +69,18 @@ export default function AuditPage() {
   const degenMode = useStore(s => s.degenMode);
 
   const [url, setUrl] = useState('');
+
+  // Arriving from a lead: take the URL, run it, and clear the handoff so a
+  // later visit to Audit does not silently re-run someone else's site.
+  const auditPrefill = useStore(s => s.auditPrefill);
+  const setAuditPrefill = useStore(s => s.setAuditPrefill);
+  useEffect(() => {
+    if (!auditPrefill) return;
+    setUrl(auditPrefill);
+    setAuditPrefill(null);
+    runAuditRef.current?.(auditPrefill);
+  }, [auditPrefill, setAuditPrefill]);
+  const runAuditRef = useRef(null);
   const [step, setStep] = useState('input'); // input | running | result | error
   const [result, setResult] = useState(null);
   const [err, setErr] = useState(null);
@@ -127,6 +139,10 @@ export default function AuditPage() {
       if (phaseTimer.current) { clearInterval(phaseTimer.current); phaseTimer.current = null; }
     }
   }, [url]);
+
+  // The prefill effect above fires before `run` is defined, so it calls
+  // through this ref rather than the binding.
+  useEffect(() => { runAuditRef.current = run; }, [run]);
 
   // ── Hash router: /#/for/{slug}?u={url} re-runs the audit live on load ──
   useEffect(() => {

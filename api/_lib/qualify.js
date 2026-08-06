@@ -152,3 +152,103 @@ export function estimateRevenue(p) {
       + (clamped ? ' Capped — the review rate implies multiple locations or solicited reviews.' : ''),
   };
 }
+
+// ─── Receptionist qualification ─────────────────────────────────────────────
+// Can we tell whether a business needs an AI receptionist without ringing them?
+//
+// Yes, from published hours. Places returns structured `periods` with exact
+// open and close times per day, so the hours nobody is answering are simple
+// arithmetic — no guessing, no calling the number and no assuming.
+//
+// The honest boundaries matter more than the pitch here:
+//   - Publishes limited hours  -> we can state exactly how many hours a week
+//                                 go unanswered. This is the sale.
+//   - Claims 24/7              -> they already have cover of some kind. We do
+//                                 NOT claim they need us; it becomes a question
+//                                 to ask, not a gap to assert.
+//   - Publishes nothing        -> unknown. Say unknown.
+//
+// Trade matters too: a burst pipe at 2am converts, a chiropractor enquiry at
+// 2am waits until morning. Both leak, but only one is urgent.
+const EMERGENCY_TRADE = /plumb|hvac|air condition|heating|electric|water damage|flood|restoration|locksmith|garage door|towing|tow truck|roof|sewer|drain|mold|glass|lock/i;
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+export function assessReceptionist(p) {
+  const hours = p.regularOpeningHours;
+  const periods = Array.isArray(hours?.periods) ? hours.periods : [];
+  const typeText = `${p.primaryTypeDisplayName?.text || ''} ${p.displayName?.text || ''}`;
+  const isEmergency = EMERGENCY_TRADE.test(typeText);
+  const hasPhone = !!(p.nationalPhoneNumber || p.internationalPhoneNumber);
+
+  if (!periods.length) {
+    return {
+      qualified: false,
+      confidence: 'none',
+      label: 'Hours not published',
+      why: 'No opening hours on the listing, so there is no way to tell from here how much of the week goes unanswered. Ask on the call.',
+      isEmergency,
+    };
+  }
+
+  // A period with no close, or one spanning the whole week, means 24/7.
+  const alwaysOpen = periods.some(x => !x.close)
+    || periods.some(x => x.open?.day === 1 && x.open?.hour === 0 && x.close?.day === 6 && x.close?.hour === 0);
+
+  if (alwaysOpen) {
+    return {
+      qualified: false,
+      confidence: 'high',
+      label: 'Listed as open 24/7',
+      why: hasPhone
+        ? 'They advertise round-the-clock cover, so the after-hours argument does not land as stated. '
+          + 'Worth asking who actually picks up at 2am — an answering service they already pay for is a cost we replace, '
+          + 'and "it rings my mobile" is a person we can give their evenings back.'
+        : 'They advertise round-the-clock cover but publish no number to call.',
+      openHoursPerWeek: 168,
+      uncoveredHoursPerWeek: 0,
+      isEmergency,
+    };
+  }
+
+  // Sum the published open hours across the week.
+  let openMinutes = 0;
+  const openDays = new Set();
+  for (const per of periods) {
+    const o = per.open, c = per.close;
+    if (!o || !c) continue;
+    openDays.add(o.day);
+    let mins = ((c.day - o.day + 7) % 7) * 1440 + (c.hour * 60 + (c.minute || 0)) - (o.hour * 60 + (o.minute || 0));
+    if (mins <= 0) mins += 7 * 1440;          // wraps past midnight
+    openMinutes += Math.min(mins, 7 * 1440);
+  }
+
+  const openHours = Math.round(openMinutes / 60);
+  const uncovered = Math.max(0, 168 - openHours);
+  const closedDays = DAY_NAMES.filter((_, i) => !openDays.has(i));
+  const pctUncovered = Math.round((uncovered / 168) * 100);
+
+  // Below roughly 100 hours a week there is a real gap worth naming. Above it
+  // they are close enough to always-on that the pitch weakens.
+  const qualified = uncovered >= 40;
+
+  return {
+    qualified,
+    confidence: 'high',
+    label: qualified
+      ? `Unreachable ${uncovered}h a week`
+      : `Open ${openHours}h a week — good cover`,
+    openHoursPerWeek: openHours,
+    uncoveredHoursPerWeek: uncovered,
+    pctUncovered,
+    closedDays,
+    isEmergency,
+    why: qualified
+      ? `Open ${openHours} hours a week, so ${uncovered} hours — ${pctUncovered}% of it — nobody is answering`
+        + (closedDays.length ? `, including all day ${closedDays.length > 2 ? `${closedDays.length} days` : closedDays.join(' and ')}` : '')
+        + (isEmergency
+            ? '. This is an emergency trade: the customer with a burst pipe at midnight rings the next name on the list.'
+            : '. Enquiries landing outside those hours wait until morning, by which point they have usually called someone else.')
+      : `Open ${openHours} hours a week, so only ${uncovered} go unanswered. The after-hours gap is small — lead with something else.`,
+  };
+}

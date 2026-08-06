@@ -25,7 +25,7 @@ const SEARCH_URL = 'https://places.googleapis.com/v1/places:searchText';
 
 // Ask only for what we use — Places bills by field mask, so a lazy '*' here is
 // a direct cost increase per request.
-import { assessActivity, estimateRevenue } from './qualify.js';
+import { assessActivity, estimateRevenue, assessReceptionist } from './qualify.js';
 
 const FIELDS = [
   'places.id',
@@ -52,6 +52,9 @@ const FIELDS = [
   // still covers roughly 5,700 requests, and we issue ~5 per leads page load.
   'places.reviews',
   'places.regularOpeningHours',
+  // priceLevel rides in the same SKU we already pay for via reviews, and it
+  // sizes the pitch: a very-expensive operator loses more per missed call.
+  'places.priceLevel',
   'nextPageToken',
 ].join(',');
 
@@ -179,6 +182,7 @@ export function transformPlace(p, index = 0) {
   const gaps = placeGaps(p);
   const activity = assessActivity(p);
   const revenue = estimateRevenue(p);
+  const receptionist = assessReceptionist(p);
 
   return {
     id: index + 1,
@@ -218,6 +222,10 @@ export function transformPlace(p, index = 0) {
       ? `$${Math.round(revenue.monthlyLow / 1000)}K–$${Math.round(revenue.monthlyHigh / 1000)}K/mo`
       : null,
     openNow: p.regularOpeningHours?.openNow ?? null,
+    // Whether the after-hours pitch is supportable, computed from published
+    // hours rather than assumed. See assessReceptionist.
+    receptionist,
+    priceLevel: p.priceLevel || null,
     hasPublishedHours: (p.regularOpeningHours?.weekdayDescriptions || []).length > 0,
     lastReviewDays: activity.daysSinceNewest ?? null,
     painPoints: [],

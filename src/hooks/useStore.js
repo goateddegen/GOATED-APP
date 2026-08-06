@@ -973,6 +973,12 @@ export const useStore = create((set, get) => ({
   leadsSearchPrefill: null,
   setLeadsSearchPrefill: (q) => set({ leadsSearchPrefill: q }),
 
+  // Audit deep-link. The audit and the leads page never spoke to each other,
+  // so auditing a prospect meant copying their URL and retyping it — the one
+  // report that would arm the call was three manual steps away.
+  auditPrefill: null,
+  setAuditPrefill: (u) => set({ auditPrefill: u }),
+
   // AI Overlay
   aiOpen: false,
   setAiOpen: (v) => set({ aiOpen: v }),

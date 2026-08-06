@@ -276,17 +276,26 @@ export function buildPackage(lead) {
     });
   }
 
-  // The core offer. Pitched to everyone, because a local operator without an
-  // after-hours answer is the norm rather than the exception.
-  items.push({
-    name: 'AI receptionist — missed-call recovery',
-    why: lead.phone
-      ? 'Answers in under 60 seconds, qualifies the caller, books the job, texts you the transcript.'
-      : 'No published number, so there is no reliable way for a customer to reach them at all.',
-    deposit: 2000,
-    monthly: 750,
-    priority: 'P0',
-  });
+  // The receptionist used to be pitched to everyone on the assumption that a
+  // local operator has no after-hours cover. Now it is only asserted when the
+  // published hours actually show a gap — see assessReceptionist. A business
+  // listed as open 24/7 gets a question instead of a claim.
+  const rec = lead.receptionist;
+  if (!rec || rec.qualified || rec.confidence === 'none') {
+    items.push({
+      name: 'AI receptionist — missed-call recovery',
+      why: rec?.qualified
+        ? `${rec.why} Answers in under 60 seconds, qualifies the caller, books the job.`
+        : !lead.phone
+          ? 'No published number, so there is no reliable way for a customer to reach them at all.'
+          : 'Answers in under 60 seconds, qualifies the caller, books the job, texts you the transcript.',
+      deposit: 2000,
+      monthly: 750,
+      priority: rec?.qualified && rec.isEmergency ? 'P0' : 'P1',
+      qualified: !!rec?.qualified,
+      evidence: rec?.label || null,
+    });
+  }
 
   if (noReviews || thinReviews) {
     items.push({
@@ -297,6 +306,17 @@ export function buildPackage(lead) {
       deposit: 1500,
       monthly: 300,
       priority: 'P1',
+    });
+  }
+
+  // Nothing to sell means nothing to quote — do not return an empty package.
+  if (!items.length) {
+    items.push({
+      name: 'Review engine + web presence audit',
+      why: 'They already cover their phones and have a site. Lead with what their listing is not doing for them.',
+      deposit: 1500,
+      monthly: 300,
+      priority: 'P2',
     });
   }
 
