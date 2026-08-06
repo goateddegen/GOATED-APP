@@ -329,6 +329,110 @@ const PRESET_PROMPTS = [
 // ---------------------------------------------------------------------------
 // Toast
 // ---------------------------------------------------------------------------
+// ─── City filter ────────────────────────────────────────────────────────────
+// Sits in the filter bar next to the priority and status selects. Options come
+// from the leads actually held so it never lists a place with nothing behind
+// it, and it carries its own search box because a working session can
+// accumulate dozens of cities.
+function CityFilter({ options, selected, onToggle, onClear, onApply }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const ref = useRef(null);
+
+  // Close on outside click and on Escape — a filter popover that traps you is
+  // worse than no popover.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') { setOpen(false); setQ(''); } };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+
+  const shown = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return needle ? options.filter(o => o.city.toLowerCase().includes(needle)) : options;
+  }, [options, q]);
+
+  if (!options.length) return null;
+
+  const label = selected.length === 0
+    ? 'All Cities'
+    : selected.length === 1 ? selected[0] : `${selected.length} Cities`;
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        aria-haspopup="true"
+        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs outline-none border transition-colors ${
+          selected.length
+            ? 'bg-brand/15 border-brand/40 text-brand'
+            : 'bg-surface-2 border-white/[0.05] text-white hover:border-white/[0.12]'}`}>
+        <MapPin size={12} className="shrink-0" />
+        <span className="max-w-[120px] truncate">{label}</span>
+        <ChevronDown size={12} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-40 mt-1 left-0 w-64 max-w-[85vw] rounded-xl border border-white/[0.08] bg-surface-3 shadow-2xl shadow-black/60 overflow-hidden">
+          <div className="p-2 border-b border-white/[0.05]">
+            <div className="relative">
+              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                autoFocus
+                value={q}
+                onChange={e => setQ(e.target.value)}
+                placeholder="Search cities…"
+                aria-label="Search cities"
+                className="w-full pl-7 pr-2 h-8 bg-surface-2 border border-white/[0.05] rounded-lg text-xs text-white placeholder-slate-500 outline-none focus:border-brand/40" />
+            </div>
+          </div>
+
+          <div className="max-h-56 overflow-y-auto py-1">
+            {shown.map(({ city, count }) => {
+              const on = selected.includes(city);
+              return (
+                <button
+                  key={city}
+                  onClick={() => onToggle(city)}
+                  className="w-full flex items-center gap-2.5 px-3 h-9 text-left hover:bg-white/[0.04] transition-colors">
+                  <span className={`w-3.5 h-3.5 rounded flex items-center justify-center border shrink-0 ${
+                    on ? 'bg-brand border-brand' : 'border-white/20'}`}>
+                    {on && <Check size={10} className="text-black" strokeWidth={3} />}
+                  </span>
+                  <span className={`flex-1 text-xs truncate ${on ? 'text-brand' : 'text-slate-300'}`}>{city}</span>
+                  <span className="text-[10px] text-slate-600 shrink-0">{count}</span>
+                </button>
+              );
+            })}
+            {!shown.length && (
+              <div className="px-3 py-4 text-center text-[11px] text-slate-500">No city matches “{q}”.</div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 p-2 border-t border-white/[0.05]">
+            <button
+              onClick={() => { onClear(); setQ(''); }}
+              disabled={!selected.length}
+              className="text-[11px] text-slate-500 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              Clear
+            </button>
+            <button
+              onClick={() => { onApply(selected); setOpen(false); setQ(''); }}
+              disabled={!selected.length}
+              className="ml-auto px-3 h-8 rounded-lg bg-brand/15 border border-brand/30 text-brand text-[11px] font-semibold hover:bg-brand/25 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              Load these cities
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Toast({ message, visible, onDone }) {
   useEffect(() => { if (visible) { const t = setTimeout(onDone, 2500); return () => clearTimeout(t); } }, [visible, onDone]);
   if (!visible) return null;
@@ -1001,54 +1105,6 @@ export default function LeadsPage({ onSelect }) {
         </div>
       </div>
 
-      {/* ── Filter by city ───────────────────────────────────────────────────
-          Options come from the leads actually held, with counts, so the list
-          never offers a city with nothing behind it. Ticking one also goes and
-          fetches more of that market rather than only hiding rows — the point
-          of picking a city is to work it. */}
-      {availableCities.length > 1 && (
-        <div className="mb-4 rounded-xl border border-white/[0.05] bg-surface-3/50 p-3">
-          <div className="flex items-center gap-2 mb-2.5">
-            <MapPin size={13} className="text-slate-500 shrink-0" />
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Cities</span>
-            {selectedCities.length > 0 && (
-              <button
-                onClick={() => { setSelectedCities([]); }}
-                className="ml-auto text-[11px] text-slate-500 hover:text-white transition-colors">
-                Clear ({selectedCities.length})
-              </button>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {availableCities.map(({ city, count }) => {
-              const on = selectedCities.includes(city);
-              return (
-                <button
-                  key={city}
-                  onClick={() => {
-                    toggleCity(city);
-                    // Read the next selection off the store so the fetch uses
-                    // the value after this toggle, not the stale render value.
-                    const next = useStore.getState().selectedCities;
-                    if (next.length) fetchLeadsForCities(next);
-                  }}
-                  aria-pressed={on}
-                  className={`flex items-center gap-1.5 h-9 pl-2 pr-2.5 rounded-lg border text-xs font-medium transition-colors ${
-                    on ? 'bg-brand/15 border-brand/40 text-brand'
-                       : 'bg-white/[0.02] border-white/[0.06] text-slate-400 hover:text-white hover:border-white/[0.12]'}`}>
-                  <span className={`w-3.5 h-3.5 rounded flex items-center justify-center border shrink-0 ${
-                    on ? 'bg-brand border-brand' : 'border-white/20'}`}>
-                    {on && <Check size={10} className="text-black" strokeWidth={3} />}
-                  </span>
-                  {city}
-                  <span className={on ? 'text-brand/60' : 'text-slate-600'}>{count}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* ── Call Now ─────────────────────────────────────────────────────────
           The tables answer "who exists". This answers "who can I actually
           reach in the next ten minutes" — businesses whose published hours say
@@ -1254,6 +1310,16 @@ export default function LeadsPage({ onSelect }) {
           <option value="all">All Statuses</option>
           {statuses.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
+        {/* Ticking filters the table straight away; "Load these cities" goes
+            and fetches more of those markets, which is the slower action and
+            so is explicit rather than firing on every checkbox. */}
+        <CityFilter
+          options={availableCities}
+          selected={selectedCities}
+          onToggle={(city) => { toggleCity(city); setVisibleCount(50); }}
+          onClear={() => { setSelectedCities([]); setVisibleCount(50); }}
+          onApply={(cities) => fetchLeadsForCities(cities)}
+        />
       </div>
 
       {/* ── Lead Table ── */}
