@@ -1053,7 +1053,7 @@ export default function LeadsPage({ onSelect }) {
           <p className="text-slate-500 text-sm mt-0.5">
             {/* Commission dropped here too — payouts aren't wired, so the
                 header was advertising a split we have no way to pay. */}
-            {totalFiltered.toLocaleString()} leads {aiFilters ? '(filtered)' : ''} &middot; Ranked by closability
+            {(totalFiltered + noWebsiteLeads.length).toLocaleString()} leads {aiFilters || selectedCities.length ? '(filtered)' : ''} &middot; Ranked by closability
             {lastAddedLeadCount > 0 && (
               <span className="text-emerald-400"> &middot; {lastAddedLeadCount} new added</span>
             )}
@@ -1489,7 +1489,14 @@ export default function LeadsPage({ onSelect }) {
         {/* Infinite scroll sentinel + status */}
         <div className="px-4 py-3 border-t border-white/[0.03] flex items-center justify-between">
           <span className="text-sm text-slate-500">
+            {/* Counts what is actually on screen. The no-website leads live in
+                their own section and are not in this table, so they are named
+                separately rather than silently missing from the total. */}
             Showing {leads.length.toLocaleString()} of {totalFiltered.toLocaleString()}
+            {selectedCities.length > 0 && <span className="text-slate-600"> in {selectedCities.length === 1 ? selectedCities[0] : `${selectedCities.length} cities`}</span>}
+            {noWebsiteLeads.length > 0 && (
+              <span className="text-slate-600"> · {noWebsiteLeads.length} more with no website</span>
+            )}
           </span>
           {hasMore && (
             <span className="text-xs text-slate-600">Scroll for more</span>

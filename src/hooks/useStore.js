@@ -886,7 +886,12 @@ export const cityOf = (l) => {
 // leaves everything already on the page alone.
 const LIVE_LEADS_KEY = 'goated_live_leads';
 const NO_WEBSITE_KEY = 'goated_nowebsite_leads';
-const MAX_STORED_LEADS = 200;   // ~300KB of localStorage, well inside the 5MB cap
+// Measured at ~2 kB per lead, so 500 is about 1 MB against a ~5 MB
+// localStorage budget — and there are two of these lists, main and
+// no-website, so the real ceiling is double. 200 was low enough that an
+// afternoon's work pinned the counter there and it read as a hardcoded
+// number rather than a real total.
+const MAX_STORED_LEADS = 500;
 
 /** Stable identity for a lead across fetches. Falls back to name + place. */
 function leadKey(l) {
