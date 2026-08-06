@@ -9,7 +9,7 @@ import {
   MapPin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight, Voicemail,
 } from 'lucide-react';
 import { useStore, fmt, enrichLead, initialsOf } from '../hooks/useStore';
-import { buildCallSheet, buildPackage, recommendStack } from '../lib/outreach';
+import { buildCallSheet, buildPackage, recommendStack, estimateMissedRevenue } from '../lib/outreach';
 
 // ─── Color Maps ────────────────────────────────────────────────────────────────
 const priorityColors = {
@@ -196,7 +196,9 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
   // "What to Say Right Now" scripts per step — tailored to THIS lead's pain + lost revenue
   const stepScripts = [
     { script: `${fn}, I've been studying ${lead.company}'s ${lead.industry} operation and I found something that might be costing you money. Companies your size dealing with ${pp1} typically lose ${monthlyLeak} per month in missed revenue. I have a specific fix — got 2 minutes?`, label: 'Pain-First Opener' },
-    { script: `Subject: ${lead.company} is leaving ${annualLeak}/yr on the table\n\nHi ${fn},\n\nI analyzed ${lead.industry} companies with ${(lead.employees || 50).toLocaleString()}+ employees and found that ${pp1} typically costs businesses like ${lead.company} around ${monthlyLeak}/month in lost revenue and inflated customer acquisition costs.\n\nI have a 12-minute walkthrough showing exactly where the leak is and how to plug it. Worth a quick look?\n\nBest,\nGOATED Solutions`, label: 'Lost Revenue Email' },
+    // Was a cold email quoting a headcount defaulted to 50. We do not run
+    // email, and a Places record has no headcount.
+    { script: `Voicemail, 20 seconds:\n\n"Hi, this is [your name] calling for the owner at ${lead.company}. I had a look at how your calls are handled and there is money going out the door on the ones nobody picks up. Give me a call back on [your number]."\n\nThen text the same number tomorrow:\n"Hi — left you a voicemail about ${lead.company}. We stop missed calls turning into lost jobs. Worth two minutes?"`, label: 'Voicemail + SMS' },
     { script: `${fn}, thanks for the time. Before I pitch anything, I want to understand YOUR numbers. Walk me through how ${lead.company} handles ${pp1} today.\n\n[Listen — let them talk]\n\nSo when that breaks down, what happens to your customer acquisition cost? What does it actually cost you to land a new client right now?\n\n[Listen — anchor the pain in dollars]\n\nGot it. So between ${pp1} and ${pp2}, you're looking at roughly ${monthlyLeak}/month in leakage. What if I showed you exactly how to cut that in half within 60 days?`, label: 'Discovery — Dollar Anchoring' },
     { script: `${fn}, based on what you told me about ${lead.company}'s challenges with ${pp1} and ${pp2}, here's the math:\n\nYou're currently losing: ~${monthlyLeak}/mo (${annualLeak}/yr)\nOur fix costs: ${recDeposit} to set up, then ${recPrice}/mo\nProjected recovery: ${fmt(Math.round(dv * 0.15))} in 90 days\nNet ROI: ${((dv * 0.15) / ((recPkg?.monthly || dv * 0.025) * 3)).toFixed(1)}x in the first quarter\n\nEvery month you wait costs ${lead.company} another ${monthlyLeak}. That's the real price of doing nothing.`, label: 'ROI-Anchored Proposal' },
     { script: `I hear you, ${fn}. But let's look at this differently:\n\nThe cost of this solution: ${recPrice}/mo\nThe cost of NOT solving ${pp1}: ${monthlyLeak}/mo\n\nYou're already paying ${monthlyLeak}/mo for this problem — you're just paying it in lost revenue instead of a solution. A 30-day pilot proves the ROI with zero long-term commitment. If we don't deliver, you walk away. But if we do — and we will — you just stopped a ${annualLeak}/yr bleed.`, label: 'Cost-of-Inaction Close' },
@@ -533,11 +535,18 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
             </li>
             <li className="flex items-start gap-2">
               <Users size={12} className="text-orange-400 shrink-0 mt-0.5" />
-              <span><strong className="text-orange-400">Customer acquisition:</strong> {lead.industry} companies with {(lead.employees || 50).toLocaleString()}+ employees typically overspend <strong className="text-white">{Math.round(20 + (lead.score % 15))}%</strong> on customer acquisition due to {(safePainPoints[1] || 'inefficient processes').toLowerCase()}. Show {(lead.name || '').split(' ')[0]} the CAC math — it's the fastest way to get budget approval.</span>
+              {/* Was a CAC overspend percentage computed as 20 + score % 15,
+                  against a headcount defaulted to 50, addressed to a first name
+                  taken off the company. Replaced with what the listing shows. */}
+              <span><strong className="text-orange-400">What they're missing:</strong>{' '}
+                {stack.products.length
+                  ? <>{stack.products.join(', ')} — {stack.summary.charAt(0).toLowerCase() + stack.summary.slice(1)}</>
+                  : <>Nothing obvious is broken on the listing, so open on the missed-call math rather than a gap you have to argue for.</>}
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <Zap size={12} className="text-brand shrink-0 mt-0.5" />
-              <span><strong className="text-brand">Attack vector:</strong> Lead with <strong className="text-white">{el.bestMethod || 'direct call'}</strong> — {lead.industry} {lead.title?.toLowerCase().includes('founder') || lead.title?.toLowerCase().includes('ceo') ? 'founders respond to direct, numbers-first outreach' : lead.title?.toLowerCase().includes('vp') || lead.title?.toLowerCase().includes('director') ? 'directors want proof of ROI before looping in their exec team' : 'decision-makers at this level need to see the cost of inaction vs. cost of solution'}. {lead.momentum === 'rising' ? 'Momentum is rising — strike while intent is hot.' : 'Don\'t wait for momentum — create urgency with the lost revenue angle.'}</span>
+              <span><strong className="text-brand">Attack vector:</strong> Lead with <strong className="text-white">{el.bestMethod || 'direct call'}</strong> — ask for the owner by role — a Places record carries no contact name. {el.receptionist?.qualified ? `Open on the ${el.receptionist.uncoveredHoursPerWeek} hours a week nobody answers.` : el.website ? 'Open on the missed-call math: what is a job worth, and what happens to the ones that come in while they are on one.' : 'Open on the missing website — they are invisible outside Maps.'}</span>
             </li>
             <li className="flex items-start gap-2">
               <Timer size={12} className="text-yellow-400 shrink-0 mt-0.5" />
@@ -1025,9 +1034,9 @@ Context:\n${ctx}`;
       confidence: Math.min(85, lead.score || 50),
       successRate: Math.min(75, safeConversion + 5),
       script: {
-        opener: `Hi ${lead.name.split(' ')[0]}, I've been researching ${lead.company}'s position in the ${lead.industry} space. I had a few thoughts I'd love your perspective on.`,
+        opener: `Hi, is the owner or manager around? I'm calling about ${lead.company}. I had a few thoughts I'd love your perspective on.`,
         discovery: safeCallScript.discovery.slice(0, 2),
-        pitch: `Based on patterns we've seen across ${lead.industry}, companies with ${(lead.employees || 50).toLocaleString()}+ employees typically leave 30-40% of revenue on the table with manual processes. We've built a system to fix that.`,
+        pitch: `We put an AI receptionist on the line that answers in under 60 seconds, qualifies the caller and books the job — so the calls arriving while you are on one stop going to whoever picks up next.`,
         close: `Would it make sense to set up a working session where we map out exactly where the gaps are? I can bring benchmarks from similar companies.`,
         valueProps: safeCallScript.valueProps,
       },
@@ -1051,6 +1060,7 @@ Context:\n${ctx}`;
   const recommendedPkg = safePackages.find(p => p.recommended) || safePackages[1];
   const mapsLink = mapsLinkFor(el);
   const stack = recommendStack(el);
+  const missed = estimateMissedRevenue(el);
   // Annual and ROI are both retainer-based: the deposit is a one-time build
   // cost, so folding it into a recurring-return multiple would overstate it.
   const recAnnualRetainer = recQuote.monthly * 12;
@@ -1171,30 +1181,50 @@ Context:\n${ctx}`;
                 <h3 className="text-sm font-bold text-brand">AI Executive Summary</h3>
                 <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20 font-semibold">AUTO-GENERATED</span>
               </div>
+              {/* Rebuilt on measured signals. The previous version read as an
+                  analyst's brief and was almost entirely arithmetic on a
+                  constant: annual revenue was dealValue x (8 + score % 7),
+                  margins were 12 + score % 18, customer acquisition cost was
+                  "inflated 20 + score % 15 percent above benchmark", and the
+                  revenue leak was a flat $2,000 x 0.15 — the same $300/mo for
+                  every business on the page. It also opened "{name} is {title}
+                  at {company}", which for a Places record is the company name
+                  twice and a null.
+
+                  Everything below traces to a field: their own address, their
+                  published hours, their review count and rating, and the
+                  estimate we derive from review pace. The recommendation is the
+                  same one the packages tab quotes. */}
               <p className="text-[13px] leading-relaxed text-slate-300">
-                <span className="text-white font-medium">{lead.name}</span> is {lead.title} at{' '}
-                <span className="text-white font-medium">{lead.company}</span>, a {lead.industry} company{' '}
-                {el.employees ? `with approximately ${el.employees.toLocaleString()} employees` : 'operating in the mid-market segment'}.{' '}
-                Estimated annual revenue: <span className="text-brand font-medium">{fmt(dv * (8 + (lead.score % 7)))}</span>{' '}
-                with projected margins of {12 + (lead.score % 18)}%.{' '}
-                {safePainPoints.length > 0 && (
-                  <><span className="text-red-400 font-medium">Critical revenue leaks</span> identified in {safePainPoints.slice(0, 2).map(p => p.toLowerCase()).join(' and ')}, {' '}
-                  costing an estimated <span className="text-red-400 font-medium">{fmt(Math.round(dv * 0.15))}/mo ({fmt(Math.round(dv * 0.15 * 12))}/yr)</span> in lost revenue.{' '}
-                  Customer acquisition costs are likely inflated {Math.round(20 + (lead.score % 15))}% above industry benchmark due to {(safePainPoints[1] || 'process inefficiency').toLowerCase()}.{' '}</>
+                <span className="text-white font-medium">{el.company || lead.name}</span>
+                {el.location ? <> in {el.location}</> : null}
+                {el.industry && el.industry !== 'Unknown' ? <> — {el.industry.toLowerCase()}</> : null}.{' '}
+                {el.reviewCount != null && (
+                  <>{el.reviewCount === 0
+                      ? <>No reviews on their listing at all. </>
+                      : <><span className="text-white font-medium">{el.reviewCount.toLocaleString()}</span> review{el.reviewCount === 1 ? '' : 's'}
+                          {el.rating ? <> at <span className="text-white font-medium">{el.rating}★</span></> : null}. </>}</>
                 )}
-                {safeBuyingSignals.length > 0 && (
-                  <>Active buying signals — {safeBuyingSignals.slice(0, 2).join(', ').toLowerCase()} — indicate {' '}
-                  a <span className="text-brand font-medium">{safeConversion}% conversion probability</span>.{' '}</>
+                {el.activity?.label && <>{el.activity.label}{el.activity.why ? <> — {el.activity.why.replace(/\.$/, '')}</> : null}. </>}
+                {el.revenueFormatted && (
+                  <>Turnover looks like <span className="text-brand font-medium">{el.revenueFormatted}</span>, estimated from review pace against a typical job in their trade — a range, not a figure. </>
                 )}
-                Recommended attack: <span className="text-white font-medium">{el.bestMethod || 'direct outreach'}</span>{' '}
-                leading with the <span className="text-red-400">{fmt(Math.round(dv * 0.15))}/mo revenue leak</span> — make the cost of inaction louder than the cost of buying.{' '}
-                {/* Was `Close window: {el.decisionTimeline || '1-3 months'}` — we have
-                    no decision timeline for a local business, so it printed a
-                    confident window for every lead. These close in one call or
-                    not at all. */}
-                Expect a decision on the call, not a procurement cycle.{' '}
-                {lead.competitorUsing && <>Currently on <span className="text-yellow-400">{lead.competitorUsing}</span> — displacement opportunity via superior ROI and {(safePainPoints[0] || 'pain point').toLowerCase()} resolution. </>}
-                Priority: <span className="font-medium" style={{ color: pc.hex }}>{lead.priority?.toUpperCase()}</span>.
+                {/* Where the money is going, sized against their own estimated
+                    turnover rather than a flat multiple of a constant. Shown as
+                    a range because the input is itself a range. */}
+                {missed && (
+                  <>Best guess, that is costing them{' '}
+                  <span className="text-red-400 font-medium">{fmt(missed.lowMonthly)}–{fmt(missed.highMonthly)}/mo</span>
+                  {' '}({missed.contributors.map(c => c.label.toLowerCase()).join('; ')}). </>
+                )}
+                {/* The recommendation, in the summary rather than a panel of its own. */}
+                <span className="text-white font-medium">{stack.headline}.</span>{' '}
+                {stack.summary}{' '}
+                {stack.products.length > 0 && (
+                  <>Quote <span className="text-white font-medium">{fmt(recQuote.deposit)}</span> plus{' '}
+                  <span className="text-white font-medium">{fmt(recQuote.monthly)}</span>/mo. </>
+                )}
+                They decide on the call, not in a procurement cycle.
               </p>
             </div>
           </div>
@@ -1205,42 +1235,6 @@ Context:\n${ctx}`;
           CONTACT INTEL + OUTREACH ACTIONS
       ═══════════════════════════════════════════════════════════════════════ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-4">
-        {/* ── What to sell them ────────────────────────────────────────────────
-            A plain-English read of this specific business, assembled from the
-            signals the record actually carries: published hours, whether a site
-            exists, review volume and rating, whether a number is listed. Where
-            we genuinely cannot tell — no hours published — it says so instead
-            of filling the gap. */}
-        <div className="rounded-2xl border border-brand/25 bg-brand/[0.04] p-5 mb-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-xl bg-brand/15 flex items-center justify-center shrink-0">
-              <Lightbulb size={18} className="text-brand" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-sm font-bold text-brand">{stack.headline}</h3>
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider">
-                {stack.confident ? 'From their listing' : 'Nothing obvious — open on the math'}
-              </span>
-            </div>
-          </div>
-
-          <p className="text-sm text-slate-300 leading-relaxed">{stack.summary}</p>
-
-          {stack.products.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-white/[0.06] flex flex-wrap items-center gap-2">
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider shrink-0">Sell</span>
-              {stack.products.map(prod => (
-                <span key={prod} className="text-[11px] px-2 py-1 rounded-lg bg-brand/10 text-brand border border-brand/20">
-                  {prod}
-                </span>
-              ))}
-              <span className="ml-auto text-[11px] text-slate-400 shrink-0">
-                <span className="text-white font-semibold">{fmt(recQuote.deposit)}</span> + <span className="text-white font-semibold">{fmt(recQuote.monthly)}</span>/mo
-              </span>
-            </div>
-          )}
-        </div>
-
         {/* ── Can we sell them a receptionist? ─────────────────────────────────
             Qualified from published opening hours, not assumed. Places returns
             structured open/close times, so the hours nobody is answering are

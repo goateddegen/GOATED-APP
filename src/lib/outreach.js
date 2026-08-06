@@ -383,15 +383,28 @@ export function recommendStack(lead) {
     parts.push('there is no published number, so a customer who wants to book cannot');
   }
 
+  // A tidy listing is not the same as nothing to sell. Every business misses
+  // calls while already on a job, and that is quantified against their own
+  // estimated turnover rather than asserted — so the strong ones still get a
+  // number and a product instead of a shrug.
   if (!parts.length) {
     return {
-      headline: 'No obvious gap — open on the missed-call math',
+      headline: 'Listing is in good shape — sell on the calls they miss while working',
       products: ['AI receptionist'],
-      summary: 'Their listing is in good shape: a website, solid reviews, and hours that cover most of the week. '
-        + 'There is nothing here to lead with, so open on the arithmetic instead — ask what a job is worth and what happens '
-        + 'to the calls that come in while they are on one.',
+      summary: 'They have a website, solid reviews and hours that cover most of the week, so there is no gap to open on. '
+        + 'The money is in the calls that arrive while they are already on a job — those go to whoever picks up next, '
+        + 'and the owner never hears about them.',
       confident: false,
     };
+  }
+
+  // A gap we can describe but no product attached is a dead end. Every
+  // business misses calls while already on a job — that is quantified against
+  // their own turnover in estimateMissedRevenue — so the receptionist still
+  // has a home even when the after-hours argument does not apply.
+  if (!products.length) {
+    products.push('AI receptionist');
+    parts.push('the calls that arrive while they are already on a job still go to whoever picks up next, and the owner never hears about them');
   }
 
   const headline = noSite && rec?.qualified
@@ -400,11 +413,79 @@ export function recommendStack(lead) {
       ? 'No website — lead with the build'
       : rec?.qualified
         ? 'Losing calls out of hours — lead with the receptionist'
-        : 'Lead with what their listing is not doing for them';
+        : rec?.label === 'Listed as open 24/7'
+          ? 'Covered out of hours — sell on the calls they miss while working'
+          : 'Lead with what their listing is not doing for them';
 
   const summary = parts.length === 1
     ? `${parts[0]}.`
     : `${parts.slice(0, -1).join('; ')}; and ${parts[parts.length - 1]}.`;
 
   return { headline, products, summary, confident: true };
+}
+
+/**
+ * What their gaps are costing them, per month.
+ *
+ * Built on the revenue we already estimate from review pace, so it scales with
+ * the actual business rather than applying one flat figure to everyone — the
+ * old code multiplied a constant $2,000 deal value by 0.15 and told every
+ * business on the page it was losing $300 a month.
+ *
+ * Two contributors, both stated as assumptions with the arithmetic attached:
+ *
+ *   after-hours   only when their published hours show a gap. Scaled by the
+ *                 share of the week nobody answers, discounted heavily because
+ *                 demand is not evenly spread across a week — most trades take
+ *                 far fewer calls at 3am than at 3pm.
+ *   in-job misses even a business open all week misses calls while on a job.
+ *                 This is the one that applies to a 24/7 operation with a
+ *                 website, and it is deliberately the smaller number.
+ *
+ * Returns null rather than a guess when we cannot size their revenue.
+ */
+export function estimateMissedRevenue(lead) {
+  const rev = lead.revenueEstimate;
+  if (!rev || !rev.monthlyLow || !rev.monthlyHigh) return null;
+
+  const mid = (rev.monthlyLow + rev.monthlyHigh) / 2;
+  const rec = lead.receptionist;
+  const contributors = [];
+
+  // Calls missed while already on a job. Applies to everyone with a phone.
+  const IN_JOB_SHARE = 0.08;
+  if (lead.phone) {
+    contributors.push({
+      label: 'Calls arriving while they are on a job',
+      monthly: Math.round(mid * IN_JOB_SHARE),
+      basis: 'assumes 8% of demand arrives while the phone is already busy or hands are full',
+    });
+  }
+
+  // After-hours, only where the published hours actually show a gap.
+  if (rec?.qualified && rec.pctUncovered > 0) {
+    // Demand outside business hours is real but much thinner than inside them.
+    const OFF_HOURS_DEMAND_WEIGHT = 0.25;
+    const share = (rec.pctUncovered / 100) * OFF_HOURS_DEMAND_WEIGHT;
+    contributors.push({
+      label: `The ${rec.uncoveredHoursPerWeek} hours a week nobody answers`,
+      monthly: Math.round(mid * share),
+      basis: `${rec.pctUncovered}% of the week is uncovered, weighted down to a quarter because demand is thinner out of hours`,
+    });
+  }
+
+  if (!contributors.length) return null;
+
+  const monthly = contributors.reduce((a, c) => a + c.monthly, 0);
+  return {
+    monthly,
+    annual: monthly * 12,
+    contributors,
+    // Never a single number — it rests on an estimate that is itself a range.
+    lowMonthly: Math.round(monthly * 0.6),
+    highMonthly: Math.round(monthly * 1.5),
+    basis: `Against an estimated ${rev.monthlyLow >= 1000 ? `$${Math.round(rev.monthlyLow / 1000)}K` : `$${rev.monthlyLow}`}–`
+      + `${rev.monthlyHigh >= 1000 ? `$${Math.round(rev.monthlyHigh / 1000)}K` : `$${rev.monthlyHigh}`}/mo of turnover, `
+      + `itself derived from review pace. Treat it as an order of magnitude.`,
+  };
 }
