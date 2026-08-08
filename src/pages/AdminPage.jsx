@@ -11,6 +11,7 @@ import {
   Filter, Search, Receipt, ArrowDown, ArrowUp
 } from 'lucide-react';
 import { useStore, fmt } from '../hooks/useStore';
+import { authedFetch } from '../lib/supabase';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function formatMs(ms) {
@@ -67,6 +68,117 @@ function Section({ title, icon: Icon, children, delay = 0, defaultOpen = true, b
         )}
       </AnimatePresence>
     </motion.div>
+  );
+}
+
+// ─── Inbound audits ─────────────────────────────────────────────────────────
+// Someone ran the public auditor against their own site, saw us price their
+// revenue leak, and then left a contact. That is the warmest lead this app
+// produces and until now it existed only as a row nobody looked at.
+//
+// Sorted by estimated monthly loss, because that is the order you should call
+// them back in.
+export function InboundAuditsSection() {
+  const [rows, setRows] = useState(null);   // null = loading
+  const [error, setError] = useState(null);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const resp = await authedFetch('/api/audit?inbound=1');
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) throw new Error(data?.error || 'Could not load inbound audits.');
+      const list = Array.isArray(data?.inbound) ? data.inbound : [];
+      // Money on the table first; unknown estimates sink rather than lead.
+      list.sort((a, b) => (b.monthly_loss ?? -1) - (a.monthly_loss ?? -1));
+      setRows(list);
+    } catch (e) {
+      setError(e.message);
+      setRows([]);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (rows === null) {
+    return <div className="text-xs text-slate-500">Loading inbound audits…</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center gap-2.5 text-xs">
+        <AlertTriangle size={14} className="text-yellow-400 shrink-0" />
+        <span className="text-slate-400">{error}</span>
+        <button onClick={load} className="ml-auto text-slate-400 hover:text-white transition">
+          <RefreshCw size={13} />
+        </button>
+      </div>
+    );
+  }
+
+  if (!rows.length) {
+    return (
+      <div className="text-xs text-slate-500">
+        No inbound audits yet. These appear when a visitor runs the public auditor on their own
+        site and leaves a contact — the report they saw is kept on the share link.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-[11px] text-slate-500">
+          {rows.length} inbound {rows.length === 1 ? 'lead' : 'leads'} · highest estimated loss first
+        </div>
+        <button onClick={load} className="text-slate-500 hover:text-white transition" title="Refresh">
+          <RefreshCw size={13} />
+        </button>
+      </div>
+
+      {rows.map(r => (
+        <div key={r.share_id}
+          className="rounded-lg border border-white/[0.05] bg-black/30 p-3.5 flex flex-wrap items-start gap-x-5 gap-y-2">
+          <div className="min-w-[180px] flex-1">
+            <div className="text-sm font-semibold text-white truncate">{r.host || r.url}</div>
+            <div className="text-[11px] text-slate-500 mt-0.5">
+              {r.lead_name ? `${r.lead_name} · ` : ''}{r.claimed_at ? new Date(r.claimed_at).toLocaleDateString() : '—'}
+            </div>
+          </div>
+
+          <div className="min-w-[170px]">
+            <a href={`mailto:${r.lead_email}`} className="text-xs text-orange-400 hover:underline break-all">
+              {r.lead_email}
+            </a>
+            {r.lead_phone && (
+              <a href={`tel:${r.lead_phone}`} className="block text-xs text-slate-300 hover:underline mt-0.5">
+                {r.lead_phone}
+              </a>
+            )}
+          </div>
+
+          <div className="text-right min-w-[92px]">
+            <div className="text-sm font-bold text-white">
+              {r.monthly_loss ? `${fmt(r.monthly_loss)}/mo` : '—'}
+            </div>
+            <div className="text-[10px] uppercase tracking-widest text-slate-600">Est. loss</div>
+          </div>
+
+          <div className="text-right min-w-[58px]">
+            <div className="text-sm font-bold text-slate-300">{r.views ?? 0}</div>
+            <div className="text-[10px] uppercase tracking-widest text-slate-600">Views</div>
+          </div>
+
+          <a
+            href={`${window.location.origin}/#/a/${r.share_id}`}
+            target="_blank" rel="noopener noreferrer"
+            className="self-center flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-white/[0.08] hover:bg-white/[0.05] text-slate-300 transition whitespace-nowrap"
+          >
+            <ExternalLink size={11} /> Their report
+          </a>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -994,6 +1106,11 @@ export default function AdminPage() {
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {isAdmin ? (
         <>
+          {/* Inbound audits — warmest leads in the funnel, so they lead */}
+          <Section title="Inbound Audits" icon={Target} delay={0.005} badge="Warm Leads">
+            <InboundAuditsSection />
+          </Section>
+
           {/* Master Wallet */}
           <Section title="Master Wallet" icon={Wallet} delay={0.01} badge="Admin Only">
             <MasterWalletSection />
