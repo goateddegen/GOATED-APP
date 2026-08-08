@@ -204,10 +204,14 @@ export default function HomePage() {
     { icon: BarChart3, title: 'Command Center', desc: 'Pipeline + activations + commission split + TCPA compliance logs. One dashboard. Daily close-rate, weekly revenue. Zero noise.', page: 'dashboard', color: '#8b5cf6', stats: 'One view' },
   ];
 
+  // Two of these used to be false. "250K+ Leads Scored" was the size of the
+  // synthetic fallback pool, not leads anyone scored, and "Real-Time Alpha
+  // Plays" pointed at a markets page that is disabled. Every figure here is
+  // something the app actually does.
   const stats = [
-    { value: '250', suffix: 'K+', label: 'Leads Scored', icon: Users },
-    { value: 'LIVE', suffix: '', label: 'Real-Time Alpha Plays', icon: Activity },
-    { value: 'AI', suffix: '', label: 'AI-Powered Closing', icon: Bot },
+    { value: 'LIVE', suffix: '', label: 'Pulled From Google Maps', icon: Activity },
+    { value: '0–99', suffix: '', label: 'Closability Score', icon: Users },
+    { value: '168', suffix: 'h', label: 'Hours/Week We Check', icon: Bot },
     { prefix: '$', value: '0', suffix: '', label: 'Platform Fee', icon: Shield },
   ];
 
@@ -370,7 +374,7 @@ export default function HomePage() {
             { icon: MessageSquare, label: 'SMS follow-up (Twilio)' },
             { icon: Users,    label: 'Owner-direct, not the front desk' },
             { icon: Shield,   label: 'TCPA + DNC baked in' },
-            { icon: Wallet,   label: 'Stripe Connect — instant payouts' },
+            { icon: Wallet,   label: 'You only pay when a deal closes' },
           ].map((t, i) => {
             const I = t.icon;
             return (
@@ -416,11 +420,11 @@ export default function HomePage() {
               <div className="text-sm text-slate-400 leading-snug flex-1">Real local businesses near you, ranked by how closable they are. Who has no website, who is open right now, who to ring first.</div>
               <div className="flex items-center gap-1 text-xs text-brand/70 mt-4 group-hover:text-brand transition-colors"><span>See today\'s list</span><ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" /></div>
             </button>
-            <button onClick={() => setAiOpen(true)} className="h-full flex flex-col text-left p-6 rounded-2xl bg-black/40 border border-cyan-400/20 hover:border-cyan-400/50 transition-all duration-300 group hover:-translate-y-1">
-              <div className="flex items-center gap-2 mb-2"><Bot size={16} className="text-cyan-400" /><span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">Pillar 03</span></div>
-              <div className="text-2xl font-black text-cyan-400 mb-1">CLOSER AI</div>
+            <button onClick={() => setAiOpen(true)} className="h-full flex flex-col text-left p-6 rounded-2xl bg-black/40 border border-red-500/20 hover:border-red-500/50 transition-all duration-300 group hover:-translate-y-1">
+              <div className="flex items-center gap-2 mb-2"><Bot size={16} className="text-red-400" /><span className="text-[10px] font-black uppercase tracking-widest text-red-400">Pillar 03</span></div>
+              <div className="text-2xl font-black text-red-400 mb-1">GOATED AI</div>
               <div className="text-sm text-slate-400 leading-snug flex-1">Ask for businesses in any city and get them back instantly. Scripts, objection handling and the exact quote, on demand.</div>
-              <div className="flex items-center gap-1 text-xs text-cyan-400/70 mt-4 group-hover:text-cyan-400 transition-colors"><span>Open the assistant</span><ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" /></div>
+              <div className="flex items-center gap-1 text-xs text-red-400/70 mt-4 group-hover:text-red-400 transition-colors"><span>Talk to GOATED AI</span><ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" /></div>
             </button>
           </StaggeredCards>
         </div>
@@ -494,7 +498,7 @@ export default function HomePage() {
               { emoji: '\u{1F4B5}', title: '14-Day Deploy', desc: 'Most AI agencies promise the moon and ship in 6 months. We deliver Tier 1 in 14 days — voice agent live, SMS automation running, review engine seeded. ROI before the next bill.', stat: '14d', label: 'To live' },
               { emoji: '\u{1F4DD}', title: '30-Day Refund', desc: 'No long-term contracts. If we don\'t deliver measurable results in 30 days, every dollar back. Real risk-reversal. We only stay paid if we keep performing.', stat: '30d', label: 'Money-back' },
               { emoji: '\u{1F4CA}', title: 'Vertical Playbooks', desc: 'HVAC, dental, plumbing, med spa, roofing, chiro. Each has a tailored voice script, objection handlers, integration patterns. We don\'t generalize. We specialize.', stat: '6+', label: 'Verticals deep' },
-              { emoji: '\u{1F4C8}', title: 'Compounding Wins', desc: 'Tier 1 captures the calls. Day 30 upsell adds review engine, GMB, reactivation. Day 90 owner copilot. Average client grows from $750/mo to $2,200/mo by month 6.', stat: '3x', label: 'Revenue/client by m6' },
+              { emoji: '\u{1F4C8}', title: 'Compounding Wins', desc: 'Tier 1 captures the calls. Day 30 upsell adds review engine, GMB, reactivation. Day 90 owner copilot. The ladder is built so month six looks nothing like month one.', stat: 'Tier 3', label: 'Upsell ladder' },
               { emoji: '\u26A1', title: 'Owner-Operated', desc: 'Texas-built. Bootstrapped. Single founder dialing 100x/day. The brand speaks. We deliver what other agencies promise. No fluff, no theater, no monthly drain.', stat: '0%', label: 'VC funded' },
             ].map((item, i) => (
               <div key={i} className="bg-black/40 backdrop-blur rounded-xl p-6 border border-white/[0.03] group hover:border-orange-500/20 transition-all duration-300 relative overflow-hidden hover:-translate-y-1 h-full flex flex-col">
@@ -657,38 +661,50 @@ export default function HomePage() {
 
 
       {/* ═══ TALK TO GOATED AI ═══
-          The assistant is behind the account wall, so this doubles as the
-          reason to make one: it names what the thing actually does with real
-          example queries rather than promising "AI-powered insights". */}
+          Brand colourway, not cyan. Every example query below is one verified
+          end to end in production — nobody signs up and discovers the demo was
+          aspirational. */}
       <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(6,182,212,0.04) 0%, rgba(0,0,0,0) 60%)' }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.06) 0%, rgba(239,68,68,0.03) 45%, rgba(0,0,0,0) 100%)' }} />
+        <div className="absolute top-1/2 right-0 w-72 h-72 bg-orange-500/10 rounded-full blur-[100px] pointer-events-none" />
         <div className="max-w-5xl mx-auto relative">
-          <div className="rounded-2xl border border-cyan-400/25 bg-gradient-to-br from-cyan-500/[0.06] via-black/60 to-transparent p-6 sm:p-10">
+          <div className="rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/[0.07] via-black/70 to-red-500/[0.04] p-6 sm:p-10">
             <div className="flex flex-col lg:flex-row lg:items-center gap-8">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-lg bg-cyan-400/15 flex items-center justify-center">
-                    <Bot size={16} className="text-cyan-400" />
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                    <Bot size={16} className="text-orange-400" />
                   </div>
-                  <span className="text-cyan-400 text-xs font-bold uppercase tracking-widest">Talk to GOATED AI</span>
+                  <span className="text-orange-400 text-xs font-black uppercase tracking-widest">Your unfair advantage</span>
                 </div>
-                <h2 className="text-3xl sm:text-4xl font-black mb-3">
-                  Ask for a trade and a city. <span className="text-cyan-400">Get real businesses back.</span>
+
+                <h2 className="text-4xl sm:text-5xl font-black mb-4 leading-[1.05]">
+                  Talk to{' '}
+                  <span className="bg-gradient-to-r from-orange-400 via-red-400 to-orange-500 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text' }}>
+                    GOATED AI
+                  </span>
                 </h2>
-                <p className="text-slate-400 leading-relaxed mb-5">
-                  Not a chatbot that summarises your own data back at you. Ask it for plumbers in Tampa and it
-                  goes and finds them — names, numbers, review counts, and which ones have no website. Then ask
-                  it what to say when they pick up.
+
+                <p className="text-slate-300 text-lg leading-relaxed mb-4">
+                  Say <span className="text-white font-semibold">&ldquo;hvac leads in dallas&rdquo;</span> and it goes and gets them.
+                  Not your data summarised back at you — <span className="text-white font-semibold">real businesses</span>, pulled
+                  live off Google Maps while you type.
                 </p>
+                <p className="text-slate-400 leading-relaxed mb-6">
+                  Names. Numbers. Review counts. Who has no website. Who is <span className="text-orange-400 font-semibold">open right now</span>{' '}
+                  so you can dial them this minute. It reads their published hours and works out how many hours a week nobody is
+                  answering their phone — then hands you the opener that names the number. Ask it what to quote, ask it how to
+                  kill the price objection, ask it who to call first. It answers in one line, not an essay.
+                </p>
+
                 <button
                   onClick={() => setAiOpen(true)}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-cyan-400 text-black font-bold hover:bg-cyan-300 transition-colors">
-                  <Bot size={18} /> Open the assistant <ArrowRight size={16} />
+                  className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-black font-black text-lg hover:from-orange-400 hover:to-red-400 transition-all hover:scale-[1.02]">
+                  <Bot size={20} /> Talk to GOATED AI <ArrowRight size={18} />
                 </button>
-                <p className="text-[11px] text-slate-500 mt-2.5">Free with an account · no card</p>
+                <p className="text-[11px] text-slate-500 mt-3">Free with an account · no card · press <kbd className="px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 font-bold">G</kbd> anywhere in the app</p>
               </div>
 
-              {/* Real queries it answers, not invented capabilities. */}
               <div className="lg:w-[340px] shrink-0 space-y-2">
                 {[
                   'hvac leads in dallas',
@@ -697,11 +713,12 @@ export default function HomePage() {
                   'handle a price objection',
                   'what do I quote a roofer with no site?',
                 ].map(q => (
-                  <div key={q} className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-black/50 border border-white/[0.06]">
-                    <span className="text-cyan-400/60 text-xs shrink-0">&rsaquo;</span>
+                  <div key={q} className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-black/60 border border-orange-500/15">
+                    <span className="text-orange-400/70 text-xs shrink-0 font-bold">&rsaquo;</span>
                     <span className="text-sm text-slate-300 truncate">{q}</span>
                   </div>
                 ))}
+                <p className="text-[10px] text-slate-600 pt-1 text-center">Every one of these works today.</p>
               </div>
             </div>
           </div>
@@ -722,7 +739,7 @@ export default function HomePage() {
               <span className="text-slate-700">|</span>
               <span>$0 until money lands</span>
               <span className="text-slate-700">|</span>
-              <span>Instant Stripe Connect payouts</span>
+              <span>No retainer until money moves</span>
               <span className="text-slate-700">|</span>
               <span>TCPA-compliant by default</span>
             </div>
