@@ -137,55 +137,86 @@ function GlassCard({ children, className = '', highlight = false }) {
 // Places; falls back to a Maps search on the business name and location so the
 // link resolves for every lead, on refresh and for previously-saved rows.
 /**
- * The business's own Google listing photo, fetched through the proxy so the
- * Places key stays server-side. Falls back to initials when the listing has no
- * photo or the image fails — the tile must never render empty.
+ * The business's own listing photos, shown properly rather than as a thumbnail.
  *
- * Deliberately only used on the detail page: photo media is billed per request,
- * so one image per lead you actually open is affordable where a grid of forty
- * thumbnails is not.
+ * The hero loads at 1600px — Places bills per photo request regardless of the
+ * size returned, so asking for a small one saves nothing and just looks worse
+ * on a retina screen. The remaining shots stay behind a click for the opposite
+ * reason: each one IS another billable request, and most leads never need them.
  */
-function ListingPhoto({ lead, size = 64 }) {
+function ListingGallery({ lead }) {
+  const [refs, setRefs] = React.useState(lead?.photoRefs?.length ? lead.photoRefs : (lead?.photoRef ? [lead.photoRef] : []));
+  const [active, setActive] = React.useState(0);
+  const [showAll, setShowAll] = React.useState(false);
   const [failed, setFailed] = React.useState(false);
-  // Backfilled ref for leads captured before photoRef was collected.
-  const [fetchedRef, setFetchedRef] = React.useState(null);
 
-  React.useEffect(() => { setFailed(false); setFetchedRef(null); }, [lead?._placeId, lead?.photoRef]);
-
-  // Leads already in the store — and rows already in Supabase — predate this
-  // field, and the merge keeps existing rows rather than replacing them, so
-  // they would never gain a photo no matter how many searches ran. Re-hydrate
-  // from the listing instead of showing initials forever.
   React.useEffect(() => {
-    if (lead?.photoRef || !lead?._placeId) return;
+    setRefs(lead?.photoRefs?.length ? lead.photoRefs : (lead?.photoRef ? [lead.photoRef] : []));
+    setActive(0); setShowAll(false); setFailed(false);
+  }, [lead?._placeId, lead?.photoRef, lead?.photoRefs]);
+
+  // Same backfill as the avatar: rows stored before photos were collected have
+  // a place id and nothing else, and should not be stuck without them.
+  React.useEffect(() => {
+    if (refs.length || !lead?._placeId) return;
     let cancelled = false;
     fetch(`/api/leads?action=place&id=${encodeURIComponent(lead._placeId)}`)
       .then(r => (r.ok ? r.json() : null))
-      .then(d => { if (!cancelled && d?.lead?.photoRef) setFetchedRef(d.lead.photoRef); })
-      .catch(() => { /* initials remain — a missing photo is not an error worth showing */ });
+      .then(d => {
+        if (cancelled || !d?.lead) return;
+        const next = d.lead.photoRefs?.length ? d.lead.photoRefs : (d.lead.photoRef ? [d.lead.photoRef] : []);
+        if (next.length) setRefs(next);
+      })
+      .catch(() => {});
     return () => { cancelled = true; };
-  }, [lead?._placeId, lead?.photoRef]);
+  }, [lead?._placeId, refs.length]);
 
-  const photoRef = lead?.photoRef || fetchedRef;
+  if (!refs.length || failed) return null;
 
-  if (!photoRef || failed) {
-    return (
-      <div className="w-16 h-16 rounded-xl bg-brand/15 flex items-center justify-center text-brand font-bold text-lg">
-        {initialsOf(lead?.company || lead?.name)}
-      </div>
-    );
-  }
+  const src = (ref, w) => `/api/leads?action=photo&ref=${encodeURIComponent(ref)}&w=${w}`;
+
   return (
-    <img
-      src={`/api/leads?action=photo&ref=${encodeURIComponent(photoRef)}&w=${size * 3}`}
-      alt={`${lead.company || 'Business'} listing photo`}
-      loading="lazy"
-      decoding="async"
-      width={size}
-      height={size}
-      onError={() => setFailed(true)}
-      className="w-16 h-16 rounded-xl object-cover bg-white/[0.04]"
-    />
+    <div className="mb-5">
+      <div className="relative rounded-2xl overflow-hidden border border-white/[0.06] bg-black/40">
+        <img
+          src={src(refs[active], 1600)}
+          alt={`${lead.company || 'Business'} — listing photo ${active + 1}`}
+          onError={() => setFailed(true)}
+          loading="lazy"
+          decoding="async"
+          className="w-full h-56 sm:h-72 lg:h-80 object-cover"
+        />
+        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+        <div className="absolute bottom-3 left-4 flex items-center gap-2">
+          <MapPin size={13} className="text-orange-400" />
+          <span className="text-xs text-white/90 font-medium">From their Google listing</span>
+        </div>
+        {refs.length > 1 && (
+          <div className="absolute bottom-3 right-4 text-[11px] text-white/70">
+            {active + 1} / {refs.length}
+          </div>
+        )}
+      </div>
+
+      {refs.length > 1 && (
+        showAll ? (
+          <div className="mt-2 grid grid-cols-5 gap-2">
+            {refs.map((r, i) => (
+              <button key={r} onClick={() => setActive(i)}
+                className={`rounded-lg overflow-hidden border transition ${i === active ? 'border-orange-400/70' : 'border-white/[0.06] hover:border-white/20'}`}>
+                <img src={src(r, 320)} alt={`Photo ${i + 1}`} loading="lazy" decoding="async"
+                  className="w-full h-14 object-cover" />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <button onClick={() => setShowAll(true)}
+            className="mt-2 text-xs text-slate-400 hover:text-white transition">
+            Show {refs.length - 1} more {refs.length - 1 === 1 ? 'photo' : 'photos'}
+          </button>
+        )
+      )}
+    </div>
   );
 }
 
@@ -207,6 +238,12 @@ function recommendedPkgQuote(pkgs) {
 function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfidence, safeCallScript, safePackages, safeObjections, safePainPoints, safeConversion, setTab, alphaIntel }) {
   const [expandedStep, setExpandedStep] = useState(null);
   const [fastTrackMode, setFastTrackMode] = useState(false);
+
+  // Derived here rather than passed down. The recommendation block below
+  // referenced a `stack` that only ever existed in LeadDetail's scope, so
+  // opening this tab threw ReferenceError and dropped the whole panel into the
+  // error boundary. It builds from `el`, which this component already has.
+  const stack = useMemo(() => recommendStack(el), [el]);
 
   // Step completion is purely derived from lead status — no manual localStorage tracking
   const stepChecks = useMemo(() => {
@@ -807,6 +844,13 @@ export default function LeadDetail() {
   const goBack = () => {
     setDetailOpen(false);
     setSelectedLead(null);
+    // Drop the lead permalink first. setPage deliberately leaves deep-link
+    // hashes alone, so without this the URL would still name a lead nobody is
+    // looking at any more — and a refresh would reopen it.
+    if (typeof window !== 'undefined' && window.history?.replaceState
+        && /^#\/lead\//.test(window.location.hash || '')) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
     if (previousPage) {
       setPage(previousPage);
       setPreviousPage(null);
@@ -1160,6 +1204,10 @@ Context:\n${ctx}`;
         <div className="absolute top-0 right-0 w-96 h-96 bg-brand/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8">
+          {/* Their premises, at a size you can actually read. Seeing the yard,
+              the van and the signage tells you what kind of operation this is
+              before you dial — which the 64px avatar never could. */}
+          <ListingGallery lead={el} />
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             {/* Avatar + Score Ring */}
             <div className="relative">
@@ -1171,7 +1219,13 @@ Context:\n${ctx}`;
                   style={{ transition: 'stroke-dashoffset 0.8s ease' }} />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <ListingPhoto lead={lead} />
+                {/* Initials, not the photo: the gallery above already shows the
+                    premises at a useful size, and repeating it here at 64px
+                    just said the same thing twice and worse. The ring is for
+                    the score. */}
+                <div className="w-16 h-16 rounded-xl bg-brand/15 flex items-center justify-center text-brand font-bold text-lg">
+                  {initialsOf(lead.company || lead.name)}
+                </div>
               </div>
             </div>
 

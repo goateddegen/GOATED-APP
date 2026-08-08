@@ -250,6 +250,10 @@ export function transformPlace(p, index = 0) {
     // this profile in years — that's the GMB-management pitch, and it costs
     // nothing extra to know.
     photoCount: Array.isArray(p.photos) ? p.photos.length : 0,
+    // Refs only — no image is fetched until something asks for one. Capped at
+    // six because photo media bills per request and nobody needs ten pictures
+    // of a van to decide whether to call.
+    photoRefs: Array.isArray(p.photos) ? p.photos.slice(0, 6).map(x => x.name).filter(Boolean) : [],
     // The review link is the one to hand a client; the rest are for us.
     reviewLink: p.googleMapsLinks?.writeAReviewUri || null,
     reviewsLink: p.googleMapsLinks?.reviewsUri || null,

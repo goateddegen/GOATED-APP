@@ -432,7 +432,7 @@ export default function App() {
   // opens for someone whose browser has never run a search — which is the whole
   // point of being able to send it to someone.
   useEffect(() => {
-    if (!pendingLeadId || !isLoggedIn || !authChecked) return;
+    if (!pendingLeadId || !authChecked) return;
     let cancelled = false;
     (async () => {
       try {
@@ -447,7 +447,7 @@ export default function App() {
       if (!cancelled) setPendingLeadId(null);
     })();
     return () => { cancelled = true; };
-  }, [pendingLeadId, isLoggedIn, authChecked, setPendingLeadId, setSelectedLead, setDetailOpen]);
+  }, [pendingLeadId, authChecked, setPendingLeadId, setSelectedLead, setDetailOpen]);
 
   // Debounced page navigation — prevents choppy rapid-fire page switching
   // Also scrolls to top so pages never open mid-scroll
@@ -547,7 +547,18 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [navTo]);
 
-  const selectLead = useCallback((l) => { setPreviousPage(page); setSelectedLead(l); setDetailOpen(true); }, [page, setPreviousPage, setSelectedLead, setDetailOpen]);
+  // Opening a lead puts its permalink in the address bar, so the URL you are
+  // looking at is the one you can send. replaceState rather than a hash write,
+  // for the same reason as setPage: assigning location.hash would fire the
+  // router and re-resolve the lead we just opened.
+  const selectLead = useCallback((l) => {
+    setPreviousPage(page);
+    setSelectedLead(l);
+    setDetailOpen(true);
+    if (l?._placeId && typeof window !== 'undefined' && window.history?.replaceState) {
+      window.history.replaceState(null, '', `#/lead/${l._placeId}`);
+    }
+  }, [page, setPreviousPage, setSelectedLead, setDetailOpen]);
   const mainML = isMobile ? 0 : (sidebar ? 240 : 72);
 
   // Routes that require login. Home is the only public page: the audit and its
@@ -568,6 +579,19 @@ export default function App() {
     return <HomePage />;
   };
 
+  // The two public surfaces: a shared audit report and a shared lead. Both are
+  // things you send to someone, so requiring the recipient to make an account
+  // before they can look at it defeats the purpose. Everything behind them —
+  // running a new audit, the leads list itself — still needs one.
+  //
+  // A shared lead is safe to render unauthenticated because LeadDetail replaces
+  // the page rather than opening over it, so the list is never mounted. Closing
+  // it falls through to the leads route, which is gated as usual.
+  const isSavedAuditLink = (typeof window !== 'undefined' &&
+    /^#\/a\/[a-z0-9]{6,32}/i.test(window.location.hash || ''));
+  const isSharedLeadLink = (typeof window !== 'undefined' &&
+    /^#\/lead\/[A-Za-z0-9_-]{10,}/.test(window.location.hash || ''));
+
   // No useMemo — prevents stale renders & black screen during rapid page switching
   const renderPage = () => {
     // Final gate: anything not in NAV_PAGES — or an admin page without an admin
@@ -579,7 +603,11 @@ export default function App() {
       switch (page) {
         case 'dashboard': return requireAuth(() => <DashboardPage onSelect={selectLead} />);
         case 'leads':     return requireAuth(() => <LeadsPage onSelect={selectLead} />);
-        case 'audit':     return requireAuth(() => <AuditPage />);
+        // A saved-audit permalink is the one public surface: it is what gets
+        // sent to a prospect, and asking a stranger to create an account
+        // before they can read a report about their own site defeats the
+        // point of sending it. Running a *new* audit still requires one.
+        case 'audit':     return isSavedAuditLink ? <AuditPage /> : requireAuth(() => <AuditPage />);
         case 'admin':     return requireAuth(() => <AdminPage />);
       }
     }
@@ -611,7 +639,8 @@ export default function App() {
   const isMidOAuthRedirect = (typeof window !== 'undefined' &&
     /access_token=|code=/.test(window.location.hash || window.location.search || ''));
 
-  if (!launchReady && !isLoggedIn && !isMidOAuthRedirect && !operatorPreview) {
+
+  if (!launchReady && !isLoggedIn && !isMidOAuthRedirect && !operatorPreview && !isSavedAuditLink && !isSharedLeadLink) {
     return <ComingSoonPage />;
   }
 

@@ -990,8 +990,36 @@ export const useStore = create((set, get) => ({
     const target = isPageEnabled(page, get().verifiedEmail) ? page : 'home';
     // Close any open modals/detail views to prevent stale renders
     const current = get().page;
-    if (current === target) return; // No-op if already on that page
-    set({ page: target, mobileMenu: false });
+    if (current !== target) set({ page: target, mobileMenu: false });
+
+    // Keep the address bar honest. Without this the URL stayed at the origin
+    // no matter where you navigated, so there was nothing to copy, bookmark or
+    // send — and the back button could not tell one page from another.
+    //
+    // Runs even when the page did not change: closing a lead leaves the URL on
+    // that lead's permalink while `page` is already 'leads', so an early return
+    // here left a stale link in the bar and a refresh reopened the lead.
+    //
+    // replaceState, not a hash assignment: writing location.hash fires
+    // hashchange, which the router listens to, and it would re-enter this from
+    // the other side. Live deep links are left alone — they carry an id this
+    // cannot reconstruct, and are cleared by whoever opened them.
+    if (typeof window !== 'undefined' && window.history?.replaceState) {
+      const h = window.location.hash || '';
+      // A deep link belongs to exactly one page. While we are navigating TO
+      // that page, leave it alone — it carries an id this cannot reconstruct,
+      // and overwriting it here destroyed the permalink before the router had
+      // read it, which made every shared link look like it was ignored.
+      // Navigating anywhere else means the link is stale, so it goes.
+      const owner = /^#\/(a|for)\//i.test(h) ? 'audit'
+        : /^#\/lead\//i.test(h) ? 'leads'
+        : null;
+      if (owner === target) return;
+
+      const next = target === 'home' ? window.location.pathname : `#/${target}`;
+      const now = target === 'home' ? window.location.pathname + h : h;
+      if (now !== next) window.history.replaceState(null, '', next);
+    }
   },
   sidebar: true,
   toggleSidebar: () => set(s => ({ sidebar: !s.sidebar })),

@@ -67,6 +67,9 @@ const PHASES = [
 // ─── Component ──────────────────────────────────────────────────────────────
 export default function AuditPage() {
   const setPage = useStore(s => s.setPage);
+  const isLoggedIn = useStore(s => s.isLoggedIn);
+  const authChecked = useStore(s => s.authChecked);
+  const setAccountModalOpen = useStore(s => s.setAccountModalOpen);
   const degenMode = useStore(s => s.degenMode);
 
   const [url, setUrl] = useState('');
@@ -98,6 +101,14 @@ export default function AuditPage() {
   const run = useCallback(async (targetUrl) => {
     const u = (targetUrl || url || '').trim();
     if (!u) return;
+    // Reading a shared report is public; running a scan is not. A visitor who
+    // arrived on a permalink can read it and then hit this, so the gate lives
+    // on the action rather than only on the route.
+    if (!isLoggedIn) {
+      if (!authChecked) return;   // session unresolved — don't flash the modal
+      setAccountModalOpen(true);
+      return;
+    }
     setErr(null);
     setResult(null);
     setStep('running');
@@ -142,7 +153,7 @@ export default function AuditPage() {
     } finally {
       if (phaseTimer.current) { clearInterval(phaseTimer.current); phaseTimer.current = null; }
     }
-  }, [url]);
+  }, [url, isLoggedIn, authChecked, setAccountModalOpen]);
 
   // Assigned during render, NOT in an effect.
   //
