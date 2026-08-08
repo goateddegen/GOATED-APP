@@ -108,6 +108,8 @@ function toRow(lead, ownerId) {
       mapsUrl: lead.mapsUrl || null,
       rating: lead.rating ?? null,
       reviewCount: lead.reviewCount ?? null,
+      photoRef: lead.photoRef || null,
+      photoCount: lead.photoCount ?? null,
       placeGaps: lead.placeGaps || [],
       painPoints: lead.painPoints || [],
       bestMethod: lead.bestMethod || null,
@@ -156,6 +158,8 @@ function fromRow(row) {
     mapsUrl: m.mapsUrl || mapsSearchUrl(row.company || row.name, m.address || row.location),
     rating: m.rating ?? null,
     reviewCount: m.reviewCount ?? null,
+    photoRef: m.photoRef || null,
+    photoCount: m.photoCount ?? null,
     placeGaps: m.placeGaps || [],
     painPoints: m.painPoints || [],
     bestMethod: m.bestMethod || null,
@@ -216,4 +220,125 @@ export async function countLeads(ownerId) {
   const cr = r?.headers?.get('content-range') || '';
   const total = cr.split('/')[1];
   return total && total !== '*' ? Number(total) : 0;
+}
+
+// ─── Saved audits ───────────────────────────────────────────────────────────
+
+/**
+ * Short, URL-safe, unguessable share id. 10 chars of base32 ≈ 50 bits, which
+ * is far more than enough to make the audits table non-enumerable while still
+ * fitting in a link you can read out over the phone.
+ */
+function makeShareId() {
+  const alphabet = '23456789abcdefghjkmnpqrstuvwxyz'; // no 0/1/i/l/o — misread aloud
+  const bytes = crypto.getRandomValues(new Uint8Array(10));
+  return Array.from(bytes, b => alphabet[b % alphabet.length]).join('');
+}
+
+/**
+ * Persist a completed audit and return its share id.
+ *
+ * Best-effort by design: a storage failure must never turn a successful audit
+ * into an error for the visitor, so this returns null instead of throwing.
+ * Degraded (rule-based) audits are not saved — a permalink should not pin the
+ * fallback report in place, same reasoning as the in-memory cache.
+ */
+function monthlyLoss(payload) {
+  const n = Number(payload?.analysis?.revenueLoss?.monthlyLowEstimate);
+  // The LLM occasionally returns an absurd figure. Clamped rather than trusted,
+  // because this column is what the inbound queue sorts on.
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.min(Math.round(n), 100_000_000);
+}
+
+export async function saveAudit(payload, ownerId = null) {
+  if (!dbConfigured() || !payload?.ok || payload.degraded) return null;
+  const shareId = makeShareId();
+  let host = null;
+  try { host = new URL(payload.url).hostname.replace(/^www\./, ''); } catch { /* keep null */ }
+  try {
+    await rest('/audits', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        share_id: shareId,
+        url: payload.url,
+        host,
+        owner_id: ownerId,
+        monthly_loss: monthlyLoss(payload),
+        payload,
+      }),
+    });
+    return shareId;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read a saved audit by share id. Returns the stored payload, or null when the
+ * id is unknown — callers should treat null as "this link is dead", not as an
+ * outage.
+ */
+export async function loadAudit(shareId) {
+  if (!dbConfigured() || !shareId) return null;
+  try {
+    const rows = await rest(`/audits?select=payload,created_at,views&share_id=eq.${encodeURIComponent(shareId)}&limit=1`);
+    const row = Array.isArray(rows) ? rows[0] : null;
+    if (!row?.payload) return null;
+    // Fire-and-forget view counter: knowing a prospect opened the report is the
+    // whole point of sending one, but nobody should wait on the write.
+    rest(`/audits?share_id=eq.${encodeURIComponent(shareId)}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ views: (row.views ?? 0) + 1 }),
+    }).catch(() => {});
+    return { ...row.payload, savedAt: row.created_at };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Attach a contact to a saved audit — the inbound-lead capture.
+ *
+ * Keyed on share_id rather than an id we hand the client, so a visitor can only
+ * write against an audit they actually ran. Returns true on success; callers
+ * should still thank the visitor if it fails, because the report is the thing
+ * they came for.
+ */
+export async function claimAudit(shareId, { email, name, phone } = {}) {
+  if (!dbConfigured() || !shareId || !email) return false;
+  try {
+    await rest(`/audits?share_id=eq.${encodeURIComponent(shareId)}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        lead_email: String(email).slice(0, 200),
+        lead_name: name ? String(name).slice(0, 120) : null,
+        lead_phone: phone ? String(phone).slice(0, 40) : null,
+        claimed_at: new Date().toISOString(),
+      }),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Inbound audits that left a contact, newest first. Operator-facing — the
+ * caller is responsible for checking that the requester is an admin.
+ */
+export async function loadInboundAudits({ limit = 50 } = {}) {
+  if (!dbConfigured()) return [];
+  try {
+    const rows = await rest(
+      '/audits?select=share_id,url,host,monthly_loss,views,lead_email,lead_name,lead_phone,claimed_at,created_at' +
+      `&lead_email=not.is.null&order=claimed_at.desc&limit=${Math.min(limit, 200)}`,
+    );
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
 }

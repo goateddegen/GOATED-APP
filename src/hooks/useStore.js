@@ -1268,62 +1268,8 @@ export const useStore = create((set, get) => ({
     }
   },
 
-  fetchLiveTrends: async () => {
-    set({ isLoadingTrends: true, trendsError: null });
-    try {
-      const res = await fetch('/api/trends');
-      if (!res.ok) throw new Error(`Trends API returned ${res.status}`);
-      const data = await res.json();
-      set({
-        liveTrends: data.trends || data,
-        isLoadingTrends: false,
-        lastFetchedTrends: new Date().toISOString(),
-      });
-      return data.trends || data;
-    } catch (err) {
-      console.warn('[GOATED] Live trends fetch failed:', err.message);
-      set({ isLoadingTrends: false, trendsError: err.message });
-      return [];
-    }
-  },
 
-  fetchMarketData: async () => {
-    set({ isLoadingMarketData: true, marketDataError: null });
-    try {
-      const res = await fetch('/api/market-data');
-      if (!res.ok) throw new Error(`Market data API returned ${res.status}`);
-      const data = await res.json();
-      set({
-        liveMarketData: data,
-        isLoadingMarketData: false,
-        lastFetchedMarketData: new Date().toISOString(),
-      });
-      return data;
-    } catch (err) {
-      console.warn('[GOATED] Market data fetch failed:', err.message);
-      set({ isLoadingMarketData: false, marketDataError: err.message });
-      return {};
-    }
-  },
 
-  fetchLivePlays: async () => {
-    set({ isLoadingPlays: true, playsError: null });
-    try {
-      const res = await fetch('/api/plays');
-      if (!res.ok) throw new Error(`Plays API returned ${res.status}`);
-      const data = await res.json();
-      set({
-        livePlays: data.plays || data,
-        isLoadingPlays: false,
-        lastFetchedPlays: new Date().toISOString(),
-      });
-      return data.plays || data;
-    } catch (err) {
-      console.warn('[GOATED] Live plays fetch failed:', err.message);
-      set({ isLoadingPlays: false, playsError: err.message });
-      return [];
-    }
-  },
 
   // Active leads getter — returns live data if available, otherwise generated (lazy)
   getActiveLeads: () => {

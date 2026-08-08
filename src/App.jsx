@@ -391,12 +391,13 @@ export default function App() {
     trackPageView(page);
   }, [page]);
 
-  // Hash router — shareable audits at /#/for/{slug} and /#/audit
+  // Hash router — shareable audits at /#/a/{shareId} (saved report),
+  // /#/for/{slug} (legacy, re-runs live) and /#/audit.
   // Public-facing lead magnet URLs need to resolve even on first page load.
   useEffect(() => {
     const resolveHash = () => {
       const h = window.location.hash || '';
-      if (/^#\/(for\/|audit)/i.test(h)) {
+      if (/^#\/(a\/|for\/|audit)/i.test(h)) {
         setPage('audit');
       } else if (/^#\/managed/i.test(h)) {
         // Managed consolidated into B2B leads v7.4
@@ -561,7 +562,7 @@ export default function App() {
      window.location.hash.toLowerCase().includes('preview=1')));
   // Audit page is always public (lead magnet). Cover only blocks the rest.
   const isAuditRoute = (typeof window !== 'undefined' &&
-    /^#\/(for\/|audit)/i.test(window.location.hash || ''));
+    /^#\/(a\/|for\/|audit)/i.test(window.location.hash || ''));
 
   // A signed-in user is never shown the cover page. Reaching a session means
   // Google authenticated them AND — while the OAuth app is in Testing mode —

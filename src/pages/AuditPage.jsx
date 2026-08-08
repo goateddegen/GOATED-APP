@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { contactMailto } from '../lib/config';
+import { authedFetch } from '../lib/supabase';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function slugify(url) {
@@ -81,6 +82,7 @@ export default function AuditPage() {
     runAuditRef.current?.(auditPrefill);
   }, [auditPrefill, setAuditPrefill]);
   const runAuditRef = useRef(null);
+  const openSavedRef = useRef(null);
   const [step, setStep] = useState('input'); // input | running | result | error
   const [result, setResult] = useState(null);
   const [err, setErr] = useState(null);
@@ -108,7 +110,9 @@ export default function AuditPage() {
     }, 1800);
 
     try {
-      const resp = await fetch('/api/audit', {
+      // Authed so a signed-in operator's audits are filed under them — an
+      // anonymous visitor still gets the full report and a share link.
+      const resp = await authedFetch('/api/audit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: u }),
@@ -144,16 +148,44 @@ export default function AuditPage() {
   // through this ref rather than the binding.
   useEffect(() => { runAuditRef.current = run; }, [run]);
 
-  // ── Hash router: /#/for/{slug}?u={url} re-runs the audit live on load ──
+  // ── Load a saved audit by share id ─────────────────────────────────────
+  // The report the prospect opens is the one they were sent — same findings,
+  // same numbers, no re-crawl.
+  const openSaved = useCallback(async (shareId) => {
+    setErr(null);
+    setResult(null);
+    setStep('running');
+    setPhase(PHASES.length - 1); // it's a fetch, not a scan — don't fake progress
+    try {
+      const resp = await fetch(`/api/audit?id=${encodeURIComponent(shareId)}`);
+      let data = null;
+      try { data = await resp.json(); } catch { data = null; }
+      if (!resp.ok || !data?.analysis) {
+        throw new Error(data?.error || 'That audit link could not be opened. Run a fresh scan below.');
+      }
+      setUrl(data.url || '');
+      setResult(data);
+      setStep('result');
+    } catch (e) {
+      setErr(e.message || 'That audit link could not be opened.');
+      setStep('error');
+    }
+  }, []);
+
+  // ── Hash router ────────────────────────────────────────────────────────
+  //   /#/a/{shareId}        → render the stored report (permalink)
+  //   /#/for/{slug}?u={url} → legacy links already in the wild; re-runs live
   useEffect(() => {
     const resolveHash = () => {
       const h = window.location.hash || '';
+      const saved = h.match(/#\/a\/([a-z0-9]{6,32})/i);
+      if (saved) { openSavedRef.current?.(saved[1]); return; }
       const m = h.match(/#\/for\/([a-z0-9-]+)/i);
       if (m) {
         const qs = new URLSearchParams((h.split('?')[1] || ''));
         const sharedUrl = qs.get('u') || `https://${m[1].replace(/-/g, '.')}`;
         setUrl(sharedUrl);
-        run(sharedUrl);
+        runAuditRef.current?.(sharedUrl);
       }
     };
     resolveHash();
@@ -162,12 +194,18 @@ export default function AuditPage() {
       window.removeEventListener('hashchange', resolveHash);
       if (phaseTimer.current) clearInterval(phaseTimer.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Same ref indirection as `run` — this effect is declared above the callback.
+  useEffect(() => { openSavedRef.current = openSaved; }, [openSaved]);
+
   // ── Shareable link ─────────────────────────────────────────────────────
+  // A stored audit gets a real permalink. Without one (storage not configured,
+  // or a degraded rule-based report we deliberately don't pin) we fall back to
+  // the legacy re-run link so the button is never dead.
   const shareLink = useMemo(() => {
     if (!result) return '';
+    if (result.shareId) return `${window.location.origin}/#/a/${result.shareId}`;
     const slug = slugify(result.url);
     const qs = new URLSearchParams({ u: result.url });
     return `${window.location.origin}/#/for/${slug}?${qs.toString()}`;
@@ -628,6 +666,9 @@ export default function AuditPage() {
             </div>
           </div>
 
+          {/* Inbound capture — the report is the pitch, this is the ask */}
+          {r.shareId && <ClaimCard shareId={r.shareId} accent={accent} accentBr={accentBr} />}
+
           {/* Footer meta */}
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-600">
             <div className="flex items-center gap-2">
@@ -639,6 +680,90 @@ export default function AuditPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+// ─── Inbound capture ────────────────────────────────────────────────────────
+// The audit is the lead magnet; until now it captured nobody. The only CTA was
+// a mailto, which we never see unless the visitor actually sends it. This
+// attaches a contact to the saved audit, so an inbound scan becomes a lead with
+// the whole report already sitting behind it.
+function ClaimCard({ shareId, accent, accentBr }) {
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [state, setState] = useState('idle'); // idle | sending | done | error
+  const [error, setError] = useState(null);
+
+  const submit = useCallback(async (e) => {
+    e.preventDefault();
+    if (state === 'sending' || state === 'done') return;
+    setState('sending');
+    setError(null);
+    try {
+      const resp = await fetch('/api/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'claim', shareId, email, name, phone }),
+      });
+      let data = null;
+      try { data = await resp.json(); } catch { data = null; }
+      if (!resp.ok || !data?.ok) throw new Error(data?.error || 'We could not save your details. Try again in a moment.');
+      setState('done');
+    } catch (err) {
+      setError(err.message);
+      setState('error');
+    }
+  }, [shareId, email, name, phone, state]);
+
+  if (state === 'done') {
+    return (
+      <div className="mt-6 rounded-2xl border p-5 flex items-start gap-3"
+        style={{ borderColor: accentBr, background: 'rgba(255,255,255,0.02)' }}>
+        <CheckCircle2 size={20} style={{ color: accent }} className="mt-0.5 shrink-0" />
+        <div>
+          <div className="font-bold text-white">Got it — we'll be in touch.</div>
+          <p className="text-sm text-slate-400 mt-1">
+            Your report is saved at the share link above. Keep it; we'll work from the same one.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="mt-6 rounded-2xl border p-5"
+      style={{ borderColor: accentBr, background: 'rgba(255,255,255,0.02)' }}>
+      <div className="font-bold text-white">Want these fixed?</div>
+      <p className="text-sm text-slate-400 mt-1 mb-4">
+        Leave a contact and we'll walk you through the findings above — no charge for the conversation.
+      </p>
+      <div className="grid sm:grid-cols-3 gap-2.5">
+        <input
+          type="email" required value={email} onChange={e => setEmail(e.target.value)}
+          placeholder="you@business.com" autoComplete="email"
+          className="rounded-xl bg-black/40 border border-white/10 px-3.5 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-white/25"
+        />
+        <input
+          type="text" value={name} onChange={e => setName(e.target.value)}
+          placeholder="Your name (optional)" autoComplete="name"
+          className="rounded-xl bg-black/40 border border-white/10 px-3.5 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-white/25"
+        />
+        <input
+          type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+          placeholder="Phone (optional)" autoComplete="tel"
+          className="rounded-xl bg-black/40 border border-white/10 px-3.5 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-white/25"
+        />
+      </div>
+      {error && <div className="text-xs text-red-400 mt-2.5">{error}</div>}
+      <button
+        type="submit" disabled={state === 'sending'}
+        className="mt-3 w-full sm:w-auto rounded-xl px-6 py-2.5 text-sm font-bold transition disabled:opacity-60"
+        style={{ background: accent, color: '#000' }}
+      >
+        {state === 'sending' ? 'Sending…' : 'Send me the fix list'}
+      </button>
+    </form>
   );
 }
 

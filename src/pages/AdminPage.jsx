@@ -123,8 +123,6 @@ const ENV_CHECKS = [
   { key: 'VITE_COINGECKO_API_KEY', label: 'CoinGecko API Key' },
 ];
 const API_ENDPOINTS = [
-  { id: 'sentiment',  url: '/api/sentiment',  label: 'Sentiment API',      icon: Activity },
-  { id: 'market',     url: '/api/market-data', label: 'Market Data API',   icon: BarChart3 },
   { id: 'leads',      url: '/api/leads',       label: 'Leads API',         icon: Database },
   { id: 'chat',       url: '/api/chat',        label: 'AI Chat API',       icon: Bot },
   { id: 'coingecko',  url: 'https://api.coingecko.com/api/v3/ping', label: 'CoinGecko', icon: Globe },

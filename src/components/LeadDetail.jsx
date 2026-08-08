@@ -142,6 +142,40 @@ function GlassCard({ children, className = '', highlight = false }) {
 // Google Maps link for a lead. Prefers the canonical listing URL captured from
 // Places; falls back to a Maps search on the business name and location so the
 // link resolves for every lead, on refresh and for previously-saved rows.
+/**
+ * The business's own Google listing photo, fetched through the proxy so the
+ * Places key stays server-side. Falls back to initials when the listing has no
+ * photo or the image fails — the tile must never render empty.
+ *
+ * Deliberately only used on the detail page: photo media is billed per request,
+ * so one image per lead you actually open is affordable where a grid of forty
+ * thumbnails is not.
+ */
+function ListingPhoto({ lead, size = 64 }) {
+  const [failed, setFailed] = React.useState(false);
+  React.useEffect(() => { setFailed(false); }, [lead?.photoRef]);
+
+  if (!lead?.photoRef || failed) {
+    return (
+      <div className="w-16 h-16 rounded-xl bg-brand/15 flex items-center justify-center text-brand font-bold text-lg">
+        {initialsOf(lead?.company || lead?.name)}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={`/api/leads?action=photo&ref=${encodeURIComponent(lead.photoRef)}&w=${size * 3}`}
+      alt={`${lead.company || 'Business'} listing photo`}
+      loading="lazy"
+      decoding="async"
+      width={size}
+      height={size}
+      onError={() => setFailed(true)}
+      className="w-16 h-16 rounded-xl object-cover bg-white/[0.04]"
+    />
+  );
+}
+
 function mapsLinkFor(lead) {
   if (lead?.mapsUrl) return { url: lead.mapsUrl, exact: true };
   const q = [lead?.company || lead?.name, lead?.address || lead?.location].filter(Boolean).join(' ');
@@ -1123,9 +1157,7 @@ Context:\n${ctx}`;
                   style={{ transition: 'stroke-dashoffset 0.8s ease' }} />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-16 h-16 rounded-xl bg-brand/15 flex items-center justify-center text-brand font-bold text-lg">
-                  {initialsOf(lead.company || lead.name)}
-                </div>
+                <ListingPhoto lead={lead} />
               </div>
             </div>
 

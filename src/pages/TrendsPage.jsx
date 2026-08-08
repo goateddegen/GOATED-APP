@@ -13,6 +13,13 @@ import { useGoatedAI } from '../hooks/useGoatedAI';
 // ============================================================================
 // ALPHA RADAR — Real-time global money-play surface
 // Globe-centric, single view, no tabs. AI tells you how to play what's moving.
+//
+// ⚠️ NOT ROUTED, AND ITS BACKEND IS GONE.
+// This page is kept on disk deliberately, but it is unreachable: /api/sentiment,
+// /api/trends, /api/plays and /api/market-data were deleted to free Vercel's
+// 12-function budget for leadgen. Three of those four returned Math.random()
+// rather than real market data, so nothing of value was lost — but reviving this
+// page means building a real data layer first, not just re-adding the routes.
 // ============================================================================
 
 const REFRESH_INTERVAL = 30_000;

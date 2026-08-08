@@ -4,15 +4,32 @@ Vercel Serverless Functions powering the GOATED Solutions B2B Sales Intelligence
 
 ## API Endpoints
 
+Vercel Hobby caps a project at 12 serverless functions. We are at 7, and the
+budget is the binding constraint on new endpoints — which is why related
+operations ride on one route behind an `action` parameter rather than each
+taking a slot of their own.
+
 | Endpoint | Method | Description |
 |---|---|---|
-| `/api/chat` | POST | AI chat assistant (Claude) |
-| `/api/leads` | GET | Lead data aggregation from Apollo, ZoomInfo, Clearbit |
-| `/api/market-data` | GET | Real-time crypto/market prices from CoinGecko |
-| `/api/trends` | GET | Trending topics aggregation |
-| `/api/health` | GET | System health check and diagnostics |
-| `/api/analytics` | GET/POST | Event tracking and KPI aggregation |
-| `/api/webhook` | POST | Webhook receiver for Stripe, Apollo, GitHub, Slack |
+| `/api/audit` | POST | Live crawl + LLM revenue-loss report |
+| `/api/audit` | POST | `action=claim` — attach a contact to a saved audit (inbound lead) |
+| `/api/audit` | GET | `?id={shareId}` — replay a saved report; `?inbound=1` — admin inbound queue |
+| `/api/chat` | POST | GOATED AI assistant (Groq) |
+| `/api/leads` | GET | Google Places lead sourcing |
+| `/api/leads` | GET | `action=whoami` — server-authoritative identity |
+| `/api/leads` | GET | `action=enrich` — contact extraction from the prospect's own site |
+| `/api/leads` | GET | `action=photo` — Places photo proxy (keeps the API key server-side) |
+| `/api/dashboard` | GET | Operator dashboard aggregation |
+| `/api/goated-ai` | POST | Assistant backend |
+| `/api/intelligence` | GET | Market/company intelligence |
+| `/api/voice` | POST | Voice agent (Vapi) |
+
+**Removed in this revision:** `/api/trends`, `/api/sentiment`, `/api/plays` and
+`/api/market-data`. They existed only for the disabled Trends page, and three of
+the four returned `Math.random()` rather than real data. `src/pages/TrendsPage.jsx`
+is still on disk, per the decision to keep hidden pages, but it is unrouted and
+its `fetch('/api/sentiment')` call now has no endpoint behind it — reviving that
+page means rebuilding the data layer first.
 
 ---
 

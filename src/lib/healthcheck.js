@@ -13,11 +13,7 @@ const API_ENDPOINTS = [
   { id: 'chat',         url: '/api/chat',          label: 'AI Chat',           method: 'GET' },
   { id: 'goated-ai',    url: '/api/goated-ai',     label: 'GOATED AI Engine',  method: 'GET' },
   { id: 'leads',        url: '/api/leads',         label: 'Leads API',         method: 'GET' },
-  { id: 'market-data',  url: '/api/market-data',   label: 'Market Data',       method: 'GET' },
-  { id: 'sentiment',    url: '/api/sentiment',     label: 'Sentiment API',     method: 'GET' },
-  { id: 'trends',       url: '/api/trends',        label: 'Trends API',        method: 'GET' },
   { id: 'dashboard',    url: '/api/dashboard',     label: 'Dashboard API',     method: 'GET' },
-  { id: 'plays',        url: '/api/plays',         label: 'Plays API',         method: 'GET' },
   { id: 'intelligence', url: '/api/intelligence',  label: 'Intelligence API',  method: 'GET' },
 ];
 

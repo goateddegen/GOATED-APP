@@ -796,6 +796,47 @@ export default async function handler(req, res) {
       });
     }
 
+    // ── Listing photo proxy ────────────────────────────────────────────────
+    // GET /api/leads?action=photo&ref={places/X/photos/Y}
+    //
+    // Places photo media URLs require the API key, so they cannot go straight
+    // into an <img src> without publishing the key. This streams the image
+    // through instead.
+    //
+    // It rides on this route rather than its own file because Hobby caps the
+    // project at 12 serverless functions and a photo proxy is not worth a slot.
+    //
+    // Photo media is billed per request, so the cache header matters as much as
+    // the code: one lead's photo fetched once serves every later view of that
+    // lead from the CDN.
+    if (action === 'photo') {
+      const ref = String(req.query?.ref || '');
+      // Anchored to the exact shape Places returns. Without this the parameter
+      // is an open redirect into googleapis.com with our key attached.
+      if (!/^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/.test(ref)) {
+        return res.status(400).json({ error: 'Invalid photo reference.' });
+      }
+      const PLACES_KEY = process.env.GOOGLE_PLACES_API_KEY;
+      if (!PLACES_KEY) return res.status(404).json({ error: 'Photos are unavailable.' });
+
+      const width = Math.min(Math.max(parseInt(req.query?.w, 10) || 400, 96), 1200);
+      try {
+        const r = await fetch(
+          `https://places.googleapis.com/v1/${ref}/media?maxWidthPx=${width}&key=${PLACES_KEY}`,
+          { redirect: 'follow', signal: AbortSignal.timeout(8000) },
+        );
+        if (!r.ok) return res.status(404).json({ error: 'Photo not available.' });
+        const buf = Buffer.from(await r.arrayBuffer());
+        res.setHeader('Content-Type', r.headers.get('content-type') || 'image/jpeg');
+        res.setHeader('Content-Length', String(buf.length));
+        // Listing photos effectively never change, and every re-fetch is billable.
+        res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800, immutable');
+        return res.status(200).end(buf);
+      } catch {
+        return res.status(404).json({ error: 'Photo could not be loaded.' });
+      }
+    }
+
     // ── Person-level enrichment ────────────────────────────────────────────
     // GET /api/leads?action=enrich&website=example.com
     //

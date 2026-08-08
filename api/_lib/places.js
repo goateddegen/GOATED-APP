@@ -55,6 +55,11 @@ const FIELDS = [
   // priceLevel rides in the same SKU we already pay for via reviews, and it
   // sizes the pitch: a very-expensive operator loses more per missed call.
   'places.priceLevel',
+  // Photos are a Pro-tier field, and `reviews` above has already moved this
+  // request to Enterprise+Atmosphere — so asking for them adds nothing to the
+  // search bill. Fetching the image bytes is a separate SKU; that happens on
+  // demand through the photo proxy, one image per lead, not per result.
+  'places.photos',
   'nextPageToken',
 ].join(',');
 
@@ -154,6 +159,16 @@ function placeGaps(p) {
       angle: 'If we cannot find a number in ten seconds, neither can their customers.',
     });
   }
+  // A listing with no photos is one nobody has logged into in years. Google
+  // ranks photo-rich profiles higher, and it's the cheapest thing to fix.
+  const photos = Array.isArray(p.photos) ? p.photos.length : 0;
+  if (photos === 0) {
+    gaps.push({
+      key: 'no-photos',
+      label: 'No photos on the listing',
+      angle: 'Nobody has touched this profile in years. Photos lift local ranking and are a same-day fix.',
+    });
+  }
   return gaps;
 }
 
@@ -215,6 +230,14 @@ export function transformPlace(p, index = 0) {
     reviewCount: reviews,
     mapsUrl: p.googleMapsUri || null,
     businessStatus: p.businessStatus || null,
+    // First listing photo, as an opaque reference. Not a URL: fetching the
+    // bytes needs the API key, so the client asks the photo proxy for it by
+    // reference and the key never leaves the server.
+    photoRef: p.photos?.[0]?.name || null,
+    // How many photos the listing has at all. Zero means nobody has touched
+    // this profile in years — that's the GMB-management pitch, and it costs
+    // nothing extra to know.
+    photoCount: Array.isArray(p.photos) ? p.photos.length : 0,
     // Qualification — is this a live business, and roughly how big?
     activity,
     revenueEstimate: revenue,

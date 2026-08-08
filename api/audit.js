@@ -15,6 +15,8 @@
 // Either one alone is enough; both = resilience.
 // =============================================================================
 
+import { saveAudit, loadAudit, claimAudit, loadInboundAudits, userFromRequest } from './_lib/db.js';
+
 // ─── CORS whitelist ─────────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
   'https://goated-app-nine.vercel.app',
@@ -669,16 +671,80 @@ export default async function handler(req, res) {
   setHeaders(res, origin);
 
   if (req.method === 'OPTIONS') return res.status(204).end();
+
+  // ── Permalink read: GET /api/audit?id={shareId} ──────────────────────────
+  // Serves a report that was already generated. This is what makes a shared
+  // link show the same findings the prospect was sent, instead of silently
+  // re-crawling their site and spending tokens on every open.
+  if (req.method === 'GET') {
+    // ── Operator view: inbound audits that left a contact ──────────────────
+    if (req.query?.inbound) {
+      const me = await userFromRequest(req);
+      const admins = (process.env.ADMIN_EMAILS || 'devfudkupradio@gmail.com')
+        .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+      if (!me || !admins.includes(String(me.email || '').toLowerCase())) {
+        return res.status(403).json({ error: 'Not authorised.' });
+      }
+      res.setHeader('Cache-Control', 'no-store, max-age=0');
+      return res.status(200).json({ inbound: await loadInboundAudits({ limit: 100 }) });
+    }
+
+    const shareId = String(req.query?.id || '').trim();
+    if (!/^[a-z0-9]{6,32}$/.test(shareId)) {
+      return res.status(400).json({ error: 'That audit link is not valid.', retryable: false });
+    }
+    const saved = await loadAudit(shareId);
+    if (!saved) {
+      return res.status(404).json({
+        error: 'That audit link has expired or was never saved. Run a fresh scan below.',
+        retryable: false,
+      });
+    }
+    // Long cache: a saved audit is immutable, so a prospect who opens the link
+    // three times costs us one read.
+    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=3600');
+    return res.status(200).json({ ...saved, shareId, saved: true });
+  }
+
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  let body = req.body;
+  if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
+
+  // ── Inbound capture: POST { action:'claim', shareId, email, name, phone } ──
+  // Someone who just watched us price their own revenue leak and then handed
+  // over an email is the warmest lead in the funnel.
+  //
+  // Handled above the rate limiter on purpose: the limiter exists to stop
+  // repeated *crawls*, and this writes one row. Behind it, the visitor most
+  // likely to convert — the one who scanned a few pages first — would be the
+  // one told to come back in a minute.
+  if (body?.action === 'claim') {
+    const shareId = String(body.shareId || '').trim();
+    const email = String(body.email || '').trim();
+    if (!/^[a-z0-9]{6,32}$/.test(shareId)) {
+      return res.status(400).json({ error: 'We could not match that report. Try running the scan again.' });
+    }
+    if (!/^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/.test(email)) {
+      return res.status(400).json({ error: 'That email address does not look right — check for a typo.' });
+    }
+    const saved = await claimAudit(shareId, { email, name: body.name, phone: body.phone });
+    if (!saved) {
+      return res.status(200).json({
+        ok: false,
+        error: "We could not save your details just now. Email us directly and we'll pick it up.",
+      });
+    }
+    return res.status(200).json({ ok: true });
+  }
+
+  // Everything past here runs a live crawl, which is what the limiter guards.
   const ip = req.headers?.['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
   if (!checkRate(ip)) return res.status(429).json({
     error: "You've run several audits in a row — give it about a minute and try again.",
     retryable: true,
   });
 
-  let body = req.body;
-  if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
   const rawUrl = body?.url;
   const norm = normalizeUrl(rawUrl);
   if (norm.error) return res.status(400).json({ error: norm.error, retryable: false });
@@ -850,6 +916,13 @@ export default async function handler(req, res) {
     socialData,  // { instagram: {...}, twitter: {...} } or {} if none
     analysis,
   };
+  // Persist for the permalink. Best-effort and awaited only briefly — if the
+  // write fails the visitor still gets their report, just without a share link.
+  const owner = await userFromRequest(req).catch(() => null);
+  payload.shareId = await saveAudit(payload, owner?.id || null);
+
+  // Cached *after* the share id is attached, so a repeat scan of the same URL
+  // hands out the same permalink instead of minting a second copy.
   cacheSet(url, payload);
   return res.status(200).json(payload);
 }

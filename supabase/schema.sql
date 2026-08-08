@@ -270,6 +270,56 @@ create policy "analytics_public_insert"
   with check (true);
 -- No select policy: events go in, only the service role reads them back.
 
+-- ─── Saved audits (shareable permalinks) ────────────────────────────────────
+-- A stored audit is what makes /#/a/{share_id} a *report* rather than an
+-- instruction to re-crawl. Before this table the share link re-ran the whole
+-- scan on every open: a different report each time, and a fresh LLM spend.
+--
+-- `payload` is the entire audit response, so rendering a saved audit needs no
+-- migration when the report grows new sections.
+create table if not exists public.audits (
+  id         bigint generated always as identity primary key,
+  share_id   text not null,
+  url        text not null,
+  host       text,
+  -- Null for anonymous visitors auditing their own site — those are the
+  -- inbound leads, and we still want the report to be shareable.
+  owner_id   uuid references auth.users(id) on delete set null,
+  -- Low end of the estimated monthly revenue loss. Denormalised out of the
+  -- payload purely so inbound audits can be sorted by money on the table
+  -- without unpacking every jsonb blob.
+  monthly_loss bigint,
+  payload    jsonb not null,
+  views      int not null default 0,
+  -- Inbound capture. A visitor who runs an audit on their own site and leaves
+  -- a contact is the warmest lead this app produces; before these columns that
+  -- signal was thrown away and the only CTA was a mailto we never saw.
+  lead_email text,
+  lead_name  text,
+  lead_phone text,
+  claimed_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (share_id)
+);
+
+create index if not exists audits_inbound_idx
+  on public.audits (claimed_at desc) where lead_email is not null;
+
+create index if not exists audits_owner_idx on public.audits (owner_id, created_at desc);
+create index if not exists audits_host_idx  on public.audits (host, created_at desc);
+
+alter table public.audits enable row level security;
+
+-- No anon policies at all. Reads and writes both go through /api/audit with the
+-- service key, which bypasses RLS — so a share_id is the only way in, and the
+-- table cannot be enumerated with the publishable key.
+
+drop policy if exists "audits_owner_select" on public.audits;
+create policy "audits_owner_select"
+  on public.audits for select
+  to authenticated
+  using (auth.uid() = owner_id);
+
 -- ─── Realtime ───────────────────────────────────────────────────────────────
 -- src/lib/supabase.js subscribes to these three tables.
 --
