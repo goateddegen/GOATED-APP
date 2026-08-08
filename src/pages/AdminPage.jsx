@@ -11,6 +11,7 @@ import {
   Filter, Search, Receipt, ArrowDown, ArrowUp
 } from 'lucide-react';
 import { useStore, fmt } from '../hooks/useStore';
+import { isAdminEmail } from '../lib/config';
 import { authedFetch } from '../lib/supabase';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -337,7 +338,6 @@ function FeatureFlag({ label, description, enabled, onToggle }) {
 }
 
 // ─── Admin Email Gate ─────────────────────────────────────────────────────
-const ADMIN_EMAIL = 'secrdev@gmail.com';
 
 function AdminAccessDenied() {
   return (
@@ -950,7 +950,7 @@ function TransactionActivityLog() {
 
 // ════════════════════════════════════════════════════════════════════════════
 export default function AdminPage() {
-  const { isLoggedIn, user, page, setAccountModalOpen, setPage, setAiOpen } = useStore();
+  const { isLoggedIn, user, verifiedEmail, page, setAccountModalOpen, setPage, setAiOpen } = useStore();
   const [endpoints, setEndpoints] = useState(() =>
     API_ENDPOINTS.reduce((a, ep) => ({ ...a, [ep.id]: { status: 'unknown', latency: null, httpStatus: null, checkedAt: null } }), {})
   );
@@ -979,8 +979,15 @@ export default function AdminPage() {
   // Auth gate
   if (!isLoggedIn) return <AccessDenied onLogin={() => setAccountModalOpen(true)} />;
 
-  // Admin email gate — only secrdev@gmail.com can access
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  // Admin gate. Reads the same allow-list as the nav gate and /api/leads?action=whoami
+  // rather than a second hardcoded address — this file used to name an account
+  // that appears nowhere else, so the operator who could reach the page was
+  // shown "Limited Access" once they arrived.
+  //
+  // verifiedEmail is preferred over user.email because App.jsx clears it when
+  // the server disagrees with the session's own claim, so this follows the
+  // server's answer rather than the browser's.
+  const isAdmin = isAdminEmail(verifiedEmail || user?.email);
 
   // Health check all endpoints
   const checkAllEndpoints = useCallback(async () => {
