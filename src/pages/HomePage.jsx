@@ -656,6 +656,58 @@ export default function HomePage() {
       </section>
 
 
+      {/* ═══ TALK TO GOATED AI ═══
+          The assistant is behind the account wall, so this doubles as the
+          reason to make one: it names what the thing actually does with real
+          example queries rather than promising "AI-powered insights". */}
+      <section className="px-6 py-16 sm:py-20 relative overflow-hidden">
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(6,182,212,0.04) 0%, rgba(0,0,0,0) 60%)' }} />
+        <div className="max-w-5xl mx-auto relative">
+          <div className="rounded-2xl border border-cyan-400/25 bg-gradient-to-br from-cyan-500/[0.06] via-black/60 to-transparent p-6 sm:p-10">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-8">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-lg bg-cyan-400/15 flex items-center justify-center">
+                    <Bot size={16} className="text-cyan-400" />
+                  </div>
+                  <span className="text-cyan-400 text-xs font-bold uppercase tracking-widest">Talk to GOATED AI</span>
+                </div>
+                <h2 className="text-3xl sm:text-4xl font-black mb-3">
+                  Ask for a trade and a city. <span className="text-cyan-400">Get real businesses back.</span>
+                </h2>
+                <p className="text-slate-400 leading-relaxed mb-5">
+                  Not a chatbot that summarises your own data back at you. Ask it for plumbers in Tampa and it
+                  goes and finds them — names, numbers, review counts, and which ones have no website. Then ask
+                  it what to say when they pick up.
+                </p>
+                <button
+                  onClick={() => setAiOpen(true)}
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-cyan-400 text-black font-bold hover:bg-cyan-300 transition-colors">
+                  <Bot size={18} /> Open the assistant <ArrowRight size={16} />
+                </button>
+                <p className="text-[11px] text-slate-500 mt-2.5">Free with an account · no card</p>
+              </div>
+
+              {/* Real queries it answers, not invented capabilities. */}
+              <div className="lg:w-[340px] shrink-0 space-y-2">
+                {[
+                  'hvac leads in dallas',
+                  'plumbers near me with no website',
+                  'who should I call first?',
+                  'handle a price objection',
+                  'what do I quote a roofer with no site?',
+                ].map(q => (
+                  <div key={q} className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-black/50 border border-white/[0.06]">
+                    <span className="text-cyan-400/60 text-xs shrink-0">&rsaquo;</span>
+                    <span className="text-sm text-slate-300 truncate">{q}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ═══ FINAL CTA ═══ */}
       <section className="px-6 py-20 sm:py-28 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-brand/5 to-transparent" />

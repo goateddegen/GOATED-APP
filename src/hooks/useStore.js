@@ -981,7 +981,19 @@ export const useStore = create((set, get) => ({
 
   // AI Overlay
   aiOpen: false,
-  setAiOpen: (v) => set({ aiOpen: v }),
+  // The assistant is behind the account wall like the leads and dashboard
+  // pages. Gated here rather than at each call site because it opens from the
+  // G keybind, the sidebar, two homepage cards and the leads page — gating
+  // those individually means missing one.
+  setAiOpen: (v) => {
+    if (!v) { set({ aiOpen: false }); return; }
+    const s = get();
+    if (s.isLoggedIn) { set({ aiOpen: true }); return; }
+    // Session not resolved yet — do nothing rather than accuse them of being
+    // logged out.
+    if (!s.authChecked) return;
+    set({ accountModalOpen: true });
+  },
   aiModel: 'goated-v1',
   setAiModel: (m) => set({ aiModel: m }),
 
@@ -1410,6 +1422,12 @@ export const useStore = create((set, get) => ({
   setUser: (u) => set({ user: u }),
   isLoggedIn: false,
   setIsLoggedIn: (v) => set({ isLoggedIn: v }),
+
+  // True once Supabase has told us whether a session exists. Anything that
+  // gates on isLoggedIn has to wait for this, or a signed-in visitor gets
+  // treated as a stranger for the second before rehydration lands.
+  authChecked: false,
+  setAuthChecked: (v) => set({ authChecked: v }),
   userPlan: 'free',
   setUserPlan: (p) => set({ userPlan: p }),
   accountModalOpen: false,

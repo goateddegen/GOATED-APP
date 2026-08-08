@@ -262,7 +262,14 @@ export default function App() {
   // False until Supabase has told us whether a session exists. requireAuth must
   // not bounce anyone before this flips, or a signed-in user gets the login
   // modal thrown at them on every page load.
-  const [authChecked, setAuthChecked] = useState(!supabase);
+  const [authChecked, setAuthCheckedLocal] = useState(!supabase);
+  const setAuthCheckedStore = useStore(s => s.setAuthChecked);
+  // Kept in both places: App renders off the local copy, and the store copy
+  // lets gates outside this component (the assistant) wait for the same signal.
+  const setAuthChecked = useCallback((v) => {
+    setAuthCheckedLocal(v);
+    setAuthCheckedStore(v);
+  }, [setAuthCheckedStore]);
 
   // Scroll to top on ANY view change — page nav, detail open/close, etc.
   useEffect(() => {
