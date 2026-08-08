@@ -8,7 +8,7 @@ import {
   Crown, PhoneCall, Timer, UserSearch, Table2,
   ExternalLink, MapPin, Crosshair, AlertTriangle, Radio, RefreshCw, Globe,
 } from 'lucide-react';
-import { useStore, fmt, priorities, statuses, industries, initialsOf, cityOf } from '../hooks/useStore';
+import { useStore, fmt, priorities, industries, initialsOf, cityOf } from '../hooks/useStore';
 import { buildOutreachStrategy, deriveGaps, recommendTier, buildPackage } from '../lib/outreach';
 
 // ---------------------------------------------------------------------------
@@ -699,8 +699,6 @@ export default function LeadsPage({ onSelect }) {
   const setSearch = useStore(s => s.setSearch);
   const filterPriority = useStore(s => s.filterPriority);
   const setFilterPriority = useStore(s => s.setFilterPriority);
-  const filterStatus = useStore(s => s.filterStatus);
-  const setFilterStatus = useStore(s => s.setFilterStatus);
   const leadsPage = useStore(s => s.leadsPage);
   const setLeadsPage = useStore(s => s.setLeadsPage);
   const leadsPerPage = useStore(s => s.leadsPerPage);
@@ -780,13 +778,28 @@ export default function LeadsPage({ onSelect }) {
       .map(([city, count]) => ({ city, count }));
   }, [liveLeads, noWebsiteLeads]);
 
+  // The city and priority filters used to reach only the table, so ticking a
+  // city left these two lists showing businesses from everywhere — the page
+  // said it was filtered and two thirds of it was not.
+  const matchesFilters = useCallback((l) => {
+    if (filterPriority !== 'all' && l.priority !== filterPriority) return false;
+    if (selectedCities.length && !selectedCities.includes(cityOf(l))) return false;
+    return true;
+  }, [filterPriority, selectedCities]);
+
   const callQueue = useMemo(() => {
     const pool = [...(liveLeads || []), ...(noWebsiteLeads || [])];
     return pool
       .filter(l => l.phone && l.openNow === true)
+      .filter(matchesFilters)
       .sort((a, b) => (b.score || 0) - (a.score || 0))
       .slice(0, 12);
-  }, [liveLeads, noWebsiteLeads]);
+  }, [liveLeads, noWebsiteLeads, matchesFilters]);
+
+  const noWebsiteShown = useMemo(
+    () => (noWebsiteLeads || []).filter(matchesFilters),
+    [noWebsiteLeads, matchesFilters],
+  );
 
 
   // Core state
@@ -829,7 +842,6 @@ export default function LeadsPage({ onSelect }) {
     setAiFilters(filters);
     setAiUnderstood(understood);
     if (filters.search) setSearch(filters.search);
-    if (filters.status) setFilterStatus(filters.status);
     if (filters.priority) setFilterPriority(filters.priority);
     if (filters.sort) setSortField(filters.sort === 'dealValue' ? 'dealValue' : filters.sort);
     if (filters.order) setSortDirection(filters.order);
@@ -875,12 +887,12 @@ export default function LeadsPage({ onSelect }) {
         setAiMessages(prev => [...prev, { role: 'assistant', content: data.content, isAI: true }]);
       }
     } catch {} finally { setIsAiThinking(false); }
-  }, [aiPrompt, setSearch, setFilterStatus, setFilterPriority, setSortField, setSortDirection, setLeadsPage]);
+  }, [aiPrompt, setSearch, setFilterPriority, setSortField, setSortDirection, setLeadsPage]);
 
   const clearAIFilters = useCallback(() => {
-    setAiFilters(null); setAiUnderstood([]); setSearch(''); setFilterPriority('all'); setFilterStatus('all'); setLeadsPage(0); setVisibleCount(50);
+    setAiFilters(null); setAiUnderstood([]); setSearch(''); setFilterPriority('all'); setLeadsPage(0); setVisibleCount(50);
     showToast('Filters cleared');
-  }, [setSearch, setFilterPriority, setFilterStatus, setLeadsPage, showToast]);
+  }, [setSearch, setFilterPriority, setLeadsPage, showToast]);
 
   // Deep-link: TrendsPage hotspot / NotchBar / Cmd+K can prefill a search, we consume once on mount
   const leadsSearchPrefill = useStore(s => s.leadsSearchPrefill);
@@ -901,9 +913,8 @@ export default function LeadsPage({ onSelect }) {
     filtered = filtered.filter(l => {
       const matchSearch = !search || l.name.toLowerCase().includes(searchLower) || l.company.toLowerCase().includes(searchLower) || l.industry.toLowerCase().includes(searchLower);
       const matchPriority = filterPriority === 'all' || l.priority === filterPriority;
-      const matchStatus = filterStatus === 'all' || l.status === filterStatus;
       const matchCity = !selectedCities.length || selectedCities.includes(cityOf(l));
-      return matchSearch && matchPriority && matchStatus && matchCity;
+      return matchSearch && matchPriority && matchCity;
     });
 
     if (aiFilters) {
@@ -934,7 +945,7 @@ export default function LeadsPage({ onSelect }) {
     });
 
     return filtered;
-  }, [activeLeads, search, filterPriority, filterStatus, aiFilters, sortField, sortDirection, selectedCities]);
+  }, [activeLeads, search, filterPriority, aiFilters, sortField, sortDirection, selectedCities]);
 
   const filteredLeads = useMemo(() => allFilteredLeads.slice(0, visibleCount), [allFilteredLeads, visibleCount]);
   const totalFiltered = allFilteredLeads.length;
@@ -1094,7 +1105,7 @@ export default function LeadsPage({ onSelect }) {
           they are open at this moment, with a number to dial, best score
           first. Roughly half of any sample is shut at a given time, so this is
           the difference between dialling and leaving voicemails. */}
-      {callQueue.length > 0 && (
+      {(callQueue.length > 0 || selectedCities.length > 0 || filterPriority !== 'all') && (
         <div className="mb-5 rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.03] overflow-hidden">
           <div className="flex items-center gap-3 px-4 py-3 border-b border-emerald-500/15">
             <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center shrink-0">
@@ -1141,6 +1152,19 @@ export default function LeadsPage({ onSelect }) {
                 </div>
               </div>
             ))}
+            {!callQueue.length && (
+              <div className="px-4 py-6 text-center">
+                <p className="text-xs text-slate-400">
+                  {selectedCities.length || filterPriority !== 'all'
+                    ? 'Nobody open right now in the cities or priority you have selected.'
+                    : 'Nobody on your list is open right now.'}
+                </p>
+                <p className="text-[11px] text-slate-600 mt-1">
+                  This list only shows businesses whose published hours say they are trading at this moment
+                  and that have a number to dial. Try again during their working hours, or load another market.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1150,7 +1174,7 @@ export default function LeadsPage({ onSelect }) {
           which buried them. A business with no website is the one call where
           we sell the build and the phone cover together, so it gets its own
           list, populated from the same fetch as the main one. */}
-      {noWebsiteLeads.length > 0 && (
+      {(noWebsiteLeads.length > 0 || selectedCities.length > 0 || filterPriority !== 'all') && (
         <div className="mb-5 rounded-2xl border border-amber-500/25 bg-amber-500/[0.03] overflow-hidden">
           <div className="flex items-center gap-3 px-4 py-3 border-b border-amber-500/15">
             <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
@@ -1163,11 +1187,11 @@ export default function LeadsPage({ onSelect }) {
               </p>
             </div>
             <span className="ml-auto shrink-0 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
-              {noWebsiteLeads.length}
+              {noWebsiteShown.length}
             </span>
           </div>
           <div className="divide-y divide-white/[0.04] max-h-[420px] overflow-y-auto">
-            {noWebsiteLeads.map((l) => {
+            {noWebsiteShown.map((l) => {
               const act = l.activity || {};
               const live = act.level === 'active';
               return (
@@ -1201,6 +1225,23 @@ export default function LeadsPage({ onSelect }) {
                 </button>
               );
             })}
+            {/* Say why it is empty. A section that simply vanishes reads as a
+                bug, and one that is empty because of a filter reads as an
+                empty database. */}
+            {!noWebsiteShown.length && (
+              <div className="px-4 py-6 text-center">
+                <p className="text-xs text-slate-400">
+                  {noWebsiteLeads.length
+                    ? 'None in the cities or priority you have selected.'
+                    : 'No businesses without a website in your current leads.'}
+                </p>
+                <p className="text-[11px] text-slate-600 mt-1">
+                  {noWebsiteLeads.length
+                    ? `${noWebsiteLeads.length} elsewhere — clear the filters to see them.`
+                    : 'They are roughly one in ten. Load more leads, or try a city with more solo operators.'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1293,11 +1334,8 @@ export default function LeadsPage({ onSelect }) {
           <option value="all">All Priorities</option>
           {priorities.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
-        <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setLeadsPage(0); setVisibleCount(50); }}
-          className="px-3 py-2 bg-surface-2 border border-white/[0.05] rounded-lg text-xs text-white outline-none">
-          <option value="all">All Statuses</option>
-          {statuses.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        {/* Status filter removed: every live lead is 'new' until something
+            sets it, so the control only ever had one meaningful value. */}
         {/* Ticking filters the table straight away; "Load these cities" goes
             and fetches more of those markets, which is the slower action and
             so is explicit rather than firing on every checkbox. */}
