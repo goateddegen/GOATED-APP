@@ -924,19 +924,54 @@ function persistLeads(leads, key = LIVE_LEADS_KEY) {
  * New rows go on the end and are given ids above every existing one. Reusing
  * the API's 1..25 numbering would collide with stored leads, and since `id` is
  * what selects a lead, opening one row would have shown a different business.
+ *
+ * A lead we already hold is REFRESHED in place rather than skipped. It used to
+ * be skipped outright, which meant a row captured before a field existed could
+ * never gain it — leads stored before listing photos were collected showed
+ * initials forever, and every later improvement would have had the same
+ * problem. Refreshing also keeps ratings, review counts and opening hours
+ * current instead of frozen at whenever the row was first seen.
+ *
+ * Three things survive the refresh, because they are ours rather than Google's:
+ * the row's `id` (it is what selects a lead, and changing it would break an
+ * open detail view), `_addedAt`, and any pipeline status the operator has set.
  */
 function mergeLeads(existing, incoming) {
-  const seen = new Set(existing.map(leadKey));
   let nextId = existing.reduce((m, l) => Math.max(m, Number(l.id) || 0), 0) + 1;
+
+  const byKey = new Map(existing.map(l => [leadKey(l), l]));
+  const refreshedKeys = new Set();
   const added = [];
+
   for (const l of incoming) {
     const k = leadKey(l);
-    if (seen.has(k)) continue;
-    seen.add(k);
-    added.push({ ...l, id: nextId++, _addedAt: new Date().toISOString() });
+    const prev = byKey.get(k);
+    if (prev) {
+      if (refreshedKeys.has(k)) continue;   // same business twice in one batch
+      refreshedKeys.add(k);
+      byKey.set(k, {
+        ...prev,
+        ...l,
+        id: prev.id,
+        _addedAt: prev._addedAt,
+        // 'new' is the API default, so it must not overwrite real progress.
+        status: (prev.status && prev.status !== 'new') ? prev.status : (l.status || prev.status),
+        _refreshedAt: new Date().toISOString(),
+      });
+      continue;
+    }
+    byKey.set(k, { ...l, id: nextId++, _addedAt: new Date().toISOString() });
+    added.push(k);
   }
-  const merged = [...existing, ...added].slice(-MAX_STORED_LEADS);
-  return { merged, addedCount: added.length };
+
+  // Rebuild in the original order so a refresh never reshuffles the list under
+  // someone mid-scroll; genuinely new rows follow.
+  const merged = [
+    ...existing.map(l => byKey.get(leadKey(l))).filter(Boolean),
+    ...added.map(k => byKey.get(k)),
+  ].slice(-MAX_STORED_LEADS);
+
+  return { merged, addedCount: added.length, refreshedCount: refreshedKeys.size };
 }
 
 export const useStore = create((set, get) => ({
@@ -1291,6 +1326,11 @@ export const useStore = create((set, get) => ({
   setFilterSource: (f) => set({ filterSource: f, leadsPage: 0 }),
   selectedLead: null,
   setSelectedLead: (l) => set({ selectedLead: l }),
+  // A lead permalink (/#/lead/{placeId}) parked until the session resolves.
+  // Held in the store rather than a local ref because the visitor may be sent
+  // to Home and through the login modal before it can be acted on.
+  pendingLeadId: null,
+  setPendingLeadId: (v) => set({ pendingLeadId: v }),
   detailOpen: false,
   setDetailOpen: (v) => set({ detailOpen: v }),
   previousPage: null,

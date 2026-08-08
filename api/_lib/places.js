@@ -60,6 +60,18 @@ const FIELDS = [
   // search bill. Fetching the image bytes is a separate SKU; that happens on
   // demand through the photo proxy, one image per lead, not per result.
   'places.photos',
+  // All three below are already inside the SKU `reviews` put us in, so they add
+  // nothing to the bill. Verified populated against real trade searches before
+  // being added — see the notes on each.
+  //
+  // 10/10 populated. Carries writeAReviewUri, which is not just a signal but a
+  // deliverable: the link a client sends customers to get reviewed.
+  'places.googleMapsLinks',
+  // ~60% populated on trades, and it is Google's own observed ticket range for
+  // the business. Better than inferring spend from a trade average.
+  'places.priceRange',
+  // 10/10. Their local clock, so the call window is a fact rather than a guess.
+  'places.utcOffsetMinutes',
   'nextPageToken',
 ].join(',');
 
@@ -238,6 +250,18 @@ export function transformPlace(p, index = 0) {
     // this profile in years — that's the GMB-management pitch, and it costs
     // nothing extra to know.
     photoCount: Array.isArray(p.photos) ? p.photos.length : 0,
+    // The review link is the one to hand a client; the rest are for us.
+    reviewLink: p.googleMapsLinks?.writeAReviewUri || null,
+    reviewsLink: p.googleMapsLinks?.reviewsUri || null,
+    // Google's observed ticket range. Sanity-checked because the low bound is
+    // sometimes a literal $1, which would make any pitch built on it nonsense.
+    ticketRange: (() => {
+      const lo = Number(p.priceRange?.startPrice?.units);
+      const hi = Number(p.priceRange?.endPrice?.units);
+      if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi <= 0 || hi < lo || lo < 20) return null;
+      return { low: lo, high: hi, currency: p.priceRange?.startPrice?.currencyCode || 'USD' };
+    })(),
+    utcOffsetMinutes: Number.isFinite(p.utcOffsetMinutes) ? p.utcOffsetMinutes : null,
     // Qualification — is this a live business, and roughly how big?
     activity,
     revenueEstimate: revenue,
@@ -382,5 +406,47 @@ export async function searchPlaces({ query, location = '', limit = 20, pageToken
     };
   } catch (e) {
     return { error: `Places request failed: ${e.message}`, fallback: true };
+  }
+}
+
+/**
+ * One place by id, normalised through the same mapper as search results.
+ *
+ * This is what makes a lead permalink resolve for someone whose browser has
+ * never seen that lead — the link carries the place id, not a row from anyone's
+ * local store. It also backfills leads captured before a field existed: an old
+ * row with a _placeId can be re-hydrated rather than left permanently missing
+ * whatever we added since.
+ *
+ * The field mask is the same constant the search uses, minus the `places.`
+ * prefix that only applies to the search response envelope.
+ */
+export async function getPlaceById(placeId) {
+  if (!placesConfigured()) return { error: 'GOOGLE_PLACES_API_KEY not set' };
+  if (!/^[A-Za-z0-9_-]{10,}$/.test(String(placeId || ''))) {
+    return { error: 'Invalid place id' };
+  }
+  const mask = FIELDS
+    .split(',')
+    .filter(f => f.startsWith('places.'))
+    .map(f => f.slice('places.'.length))
+    .join(',');
+  try {
+    const r = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`, {
+      headers: {
+        'X-Goog-Api-Key': key(),
+        'X-Goog-FieldMask': mask,
+      },
+      signal: AbortSignal.timeout(9000),
+    });
+    if (!r.ok) {
+      const body = await r.text().catch(() => '');
+      return { error: r.status === 404 ? 'That business is no longer listed on Google.' : `Places ${r.status}`, detail: body.slice(0, 160) };
+    }
+    const p = await r.json();
+    if (!p?.id) return { error: 'That business is no longer listed on Google.' };
+    return { lead: transformPlace(p, 0) };
+  } catch (e) {
+    return { error: 'Could not reach Google Places just now.', detail: String(e.message || e).slice(0, 120) };
   }
 }

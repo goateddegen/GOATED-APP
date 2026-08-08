@@ -731,7 +731,7 @@ function getAllLeads(poolSize = DEFAULT_POOL) {
 import { guardRequest, setCacheHeaders } from './_lib/guard.js';
 import { extractContacts } from './_lib/contacts.js';
 import { userFromRequest, saveLeads, loadLeads, dbConfigured } from './_lib/db.js';
-import { searchPlaces, placesConfigured } from './_lib/places.js';
+import { searchPlaces, placesConfigured, getPlaceById } from './_lib/places.js';
 
 export default async function handler(req, res) {
   // Apollo API passthrough — 30/min per IP is plenty, daily cap prevents quota burn
@@ -794,6 +794,29 @@ export default async function handler(req, res) {
         // because the email comes from a signature-checked token.
         isAdmin: admins.includes(email),
       });
+    }
+
+    // ── Single place by id ─────────────────────────────────────────────────
+    // GET /api/leads?action=place&id={placeId}
+    //
+    // Two jobs. It resolves a lead permalink for a browser that has never seen
+    // that lead — the link carries a Google place id, not a row out of someone's
+    // local storage. And it re-hydrates leads saved before a field existed,
+    // which is why listing photos were missing on everything already in the
+    // store: those rows were captured before photoRef was collected, and the
+    // merge keeps existing rows rather than replacing them.
+    if (action === 'place') {
+      const id = String(req.query?.id || '').trim();
+      const out = await getPlaceById(id);
+      if (out.error) {
+        return res.status(out.error === 'Invalid place id' ? 400 : 404).json({ error: out.error });
+      }
+      // Short browser cache, longer at the edge. A listing changes rarely, but
+      // this payload gains fields as the app grows, and a 10-minute private
+      // cache meant a lead opened just before a deploy kept serving the old
+      // shape — which reads as "the new field is broken".
+      res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=3600');
+      return res.status(200).json({ lead: out.lead });
     }
 
     // ── Listing photo proxy ────────────────────────────────────────────────

@@ -144,9 +144,14 @@ export default function AuditPage() {
     }
   }, [url]);
 
-  // The prefill effect above fires before `run` is defined, so it calls
-  // through this ref rather than the binding.
-  useEffect(() => { runAuditRef.current = run; }, [run]);
+  // Assigned during render, NOT in an effect.
+  //
+  // The hash resolver below runs on mount and calls through these refs. An
+  // effect-based assignment runs *after* it, so the ref was still null on the
+  // one pass that mattered and `?.` swallowed the call — permalinks silently
+  // did nothing. StrictMode hid this in dev by invoking effects twice, so the
+  // second pass always found a populated ref. Production runs them once.
+  runAuditRef.current = run;
 
   // ── Load a saved audit by share id ─────────────────────────────────────
   // The report the prospect opens is the one they were sent — same findings,
@@ -172,6 +177,8 @@ export default function AuditPage() {
     }
   }, []);
 
+  openSavedRef.current = openSaved;
+
   // ── Hash router ────────────────────────────────────────────────────────
   //   /#/a/{shareId}        → render the stored report (permalink)
   //   /#/for/{slug}?u={url} → legacy links already in the wild; re-runs live
@@ -195,9 +202,6 @@ export default function AuditPage() {
       if (phaseTimer.current) clearInterval(phaseTimer.current);
     };
   }, []);
-
-  // Same ref indirection as `run` — this effect is declared above the callback.
-  useEffect(() => { openSavedRef.current = openSaved; }, [openSaved]);
 
   // ── Shareable link ─────────────────────────────────────────────────────
   // A stored audit gets a real permalink. Without one (storage not configured,

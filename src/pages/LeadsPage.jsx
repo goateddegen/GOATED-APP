@@ -967,6 +967,16 @@ export default function LeadsPage({ onSelect }) {
     return () => observer.disconnect();
   }, [hasMore, totalFiltered]);
 
+  // What the banner should call the current view. Ticked cities win over the
+  // searched market, because they are what is actually on screen; past three
+  // it degrades to a count rather than running off the line.
+  const shownMarket = useMemo(() => {
+    if (selectedCities.length === 1) return selectedCities[0];
+    if (selectedCities.length === 2) return selectedCities.join(' & ');
+    if (selectedCities.length > 2) return `${selectedCities.length} cities`;
+    return market || resolvedMarket || '';
+  }, [selectedCities, market, resolvedMarket]);
+
   // Pipeline stats
   const stats = useMemo(() => {
     const total = activeLeads.length;
@@ -1042,7 +1052,10 @@ export default function LeadsPage({ onSelect }) {
           <Radio size={16} className="text-emerald-400 flex-shrink-0" />
           <span className="text-sm text-emerald-200/90">
             <span className="font-semibold">Live data</span>
-            {(market || resolvedMarket) && <> &mdash; <span className="font-semibold text-white">{market || resolvedMarket}</span></>}
+            {/* Names the cities actually on screen. Ticking a city filters the
+                list, so a banner still naming the searched market described a
+                set the operator was no longer looking at. */}
+            {shownMarket && <> &mdash; <span className="font-semibold text-white">{shownMarket}</span></>}
             {' '}&mdash; real local businesses from Google Maps. Names, addresses, phone numbers and
             review counts are theirs; revenue is estimated from review volume and shown as a range.
             {/* IP geolocation is approximate, and on a mobile network it often
@@ -1050,7 +1063,7 @@ export default function LeadsPage({ onSelect }) {
                 Houston phone can come back as Philadelphia. Say which city we
                 used and how to change it, rather than leaving the operator to
                 work it out from the addresses. */}
-            {!market && resolvedMarket && (
+            {!market && resolvedMarket && !selectedCities.length && (
               <span className="text-emerald-200/60"> Not your area? Pick or search a city in the filter bar.</span>
             )}
           </span>

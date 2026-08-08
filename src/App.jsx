@@ -27,7 +27,7 @@ const TrendsPage = React.memo(lazy(() => import('./pages/TrendsPage')));
 // const MarketPage = lazy(() => import('./pages/MarketPage'));
 const WalletPage = React.memo(lazy(() => import('./pages/WalletPage')));
 const AdminPage = React.memo(lazy(() => import('./pages/AdminPage')));
-// Public lead magnet — Revenue Loss Auditor. No login. Shareable at /#/for/{slug}
+// Revenue Loss Auditor. Account-walled; permalinks at /#/a/{shareId}.
 const AuditPage = React.memo(lazy(() => import('./pages/AuditPage')));
 // v7.5 cover page — shown until VITE_LAUNCH_READY === 'true' is set in env vars.
 // Eagerly imported (not lazy) so it shows instantly with no loading flash.
@@ -244,6 +244,8 @@ export default function App() {
   const detailOpen = useStore(s => s.detailOpen);
   const setDetailOpen = useStore(s => s.setDetailOpen);
   const setSelectedLead = useStore(s => s.setSelectedLead);
+  const pendingLeadId = useStore(s => s.pendingLeadId);
+  const setPendingLeadId = useStore(s => s.setPendingLeadId);
   const setMobileMenu = useStore(s => s.setMobileMenu);
   const setPreviousPage = useStore(s => s.setPreviousPage);
   const accountModalOpen = useStore(s => s.accountModalOpen);
@@ -391,12 +393,27 @@ export default function App() {
     trackPageView(page);
   }, [page]);
 
-  // Hash router — shareable audits at /#/a/{shareId} (saved report),
-  // /#/for/{slug} (legacy, re-runs live) and /#/audit.
-  // Public-facing lead magnet URLs need to resolve even on first page load.
+  // Hash router — the app stays a lazy-loaded SPA; these are the permalinks
+  // into it.
+  //   /#/a/{shareId}        saved audit report
+  //   /#/lead/{placeId}     one lead, resolved from Google's place id
+  //   /#/for/{slug}         legacy audit link, re-runs live
+  //   /#/audit              the auditor itself
+  //
+  // Re-runs when the session resolves. Both targets are behind the account
+  // wall, so an anonymous visitor gets bounced to Home with the login modal;
+  // the hash survives that bounce untouched, and this effect firing again on
+  // isLoggedIn is what carries them to the page they actually asked for
+  // instead of stranding them on the homepage after signing in.
   useEffect(() => {
     const resolveHash = () => {
       const h = window.location.hash || '';
+      const lead = h.match(/^#\/lead\/([A-Za-z0-9_-]{10,})/);
+      if (lead) {
+        setPendingLeadId(lead[1]);
+        setPage('leads');
+        return;
+      }
       if (/^#\/(a\/|for\/|audit)/i.test(h)) {
         setPage('audit');
       } else if (/^#\/managed/i.test(h)) {
@@ -407,7 +424,30 @@ export default function App() {
     resolveHash();
     window.addEventListener('hashchange', resolveHash);
     return () => window.removeEventListener('hashchange', resolveHash);
-  }, [setPage]);
+  }, [setPage, setPendingLeadId, isLoggedIn, authChecked]);
+
+  // Resolve a lead permalink once we know who the visitor is.
+  //
+  // Fetched by place id rather than looked up in the local store, so the link
+  // opens for someone whose browser has never run a search — which is the whole
+  // point of being able to send it to someone.
+  useEffect(() => {
+    if (!pendingLeadId || !isLoggedIn || !authChecked) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`/api/leads?action=place&id=${encodeURIComponent(pendingLeadId)}`);
+        const d = r.ok ? await r.json() : null;
+        if (cancelled) return;
+        if (d?.lead) {
+          setSelectedLead(d.lead);
+          setDetailOpen(true);
+        }
+      } catch { /* leaves them on the leads list, which is a reasonable landing */ }
+      if (!cancelled) setPendingLeadId(null);
+    })();
+    return () => { cancelled = true; };
+  }, [pendingLeadId, isLoggedIn, authChecked, setPendingLeadId, setSelectedLead, setDetailOpen]);
 
   // Debounced page navigation — prevents choppy rapid-fire page switching
   // Also scrolls to top so pages never open mid-scroll
@@ -510,9 +550,10 @@ export default function App() {
   const selectLead = useCallback((l) => { setPreviousPage(page); setSelectedLead(l); setDetailOpen(true); }, [page, setPreviousPage, setSelectedLead, setDetailOpen]);
   const mainML = isMobile ? 0 : (sidebar ? 240 : 72);
 
-  // v7.5 — Routes that require login (sensitive: leads, financials, internal tooling).
-  // home + audit stay public (audit is the lead magnet).
-  const PROTECTED_PAGES = new Set(['leads', 'dashboard', 'wallet', 'admin', 'trends', 'market', 'managed']);
+  // Routes that require login. Home is the only public page: the audit and its
+  // permalinks are now account-walled too, so the homepage sells the auditor
+  // and an account is the price of running one.
+  const PROTECTED_PAGES = new Set(['leads', 'audit', 'dashboard', 'wallet', 'admin', 'trends', 'market', 'managed']);
 
   // Lightweight auth gate — when launch-ready and visitor isn't logged in,
   // gently redirect them to homepage and pop the AccountModal.
@@ -538,12 +579,12 @@ export default function App() {
       switch (page) {
         case 'dashboard': return requireAuth(() => <DashboardPage onSelect={selectLead} />);
         case 'leads':     return requireAuth(() => <LeadsPage onSelect={selectLead} />);
+        case 'audit':     return requireAuth(() => <AuditPage />);
         case 'admin':     return requireAuth(() => <AdminPage />);
       }
     }
     switch (page) {
       case 'home':  return <HomePage />;
-      case 'audit': return <AuditPage />;
       default:      return <HomePage />;
     }
   };
@@ -560,9 +601,6 @@ export default function App() {
   const operatorPreview = (typeof window !== 'undefined' &&
     (localStorage.getItem('goated_operator_preview') === '1' ||
      window.location.hash.toLowerCase().includes('preview=1')));
-  // Audit page is always public (lead magnet). Cover only blocks the rest.
-  const isAuditRoute = (typeof window !== 'undefined' &&
-    /^#\/(a\/|for\/|audit)/i.test(window.location.hash || ''));
 
   // A signed-in user is never shown the cover page. Reaching a session means
   // Google authenticated them AND — while the OAuth app is in Testing mode —
@@ -573,7 +611,7 @@ export default function App() {
   const isMidOAuthRedirect = (typeof window !== 'undefined' &&
     /access_token=|code=/.test(window.location.hash || window.location.search || ''));
 
-  if (!launchReady && !isLoggedIn && !isMidOAuthRedirect && !operatorPreview && !isAuditRoute) {
+  if (!launchReady && !isLoggedIn && !isMidOAuthRedirect && !operatorPreview) {
     return <ComingSoonPage />;
   }
 

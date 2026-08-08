@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
-  ArrowLeft, Phone, Mail, Calendar, Globe, Building2, AlertCircle, Copy, Check,
-  TrendingUp, TrendingDown, Minus, Target, Shield, Zap, Star, ChevronRight,
-  ChevronDown, Users, DollarSign, Clock, Award, BarChart3, Activity,
-  Cpu, Eye, MessageSquare, Send, Package, Calculator, Flame, Crosshair,
-  Brain, Timer, AlertTriangle, Keyboard, ExternalLink, Search, UserSearch,
-  Crown, Sparkles, PhoneCall, FileText, CreditCard, Trophy, Rocket, ChevronUp,
-  MapPin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight, Voicemail,
+  ArrowLeft, Phone, Mail, Calendar, Globe, Building2, AlertCircle, Copy, Check, TrendingUp, TrendingDown, Minus, Target, Shield, Zap, Star, ChevronRight, ChevronDown, Users, DollarSign, Clock, Award, BarChart3, Activity, Cpu, Eye, MessageSquare, Send, Package, Calculator, Flame, Crosshair, Brain, Timer, AlertTriangle, Keyboard, ExternalLink, Search, UserSearch, Crown, Sparkles, PhoneCall, FileText, CreditCard, Trophy, Rocket, ChevronUp, MapPin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight, Voicemail, Share2, CheckCircle2
 } from 'lucide-react';
 import { useStore, fmt, enrichLead, initialsOf } from '../hooks/useStore';
 import { buildCallSheet, buildPackage, recommendStack, estimateMissedRevenue } from '../lib/outreach';
@@ -153,9 +147,28 @@ function GlassCard({ children, className = '', highlight = false }) {
  */
 function ListingPhoto({ lead, size = 64 }) {
   const [failed, setFailed] = React.useState(false);
-  React.useEffect(() => { setFailed(false); }, [lead?.photoRef]);
+  // Backfilled ref for leads captured before photoRef was collected.
+  const [fetchedRef, setFetchedRef] = React.useState(null);
 
-  if (!lead?.photoRef || failed) {
+  React.useEffect(() => { setFailed(false); setFetchedRef(null); }, [lead?._placeId, lead?.photoRef]);
+
+  // Leads already in the store — and rows already in Supabase — predate this
+  // field, and the merge keeps existing rows rather than replacing them, so
+  // they would never gain a photo no matter how many searches ran. Re-hydrate
+  // from the listing instead of showing initials forever.
+  React.useEffect(() => {
+    if (lead?.photoRef || !lead?._placeId) return;
+    let cancelled = false;
+    fetch(`/api/leads?action=place&id=${encodeURIComponent(lead._placeId)}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (!cancelled && d?.lead?.photoRef) setFetchedRef(d.lead.photoRef); })
+      .catch(() => { /* initials remain — a missing photo is not an error worth showing */ });
+    return () => { cancelled = true; };
+  }, [lead?._placeId, lead?.photoRef]);
+
+  const photoRef = lead?.photoRef || fetchedRef;
+
+  if (!photoRef || failed) {
     return (
       <div className="w-16 h-16 rounded-xl bg-brand/15 flex items-center justify-center text-brand font-bold text-lg">
         {initialsOf(lead?.company || lead?.name)}
@@ -164,7 +177,7 @@ function ListingPhoto({ lead, size = 64 }) {
   }
   return (
     <img
-      src={`/api/leads?action=photo&ref=${encodeURIComponent(lead.photoRef)}&w=${size * 3}`}
+      src={`/api/leads?action=photo&ref=${encodeURIComponent(photoRef)}&w=${size * 3}`}
       alt={`${lead.company || 'Business'} listing photo`}
       loading="lazy"
       decoding="async"
@@ -767,6 +780,7 @@ export default function LeadDetail() {
   // Selective selectors — never subscribe to the whole store. Prevents re-renders on
   // unrelated state mutations (ticker prices, RAF animations, lead list scrolls, etc).
   const lead = useStore(s => s.selectedLead);
+  const [linkCopied, setLinkCopied] = useState(false);
   const setDetailOpen = useStore(s => s.setDetailOpen);
   const setSelectedLead = useStore(s => s.setSelectedLead);
   const previousPage = useStore(s => s.previousPage);
@@ -1175,6 +1189,22 @@ Context:\n${ctx}`;
                 <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-brand/15 text-brand border border-brand/20">
                   Fit #{safeRanking.overall}
                 </span>
+                {/* Permalink. Keyed on the Google place id, so the link opens
+                    this lead for someone whose browser has never run a search —
+                    nothing about it depends on local storage. */}
+                {lead._placeId && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard?.writeText(`${window.location.origin}/#/lead/${lead._placeId}`);
+                      setLinkCopied(true);
+                      setTimeout(() => setLinkCopied(false), 2400);
+                    }}
+                    className="px-2.5 py-1 rounded-full text-xs font-semibold bg-white/[0.04] text-slate-300 border border-white/[0.08] hover:bg-white/[0.08] transition flex items-center gap-1.5"
+                  >
+                    {linkCopied ? <CheckCircle2 size={11} /> : <Share2 size={11} />}
+                    {linkCopied ? 'Link copied' : 'Share lead'}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1586,6 +1616,42 @@ Context:\n${ctx}`;
                 </div>
               </div>
             )}
+            {/* Their clock, and the review link.
+                Local time because a cold call at 6am their time is a wasted
+                lead, and the offset comes straight from the listing rather
+                than being guessed from the address. The review link is the
+                one artefact here a client can actually use: it is what they
+                send customers to get reviewed, so it doubles as proof on the
+                call that the review pitch is a real deliverable. */}
+            {(el.utcOffsetMinutes != null || el.reviewLink) && (
+              <div className="flex flex-wrap items-center gap-2">
+                {el.utcOffsetMinutes != null && (() => {
+                  const now = new Date(Date.now() + (el.utcOffsetMinutes + new Date().getTimezoneOffset()) * 60000);
+                  const hr = now.getHours();
+                  const businessHours = hr >= 8 && hr < 18;
+                  return (
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${
+                      businessHours
+                        ? 'bg-emerald-500/[0.08] border-emerald-500/20 text-emerald-300'
+                        : 'bg-white/[0.02] border-white/[0.06] text-slate-400'}`}>
+                      <Clock size={13} className="shrink-0" />
+                      <span>
+                        {now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} their time
+                        <span className="opacity-70">{businessHours ? ' · good time to call' : ' · outside business hours'}</span>
+                      </span>
+                    </div>
+                  );
+                })()}
+                {el.reviewLink && (
+                  <a href={el.reviewLink} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/[0.06] bg-white/[0.02] text-xs text-slate-300 hover:bg-white/[0.05] transition">
+                    <Star size={13} className="text-amber-400 shrink-0" />
+                    Review link <span className="text-slate-500">— give this to the client</span>
+                  </a>
+                )}
+              </div>
+            )}
+
             {/* People Search */}
             <div className="flex items-center gap-2 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
               <a href={`https://www.truepeoplesearch.com/results?name=${encodeURIComponent(lead.name)}&citystatezip=${encodeURIComponent(lead.location || '')}`}
