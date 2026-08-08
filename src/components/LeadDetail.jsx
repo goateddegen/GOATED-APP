@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   ArrowLeft, Phone, Mail, Calendar, Globe, Building2, AlertCircle, Copy, Check, TrendingUp, TrendingDown, Minus, Target, Shield, Zap, Star, ChevronRight, ChevronDown, Users, DollarSign, Clock, Award, BarChart3, Activity, Cpu, Eye, MessageSquare, Send, Package, Calculator, Flame, Crosshair, Brain, Timer, AlertTriangle, Keyboard, ExternalLink, Search, UserSearch, Crown, Sparkles, PhoneCall, FileText, CreditCard, Trophy, Rocket, ChevronUp, MapPin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight, Voicemail, Share2, CheckCircle2
 } from 'lucide-react';
-import { useStore, fmt, enrichLead, initialsOf } from '../hooks/useStore';
+import { useStore, fmt, enrichLead, initialsOf, placeIdOf } from '../hooks/useStore';
 import { buildCallSheet, buildPackage, recommendStack, estimateMissedRevenue } from '../lib/outreach';
 
 // ─── Color Maps ────────────────────────────────────────────────────────────────
@@ -153,14 +153,15 @@ function ListingGallery({ lead }) {
   React.useEffect(() => {
     setRefs(lead?.photoRefs?.length ? lead.photoRefs : (lead?.photoRef ? [lead.photoRef] : []));
     setActive(0); setShowAll(false); setFailed(false);
-  }, [lead?._placeId, lead?.photoRef, lead?.photoRefs]);
+  }, [lead?._placeId, lead?.external_id, lead?.photoRef, lead?.photoRefs]);
 
   // Same backfill as the avatar: rows stored before photos were collected have
   // a place id and nothing else, and should not be stuck without them.
+  const placeId = placeIdOf(lead);
   React.useEffect(() => {
-    if (refs.length || !lead?._placeId) return;
+    if (refs.length || !placeId) return;
     let cancelled = false;
-    fetch(`/api/leads?action=place&id=${encodeURIComponent(lead._placeId)}`)
+    fetch(`/api/leads?action=place&id=${encodeURIComponent(placeId)}`)
       .then(r => (r.ok ? r.json() : null))
       .then(d => {
         if (cancelled || !d?.lead) return;
@@ -169,7 +170,7 @@ function ListingGallery({ lead }) {
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [lead?._placeId, refs.length]);
+  }, [placeId, refs.length]);
 
   if (!refs.length || failed) return null;
 
@@ -1246,10 +1247,10 @@ Context:\n${ctx}`;
                 {/* Permalink. Keyed on the Google place id, so the link opens
                     this lead for someone whose browser has never run a search —
                     nothing about it depends on local storage. */}
-                {lead._placeId && (
+                {placeIdOf(lead) && (
                   <button
                     onClick={() => {
-                      navigator.clipboard?.writeText(`${window.location.origin}/#/lead/${lead._placeId}`);
+                      navigator.clipboard?.writeText(`${window.location.origin}/#/lead/${placeIdOf(lead)}`);
                       setLinkCopied(true);
                       setTimeout(() => setLinkCopied(false), 2400);
                     }}

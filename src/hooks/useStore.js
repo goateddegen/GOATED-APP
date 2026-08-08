@@ -894,6 +894,22 @@ const NO_WEBSITE_KEY = 'goated_nowebsite_leads';
 const MAX_STORED_LEADS = 500;
 
 /** Stable identity for a lead across fetches. Falls back to name + place. */
+/**
+ * The Google place id for a lead, wherever it came from.
+ *
+ * Straight from a search it is on `_placeId`. Read back from Supabase — or
+ * restored from localStorage after having been read back once — it survives
+ * only inside `external_id`/`_apolloId` as `place:{id}`. Everything that needs
+ * a listing (photos, the permalink) goes through here, so a lead behaves the
+ * same no matter which path it arrived by.
+ */
+export function placeIdOf(l) {
+  if (!l) return null;
+  if (l._placeId) return l._placeId;
+  const ext = l._apolloId || l.external_id || '';
+  return /^place:/.test(ext) ? ext.slice(6) : null;
+}
+
 function leadKey(l) {
   return l._placeId || l._apolloId || l.external_id
     || `${(l.company || l.name || '').toLowerCase()}|${(l.address || l.location || '').toLowerCase()}`;

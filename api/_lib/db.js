@@ -124,6 +124,11 @@ function fromRow(row) {
   return {
     id: row.id,
     external_id: row.external_id,
+    // Recovered from external_id, which is stored as `place:{id}`. Without it a
+    // lead read back from the database had no Google id, so it could not
+    // backfill its listing photos and had no permalink to share — both of which
+    // worked fine for the identical lead straight from a search.
+    _placeId: /^place:/.test(row.external_id || '') ? row.external_id.slice(6) : null,
     name: row.name,
     company: row.company,
     email: row.email,
