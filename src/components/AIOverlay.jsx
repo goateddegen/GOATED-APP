@@ -410,18 +410,11 @@ const QUICK_ACTIONS = {
 };
 
 // ─── TEMPLATE FALLBACK RESPONSES ───────────────────────────────────────
-function getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats, degenMode } = {}) {
+function getTemplateResponse(msg, leads, { coachMode, selectedLead, degenMode } = {}) {
   const lower = msg.toLowerCase();
-  const stats = revenueStats || {};
-  const wonLeadsAll = leads.filter(l => l.status === 'won');
-  const totalWonValue = wonLeadsAll.reduce((s, l) => s + l.dealValue, 0);
-  const commissionRate = 0.12;
-  const currentMRR = Math.round((totalWonValue * commissionRate) / 12);
-  const mrrGoal = 25000;
-  const distanceToGoal = Math.max(0, mrrGoal - currentMRR);
-  const negotiatingLeads = leads.filter(l => l.status === 'negotiation');
-  const weeklyCloses = Math.min(wonLeadsAll.length, 3 + Math.floor(Math.random() * 4));
-  const streakCount = 2 + Math.floor(Math.random() * 5);
+  // The commission/MRR/goal/streak block that used to sit here was dead — every
+  // value fed only other values in the same block, all of them invented, and it
+  // survived the earlier coach rewrite because nothing read it any more.
 
   // ── COACH MODE ────────────────────────────────────────────────────────────
   // Rewritten. The previous version quoted a commission we do not pay, a
@@ -1328,50 +1321,13 @@ export default function AIOverlay() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, typing]);
 
-  // Revenue tracking stats — computed lazily to avoid filtering 500K leads
-  // on every render. Only materializes when the AI panel is open OR when
-  // needed for a send() call. Cached by leads reference.
-  const revenueStatsCacheRef = useRef({ leads: null, value: null });
-  const computeRevenueStats = useCallback(() => {
-    if (revenueStatsCacheRef.current.leads === leads && revenueStatsCacheRef.current.value) {
-      return revenueStatsCacheRef.current.value;
-    }
-    const commissionRate = 0.12;
-    // Single pass instead of 4 separate filter iterations over 500K items
-    let wonCount = 0, wonValue = 0, negCount = 0, negValue = 0, risingCount = 0, totalPipeline = 0;
-    for (let i = 0; i < leads.length; i++) {
-      const l = leads[i];
-      totalPipeline += l.dealValue;
-      if (l.status === 'won') { wonCount++; wonValue += l.dealValue; }
-      else if (l.status === 'negotiation') { negCount++; negValue += l.dealValue; }
-      if (l.momentum === 'rising') risingCount++;
-    }
-    const currentMRR = Math.round((wonValue * commissionRate) / 12);
-    const mrrGoal = 25000;
-    const pendingCommission = Math.round(negValue * commissionRate);
-    const value = {
-      currentMRR,
-      mrrGoal,
-      distanceToGoal: Math.max(0, mrrGoal - currentMRR),
-      wonDeals: wonCount,
-      wonValue,
-      negotiatingCount: negCount,
-      pendingCommission,
-      risingCount,
-      totalPipeline,
-      weekActivity: { calls: 8 + Math.floor(Math.random() * 15), outreach: 12 + Math.floor(Math.random() * 20) },
-      streakDays: 2 + Math.floor(Math.random() * 5),
-      pipelineHealth: risingCount > leads.length * 0.3 ? 'Strong' : risingCount > leads.length * 0.15 ? 'Good' : 'Needs Attention',
-    };
-    revenueStatsCacheRef.current = { leads, value };
-    return value;
-  }, [leads]);
-
-  // Only compute stats when panel actually opens — not on every keystroke elsewhere
-  const revenueStats = useMemo(() => {
-    if (!aiOpen) return null;
-    return computeRevenueStats();
-  }, [aiOpen, computeRevenueStats]);
+  // Revenue tracking removed. It reported a commission rate we do not charge,
+  // an MRR derived from that commission, a $25K/mo goal nobody set, a pipeline
+  // health score keyed on a `momentum` field that is hardcoded 'stable' for
+  // every Places lead, and — literally — a weekly call count and closing streak
+  // generated with Math.random(). All of it was injected into the model prompt
+  // on every message, so the assistant reported invented figures with total
+  // confidence and coach mode was explicitly told to quote them.
 
   // Determine contextual thinking label based on message content and page
   const getThinkingLabel = useCallback((msg) => {
@@ -1457,12 +1413,10 @@ export default function AIOverlay() {
     if (!aiOpen) setAiOpen(true);
 
     const leadCtx = selectedLead ? `\n\nCurrently viewing lead: ${selectedLead.name} at ${selectedLead.company} (${selectedLead.industry}), Score: ${selectedLead.score}/100, Deal: $${(selectedLead.dealValue||0).toLocaleString()}, Status: ${selectedLead.status}, Priority: ${selectedLead.priority}, Phone: ${selectedLead.phone||'N/A'}, Email: ${selectedLead.email||'N/A'}, Website: ${selectedLead.website||'N/A'}, Location: ${selectedLead.location||'N/A'}, Pain Points: ${(selectedLead.painPoints||[]).join(', ')}, Buying Signals: ${(selectedLead.buyingSignals||[]).join(', ')}, Best Method: ${selectedLead.bestMethod||'email'}` : '';
-    const stats = revenueStats || computeRevenueStats();
-    const revenueCtx = `\n\nRevenue tracking: Current MRR: $${stats.currentMRR.toLocaleString()}, Goal: $${stats.mrrGoal.toLocaleString()}/mo, Distance to goal: $${stats.distanceToGoal.toLocaleString()}, Won deals: ${stats.wonDeals}, Pending commission: $${stats.pendingCommission.toLocaleString()}, Deals in negotiation: ${stats.negotiatingCount}, Pipeline health: ${stats.pipelineHealth}, This week: ${stats.weekActivity.calls} calls made, ${stats.weekActivity.outreach} outreach sent, Closing streak: ${stats.streakDays} days`;
-    const coachCtx = coachMode ? '\n\nCOACH MODE IS ON: Act as a real-time closing coach. Be proactive, suggest next actions, celebrate wins, give specific dollar amounts for commission, create urgency based on decision timelines, and reference their pipeline goals.' : '';
+    const coachCtx = coachMode ? '\n\nCOACH MODE IS ON: Act as a closing coach for the lead in view. Work only from the fields given above — do not quote commission, MRR, quotas or streaks, none of which exist in this product. If a number is not in the context, do not state one.' : '';
     const pipelineContext = `Pipeline context: ${leads.length} leads, top 5: ${leads.slice(0, 5).map(l =>
       `${l.name} at ${l.company} (score: ${l.score}, value: ${fmt(l.dealValue)}, priority: ${l.priority}, status: ${l.status})`
-    ).join('; ')}${leadCtx}${revenueCtx}${coachCtx}`;
+    ).join('; ')}${leadCtx}${coachCtx}`;
 
     if (useAI) {
       try {
@@ -1511,7 +1465,7 @@ export default function AIOverlay() {
     }
 
     // Instant template response — no artificial delay
-    const res = getTemplateResponse(msg, leads, { coachMode, selectedLead, revenueStats: stats, degenMode });
+    const res = getTemplateResponse(msg, leads, { coachMode, selectedLead, degenMode });
 
     // Smart auto-navigate based on user intent
     const lower = msg.toLowerCase();
@@ -1529,26 +1483,38 @@ export default function AIOverlay() {
 
     setMessages(p => [...p, { role: 'assistant', content: res }]);
     setTyping(false);
-  }, [input, typing, messages, leads, useAI, degenMode, coachMode, selectedLead, revenueStats, aiOpen]);
+  }, [input, typing, messages, leads, useAI, degenMode, coachMode, selectedLead, aiOpen]);
 
   // Coach Mode: proactive suggestions when viewing a lead
   const prevSelectedRef = useRef(selectedLead?.id);
   useEffect(() => {
     if (coachMode && selectedLead && selectedLead.id !== prevSelectedRef.current) {
       prevSelectedRef.current = selectedLead.id;
-      const commission = Math.round(selectedLead.dealValue * 0.12);
-      const daysInStage = 1 + Math.floor(Math.random() * 5);
-      let proactiveMsg = '';
-      if (selectedLead.status === 'negotiation') {
-        proactiveMsg = `**Coach Alert:** You should call **${selectedLead.name}** now \u2014 they've been in Negotiation for ${daysInStage} days. This deal is worth **$${commission.toLocaleString()} in commission**. Decision timeline: ${selectedLead.decisionTimeline || '2 weeks'}. Don't let this one slip!`;
-      } else if (selectedLead.status === 'qualified') {
-        proactiveMsg = `**Coach Alert:** **${selectedLead.name}** is qualified and ready for a demo. Commission opportunity: **$${commission.toLocaleString()}**. Their pain points are ${(selectedLead.painPoints||[]).slice(0, 2).join(' and ')} \u2014 lead with those.`;
-      } else if (selectedLead.status === 'won') {
-        proactiveMsg = `**Great call!** That's **$${commission.toLocaleString()} in commission** from closing ${selectedLead.name}! Now ask for a referral to 10x this win.`;
-      } else {
-        proactiveMsg = `**Coach Alert:** Viewing **${selectedLead.name}** (${selectedLead.company}). Score: ${selectedLead.score}/100, worth **$${commission.toLocaleString()} in commission**. Best approach: **${selectedLead.bestMethod || 'Phone call'}**. Want me to coach you through the close?`;
-      }
-      setMessages(p => [...p, { role: 'assistant', content: proactiveMsg }]);
+      // Rebuilt on real fields. The previous version opened with a commission
+      // at 12% of dealValue (we charge none), a "days in stage" from
+      // Math.random(), and a decisionTimeline field that does not exist on any
+      // lead — so it greeted every lead with three fabricated numbers.
+      const l = selectedLead;
+      const noSite = !l.website && !l.domain;
+      const gaps = [];
+      if (noSite) gaps.push('no website');
+      if (l.reviewCount === 0) gaps.push('no reviews');
+      else if (typeof l.reviewCount === 'number' && l.reviewCount < 25) gaps.push(`only ${l.reviewCount} reviews`);
+      if (!l.phone) gaps.push('no published number');
+
+      const bits = [`**${l.company}** — score ${l.score}/100`];
+      if (l.revenueFormatted) bits.push(`est. ${l.revenueFormatted}`);
+      if (l.activity?.label) bits.push(l.activity.label);
+
+      setMessages(p => [...p, {
+        role: 'assistant',
+        content: `**Coaching:** ${bits.join(' · ')}\n\n`
+          + (gaps.length
+              ? `Open on **${gaps.join(' and ')}** — name it in the first sentence.`
+              : `Nothing obvious is broken, so open on the missed-call math.`)
+          + (l.phone ? `\n\n**Dial:** ${l.phone}` : `\n\nNo number published — walk in or message the listing.`)
+          + `\n\nAsk me to run the close and I will walk the call with you.`,
+      }]);
     }
   }, [coachMode, selectedLead]);
 
@@ -1564,18 +1530,22 @@ export default function AIOverlay() {
 
       if (useAI) {
         const leadCtx = selectedLead ? `\n\nCurrently viewing lead: ${selectedLead.name} at ${selectedLead.company} (${selectedLead.industry}), Score: ${selectedLead.score}/100, Deal: $${(selectedLead.dealValue||0).toLocaleString()}, Status: ${selectedLead.status}` : '';
-        const stats = revenueStats || computeRevenueStats();
-        const revenueCtx = `\n\nRevenue tracking: Current MRR: $${stats.currentMRR.toLocaleString()}, Goal: $${stats.mrrGoal.toLocaleString()}/mo, Distance to goal: $${stats.distanceToGoal.toLocaleString()}, Pending commission: $${stats.pendingCommission.toLocaleString()}, Pipeline health: ${stats.pipelineHealth}`;
         const coachCtx = coachMode ? '\n\nCOACH MODE IS ON: Act as a real-time closing coach.' : '';
         const pipelineContext = `Pipeline context: ${leads.length} leads, top 5: ${leads.slice(0, 5).map(l =>
           `${l.name} at ${l.company} (score: ${l.score}, value: ${fmt(l.dealValue)}, priority: ${l.priority}, status: ${l.status})`
-        ).join('; ')}${leadCtx}${revenueCtx}${coachCtx}`;
+        ).join('; ')}${leadCtx}${coachCtx}`;
 
         const slimLeadsQA = leads.slice(0, 25).map(l => ({
           id: l.id, name: l.name, company: l.company, industry: l.industry,
           location: l.location, score: l.score, dealValue: l.dealValue,
-          status: l.status, priority: l.priority, conversionProbability: l.conversionProbability,
+          status: l.status, priority: l.priority,
+          // conversionProbability dropped: it is only ever set on the synthetic
+          // pool, so on live Places leads this sent the model a null it was
+          // free to fill in with a confident-sounding percentage.
           bestMethod: l.bestMethod, email: l.email, phone: l.phone,
+          // Real, and far more useful to reason about than a made-up close rate.
+          reviewCount: l.reviewCount, rating: l.rating, website: l.website || null,
+          revenueFormatted: l.revenueFormatted || null,
         }));
 
         fetch('/api/chat', {
@@ -1611,20 +1581,18 @@ export default function AIOverlay() {
             throw new Error('fallback');
           })
           .catch(() => {
-            const fallbackStats = revenueStats || computeRevenueStats();
-            const res = getTemplateResponse(label, leads, { coachMode, selectedLead, revenueStats: fallbackStats, degenMode });
+            const res = getTemplateResponse(label, leads, { coachMode, selectedLead, degenMode });
             setMessages(p => [...p, { role: 'assistant', content: res }]);
             setTyping(false);
           });
       } else {
-        const fallbackStats = revenueStats || computeRevenueStats();
-        const res = getTemplateResponse(label, leads, { coachMode, selectedLead, revenueStats: fallbackStats, degenMode });
+        const res = getTemplateResponse(label, leads, { coachMode, selectedLead, degenMode });
         setMessages(p => [...p, { role: 'assistant', content: res }]);
         setTyping(false);
       }
       setInput('');
     }, 10);
-  }, [messages, leads, useAI, degenMode, coachMode, selectedLead, revenueStats, aiOpen]);
+  }, [messages, leads, useAI, degenMode, coachMode, selectedLead, aiOpen]);
 
   // ─── DRAG STATE FOR CHAT BUBBLE ────────────────────────────────────
   const [dragPos, setDragPos] = useState(null); // { x, y } or null for default
@@ -2100,48 +2068,24 @@ export default function AIOverlay() {
                 </div>
               </div>
 
-              {/* ── COACH MODE MINI DASHBOARD ──────────────────────────────── */}
+              {/* Coach mode banner. The mini dashboard that used to sit here
+                  showed an MRR, a pending-commission figure, a progress bar
+                  toward a $25K goal and a "day streak" — none of which were
+                  real. The streak was Math.random(); the money was a 12%
+                  commission we do not charge. */}
               {coachMode && (
-                <div className="mx-2 mt-1 p-2 rounded-xl border"
+                <div className="mx-2 mt-1 px-2.5 py-1.5 rounded-xl border flex items-center gap-1.5"
                   style={{
                     background: 'linear-gradient(135deg, rgba(245,158,11,0.05), rgba(245,158,11,0.02))',
                     borderColor: 'rgba(245,158,11,0.15)',
                   }}
                 >
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <Trophy size={10} className="text-amber-400" />
-                    <span className="text-[9px] font-bold text-amber-400 tracking-wider">COACH MODE</span>
-                    <div className="flex-1" />
-                    <span className="text-[9px] text-amber-400/60">{revenueStats.streakDays}-day streak</span>
-                    <Flame size={10} className="text-amber-400" />
-                  </div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <div className="text-center p-1 rounded-lg bg-black/30">
-                      <div className="text-[10px] font-bold text-white">${revenueStats.currentMRR >= 1000 ? `${(revenueStats.currentMRR / 1000).toFixed(1)}K` : revenueStats.currentMRR}</div>
-                      <div className="text-[8px] text-slate-500">MRR</div>
-                    </div>
-                    <div className="text-center p-1 rounded-lg bg-black/30">
-                      <div className="text-[10px] font-bold text-amber-400">{revenueStats.negotiatingCount}</div>
-                      <div className="text-[8px] text-slate-500">In Progress</div>
-                    </div>
-                    <div className="text-center p-1 rounded-lg bg-black/30">
-                      <div className="text-[10px] font-bold text-brand">${revenueStats.pendingCommission >= 1000 ? `${(revenueStats.pendingCommission / 1000).toFixed(0)}K` : revenueStats.pendingCommission}</div>
-                      <div className="text-[8px] text-slate-500">Pending $</div>
-                    </div>
-                  </div>
-                  <div className="mt-1.5 h-1 rounded-full bg-black/30 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${Math.min(100, (revenueStats.currentMRR / revenueStats.mrrGoal) * 100)}%`,
-                        background: 'linear-gradient(90deg, #f59e0b, #10b981)',
-                      }}
-                    />
-                  </div>
-                  <div className="flex justify-between mt-0.5">
-                    <span className="text-[8px] text-slate-500">${revenueStats.distanceToGoal >= 1000 ? `${(revenueStats.distanceToGoal / 1000).toFixed(1)}K` : revenueStats.distanceToGoal} to goal</span>
-                    <span className="text-[8px] text-slate-500">${revenueStats.mrrGoal >= 1000 ? `${(revenueStats.mrrGoal / 1000).toFixed(0)}K` : revenueStats.mrrGoal} MRR</span>
-                  </div>
+                  <Trophy size={10} className="text-amber-400" />
+                  <span className="text-[9px] font-bold text-amber-400 tracking-wider">COACH MODE</span>
+                  <div className="flex-1" />
+                  <span className="text-[9px] text-amber-400/60">
+                    {selectedLead ? `Coaching: ${selectedLead.company}` : 'Open a lead to coach a call'}
+                  </span>
                 </div>
               )}
 
