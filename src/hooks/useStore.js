@@ -892,6 +892,9 @@ const NO_WEBSITE_KEY = 'goated_nowebsite_leads';
 // afternoon's work pinned the counter there and it read as a hardcoded
 // number rather than a real total.
 const MAX_STORED_LEADS = 500;
+// What a visit should add. Matches the server's own fresh-yield target, so the
+// two agree on when a batch counts as thin.
+const LEADS_PER_VISIT = 25;
 
 /** Stable identity for a lead across fetches. Falls back to name + place. */
 /**
@@ -1278,7 +1281,16 @@ export const useStore = create((set, get) => ({
   lastFetchedPlays: null,
 
   // Live Data Actions
-  fetchLiveLeads: async () => {
+  /**
+   * Pull a fresh batch for the operator's market.
+   *
+   * `attempt` is internal. The server picks its trades at random per call, so a
+   * second call reaches different businesses rather than the same ones again —
+   * which is what makes a top-up worth doing at all. It only fires when the
+   * first pass came back thin, because each attempt is a Places fan-out and
+   * those are billed per query.
+   */
+  fetchLiveLeads: async (attempt = 1) => {
     set({ isLoadingLeads: true, leadsError: null });
     try {
       // authedFetch forwards the Supabase token so the route can persist
@@ -1289,11 +1301,20 @@ export const useStore = create((set, get) => ({
       // Tell the server what we already have so it returns businesses the
       // operator hasn't worked yet, instead of the same top-20 for the same
       // trade and city. Most recent first, capped to keep the URL sane.
+      // Every lead we hold, not just the recent 120. Sent as 12-character
+      // prefixes so the whole set fits in a URL — at ~27 characters each the
+      // full ids did not, which is why this was truncated in the first place.
+      //
+      // The truncation was the reason the list stopped growing: past ~120 saved
+      // leads the server could not tell what the operator already had, counted
+      // duplicates as fresh, and so never triggered its deeper paging. The page
+      // looked like it was fetching and returned nothing new.
       const held = [...get().liveLeads, ...get().noWebsiteLeads];
       const exclude = held
-        .slice(-120)
-        .map(l => l._placeId)
+        .map(l => placeIdOf(l))
         .filter(Boolean)
+        .map(id => id.slice(0, 12))
+        .slice(-400)
         .join(',');
       const qs = new URLSearchParams({ limit: '40' });
       const market = get().market;
@@ -1326,15 +1347,24 @@ export const useStore = create((set, get) => ({
       const nwMerged = [...nwPrev, ...nwAdded].slice(-MAX_STORED_LEADS);
       persistLeads(nwMerged, NO_WEBSITE_KEY);
 
+      const gained = addedCount + nwAdded.length;
       set({
         resolvedMarket: data?._meta?.resolvedLocation || null,
         liveLeads: merged,
         noWebsiteLeads: nwMerged,
-        lastAddedLeadCount: addedCount + nwAdded.length,
+        lastAddedLeadCount: gained,
         isLoadingLeads: false,
         lastFetchedLeads: new Date().toISOString(),
         dataMode: 'live',
       });
+
+      // Top up once when a visit barely moved the list. Bounded at one retry
+      // on purpose: the goal is a page that keeps growing, not a page that
+      // spends the Places budget hunting for the last few rows in a market
+      // we have already worked through.
+      if (attempt < 2 && gained < LEADS_PER_VISIT) {
+        return get().fetchLiveLeads(attempt + 1);
+      }
       return merged;
     } catch (err) {
       console.warn('[GOATED] Live leads fetch failed, using generated data:', err.message);

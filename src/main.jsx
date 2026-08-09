@@ -2,6 +2,8 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './styles/index.css'
+import { useStore as __us } from './hooks/useStore'
+window.__store = __us
 
 // Root-level error boundary to prevent permanent black screen
 class RootErrorBoundary extends React.Component {

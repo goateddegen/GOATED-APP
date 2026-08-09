@@ -886,12 +886,22 @@ export default async function handler(req, res) {
     // returns the same top-20 every time, so a second visit surfaced almost
     // nothing new — the "stale cycling" problem. Capped so the query string
     // stays sane; the client sends its most recent ids.
+    // Prefixes, not whole ids. A place id is ~27 characters, so sending every
+    // lead an operator holds would blow past a sane URL length and the list had
+    // to be truncated to the most recent 120 — which meant that past ~120 saved
+    // leads the server kept "discovering" businesses the operator already had,
+    // scored them as fresh, and never triggered the deeper paging below. The
+    // first 12 characters are plenty to identify a place within one operator's
+    // own set, and cost less than half the bytes.
+    const EXCLUDE_PREFIX_LEN = 12;
     const excludeIds = new Set(
       String(req.query?.exclude || '')
         .split(',')
-        .map(x => x.trim())
+        // Truncate here too: an older client still sends full ids, and both
+        // sides must key on the same thing or the set matches nothing.
+        .map(x => x.trim().slice(0, EXCLUDE_PREFIX_LEN))
         .filter(Boolean)
-        .slice(0, 120)
+        .slice(0, 400)
     );
 
     const page = Math.max(parseInt(rawPage, 10) || 1, 1);
@@ -1018,7 +1028,7 @@ export default async function handler(req, res) {
               const k = keyOf(b[i]);
               if (seen.has(k)) continue;
               seen.add(k);
-              if (excludeIds.has(b[i]._placeId)) continue;   // already on their page
+              if (excludeIds.has((b[i]._placeId || '').slice(0, EXCLUDE_PREFIX_LEN))) continue; // already on their page
               merged.push(b[i]);
             }
             if (!added) break;
