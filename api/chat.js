@@ -102,9 +102,18 @@ function renderLeadResults(result, args) {
     if (realGaps.length) bits.push(realGaps.join(', '));
 
     const quote = !l.website ? `${money(4000)} + ${money(1000)}/mo` : `${money(2000)} + ${money(750)}/mo`;
-    return `${i + 1}. **${l.company}**${l.location ? ` — ${l.location}` : ''}\n`
+    // Link the name to its lead page, and the site to a fresh audit. The
+    // client turns both into in-app buttons; anywhere else they degrade to
+    // ordinary markdown links rather than breaking.
+    const name = l.placeId
+      ? `[${l.company}](#/lead/${l.placeId})`
+      : `**${l.company}**`;
+    const auditLink = l.website
+      ? ` · [audit their site](#/audit?u=${encodeURIComponent(l.website)})`
+      : '';
+    return `${i + 1}. ${name}${l.location ? ` — ${l.location}` : ''}\n`
       + `   ${bits.join(' · ') || 'Established operator'}\n`
-      + `   ${l.phone ? `${l.phone} · ` : ''}Quote ${quote}`;
+      + `   ${l.phone ? `${l.phone} · ` : ''}Quote ${quote}${auditLink}`;
   });
 
   const noSite = leads.filter(l => !l.website).length;
@@ -545,6 +554,11 @@ RULES — OBEY EVERY ONE:
   real domain the user gave you, do not call a tool that needs one.
 - Never state a deal value, close rate, commission or percentage that did not come back from
   a tool. If you do not have the number, leave it out — an answer without it is fine.
+- LINK BUSINESSES. When a tool result gives a business a placeId, write its name as
+  [Name](#/lead/PLACEID) — never as bare text. If it also has a website, offer
+  [audit their site](#/audit?u=WEBSITE) once for that business. The app turns both into
+  buttons. Only ever use a placeId that came back from a tool; never invent one, and never
+  link a business that did not come from a tool result.
 - NEVER mention commission, payouts or splits. We do not pay them and the UI does not show them.
 - Never write placeholder maths like "$X/year" or "$Y return". Either use a real figure or
   describe the benefit in words.

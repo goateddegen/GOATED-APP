@@ -179,6 +179,10 @@ export async function runTool(name, args, ctx = {}) {
           : 'None of these show an obvious gap — they all have sites and solid reviews. '
             + 'Say so honestly and pitch missed-call recovery rather than implying they are weak.',
         leads: (j.leads || []).slice(0, args.needsWebsite ? 40 : 12).map(l => ({
+          // Carried so the chat can link each result to its lead page. Without
+          // it the assistant could name a business but never point at it, and
+          // the operator had to go and find it by hand on the Leads page.
+          placeId: l._placeId || null,
           company: l.company,
           location: l.location,
           phone: l.phone,

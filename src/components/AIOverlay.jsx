@@ -1,16 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Send, Minimize2,
-  Globe, Users, TrendingUp, Lightbulb,
-  ChevronRight, ChevronDown, Check,
-  BarChart3, Wallet, Zap, Target, ArrowRight,
-  MessageSquare, Sparkles, LayoutDashboard, ExternalLink, Phone, UserSearch,
-  Trophy, Flame, DollarSign, Clock, Activity, Shield, ClipboardList, FileText,
-  Brain, Newspaper, BookOpen, Crosshair,
-  Bell, Copy, Eye, AlertTriangle, Award, Voicemail
+  X, Send, Minimize2, Globe, Users, TrendingUp, Lightbulb, ChevronRight, ChevronDown, Check, BarChart3, Wallet, Zap, Target, ArrowRight, MessageSquare, Sparkles, LayoutDashboard, ExternalLink, Phone, UserSearch, Trophy, Flame, DollarSign, Clock, Activity, Shield, ClipboardList, FileText, Brain, Newspaper, BookOpen, Crosshair, Bell, Copy, Eye, AlertTriangle, Award, Voicemail, Search
 } from 'lucide-react';
-import { useStore, fmt, initialsOf } from '../hooks/useStore';
+import { useStore, fmt, initialsOf, placeIdOf } from '../hooks/useStore';
 import { GoatIcon } from './GoatLogo';
 import { notify, requestNotifPermission, getNotifPermission } from '../utils/notifications';
 import { isPageEnabled } from '../lib/config';
@@ -671,9 +664,11 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, degenMode } 
 }
 
 // ─── PARSE RESPONSE WITH FEATURE LINKS + LEAD LINKING ────────────────
-function ParsedMessage({ content, onNavigate, onOpenLead, leads }) {
-  // Split on bold markers, --- dividers, and lead card embeds
-  const parts = content.split(/(\*\*[^*]+\*\*|---|\[LEAD_CARD:\d+\])/g);
+function ParsedMessage({ content, onNavigate, onOpenLead, onOpenPlace, onAudit, leads }) {
+  // Split on bold markers, --- dividers, lead card embeds, and markdown links.
+  // Links come last in the alternation but are matched first in the body below,
+  // because a link label may itself contain bold markers.
+  const parts = content.split(/(\[[^\]\n]+\]\((?:#\/[^)\s]+|https?:\/\/[^)\s]+)\)|\*\*[^*]+\*\*|---|\[LEAD_CARD:\d+\])/g);
 
   return (
     <span>
@@ -707,6 +702,57 @@ function ParsedMessage({ content, onNavigate, onOpenLead, leads }) {
             );
           }
         }
+        // Markdown link. Three in-app destinations get intercepted so they open
+        // inside the app instead of reloading it; anything else is a normal
+        // outbound link.
+        const link = part.match(/^\[([^\]\n]+)\]\(([^)\s]+)\)$/);
+        if (link) {
+          const [, label, href] = link;
+          const leadHref = href.match(/^#\/lead\/([A-Za-z0-9_-]{10,})$/);
+          if (leadHref && onOpenPlace) {
+            return (
+              <button key={i} onClick={() => onOpenPlace(leadHref[1])}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md font-bold
+                  bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20
+                  hover:border-purple-500/40 transition-colors duration-200 cursor-pointer mx-0.5">
+                <Users size={10} />
+                {label}
+                <ChevronRight size={9} className="opacity-60" />
+              </button>
+            );
+          }
+          const auditHref = href.match(/^#\/audit\?u=(.+)$/);
+          if (auditHref && onAudit) {
+            return (
+              <button key={i} onClick={() => onAudit(decodeURIComponent(auditHref[1]))}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md font-semibold
+                  bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20
+                  hover:border-amber-500/40 transition-colors duration-200 cursor-pointer mx-0.5">
+                <Search size={10} />
+                {label}
+              </button>
+            );
+          }
+          const savedAudit = href.match(/^#\/a\/[a-z0-9]{6,32}$/i);
+          if (savedAudit) {
+            return (
+              <a key={i} href={href}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md font-semibold
+                  bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20
+                  transition-colors mx-0.5">
+                <Search size={10} />
+                {label}
+              </a>
+            );
+          }
+          return (
+            <a key={i} href={href} target="_blank" rel="noopener noreferrer"
+              className="text-brand underline decoration-brand/30 hover:text-white transition-colors">
+              {label}
+            </a>
+          );
+        }
+
         // Bold text with feature/lead linking
         if (part.startsWith('**') && part.endsWith('**')) {
           const inner = part.slice(2, -2);
@@ -776,11 +822,11 @@ function ParsedMessage({ content, onNavigate, onOpenLead, leads }) {
 }
 
 // ─── STREAMING ASSISTANT MESSAGE ──────────────────────────────────────
-function StreamingAssistantMessage({ content, isLatest, onNavigate, onOpenLead, leads }) {
+function StreamingAssistantMessage({ content, isLatest, onNavigate, onOpenLead, onOpenPlace, onAudit, leads }) {
   const { displayed, isStreaming } = useStreamingText(content, isLatest);
   return (
     <>
-      <ParsedMessage content={displayed} onNavigate={onNavigate} onOpenLead={onOpenLead} leads={leads} />
+      <ParsedMessage content={displayed} onNavigate={onNavigate} onOpenLead={onOpenLead} onOpenPlace={onOpenPlace} onAudit={onAudit} leads={leads} />
       {isStreaming && (
         <span className="inline-block w-1.5 h-3.5 bg-brand/70 ml-0.5 animate-pulse rounded-sm" style={{ verticalAlign: 'text-bottom' }} />
       )}
@@ -1085,6 +1131,7 @@ export default function AIOverlay() {
   // selectors so we only re-render when specific slices change.
   const aiOpen = useStore(s => s.aiOpen);
   const setAiOpen = useStore(s => s.setAiOpen);
+  const setAuditPrefill = useStore(s => s.setAuditPrefill);
   const rawLeads = useStore(s => s.leads);
   const getLeads = useStore(s => s.getLeads);
   const currentPage = useStore(s => s.page);
@@ -1397,7 +1444,40 @@ export default function AIOverlay() {
     setPreviousPage(currentPage);
     setSelectedLead(lead);
     setDetailOpen(true);
+    // Same permalink the Leads page writes, so a lead opened from chat is just
+    // as shareable as one opened from the list.
+    const pid = placeIdOf(lead);
+    if (pid && typeof window !== 'undefined' && window.history?.replaceState) {
+      window.history.replaceState(null, '', `#/lead/${pid}`);
+    }
   }, [currentPage, setPreviousPage, setSelectedLead, setDetailOpen]);
+
+  // Open a lead the assistant named, by Google place id.
+  //
+  // Fetched rather than looked up locally: the chat runs its own Places search,
+  // so the businesses it lists are usually NOT in the operator's store. The old
+  // behaviour only linked a name when it exactly matched a lead already held,
+  // which meant results from a fresh search — the common case — rendered as
+  // plain text you had to go and find by hand.
+  const openPlace = useCallback(async (placeId) => {
+    const local = leads.find(l => placeIdOf(l) === placeId);
+    if (local) { openLead(local); return; }
+    try {
+      const r = await fetch(`/api/leads?action=place&id=${encodeURIComponent(placeId)}`);
+      const d = r.ok ? await r.json() : null;
+      if (d?.lead) openLead(d.lead);
+      else setPage('leads');
+    } catch {
+      setPage('leads');
+    }
+  }, [leads, openLead, setPage]);
+
+  // Send a site straight into the auditor and run it.
+  const runAudit = useCallback((url) => {
+    setAuditPrefill(url);
+    setPage('audit');
+    setAiOpen(false);
+  }, [setAuditPrefill, setPage, setAiOpen]);
 
   // Send message
   const send = useCallback(async () => {
@@ -2236,6 +2316,8 @@ export default function AIOverlay() {
                                 isLatest={i === messages.length - 1 || (i === messages.length - 2 && typing)}
                                 onNavigate={navigateTo}
                                 onOpenLead={openLead}
+                                onOpenPlace={openPlace}
+                                onAudit={runAudit}
                                 leads={leads}
                               />
                             ) : (
