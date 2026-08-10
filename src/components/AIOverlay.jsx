@@ -1444,12 +1444,6 @@ export default function AIOverlay() {
     setPreviousPage(currentPage);
     setSelectedLead(lead);
     setDetailOpen(true);
-    // Same permalink the Leads page writes, so a lead opened from chat is just
-    // as shareable as one opened from the list.
-    const pid = placeIdOf(lead);
-    if (pid && typeof window !== 'undefined' && window.history?.replaceState) {
-      window.history.replaceState(null, '', `#/lead/${pid}`);
-    }
   }, [currentPage, setPreviousPage, setSelectedLead, setDetailOpen]);
 
   // Open a lead the assistant named, by Google place id.

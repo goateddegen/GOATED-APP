@@ -1208,7 +1208,7 @@ export default function LeadsPage({ onSelect }) {
               const act = l.activity || {};
               const live = act.level === 'active';
               return (
-                <button key={l.id} onClick={() => { setSelectedLead(l); setDetailOpen(true); }}
+                <button key={l.id} onClick={() => handleSelectLead(l)}
                   className="w-full text-left px-4 py-3 hover:bg-white/[0.03] transition-colors flex items-center gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">

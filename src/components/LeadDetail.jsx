@@ -845,13 +845,6 @@ export default function LeadDetail() {
   const goBack = () => {
     setDetailOpen(false);
     setSelectedLead(null);
-    // Drop the lead permalink first. setPage deliberately leaves deep-link
-    // hashes alone, so without this the URL would still name a lead nobody is
-    // looking at any more — and a refresh would reopen it.
-    if (typeof window !== 'undefined' && window.history?.replaceState
-        && /^#\/lead\//.test(window.location.hash || '')) {
-      window.history.replaceState(null, '', window.location.pathname);
-    }
     if (previousPage) {
       setPage(previousPage);
       setPreviousPage(null);

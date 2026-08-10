@@ -2,7 +2,7 @@ import React, { useEffect, useState, lazy, Suspense, useRef, useCallback } from 
 import { AnimatePresence, motion } from 'framer-motion';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
-import { useStore, placeIdOf } from './hooks/useStore';
+import { useStore } from './hooks/useStore';
 import Sidebar from './components/Sidebar';
 // NotchBar removed v7.4 — conflicted with AI overlay. AI overlay is the one AI surface.
 import SearchModal from './components/SearchModal';
@@ -547,18 +547,12 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [navTo]);
 
-  // Opening a lead puts its permalink in the address bar, so the URL you are
-  // looking at is the one you can send. replaceState rather than a hash write,
-  // for the same reason as setPage: assigning location.hash would fire the
-  // router and re-resolve the lead we just opened.
+  // The permalink is written by setSelectedLead in the store, so every route
+  // into a lead gets one — not just this one.
   const selectLead = useCallback((l) => {
     setPreviousPage(page);
     setSelectedLead(l);
     setDetailOpen(true);
-    const pid = placeIdOf(l);
-    if (pid && typeof window !== 'undefined' && window.history?.replaceState) {
-      window.history.replaceState(null, '', `#/lead/${pid}`);
-    }
   }, [page, setPreviousPage, setSelectedLead, setDetailOpen]);
   const mainML = isMobile ? 0 : (sidebar ? 240 : 72);
 

@@ -1427,7 +1427,29 @@ export const useStore = create((set, get) => ({
   filterSource: 'all',
   setFilterSource: (f) => set({ filterSource: f, leadsPage: 0 }),
   selectedLead: null,
-  setSelectedLead: (l) => set({ selectedLead: l }),
+  /**
+   * Select a lead, and make the address bar say which one.
+   *
+   * The permalink used to be written by whichever caller happened to remember
+   * — the Leads table and the assistant did, the No Website list, the search
+   * modal and the prev/next arrows inside the detail view did not. So whether a
+   * lead had a shareable URL depended on which of five routes you took to open
+   * it. Doing it here means every path gets it, including any added later.
+   */
+  setSelectedLead: (l) => {
+    set({ selectedLead: l });
+    if (typeof window === 'undefined' || !window.history?.replaceState) return;
+    const pid = placeIdOf(l);
+    const onLeadHash = /^#\/lead\//.test(window.location.hash || '');
+    if (pid) {
+      const next = `#/lead/${pid}`;
+      if (window.location.hash !== next) window.history.replaceState(null, '', next);
+    } else if (onLeadHash) {
+      // Deselecting, or a lead with no Google id — either way the URL must stop
+      // naming a lead, or a refresh would reopen one nobody is looking at.
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  },
   // A lead permalink (/#/lead/{placeId}) parked until the session resolves.
   // Held in the store rather than a local ref because the visitor may be sent
   // to Home and through the login modal before it can be acted on.
