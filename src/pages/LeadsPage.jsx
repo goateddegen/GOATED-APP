@@ -792,7 +792,11 @@ export default function LeadsPage({ onSelect }) {
     return pool
       .filter(l => l.phone && l.openNow === true)
       .filter(matchesFilters)
-      .sort((a, b) => (b.score || 0) - (a.score || 0))
+      // Newest batch first, then closability within it. Sorting on score alone
+      // meant a freshly pulled lead only appeared in this twelve-row queue if it
+      // happened to outrank everything already there — so "Load more" could add
+      // forty businesses and leave the call queue looking untouched.
+      .sort((a, b) => ((b._seq || 0) - (a._seq || 0)) || ((b.score || 0) - (a.score || 0)))
       .slice(0, 12);
   }, [liveLeads, noWebsiteLeads, matchesFilters]);
 
@@ -931,10 +935,18 @@ export default function LeadsPage({ onSelect }) {
       });
     }
 
-    // Sort by close probability * deal value (money-first ordering)
     filtered.sort((a, b) => {
       const sf = aiFilters?.sort || sortField;
       const dir = (aiFilters?.order || sortDirection) === 'asc' ? 1 : -1;
+      // On the default ranking, the batch you just pulled sits above the rest,
+      // ordered by closability within it. Without this a "Load more" that added
+      // forty leads scattered them through three hundred rows and looked like
+      // it had done nothing. Choosing a column explicitly overrides this — an
+      // operator sorting by deposit wants deposit order, not recency.
+      if (sf === 'score' && !aiFilters?.sort) {
+        const seqGap = (b._seq || 0) - (a._seq || 0);
+        if (seqGap) return seqGap;
+      }
       // `deposit` isn't a field on the lead — it's derived from the gaps the
       // record shows, so the column has to compute it to sort by what's
       // actually on screen.

@@ -895,6 +895,15 @@ const MAX_STORED_LEADS = 500;
 // What a visit should add. Matches the server's own fresh-yield target, so the
 // two agree on when a batch counts as thin.
 const LEADS_PER_VISIT = 25;
+// Monotonic, so leads from the same fetch sort together and a later fetch always
+// outranks an earlier one. A timestamp is not enough — a batch lands inside the
+// same millisecond and the order within it becomes arbitrary.
+let fetchSeq = Number(localStorage?.getItem?.('goated_fetch_seq') || 0) || 0;
+function nextSeq() {
+  fetchSeq += 1;
+  try { localStorage.setItem('goated_fetch_seq', String(fetchSeq)); } catch { /* private mode */ }
+  return fetchSeq;
+}
 
 /** Stable identity for a lead across fetches. Falls back to name + place. */
 /**
@@ -984,6 +993,7 @@ function persistLeads(leads, key = LIVE_LEADS_KEY) {
  * open detail view), `_addedAt`, and any pipeline status the operator has set.
  */
 function mergeLeads(existing, incoming) {
+  const seq = nextSeq();
   let nextId = existing.reduce((m, l) => Math.max(m, Number(l.id) || 0), 0) + 1;
 
   const byKey = new Map(existing.map(l => [leadKey(l), l]));
@@ -1007,16 +1017,22 @@ function mergeLeads(existing, incoming) {
       });
       continue;
     }
-    byKey.set(k, { ...l, id: nextId++, _addedAt: new Date().toISOString() });
+    byKey.set(k, { ...l, id: nextId++, _addedAt: new Date().toISOString(), _seq: seq });
     added.push(k);
   }
 
-  // Rebuild in the original order so a refresh never reshuffles the list under
-  // someone mid-scroll; genuinely new rows follow.
+  // Newly fetched rows go to the FRONT. Pressing "Load more" and having the
+  // results land below three hundred existing leads reads as nothing having
+  // happened; what you just pulled should be the first thing you see. Existing
+  // rows keep their order behind them, so nothing reshuffles mid-scroll.
+  //
+  // Trimming from the END now, not the start: the cap used to drop the oldest
+  // by keeping the tail, which with newest-first ordering would have thrown
+  // away the leads that had just arrived.
   const merged = [
-    ...existing.map(l => byKey.get(leadKey(l))).filter(Boolean),
     ...added.map(k => byKey.get(k)),
-  ].slice(-MAX_STORED_LEADS);
+    ...existing.map(l => byKey.get(leadKey(l))).filter(Boolean),
+  ].slice(0, MAX_STORED_LEADS);
 
   return { merged, addedCount: added.length, refreshedCount: refreshedKeys.size };
 }
@@ -1227,7 +1243,9 @@ export const useStore = create((set, get) => ({
     set({ isLoadingLeads: true, leadsError: null });
     try {
       const held = [...get().liveLeads, ...get().noWebsiteLeads];
-      const exclude = held.slice(-120).map(l => l._placeId).filter(Boolean).join(',');
+      const exclude = held
+        .map(l => placeIdOf(l)).filter(Boolean)
+        .map(id => id.slice(0, 12)).slice(-400).join(',');
       const results = await Promise.allSettled(
         cities.slice(0, 4).map(city => {
           const qs = new URLSearchParams({ limit: '25', location: city });
@@ -1254,9 +1272,9 @@ export const useStore = create((set, get) => ({
             const k = l._placeId || `${l.company}|${l.address}`;
             if (seen.has(k)) continue;
             seen.add(k);
-            fresh.push({ ...l, id: nextId++, _addedAt: new Date().toISOString() });
+            fresh.push({ ...l, id: nextId++, _addedAt: new Date().toISOString(), _seq: fetchSeq });
           }
-          nwMerged = [...nwMerged, ...fresh].slice(-MAX_STORED_LEADS);
+          nwMerged = [...fresh, ...nwMerged].slice(0, MAX_STORED_LEADS);
           added += fresh.length;
         }
       }
@@ -1319,6 +1337,14 @@ export const useStore = create((set, get) => ({
    * those are billed per query.
    */
   fetchLiveLeads: async (attempt = 1) => {
+    // More than one city ticked and no explicit market: fan out across them
+    // rather than quietly prospecting only the first. Disjoint from the guard
+    // in fetchLeadsForCities, which delegates back here when nothing is ticked,
+    // so the two cannot bounce.
+    const sel = get().selectedCities;
+    if (attempt === 1 && !get().market && sel.length > 1) {
+      return get().fetchLeadsForCities(sel);
+    }
     set({ isLoadingLeads: true, leadsError: null });
     try {
       // authedFetch forwards the Supabase token so the route can persist
@@ -1345,8 +1371,14 @@ export const useStore = create((set, get) => ({
         .slice(-400)
         .join(',');
       const qs = new URLSearchParams({ limit: '40' });
-      const market = get().market;
-      if (market) qs.set('location', market);
+      // Prospect where the operator is actually looking. Ticking cities used to
+      // filter the list without changing what got fetched, so "Load more" kept
+      // pulling the original market and the filtered view stayed empty.
+      // Explicit market beats the ticked cities; the edge's guess is the last
+      // resort, which is what `location` omitted means.
+      const { market, selectedCities } = get();
+      const where = market || (selectedCities.length ? selectedCities[0] : '');
+      if (where) qs.set('location', where);
       if (exclude) qs.set('exclude', exclude);
       const res = await authedFetch(`/api/leads?${qs}`);
       if (!res.ok) throw new Error(`Leads API returned ${res.status}`);
@@ -1370,9 +1402,11 @@ export const useStore = create((set, get) => ({
         const k = l._placeId || l._apolloId || l.external_id || `${l.company}|${l.address}`;
         if (nwSeen.has(k)) continue;
         nwSeen.add(k);
-        nwAdded.push({ ...l, id: nwNextId++, _addedAt: new Date().toISOString() });
+        nwAdded.push({ ...l, id: nwNextId++, _addedAt: new Date().toISOString(), _seq: fetchSeq });
       }
-      const nwMerged = [...nwPrev, ...nwAdded].slice(-MAX_STORED_LEADS);
+      // Newest first, same as the main list — this section is short enough that
+      // appending buried every new find below the ones already worked.
+      const nwMerged = [...nwAdded, ...nwPrev].slice(0, MAX_STORED_LEADS);
       persistLeads(nwMerged, NO_WEBSITE_KEY);
 
       const gained = addedCount + nwAdded.length;
