@@ -88,7 +88,6 @@ export default function SearchModal() {
       p.name.toLowerCase().includes(query) || p.hint.toLowerCase().includes(query)
     );
     const actionMatches = [
-      { id: 'toggle-degen', name: degenMode ? 'Switch to CHILL mode' : 'Activate DEGEN mode', desc: 'Alpha plays, insider intel, market signals' },
       { id: 'open-audit', name: 'Run a free audit', desc: 'Paste a URL → 12-dimension revenue loss analysis' },
     ].filter(a => a.name.toLowerCase().includes(query) || a.desc.toLowerCase().includes(query));
 
@@ -153,9 +152,7 @@ export default function SearchModal() {
       setPage(item.data.id);
       setSearchOpen(false);
     } else if (item.type === 'action') {
-      if (item.data.id === 'toggle-degen') {
-        useStore.getState().toggleDegenMode();
-      } else if (item.data.id === 'open-audit') {
+      if (item.data.id === 'open-audit') {
         setPage('audit');
       }
       setSearchOpen(false);

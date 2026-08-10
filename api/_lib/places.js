@@ -145,9 +145,35 @@ function scorePlace(p) {
   // them — it is scored as need and paid for in reach above.
   if (!hasPhone) need += 8;
 
-  // Reachability gates; need orders. Weighted so a genuinely unreachable
-  // business cannot ride a big need score to the top of the list.
-  const score = Math.round(reach * 0.45 + need * 0.85);
+  // ── Ability to pay ───────────────────────────────────────────────────────
+  // The missing third dimension, and the reason the first cut of this ranking
+  // put water-well outfits and one-truck pavers at the top: need correlates
+  // with being small, and being small correlates with not being able to afford
+  // the retainer. A business that needs everything and can pay for nothing is
+  // not a good lead, it is a wasted morning.
+  //
+  // Sized off the same revenue estimate the quote uses, so the ranking and the
+  // price agree with each other rather than pointing in opposite directions.
+  const rev = estimateRevenue(p);
+  const mid = rev ? (rev.monthlyLow + rev.monthlyHigh) / 2 : null;
+  let value = 0;
+  if (mid == null) {
+    value = 10;                       // unknown: neither reward nor punish
+  } else if (mid < 6000) {
+    value = -45;                      // below the floor — the quote returns "too small"
+  } else if (mid < 15000) {
+    value = 5;
+  } else if (mid < 40000) {
+    value = 30;                       // the sweet spot: can pay, still owner-run
+  } else if (mid < 120000) {
+    value = 35;
+  } else {
+    value = 20;                       // large enough to have a procurement process
+  }
+
+  // Need still orders within a band, but a business that cannot pay can no
+  // longer ride its gaps to the top of the list.
+  const score = Math.round(reach * 0.35 + need * 0.55 + value * 0.75);
   return Math.max(1, Math.min(99, score));
 }
 

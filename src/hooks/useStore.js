@@ -1399,7 +1399,79 @@ export const useStore = create((set, get) => ({
     } catch { /* storage is a cache; fewer leads is an acceptable outcome */ }
   },
 
-  fetchLiveLeads: async (attempt = 1) => {
+  // ── Building the book ────────────────────────────────────────────────────
+  // One visit adds 25-40 leads. Getting to a working book of a thousand-plus
+  // that way means pressing Load more forty times, so this does it in the
+  // background while the operator works the top of the list.
+  //
+  // Deliberately paced rather than parallel. Each pass is a Places fan-out of
+  // ~8 queries billed per request, so hammering it would be both expensive and
+  // rude to the API; a second between passes keeps the UI responsive and the
+  // spend visible as it accrues.
+  //
+  // Stops on three consecutive dry passes. A metro has a finite number of
+  // businesses in the trades we search, and past that point every further pass
+  // costs money to return rows we already hold.
+  backfillTarget: 1500,
+  backfillRunning: false,
+  backfillStop: false,
+  stopBackfill: () => set({ backfillStop: true }),
+  buildLeadBook: async () => {
+    if (get().backfillRunning) return;
+    set({ backfillRunning: true, backfillStop: false });
+    // Rotate across cities. Draining a single metro hits diminishing returns
+    // fast — the trades we search have a finite number of businesses in one
+    // place — and it also leaves the operator with a book they can only work
+    // in one area. Cycling spreads the spend and keeps every pass productive.
+    //
+    // The rotation is discovered rather than hardcoded: ticked cities if the
+    // operator has chosen any, otherwise their own market plus the cities that
+    // already appear in the leads they hold. That widens on its own as the book
+    // grows, without this file needing to know any geography.
+    const rotation = () => {
+      const s0 = get();
+      if (s0.selectedCities.length) return s0.selectedCities;
+      const seen = new Map();
+      for (const l of [...s0.liveLeads, ...s0.noWebsiteLeads]) {
+        const c = cityOf(l);
+        if (c) seen.set(c, (seen.get(c) || 0) + 1);
+      }
+      const discovered = [...seen.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([c]) => c);
+      const home = s0.market || s0.resolvedMarket || '';
+      return [home, ...discovered.filter(c => c !== home)].filter(Boolean);
+    };
+
+    // Per-city dry counters, so one exhausted city retires without stopping the
+    // whole run — that was the flaw in a single counter.
+    const dryByCity = new Map();
+    let i = 0;
+    try {
+      while (!get().backfillStop) {
+        const held = get().liveLeads.length + get().noWebsiteLeads.length;
+        if (held >= get().backfillTarget) break;
+
+        const cities = rotation();
+        const live = cities.filter(c => (dryByCity.get(c) || 0) < 2);
+        if (!live.length) break;                       // every city exhausted
+
+        const city = live[i++ % live.length];
+        const before = held;
+        await get().fetchLiveLeads(1, city);
+        const after = get().liveLeads.length + get().noWebsiteLeads.length;
+        if (after - before < 5) dryByCity.set(city, (dryByCity.get(city) || 0) + 1);
+        else dryByCity.set(city, 0);
+
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    } finally {
+      set({ backfillRunning: false });
+    }
+  },
+
+  fetchLiveLeads: async (attempt = 1, locationOverride = '') => {
     // More than one city ticked and no explicit market: fan out across them
     // rather than quietly prospecting only the first. Disjoint from the guard
     // in fetchLeadsForCities, which delegates back here when nothing is ticked,
@@ -1440,7 +1512,7 @@ export const useStore = create((set, get) => ({
       // Explicit market beats the ticked cities; the edge's guess is the last
       // resort, which is what `location` omitted means.
       const { market, selectedCities } = get();
-      const where = market || (selectedCities.length ? selectedCities[0] : '');
+      const where = locationOverride || market || (selectedCities.length ? selectedCities[0] : '');
       if (where) qs.set('location', where);
       if (exclude) qs.set('exclude', exclude);
       const res = await authedFetch(`/api/leads?${qs}`);
@@ -1488,7 +1560,7 @@ export const useStore = create((set, get) => ({
       // spends the Places budget hunting for the last few rows in a market
       // we have already worked through.
       if (attempt < 2 && gained < LEADS_PER_VISIT) {
-        return get().fetchLiveLeads(attempt + 1);
+        return get().fetchLiveLeads(attempt + 1, locationOverride);
       }
       return merged;
     } catch (err) {

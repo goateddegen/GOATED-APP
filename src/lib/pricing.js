@@ -40,7 +40,7 @@ export const PRICING = {
   // Floor raised deliberately. Below roughly $550 the setup does not cover the
   // work, and a very cheap unsolicited quote reads as scam-adjacent to a wary
   // owner rather than as a bargain — cheap is not the same as credible.
-  minDeposit: 550,
+  minDeposit: 500,
   maxDeposit: 2500,
   // A site build is real one-off work, so it carries its own floor.
   websiteBuildFloor: 850,
@@ -102,7 +102,7 @@ export function priceFor(lead, { includesBuild = false } = {}) {
 export function quoteLine(lead, opts) {
   const p = priceFor(lead, opts);
   if (p.fit === 'too-small') {
-    return 'Below the size this service pays for — our floor would be most of their month. Skip, or sell the one-off build only.';
+    return 'Cannot carry a retainer at their size — sell the one-off build and stop there.';
   }
   if (!p.monthly) return 'Priced on the call — not enough public signal to quote blind.';
   const money = (n) => `$${n.toLocaleString('en-US')}`;

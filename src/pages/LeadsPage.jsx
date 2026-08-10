@@ -712,6 +712,10 @@ export default function LeadsPage({ onSelect }) {
   const degenMode = useStore(s => s.degenMode);
 
   const fetchLiveLeads = useStore(s => s.fetchLiveLeads);
+  const buildLeadBook = useStore(s => s.buildLeadBook);
+  const stopBackfill = useStore(s => s.stopBackfill);
+  const backfillRunning = useStore(s => s.backfillRunning);
+  const backfillTarget = useStore(s => s.backfillTarget);
   const lastAddedLeadCount = useStore(s => s.lastAddedLeadCount);
   const noWebsiteLeads = useStore(s => s.noWebsiteLeads);
   // Opening a lead is a two-step store action — LeadDetail reads selectedLead
@@ -747,8 +751,10 @@ export default function LeadsPage({ onSelect }) {
   const detailOpen = useStore(s => s.detailOpen);
   useEffect(() => {
     if (currentPage !== 'leads' || detailOpen) return;
-    fetchLiveLeads();
-  }, [currentPage, detailOpen, fetchLiveLeads]);
+    // First page immediately so there is something to work, then keep filling
+    // the book in the background until it is deep enough to be useful.
+    fetchLiveLeads().then(() => buildLeadBook?.());
+  }, [currentPage, detailOpen, fetchLiveLeads, buildLeadBook]);
 
   const isLive = dataMode === 'live' && liveLeads.length > 0;
 
@@ -1112,11 +1118,20 @@ export default function LeadsPage({ onSelect }) {
         <div className="flex items-center gap-2 flex-wrap">
           {/* Leads accumulate rather than being replaced, so there has to be a
               way to pull more without reloading the whole page. */}
-          <button onClick={() => fetchLiveLeads()} disabled={isLoadingLeads}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border bg-surface-2 border-white/[0.05] text-slate-400 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed">
-            <RefreshCw size={14} className={isLoadingLeads ? 'animate-spin' : ''} />
-            {isLoadingLeads ? 'Finding…' : 'Load more'}
-          </button>
+          {backfillRunning ? (
+            <button onClick={stopBackfill}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border bg-emerald-500/10 border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/15">
+              <RefreshCw size={14} className="animate-spin" />
+              Building book — {(liveLeads.length + noWebsiteLeads.length).toLocaleString()} of {backfillTarget.toLocaleString()}
+              <span className="text-emerald-400/50 ml-1">stop</span>
+            </button>
+          ) : (
+            <button onClick={() => buildLeadBook()} disabled={isLoadingLeads}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border bg-surface-2 border-white/[0.05] text-slate-400 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed">
+              <RefreshCw size={14} className={isLoadingLeads ? 'animate-spin' : ''} />
+              {isLoadingLeads ? 'Finding…' : 'Load more'}
+            </button>
+          )}
           <button onClick={() => setAiChatOpen(!aiChatOpen)}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${aiChatOpen ? 'bg-brand/15 border-brand/30 text-brand' : 'bg-surface-2 border-white/[0.05] text-slate-400 hover:text-white'}`}>
             <Brain size={14} /> AI Search
@@ -1208,7 +1223,7 @@ export default function LeadsPage({ onSelect }) {
             <div className="min-w-0">
               <h2 className="text-sm font-bold text-amber-400">No Website — Highest Intent</h2>
               <p className="text-[11px] text-slate-500">
-                Invisible outside Maps. Sell the build plus the receptionist: {fmt(4000)} deposit + {fmt(1000)}/mo
+                Invisible outside Maps. Sell the build plus the receptionist — each one priced to the business.
               </p>
             </div>
             <span className="ml-auto shrink-0 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
@@ -1426,7 +1441,9 @@ export default function LeadsPage({ onSelect }) {
 
                 <div className="flex items-center gap-2 mt-3">
                   <div className="flex-1 min-w-0 text-[11px] text-slate-400">
-                    <span className="text-white font-semibold">{fmt(pkg.deposit)}</span> + {fmt(pkg.monthly)}/mo
+                    {pkg.deposit
+                      ? <><span className="text-white font-semibold">{fmt(pkg.deposit)}</span> + {fmt(pkg.monthly)}/mo</>
+                      : <span className="text-amber-400/80">Build only — no retainer budget</span>}
                     <span className="text-slate-600"> · </span>
                     <span className="text-emerald-400">{prob}% close</span>
                   </div>
@@ -1524,8 +1541,23 @@ export default function LeadsPage({ onSelect }) {
 
                       {/* Price — deposit up front, retainer per month. */}
                       <td className="px-3 py-2.5">
-                        <div className="font-mono text-sm text-white">{fmt(pkg.deposit)}</div>
-                        <div className="text-[10px] text-slate-500">+ {fmt(pkg.monthly)}/mo</div>
+                        {/* A null price is a verdict, not a zero — rendering it
+                            as "$0 + $0/mo" read as a broken row. It says the
+                            business cannot carry a monthly retainer, which is
+                            not the same as worthless: a one-off build is still
+                            sellable, so the cell names that rather than just
+                            flagging a problem. */}
+                        {pkg.deposit ? (
+                          <>
+                            <div className="font-mono text-sm text-white">{fmt(pkg.deposit)}</div>
+                            <div className="text-[10px] text-slate-500">+ {fmt(pkg.monthly)}/mo</div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-sm text-amber-400/80 font-medium">Build only</div>
+                            <div className="text-[10px] text-slate-600">no retainer budget</div>
+                          </>
+                        )}
                       </td>
 
                       {/* Close % */}

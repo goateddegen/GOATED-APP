@@ -148,19 +148,16 @@ function GlassCard({ children, className = '', highlight = false }) {
 function ListingGallery({ lead }) {
   const [refs, setRefs] = React.useState(lead?.photoRefs?.length ? lead.photoRefs : (lead?.photoRef ? [lead.photoRef] : []));
   const [active, setActive] = React.useState(0);
-  const [showAll, setShowAll] = React.useState(false);
   const [failed, setFailed] = React.useState(false);
 
   React.useEffect(() => {
     setRefs(lead?.photoRefs?.length ? lead.photoRefs : (lead?.photoRef ? [lead.photoRef] : []));
-    setActive(0); setShowAll(false); setFailed(false);
+    setActive(0); setFailed(false);
   }, [lead?._placeId, lead?.external_id, lead?.photoRef, lead?.photoRefs]);
 
-  // Same backfill as the avatar: rows stored before photos were collected have
-  // a place id and nothing else, and should not be stuck without them.
   const placeId = placeIdOf(lead);
   React.useEffect(() => {
-    if (refs.length || !placeId) return;
+    if (refs.length > 1 || !placeId) return;
     let cancelled = false;
     fetch(`/api/leads?action=place&id=${encodeURIComponent(placeId)}`)
       .then(r => (r.ok ? r.json() : null))
@@ -173,21 +170,50 @@ function ListingGallery({ lead }) {
     return () => { cancelled = true; };
   }, [placeId, refs.length]);
 
-  if (!refs.length || failed) return null;
+  // ONE url per photo, used for both the hero and its thumbnail.
+  //
+  // Switching photos used to stall because the thumbnail was requested at 320px
+  // and the hero at 1600px — two different URLs, so clicking a thumb started a
+  // fresh download of an image the browser had never seen. Same URL for both
+  // means the thumbnail strip warms the cache, and selecting one is instant.
+  // It also halves the number of billable photo requests per lead.
+  const src = React.useCallback((ref) => `/api/leads?action=photo&ref=${encodeURIComponent(ref)}&w=1600`, []);
 
-  const src = (ref, w) => `/api/leads?action=photo&ref=${encodeURIComponent(ref)}&w=${w}`;
+  // Arrow keys move through the set. Ignored while typing, so the shortcut does
+  // not fight the search and script fields elsewhere on the page.
+  React.useEffect(() => {
+    if (refs.length < 2) return;
+    const onKey = (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      e.preventDefault();
+      setActive(i => (e.key === 'ArrowRight'
+        ? (i + 1) % refs.length
+        : (i - 1 + refs.length) % refs.length));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [refs.length]);
+
+  if (!refs.length || failed) return null;
 
   return (
     <div className="mb-5">
       <div className="relative rounded-2xl overflow-hidden border border-white/[0.06] bg-black/40">
-        <img
-          src={src(refs[active], 1600)}
-          alt={`${lead.company || 'Business'} — listing photo ${active + 1}`}
-          onError={() => setFailed(true)}
-          loading="lazy"
-          decoding="async"
-          className="w-full h-56 sm:h-72 lg:h-80 object-cover"
-        />
+        {/* Every photo is mounted, and only the selected one is shown. The
+            browser therefore fetches all of them once, up front, and switching
+            is a CSS change rather than a network round trip. */}
+        {refs.map((r, i) => (
+          <img
+            key={r}
+            src={src(r)}
+            alt={`${lead.company || 'Business'} — listing photo ${i + 1}`}
+            onError={() => { if (i === 0) setFailed(true); }}
+            decoding="async"
+            className={`w-full h-56 sm:h-72 lg:h-80 object-cover ${i === active ? '' : 'hidden'}`}
+          />
+        ))}
         <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
         <div className="absolute bottom-3 left-4 flex items-center gap-2">
           <MapPin size={13} className="text-orange-400" />
@@ -195,28 +221,20 @@ function ListingGallery({ lead }) {
         </div>
         {refs.length > 1 && (
           <div className="absolute bottom-3 right-4 text-[11px] text-white/70">
-            {active + 1} / {refs.length}
+            {active + 1} / {refs.length} <span className="text-white/40 ml-1">← →</span>
           </div>
         )}
       </div>
 
       {refs.length > 1 && (
-        showAll ? (
-          <div className="mt-2 grid grid-cols-5 gap-2">
-            {refs.map((r, i) => (
-              <button key={r} onClick={() => setActive(i)}
-                className={`rounded-lg overflow-hidden border transition ${i === active ? 'border-orange-400/70' : 'border-white/[0.06] hover:border-white/20'}`}>
-                <img src={src(r, 320)} alt={`Photo ${i + 1}`} loading="lazy" decoding="async"
-                  className="w-full h-14 object-cover" />
-              </button>
-            ))}
-          </div>
-        ) : (
-          <button onClick={() => setShowAll(true)}
-            className="mt-2 text-xs text-slate-400 hover:text-white transition">
-            Show {refs.length - 1} more {refs.length - 1 === 1 ? 'photo' : 'photos'}
-          </button>
-        )
+        <div className="mt-2 grid grid-cols-6 gap-2">
+          {refs.map((r, i) => (
+            <button key={r} onClick={() => setActive(i)}
+              className={`rounded-lg overflow-hidden border transition ${i === active ? 'border-orange-400/70' : 'border-white/[0.06] hover:border-white/20'}`}>
+              <img src={src(r)} alt={`Photo ${i + 1}`} decoding="async" className="w-full h-14 object-cover" />
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );

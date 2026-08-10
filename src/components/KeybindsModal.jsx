@@ -25,7 +25,6 @@ const sections = [
       { key: 'G', label: 'Open GOATED AI', icon: Bot, color: '#a855f7' },
       { key: 'A', label: 'Account settings', icon: User, color: '#ec4899' },
       { key: 'S', label: 'Toggle sidebar', icon: Eye, color: '#06b6d4' },
-      { key: 'Shift+D', label: 'Toggle DEGEN Mode', icon: Flame, color: '#f97316' },
       { key: '?', label: 'Show this guide', icon: Keyboard, color: '#f59e0b' },
       { key: 'ESC', label: 'Close any overlay', icon: X, color: '#64748b' },
     ]
