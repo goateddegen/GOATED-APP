@@ -183,6 +183,9 @@ export async function runTool(name, args, ctx = {}) {
           // it the assistant could name a business but never point at it, and
           // the operator had to go and find it by hand on the Leads page.
           placeId: l._placeId || null,
+          // Pricing inputs — the chat quotes per business rather than a flat rate.
+          revenueEstimate: l.revenueEstimate || null,
+          ticketRange: l.ticketRange || null,
           company: l.company,
           location: l.location,
           phone: l.phone,

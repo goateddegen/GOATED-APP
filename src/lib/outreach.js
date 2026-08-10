@@ -18,6 +18,8 @@
 // If a signal is missing we say less rather than inventing it.
 
 /** Concrete gaps we can name on the call, straight from the record. */
+
+import { priceFor, quoteLine } from './pricing';
 export function deriveGaps(lead) {
   const gaps = [];
   if (!lead.website && !lead.domain) {
@@ -73,10 +75,10 @@ export function recommendTier(lead) {
       why: `${emp ? `${emp} staff` : 'Larger org'}${rev ? ` · ${lead.revenueFormatted || ''} revenue` : ''} — multi-location or high call volume.` };
   }
   if (emp >= 10 || rev >= 1_000_000) {
-    return { id: 'local', label: 'Local Engine', price: '$2,000 setup + $750/mo',
+    return { id: 'local', label: 'Local Engine', price: quoteLine(lead),
       why: `${emp ? `${emp} staff` : 'SMB'} — classic missed-call recovery profile.` };
   }
-  return { id: 'starter', label: 'Local Engine (starter)', price: '$2,000 setup + $750/mo',
+  return { id: 'starter', label: 'Local Engine (starter)', price: quoteLine(lead),
     why: 'Very small team — owner likely answers the phone themselves. Lead with time saved, not headcount.' };
 }
 
@@ -191,8 +193,8 @@ export function buildObjections(lead) {
   out.push({
     objection: "It's too expensive",
     response: loss
-      ? `Setup is $2,000 and $750/mo. You're losing roughly ${loss.formatted}/mo right now. It pays for itself if it recovers three jobs.`
-      : `Setup is $2,000 and $750/mo. It pays for itself the moment it recovers a handful of jobs — and there's a 30-day refund.`,
+      ? `${quoteLine(lead)}. You're losing roughly ${loss.formatted}/mo right now.`
+      : `${quoteLine(lead)}. There's a 30-day refund if it doesn't pay for itself.`,
   });
 
   if (!lead.website && !lead.domain) {
@@ -270,8 +272,9 @@ export function buildPackage(lead) {
     items.push({
       name: 'Website build + lead capture',
       why: 'No site on file — every enquiry has to arrive by phone or Maps, and anything after hours is gone.',
-      deposit: 2000,
-      monthly: 250,
+      // Sized to this business, not to a flat rate. See lib/pricing.js.
+      deposit: priceFor(lead, { includesBuild: true }).deposit,
+      monthly: priceFor(lead).monthly,
       priority: 'P0',
     });
   }
@@ -289,8 +292,8 @@ export function buildPackage(lead) {
         : !lead.phone
           ? 'No published number, so there is no reliable way for a customer to reach them at all.'
           : 'Answers in under 60 seconds, qualifies the caller, books the job, texts you the transcript.',
-      deposit: 2000,
-      monthly: 750,
+      deposit: priceFor(lead).deposit,
+      monthly: priceFor(lead).monthly,
       priority: rec?.qualified && rec.isEmergency ? 'P0' : 'P1',
       qualified: !!rec?.qualified,
       evidence: rec?.label || null,
@@ -303,8 +306,8 @@ export function buildPackage(lead) {
       why: noReviews
         ? 'No reviews at all — effectively invisible in local ranking.'
         : `Only ${reviews} reviews. Competitors outrank them on volume, not quality.`,
-      deposit: 1500,
-      monthly: 300,
+      deposit: Math.round((priceFor(lead).deposit ?? 0) * 0.6 / 50) * 50 || null,
+      monthly: Math.round((priceFor(lead).monthly ?? 0) * 0.6 / 50) * 50 || null,
       priority: 'P1',
     });
   }
@@ -314,8 +317,8 @@ export function buildPackage(lead) {
     items.push({
       name: 'Review engine + web presence audit',
       why: 'They already cover their phones and have a site. Lead with what their listing is not doing for them.',
-      deposit: 1500,
-      monthly: 300,
+      deposit: Math.round((priceFor(lead).deposit ?? 0) * 0.6 / 50) * 50 || null,
+      monthly: Math.round((priceFor(lead).monthly ?? 0) * 0.6 / 50) * 50 || null,
       priority: 'P2',
     });
   }

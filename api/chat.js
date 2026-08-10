@@ -4,6 +4,7 @@
 
 import { TOOL_SCHEMAS, runTool } from './_lib/tools.js';
 import { formatPhone } from './_lib/phone.js';
+import { quoteLine, PRICING } from './_lib/pricing.js';
 
 // Overridable so a bad day on one model does not need a redeploy.
 const CHAT_MODEL = process.env.GROQ_CHAT_MODEL || 'llama-3.1-8b-instant';
@@ -102,7 +103,10 @@ function renderLeadResults(result, args) {
     const realGaps = (l.gaps || []).filter(g => !/^none found/i.test(g));
     if (realGaps.length) bits.push(realGaps.join(', '));
 
-    const quote = !l.website ? `${money(4000)} + ${money(1000)}/mo` : `${money(2000)} + ${money(750)}/mo`;
+    // Sized to the business. A flat rate quoted a well-drilling outfit the app
+    // estimates at $1-3K/mo the same number as a foundation-repair company at
+    // $63-189K/mo, and the first one hangs up.
+    const quote = quoteLine(l, { includesBuild: !l.website });
     // Link the name to its lead page, and the site to a fresh audit. The
     // client turns both into in-app buttons; anywhere else they degrade to
     // ordinary markdown links rather than breaking.
@@ -114,7 +118,7 @@ function renderLeadResults(result, args) {
       : '';
     return `${i + 1}. ${name}${l.location ? ` — ${l.location}` : ''}\n`
       + `   ${bits.join(' · ') || 'Established operator'}\n`
-      + `   ${l.phone ? `${formatPhone(l.phone)} · ` : ''}Quote ${quote}${auditLink}`;
+      + `   ${l.phone ? `${formatPhone(l.phone)} · ` : ''}${quote}${auditLink}`;
   });
 
   const noSite = leads.filter(l => !l.website).length;
@@ -215,7 +219,7 @@ function staticAnswer(message) {
   // What we sell and what it costs — fixed facts, straight from PRICING.
   if (/what (does|do) (goated|we|you) (sell|offer|do)\b|what('| i)?s the (pitch|offer|product)|how much (do|does) (we|you|it) (charge|cost)|what do we charge|pricing/.test(t)) {
     return 'We sell two things to local service businesses:\n\n'
-      + '**AI receptionist** — $2,000 deposit + $750/mo. Answers missed calls in under 60 seconds, '
+      + '**AI receptionist** — priced per business, typically $300-$2,500 to set up and $150-$1,200/mo depending on their size. Answers missed calls in under 60 seconds, '
       + 'qualifies the caller, books the job, texts you the transcript.\n\n'
       + '**Website build** — add $2,000 deposit + $250/mo. For businesses with no site at all, '
       + 'which is the strongest pitch we have: they are invisible outside Maps and have nowhere to send anyone.\n\n'
@@ -257,7 +261,7 @@ function staticAnswer(message) {
       + '"What happens to a call that comes in while you are on a job?"\n\n'
       + 'Follow with "What is a job like that worth to you?" — once they say the number out loud, '
       + 'the price argument is already over.\n\n'
-      + '**Then quote it on the call.** $2,000 to set up, $750 a month. No proposal, no follow-up deck.\n\n'
+      + '**Then quote it on the call.** Open the lead for its actual number — it is sized to that business, not a flat rate. No proposal, no follow-up deck.\n\n'
       + 'Best times are mid-morning or mid-afternoon. Never 7-9am — they are loading the van.';
   }
 
@@ -569,7 +573,9 @@ RULES — OBEY EVERY ONE:
 - When you need an example business, use a real-sounding local trade — "Rodriguez Plumbing",
   "A-1 Garage Door" — never "XYZ Corp", "Acme" or "John Smith at Company Inc". Our customers
   call plumbers and roofers, not enterprises, and a corporate example reads as boilerplate.
-- Our pricing is a one-time deposit plus a monthly retainer: $2,000 + $750/mo for the AI
+- Pricing is a one-time deposit plus a monthly retainer, SIZED PER BUSINESS from its estimated
+  revenue — roughly $300-$2,500 setup and $150-$1,200/mo. Never quote a flat figure; use the
+  quote that came back with the lead, or say it is priced on the call. For the AI
   receptionist, $2,000 + $250/mo to add a website build. Quote those when asked what to sell.
 - 60 words MAX unless the user explicitly asks for a report / breakdown / deep dive.
 - Bullets beat paragraphs. Lead with the number or action — no "Sure, here's…" preambles.
@@ -682,13 +688,17 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
     const providerErrors = [];
     // Surfaced in the response so the UI can show what the assistant actually did.
     const toolsUsed = [];
-    // Seeded with our own canonical pricing so the ungrounded-figure stripper
-    // treats it as real. Without this it deleted the numbers we actually want
-    // quoted — "$2,000 + $750/mo" came out as "+ /mo" — because they originate
-    // in the system prompt rather than a tool result.
-    let groundingJson = JSON.stringify({
-      pricing: [2000, 750, 250, 300, 1500, 10000, 20000, 2500, 5000],
-    });
+    // Seeded so the ungrounded-figure stripper treats our own prices as real.
+    // Without it the numbers we actually want quoted were deleted — "$2,000 +
+    // $750/mo" came out as "+ /mo" — because they originate in the system
+    // prompt rather than a tool result.
+    //
+    // Now that a quote is derived per business it is not a fixed list any more,
+    // so this seeds every value the policy in _lib/pricing.js can produce:
+    // multiples of the rounding step across the deposit and monthly bands.
+    const priceBand = [];
+    for (let n = PRICING.minMonthly; n <= PRICING.maxDeposit; n += PRICING.roundTo) priceBand.push(n);
+    let groundingJson = JSON.stringify({ pricing: priceBand });
 
     // Before spending a model call: if this is plainly "<trade> in <city>",
     // run the search and format it ourselves. Same answer every time, no

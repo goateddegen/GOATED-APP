@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { useStore, fmt, enrichLead, initialsOf, placeIdOf, formatPhone } from '../hooks/useStore';
 import { buildCallSheet, buildPackage, recommendStack, estimateMissedRevenue } from '../lib/outreach';
+import { priceFor, quoteLine } from '../lib/pricing';
 
 // ─── Color Maps ────────────────────────────────────────────────────────────────
 const priorityColors = {
@@ -273,8 +274,11 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
   const fn = (lead.name || '').split(' ')[0];
   const recPkg = safePackages.find(p => p.recommended);
   // Monthly retainer — this is quoted with a "/mo" suffix in the scripts below.
-  const recPrice = fmt(recPkg?.monthly || Math.round(dv * 0.025));
-  const recDeposit = fmt(recPkg?.price || 2000);
+  // Falls back to this business's derived price rather than a flat rate — the
+  // whole point is that the number in the script matches who you are calling.
+  const derived = priceFor(el, { includesBuild: !el.website && !el.domain });
+  const recPrice = fmt(recPkg?.monthly ?? derived.monthly ?? 0);
+  const recDeposit = fmt(recPkg?.price ?? derived.deposit ?? 0);
   const pp1 = (safePainPoints[0] || 'operational gaps').toLowerCase();
   const pp2 = (safePainPoints[1] || 'customer acquisition costs').toLowerCase();
 
@@ -785,7 +789,7 @@ function CloseGuideTab({ lead, el, dv, closeSteps, completedSteps, closeConfiden
               {currentStep && currentStep.step === 1 && `${lead.company} is losing ~${fmt(Math.round(dv * 0.15))}/mo to ${(safePainPoints[0] || 'operational gaps').toLowerCase()}. Review the pain point analysis above and craft your opening around this number. Your first message should make ${(lead.name || '').split(' ')[0]} feel the cost of inaction — not hear a sales pitch. Prepare a ${el.bestMethod || 'direct outreach'} message and move to contact within 24 hours.`}
               {currentStep && currentStep.step === 2 && `Hit ${(lead.name || '').split(' ')[0]} today via ${el.bestMethod || 'phone'}. Lead with the money: "${lead.company} is leaving ${fmt(Math.round(dv * 0.15 * 12))}/yr on the table because of ${(safePainPoints[0] || 'process gaps').toLowerCase()}." Don't sell — diagnose. Your goal is to get them to confirm the pain and agree to a discovery call.`}
               {currentStep && currentStep.step === 3 && `Discovery call with ${(lead.name || '').split(' ')[0]}: Your job is to get them to say the dollar amount out loud. Ask: "What does ${(safePainPoints[0] || 'this problem').toLowerCase()} cost ${lead.company} per month?" Then anchor: "So you're spending ${fmt(Math.round(dv * 0.15))}/mo on a problem that has a ${fmt(safePackages.find(p => p.recommended)?.monthly || Math.round(dv * 0.025))}/mo fix." Verify budget authority and timeline.`}
-              {currentStep && currentStep.step === 4 && `Send the proposal NOW. Frame it as: "${lead.company} is currently paying ${fmt(Math.round(dv * 0.15))}/mo for ${(safePainPoints[0] || 'this problem').toLowerCase()} — you're just paying it in lost revenue instead of a solution. The ${safePackages.find(p => p.recommended)?.name || 'Growth'} plan at ${fmt(safePackages.find(p => p.recommended)?.price || 2000)} + ${fmt(safePackages.find(p => p.recommended)?.monthly || Math.round(dv * 0.025))}/mo — and it starts paying for itself the first month." Follow up in 48 hours — every day of delay costs them.`}
+              {currentStep && currentStep.step === 4 && `Send the proposal NOW. Frame it as: "${lead.company} is currently paying ${fmt(Math.round(dv * 0.15))}/mo for ${(safePainPoints[0] || 'this problem').toLowerCase()} — you're just paying it in lost revenue instead of a solution. The ${safePackages.find(p => p.recommended)?.name || 'Growth'} plan at ${recDeposit} + ${fmt(safePackages.find(p => p.recommended)?.monthly || Math.round(dv * 0.025))}/mo — and it starts paying for itself the first month." Follow up in 48 hours — every day of delay costs them.`}
               {currentStep && currentStep.step === 5 && `${(lead.name || '').split(' ')[0]} is negotiating — they WANT to buy but need justification. Reframe any budget objection: "The question isn't whether you can afford ${fmt(safePackages.find(p => p.recommended)?.monthly || Math.round(dv * 0.025))}/mo — it's whether you can afford another ${fmt(Math.round(dv * 0.15))} month of doing nothing." Offer the 30-day pilot if needed. Close this week.`}
               {currentStep && currentStep.step === 6 && `Lock it down. ${lead.company} — ${fmt(quoted.deposit)} deposit plus ${fmt(quoted.monthly)}/mo. Send the agreement, process payment, and schedule onboarding. Then immediately ask: "Who else in ${lead.industry} should I be talking to?" Every won deal should generate 2-3 warm referrals.`}
               {!currentStep && `Start with the revenue leak: ${lead.company} is losing ~${fmt(Math.round(dv * 0.15))}/mo to ${(safePainPoints[0] || 'inefficiency').toLowerCase()}. Build your outreach around making ${(lead.name || '').split(' ')[0]} feel that cost.`}
@@ -1400,7 +1404,7 @@ Context:\n${ctx}`;
             {el.receptionist.qualified ? (
               <div className="mt-3 pt-3 border-t border-white/[0.06] flex flex-wrap items-center gap-2">
                 <span className="text-[11px] text-slate-400">
-                  Quote <span className="text-white font-semibold">{fmt(2000)}</span> + <span className="text-white font-semibold">{fmt(750)}</span>/mo
+                  Quote <span className="text-white font-semibold">{quoteLine(el)}</span>
                 </span>
                 <button
                   onClick={() => {
@@ -1632,7 +1636,7 @@ Context:\n${ctx}`;
                 </div>
                 <div className="min-w-0">
                   <div className="text-[10px] text-amber-400 uppercase tracking-wider font-semibold">No Website</div>
-                  <div className="text-sm text-white truncate">Lead with the build — {fmt(2000)} + {fmt(250)}/mo</div>
+                  <div className="text-sm text-white truncate">Lead with the build — {quoteLine(el, { includesBuild: true })}</div>
                 </div>
               </div>
             )}
