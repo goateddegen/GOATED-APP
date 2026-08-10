@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { TOOL_SCHEMAS, runTool } from './_lib/tools.js';
+import { formatPhone } from './_lib/phone.js';
 
 // Overridable so a bad day on one model does not need a redeploy.
 const CHAT_MODEL = process.env.GROQ_CHAT_MODEL || 'llama-3.1-8b-instant';
@@ -113,7 +114,7 @@ function renderLeadResults(result, args) {
       : '';
     return `${i + 1}. ${name}${l.location ? ` — ${l.location}` : ''}\n`
       + `   ${bits.join(' · ') || 'Established operator'}\n`
-      + `   ${l.phone ? `${l.phone} · ` : ''}Quote ${quote}${auditLink}`;
+      + `   ${l.phone ? `${formatPhone(l.phone)} · ` : ''}Quote ${quote}${auditLink}`;
   });
 
   const noSite = leads.filter(l => !l.website).length;

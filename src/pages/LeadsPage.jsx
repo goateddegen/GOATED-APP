@@ -8,7 +8,7 @@ import {
   Crown, PhoneCall, Timer, UserSearch, Table2,
   ExternalLink, MapPin, Crosshair, AlertTriangle, Radio, RefreshCw, Globe,
 } from 'lucide-react';
-import { useStore, fmt, priorities, industries, initialsOf, cityOf } from '../hooks/useStore';
+import { useStore, fmt, priorities, industries, initialsOf, cityOf, formatPhone } from '../hooks/useStore';
 import { buildOutreachStrategy, deriveGaps, recommendTier, buildPackage } from '../lib/outreach';
 
 // ---------------------------------------------------------------------------
@@ -510,14 +510,14 @@ function CallModal({ lead, phone, onClose, showToast }) {
         </div>
         <div className="text-lg font-bold text-white mb-1">{lead.name}</div>
         <div className="text-sm text-slate-400 mb-1">{lead.company} · {lead.industry}</div>
-        <div className="text-xs text-slate-500 mb-4">Direct line available</div>
+        <div className="text-sm font-mono text-white mb-4 tracking-wide">{formatPhone(phone)}</div>
 
         <div className="space-y-2">
           <a href={`tel:${phone.replace(/[^\d+]/g, '')}`}
             className="w-full py-3 rounded-xl bg-brand text-black font-bold text-sm hover:bg-brand/90 transition-colors flex items-center justify-center gap-2">
             <PhoneCall size={16} /> Call from Device
           </a>
-          <button onClick={() => { navigator.clipboard.writeText(phone); showToast('Phone number copied'); }}
+          <button onClick={() => { navigator.clipboard.writeText(formatPhone(phone)); showToast('Phone number copied'); }}
             className="w-full py-2.5 rounded-xl bg-surface-2 text-slate-300 text-sm hover:bg-surface-1 transition-colors flex items-center justify-center gap-2">
             <Copy size={14} /> Copy Number
           </button>
@@ -1159,7 +1159,7 @@ export default function LeadsPage({ onSelect }) {
                   <a href={`tel:${(l.phone || '').replace(/[^+\d]/g, '')}`}
                     className="shrink-0 flex items-center gap-1.5 px-3 h-10 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/25 active:bg-emerald-500/30">
                     <PhoneCall size={14} />
-                    <span className="hidden sm:inline font-mono">{l.phone}</span>
+                    <span className="hidden sm:inline font-mono">{formatPhone(l.phone)}</span>
                     <span className="sm:hidden">Call</span>
                   </a>
                 </div>
@@ -1228,7 +1228,7 @@ export default function LeadsPage({ onSelect }) {
                     </div>
                   </div>
                   {l.phone && (
-                    <span className="hidden sm:block text-[11px] font-mono text-slate-400 shrink-0">{l.phone}</span>
+                    <span className="hidden sm:block text-[11px] font-mono text-slate-400 shrink-0">{formatPhone(l.phone)}</span>
                   )}
                   <div className="text-right shrink-0">
                     <div className="text-sm font-bold text-amber-400">{l.score}</div>

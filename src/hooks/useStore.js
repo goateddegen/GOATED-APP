@@ -898,6 +898,34 @@ const LEADS_PER_VISIT = 25;
 
 /** Stable identity for a lead across fetches. Falls back to name + place. */
 /**
+ * A phone number as a human reads it, from whatever shape we stored.
+ *
+ * Places hands back E.164 (`+13462391620`), which is right for a tel: href and
+ * for deduping, but is genuinely hard to read off a screen while dialling —
+ * which is what this app is mostly for. Display goes through here; the raw
+ * value stays on the lead for links and comparisons.
+ *
+ * Only North American numbers are reformatted. Anything else keeps its stored
+ * form rather than being forced into a grouping that would be wrong for it.
+ */
+export function formatPhone(raw) {
+  if (!raw) return '';
+  const s = String(raw).trim();
+  const digits = s.replace(/\D/g, '');
+  const ext = s.match(/(?:ext|x|#)\.?\s*(\d{1,6})\s*$/i);
+  const core = ext ? digits.slice(0, digits.length - ext[1].length) : digits;
+  const tail = ext ? ` ext. ${ext[1]}` : '';
+
+  if (core.length === 10) {
+    return `(${core.slice(0, 3)}) ${core.slice(3, 6)}-${core.slice(6)}${tail}`;
+  }
+  if (core.length === 11 && core[0] === '1') {
+    return `(${core.slice(1, 4)}) ${core.slice(4, 7)}-${core.slice(7)}${tail}`;
+  }
+  return s;
+}
+
+/**
  * The Google place id for a lead, wherever it came from.
  *
  * Straight from a search it is on `_placeId`. Read back from Supabase — or

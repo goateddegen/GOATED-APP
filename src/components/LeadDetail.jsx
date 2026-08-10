@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   ArrowLeft, Phone, Mail, Calendar, Globe, Building2, AlertCircle, Copy, Check, TrendingUp, TrendingDown, Minus, Target, Shield, Zap, Star, ChevronRight, ChevronDown, Users, DollarSign, Clock, Award, BarChart3, Activity, Cpu, Eye, MessageSquare, Send, Package, Calculator, Flame, Crosshair, Brain, Timer, AlertTriangle, Keyboard, ExternalLink, Search, UserSearch, Crown, Sparkles, PhoneCall, FileText, CreditCard, Trophy, Rocket, ChevronUp, MapPin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight, Voicemail, Share2, CheckCircle2
 } from 'lucide-react';
-import { useStore, fmt, enrichLead, initialsOf, placeIdOf } from '../hooks/useStore';
+import { useStore, fmt, enrichLead, initialsOf, placeIdOf, formatPhone } from '../hooks/useStore';
 import { buildCallSheet, buildPackage, recommendStack, estimateMissedRevenue } from '../lib/outreach';
 
 // ─── Color Maps ────────────────────────────────────────────────────────────────
@@ -1030,7 +1030,7 @@ Context:\n${ctx}`;
       action: el.mapsUrl ? 'Skim their recent reviews for complaints about reach or response time' : 'Check what they do and how big they are' },
     { step: 2, name: 'Dial and get the owner', status: 'pending',
       desc: 'Whoever answers is not who signs. Ask for the owner by role, not by name.',
-      check: el.phone ? `Call ${el.phone} — mid-morning or mid-afternoon` : 'No published number — walk in or message the listing',
+      check: el.phone ? `Call ${formatPhone(el.phone)} — mid-morning or mid-afternoon` : 'No published number — walk in or message the listing',
       action: '"Hi, is the owner or manager around?" If not, ask when they are in and call back then.' },
     { step: 3, name: 'Make them say the number', status: 'pending',
       desc: 'Do not pitch. Ask questions until they tell you what a missed call costs them.',
@@ -1511,14 +1511,14 @@ Context:\n${ctx}`;
                     {contacts.phones.map((ph, i) => (
                       <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/[0.05] border border-emerald-500/15">
                         <PhoneCall size={13} className="text-emerald-400 shrink-0" />
-                        <a href={`tel:${ph.number}`} className="text-sm text-white font-mono hover:text-emerald-300 transition-colors">{ph.number}</a>
+                        <a href={`tel:${ph.number}`} className="text-sm text-white font-mono hover:text-emerald-300 transition-colors">{formatPhone(ph.number)}</a>
                         <span className="text-[10px] text-slate-500">{ph.source}</span>
                         {el.phone && ph.number.replace(/\D/g, '') !== el.phone.replace(/\D/g, '') && (
                           <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 font-bold ml-auto shrink-0">
                             NOT THE MAPS LINE
                           </span>
                         )}
-                        <CopyBtn text={ph.number} />
+                        <CopyBtn text={formatPhone(ph.number)} />
                       </div>
                     ))}
                   </div>
@@ -1568,7 +1568,7 @@ Context:\n${ctx}`;
                 <div className={`text-[10px] uppercase tracking-wider font-bold mb-1 ${lead.phone ? 'text-emerald-400' : 'text-slate-500'}`}>
                   {lead.phone ? 'Call Now' : 'Phone Unavailable'}
                 </div>
-                <div className="text-sm font-medium text-white font-mono tracking-wide">{lead.phone || 'No number on the listing'}</div>
+                <div className="text-sm font-medium text-white font-mono tracking-wide">{lead.phone ? formatPhone(lead.phone) : 'No number on the listing'}</div>
                 {lead.phone && <div className="text-[10px] text-slate-500 mt-0.5">Public line — tap to call</div>}
               </div>
             </a>
@@ -1731,7 +1731,7 @@ Context:\n${ctx}`;
           <button onClick={() => {
             const brief = [
               `${lead.company}${lead.location ? ` — ${lead.location}` : ''}`,
-              el.phone ? `Phone: ${el.phone}` : 'Phone: none published',
+              el.phone ? `Phone: ${formatPhone(el.phone)}` : 'Phone: none published',
               el.website ? `Site: ${el.website}` : 'Site: NONE — lead with the build',
               el.rating != null ? `Reviews: ${el.reviewCount ?? 0} at ${el.rating}★` : null,
               el.activity?.label ? `Activity: ${el.activity.label} — ${el.activity.why}` : null,
@@ -2104,13 +2104,13 @@ Context:\n${ctx}`;
                     <div>
                       <div className="text-[10px] text-slate-500 uppercase tracking-wider">Phone</div>
                       {lead.phone ? (
-                        <a href={`tel:${(lead.phone || '').replace(/[^+\d]/g, '')}`} className="text-sm text-brand hover:text-white transition-colors cursor-pointer font-mono">{lead.phone}</a>
+                        <a href={`tel:${(lead.phone || '').replace(/[^+\d]/g, '')}`} className="text-sm text-brand hover:text-white transition-colors cursor-pointer font-mono">{formatPhone(lead.phone)}</a>
                       ) : (
                         <span className="text-sm text-slate-500">Enrich to unlock</span>
                       )}
                     </div>
                   </div>
-                  {lead.phone && <CopyBtn text={lead.phone} />}
+                  {lead.phone && <CopyBtn text={formatPhone(lead.phone)} />}
                 </div>
                 {/* Website */}
                 <div className="group relative flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">

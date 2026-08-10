@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Send, Minimize2, Globe, Users, TrendingUp, Lightbulb, ChevronRight, ChevronDown, Check, BarChart3, Wallet, Zap, Target, ArrowRight, MessageSquare, Sparkles, LayoutDashboard, ExternalLink, Phone, UserSearch, Trophy, Flame, DollarSign, Clock, Activity, Shield, ClipboardList, FileText, Brain, Newspaper, BookOpen, Crosshair, Bell, Copy, Eye, AlertTriangle, Award, Voicemail, Search
 } from 'lucide-react';
-import { useStore, fmt, initialsOf, placeIdOf } from '../hooks/useStore';
+import { useStore, fmt, initialsOf, placeIdOf, formatPhone } from '../hooks/useStore';
 import { GoatIcon } from './GoatLogo';
 import { notify, requestNotifPermission, getNotifPermission } from '../utils/notifications';
 import { isPageEnabled } from '../lib/config';
@@ -435,7 +435,7 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, degenMode } 
         + `**Then diagnose, do not pitch.** One question: "What is a job like that worth to you?" `
         + `Once they say the number out loud the price argument is over.\n\n`
         + `**Quote on the call:** ${quote}. No proposal, no follow-up deck — they decide in one conversation.\n\n`
-        + `${l.phone ? `**Dial:** ${l.phone}` : '**No number published** — walk in, or message the Maps listing.'}`;
+        + `${l.phone ? `**Dial:** ${formatPhone(l.phone)}` : '**No number published** — walk in, or message the Maps listing.'}`;
     }
 
     return `Open a lead and I will coach you through that specific call.\n\n`
@@ -504,7 +504,7 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, degenMode } 
     let res = `**Leads in ${searchLocation}** — ${locationLeads.length} found, **${fmt(totalValue)}** total pipeline\n\n---\n\n`;
     top.forEach((l) => {
       res += `[LEAD_CARD:${l.id}]\n`;
-      res += `   Score: **${l.score}**/100${l.reviewCount != null ? ` | ${l.reviewCount} reviews` : ''}${l.website ? '' : ' | **no website**'}${l.phone ? ` | ${l.phone}` : ''}\n\n`;
+      res += `   Score: **${l.score}**/100${l.reviewCount != null ? ` | ${l.reviewCount} reviews` : ''}${l.website ? '' : ' | **no website**'}${l.phone ? ` | ${formatPhone(l.phone)}` : ''}\n\n`;
     });
     if (locationLeads.length > 5) {
       res += `\n...and **${locationLeads.length - 5} more** in ${searchLocation}.\n\n`;
@@ -600,7 +600,7 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, degenMode } 
       else if (typeof reviews === 'number') rows.push(`| ${reviews} reviews${rating ? ` at ${rating}★` : ''} | **+10** | Established but still owner-run: the sweet spot |`);
 
       rows.push(target.phone
-        ? `| ${target.phone} | **+10** | Reachable today |`
+        ? `| ${formatPhone(target.phone)} | **+10** | Reachable today |`
         : '| No published number | — | Cannot dial them; walk in or message the listing |');
 
       const act = target.activity;
@@ -1016,7 +1016,7 @@ function ContextSummaryCard({ currentPage, leads, degenMode, onAction }) {
           color: 'brand',
           // Was `${l.conversionProbability}%` — null on every live lead, so
           // this rendered "(undefined%)" next to each company.
-          items: topCloseable.map(l => `${l.company || l.name} — ${l.score}/100${l.website ? '' : ' · no website'}${l.phone ? ` · ${l.phone}` : ''}`),
+          items: topCloseable.map(l => `${l.company || l.name} — ${l.score}/100${l.website ? '' : ' · no website'}${l.phone ? ` · ${formatPhone(l.phone)}` : ''}`),
           action: { label: 'Who do I call first?', prompt: 'Who should I call first?' },
         };
       case 'trends':
@@ -1492,7 +1492,7 @@ export default function AIOverlay() {
     // Auto-expand when sending
     if (!aiOpen) setAiOpen(true);
 
-    const leadCtx = selectedLead ? `\n\nCurrently viewing lead: ${selectedLead.name} at ${selectedLead.company} (${selectedLead.industry}), Score: ${selectedLead.score}/100, Deal: $${(selectedLead.dealValue||0).toLocaleString()}, Status: ${selectedLead.status}, Priority: ${selectedLead.priority}, Phone: ${selectedLead.phone||'N/A'}, Email: ${selectedLead.email||'N/A'}, Website: ${selectedLead.website||'N/A'}, Location: ${selectedLead.location||'N/A'}, Pain Points: ${(selectedLead.painPoints||[]).join(', ')}, Buying Signals: ${(selectedLead.buyingSignals||[]).join(', ')}, Best Method: ${selectedLead.bestMethod||'email'}` : '';
+    const leadCtx = selectedLead ? `\n\nCurrently viewing lead: ${selectedLead.name} at ${selectedLead.company} (${selectedLead.industry}), Score: ${selectedLead.score}/100, Deal: $${(selectedLead.dealValue||0).toLocaleString()}, Status: ${selectedLead.status}, Priority: ${selectedLead.priority}, Phone: ${selectedLead.phone ? formatPhone(selectedLead.phone) : 'N/A'}, Email: ${selectedLead.email||'N/A'}, Website: ${selectedLead.website||'N/A'}, Location: ${selectedLead.location||'N/A'}, Pain Points: ${(selectedLead.painPoints||[]).join(', ')}, Buying Signals: ${(selectedLead.buyingSignals||[]).join(', ')}, Best Method: ${selectedLead.bestMethod||'email'}` : '';
     const coachCtx = coachMode ? '\n\nCOACH MODE IS ON: Act as a closing coach for the lead in view. Work only from the fields given above — do not quote commission, MRR, quotas or streaks, none of which exist in this product. If a number is not in the context, do not state one.' : '';
     const pipelineContext = `Pipeline context: ${leads.length} leads, top 5: ${leads.slice(0, 5).map(l =>
       `${l.name} at ${l.company} (score: ${l.score}, value: ${fmt(l.dealValue)}, priority: ${l.priority}, status: ${l.status})`
@@ -1592,7 +1592,7 @@ export default function AIOverlay() {
           + (gaps.length
               ? `Open on **${gaps.join(' and ')}** — name it in the first sentence.`
               : `Nothing obvious is broken, so open on the missed-call math.`)
-          + (l.phone ? `\n\n**Dial:** ${l.phone}` : `\n\nNo number published — walk in or message the listing.`)
+          + (l.phone ? `\n\n**Dial:** ${formatPhone(l.phone)}` : `\n\nNo number published — walk in or message the listing.`)
           + `\n\nAsk me to run the close and I will walk the call with you.`,
       }]);
     }
@@ -1622,7 +1622,9 @@ export default function AIOverlay() {
           // conversionProbability dropped: it is only ever set on the synthetic
           // pool, so on live Places leads this sent the model a null it was
           // free to fill in with a confident-sounding percentage.
-          bestMethod: l.bestMethod, email: l.email, phone: l.phone,
+          bestMethod: l.bestMethod, email: l.email,
+          // Formatted, so a number the model repeats back is already readable.
+          phone: formatPhone(l.phone),
           // Real, and far more useful to reason about than a made-up close rate.
           reviewCount: l.reviewCount, rating: l.rating, website: l.website || null,
           revenueFormatted: l.revenueFormatted || null,
