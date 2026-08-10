@@ -432,7 +432,7 @@ export default function App() {
   // opens for someone whose browser has never run a search — which is the whole
   // point of being able to send it to someone.
   useEffect(() => {
-    if (!pendingLeadId || !authChecked) return;
+    if (!pendingLeadId || !isLoggedIn || !authChecked) return;
     let cancelled = false;
     (async () => {
       try {
@@ -447,7 +447,7 @@ export default function App() {
       if (!cancelled) setPendingLeadId(null);
     })();
     return () => { cancelled = true; };
-  }, [pendingLeadId, authChecked, setPendingLeadId, setSelectedLead, setDetailOpen]);
+  }, [pendingLeadId, isLoggedIn, authChecked, setPendingLeadId, setSelectedLead, setDetailOpen]);
 
   // Debounced page navigation — prevents choppy rapid-fire page switching
   // Also scrolls to top so pages never open mid-scroll
@@ -574,18 +574,15 @@ export default function App() {
     return <HomePage />;
   };
 
-  // The two public surfaces: a shared audit report and a shared lead. Both are
-  // things you send to someone, so requiring the recipient to make an account
-  // before they can look at it defeats the purpose. Everything behind them —
-  // running a new audit, the leads list itself — still needs one.
+  // A saved audit report is the one public surface. It is the lead magnet — you
+  // send it to a prospect, and asking a stranger to make an account before
+  // reading a report about their own site defeats the point of sending it.
   //
-  // A shared lead is safe to render unauthenticated because LeadDetail replaces
-  // the page rather than opening over it, so the list is never mounted. Closing
-  // it falls through to the leads route, which is gated as usual.
+  // Everything else needs a session, leads included. A lead permalink is an
+  // internal link: it survives the login bounce and opens once the session
+  // resolves, but it does not let anyone past the wall.
   const isSavedAuditLink = (typeof window !== 'undefined' &&
     /^#\/a\/[a-z0-9]{6,32}/i.test(window.location.hash || ''));
-  const isSharedLeadLink = (typeof window !== 'undefined' &&
-    /^#\/lead\/[A-Za-z0-9_-]{10,}/.test(window.location.hash || ''));
 
   // No useMemo — prevents stale renders & black screen during rapid page switching
   const renderPage = () => {
@@ -635,7 +632,7 @@ export default function App() {
     /access_token=|code=/.test(window.location.hash || window.location.search || ''));
 
 
-  if (!launchReady && !isLoggedIn && !isMidOAuthRedirect && !operatorPreview && !isSavedAuditLink && !isSharedLeadLink) {
+  if (!launchReady && !isLoggedIn && !isMidOAuthRedirect && !operatorPreview && !isSavedAuditLink) {
     return <ComingSoonPage />;
   }
 
