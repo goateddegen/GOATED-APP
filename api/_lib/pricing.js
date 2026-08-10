@@ -30,7 +30,12 @@ export const PRICING = {
   monthlyShareOfRevenue: 0.02,
   // Floors exist because below them the work is not worth doing. Caps exist
   // because past them you are talking to a procurement process, not an owner.
-  minMonthly: 250,
+  // $450, not $250. Cost to serve is per-minute (Vapi/Twilio), so at a low flat
+  // rate the busiest clients are the worst margin — backwards. It is also well
+  // under what Smith.ai and Ruby charge for the same job, so it stays easy to
+  // justify, and an unusually cheap unsolicited quote reads as risky rather
+  // than as a bargain.
+  minMonthly: 450,
   maxMonthly: 1200,
   // Setup as a multiple of the monthly. Kept deliberately low: the deposit is
   // the thing that kills a cold deal, and recurring is where the value is.
@@ -43,6 +48,10 @@ export const PRICING = {
   // A site build is real one-off work, so it carries its own floor.
   websiteBuildFloor: 850,
   roundTo: 50,
+  // Past this share of their estimated revenue the floor price is not something
+  // they can pay, whatever we would like to charge. Say "too small" rather than
+  // quoting a number that guarantees a no — that is a call the operator can skip.
+  maxShareOfRevenue: 0.08,
 };
 
 const round = (n, to = PRICING.roundTo) => Math.max(to, Math.round(n / to) * to);
@@ -72,6 +81,14 @@ export function priceFor(lead, { includesBuild = false } = {}) {
 
   const monthly = round(clamp(rev * PRICING.monthlyShareOfRevenue, PRICING.minMonthly, PRICING.maxMonthly));
 
+  // The floor and the revenue share can disagree. When they do, the business is
+  // below the size this service works for — a $450/mo minimum against a
+  // $2K/mo operation is 22% of everything they take, and no amount of framing
+  // fixes that. Better to know before dialling.
+  if (monthly > rev * PRICING.maxShareOfRevenue) {
+    return { monthly: null, deposit: null, basis: 'too-small', fit: 'too-small', jobsToBreakEven: null, ticket, rev };
+  }
+
   let deposit = round(clamp(monthly * PRICING.depositMultiple, PRICING.minDeposit, PRICING.maxDeposit));
   if (includesBuild) deposit = round(Math.max(deposit, PRICING.websiteBuildFloor));
 
@@ -87,6 +104,9 @@ export function priceFor(lead, { includesBuild = false } = {}) {
 /** "$850 to set up, then $250/mo" — or an honest hedge when we cannot price it. */
 export function quoteLine(lead, opts) {
   const p = priceFor(lead, opts);
+  if (p.fit === 'too-small') {
+    return 'Below the size this service pays for — our floor would be most of their month. Skip, or sell the one-off build only.';
+  }
   if (!p.monthly) return 'Priced on the call — not enough public signal to quote blind.';
   const money = (n) => `$${n.toLocaleString('en-US')}`;
   const base = `${money(p.deposit)} to set up, then ${money(p.monthly)}/mo`;
@@ -105,6 +125,9 @@ export function quoteLine(lead, opts) {
  */
 export function priceRationale(lead, opts) {
   const p = priceFor(lead, opts);
+  if (p.fit === 'too-small') {
+    return `Estimated turnover is too low for the retainer — ${'$'}${PRICING.minMonthly}/mo would be more than ${Math.round(PRICING.maxShareOfRevenue * 100)}% of what they take. Sell them a site and leave it there.`;
+  }
   if (!p.monthly) {
     return 'No public revenue signal on this listing, so quote after you have heard their numbers rather than guessing.';
   }

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { isPageEnabled } from '../lib/config';
 import { authedFetch } from '../lib/supabase';
+import { saveLeadsDeep, loadLeadsDeep } from '../lib/leadstore';
 // startTransition removed — direct set() prevents Suspense flash during page navigation
 
 // ===========================================================================
@@ -990,6 +991,11 @@ function loadStoredLeads(key = LIVE_LEADS_KEY) {
 }
 
 function persistLeads(leads, key = LIVE_LEADS_KEY) {
+  // Deep store first, fire-and-forget. Full objects, no slimming: IndexedDB is
+  // not competing for the 5MB origin budget, so there is no reason to throw
+  // away photo refs that would otherwise have to be re-fetched.
+  saveLeadsDeep(key, leads.slice(0, MAX_LEADS)).catch(() => {});
+
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(key, JSON.stringify(leads.slice(0, MAX_PERSISTED_LEADS).map(slimForStorage)));
@@ -1362,6 +1368,37 @@ export const useStore = create((set, get) => ({
    * first pass came back thin, because each attempt is a Places fan-out and
    * those are billed per query.
    */
+  // Pull the deep store into memory once, after first paint.
+  //
+  // localStorage gave the page something to render synchronously; this brings
+  // back everything past its 700-lead cap. Merged rather than assigned, because
+  // a fetch may already have landed by the time this resolves and that batch
+  // must not be thrown away.
+  leadsHydrated: false,
+  hydrateStoredLeads: async () => {
+    if (get().leadsHydrated) return;
+    set({ leadsHydrated: true });
+    try {
+      const [deepLive, deepNoSite] = await Promise.all([
+        loadLeadsDeep(LIVE_LEADS_KEY),
+        loadLeadsDeep(NO_WEBSITE_KEY),
+      ]);
+      if (!deepLive.length && !deepNoSite.length) return;
+
+      // Existing rows win on conflict — they are at least as fresh as what was
+      // written to disk, and may carry status the operator has since set.
+      const mergeDeep = (current, deep) => {
+        const have = new Set(current.map(leadKey));
+        const extra = deep.filter(l => !have.has(leadKey(l)));
+        return [...current, ...extra].slice(0, MAX_LEADS);
+      };
+      set({
+        liveLeads: mergeDeep(get().liveLeads, deepLive),
+        noWebsiteLeads: mergeDeep(get().noWebsiteLeads, deepNoSite),
+      });
+    } catch { /* storage is a cache; fewer leads is an acceptable outcome */ }
+  },
+
   fetchLiveLeads: async (attempt = 1) => {
     // More than one city ticked and no explicit market: fan out across them
     // rather than quietly prospecting only the first. Disjoint from the guard

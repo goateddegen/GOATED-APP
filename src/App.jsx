@@ -246,6 +246,7 @@ export default function App() {
   const setSelectedLead = useStore(s => s.setSelectedLead);
   const pendingLeadId = useStore(s => s.pendingLeadId);
   const setPendingLeadId = useStore(s => s.setPendingLeadId);
+  const hydrateStoredLeads = useStore(s => s.hydrateStoredLeads);
   const setMobileMenu = useStore(s => s.setMobileMenu);
   const setPreviousPage = useStore(s => s.setPreviousPage);
   const accountModalOpen = useStore(s => s.accountModalOpen);
@@ -425,6 +426,10 @@ export default function App() {
     window.addEventListener('hashchange', resolveHash);
     return () => window.removeEventListener('hashchange', resolveHash);
   }, [setPage, setPendingLeadId, isLoggedIn, authChecked]);
+
+  // Bring the deep lead store into memory once, after first paint. localStorage
+  // covers the first render; this restores everything past its cap.
+  useEffect(() => { hydrateStoredLeads?.(); }, [hydrateStoredLeads]);
 
   // Resolve a lead permalink once we know who the visitor is.
   //
