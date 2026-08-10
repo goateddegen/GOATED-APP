@@ -891,7 +891,33 @@ const NO_WEBSITE_KEY = 'goated_nowebsite_leads';
 // no-website, so the real ceiling is double. 200 was low enough that an
 // afternoon's work pinned the counter there and it read as a hardcoded
 // number rather than a real total.
-const MAX_STORED_LEADS = 500;
+// Two different limits, because memory and localStorage have nothing to do with
+// each other and conflating them capped the app at 500 for no good reason.
+//
+// In memory a lead is just an object: five thousand of them is about 33MB, which
+// a browser does not notice. localStorage is the real constraint — roughly 5MB
+// per ORIGIN, shared between the live list and the no-website list — so only the
+// newest slice is persisted. Anything past it survives the session but not a
+// refresh, which is the right trade: the app refills on load anyway.
+const MAX_LEADS = 5000;
+const MAX_PERSISTED_LEADS = 700;
+const MAX_STORED_LEADS = MAX_LEADS;
+
+// Fields dropped before writing to localStorage. Every one is re-fetchable from
+// action=place the moment a lead is opened, and together they were most of the
+// payload: photoRefs alone is 45% of a stored lead (six ~500-character refs), so
+// keeping it capped the whole store at roughly 750 leads. Dropping these takes a
+// lead from ~6.6KB to ~3.2KB, which is what makes thousands fit at all.
+//
+// photoRef — the single hero image — is deliberately KEPT, so an opened lead
+// still shows a picture immediately without a round trip.
+const PERSIST_DROP = ['photoRefs', 'reviewLink', 'reviewsLink', 'googleMapsLinks'];
+
+function slimForStorage(lead) {
+  const out = {};
+  for (const k in lead) if (!PERSIST_DROP.includes(k)) out[k] = lead[k];
+  return out;
+}
 // What a visit should add. Matches the server's own fresh-yield target, so the
 // two agree on when a batch counts as thin.
 const LEADS_PER_VISIT = 25;
@@ -966,10 +992,10 @@ function loadStoredLeads(key = LIVE_LEADS_KEY) {
 function persistLeads(leads, key = LIVE_LEADS_KEY) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(key, JSON.stringify(leads.slice(-MAX_STORED_LEADS)));
+    localStorage.setItem(key, JSON.stringify(leads.slice(0, MAX_PERSISTED_LEADS).map(slimForStorage)));
   } catch {
     // Quota exceeded — keep only the most recent half rather than losing the lot.
-    try { localStorage.setItem(key, JSON.stringify(leads.slice(-Math.floor(MAX_STORED_LEADS / 2)))); }
+    try { localStorage.setItem(key, JSON.stringify(leads.slice(0, Math.floor(MAX_PERSISTED_LEADS / 2)).map(slimForStorage))); }
     catch { /* give up on persistence; the in-memory list still works */ }
   }
 }

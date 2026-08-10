@@ -79,62 +79,76 @@ const key = () => process.env.GOOGLE_PLACES_API_KEY || '';
 export const placesConfigured = () => !!key();
 
 /**
- * Rank a local business by how much it needs this offer — not by how impressive
- * it is. A polished operation with 400 reviews and a booking widget is a worse
- * prospect than a well-reviewed shop with no website, because the second one has
- * demand it is visibly failing to capture.
+ * Rank by how much this business NEEDS the offer, and how likely the owner is to
+ * be the one who answers — not by how impressive the business is.
+ *
+ * Rewritten after a day of cold calls returned nothing. The previous version
+ * rewarded rating and review volume as "demand you can scale", which sounds
+ * right and is backwards: it surfaced 4.9-star operators with 118 reviews, a
+ * working website and a phone that gets answered. Those businesses have no
+ * problem to sell against, so the call dies in the first ten seconds.
+ *
+ * Two independent things are being measured, and conflating them was the bug:
+ *
+ *   reachable — will a human answer and can they decide? A dead listing wastes
+ *               the call no matter how good the gap looks.
+ *   need      — is something visibly broken that we sell the fix for?
+ *
+ * A business must clear the reachability bar to appear at all; among those that
+ * do, need decides the order.
  */
 function scorePlace(p) {
-  let score = 30;
   const reviews = p.userRatingCount ?? 0;
   const rating = p.rating ?? 0;
-
-  // Demand exists and customers are happy — they have something to scale.
-  if (rating >= 4.5 && reviews >= 20) score += 20;
-  else if (rating >= 4.0 && reviews >= 10) score += 14;
-  else if (rating >= 4.0) score += 8;
-
-  // The strongest signal in this whole file. No website means every lead comes
-  // from Maps or word of mouth, and there is nowhere to capture the ones that
-  // slip. Highest intent for a web/AI build.
-  if (!p.websiteUri) score += 25;
-
-  // Thin review count against a good rating = they aren't asking for reviews.
-  // Directly addressable by the review engine.
-  if (rating >= 4.0 && reviews > 0 && reviews < 25) score += 12;
-
-  // Reachable at all.
-  if (p.nationalPhoneNumber || p.internationalPhoneNumber) score += 10;
-
-  // Size, proxied by review volume — the missing dimension. Without this every
-  // established business scored exactly 60, so a 6,000-review franchise tied
-  // with a 40-review owner-operator and the ordering fell back to whatever
-  // Places considered most prominent. That put the single hardest sale in the
-  // city at the top of the list.
-  //
-  // We sell to the owner. Past a few hundred reviews there is a marketing
-  // manager, an agency on retainer, and a procurement process; below that the
-  // person who answers the phone can also sign.
-  if (reviews > 2000) score -= 18;        // regional/franchise, already has an agency
-  else if (reviews > 800) score -= 12;
-  else if (reviews > 300) score -= 5;
-  else if (reviews >= 40) score += 10;    // established but still owner-run: the sweet spot
-  else if (reviews >= 10) score += 6;
-
-  // Don't pitch a business that has closed.
-  if (p.businessStatus && p.businessStatus !== 'OPERATIONAL') score -= 40;
-
-  // Liveness. A dead contact wastes the operator's time no matter how good the
-  // gap looks on paper, and a listing with no review in two years is exactly
-  // the kind of thing that scored well here before: no website, thin reviews,
-  // maximum apparent need, nobody home.
   const act = assessActivity(p);
-  if (act.level === 'stale') score -= 30;
-  else if (act.level === 'slowing') score -= 10;
-  else if (act.level === 'active') score += 12;
-  else if (act.level === 'steady') score += 5;
+  const photos = Array.isArray(p.photos) ? p.photos.length : 0;
+  const hasPhone = !!(p.nationalPhoneNumber || p.internationalPhoneNumber);
 
-  return Math.max(1, Math.min(99, Math.round(score)));
+  // ── Reachability: can this call go anywhere at all? ──────────────────────
+  let reach = 50;
+  if (hasPhone) reach += 25;
+  if (p.businessStatus && p.businessStatus !== 'OPERATIONAL') reach -= 60;
+  // Trading recently means someone is there to pick up. Note this is NOT a
+  // measure of need — a busy shop is easy to reach and hard to sell.
+  if (act.level === 'active') reach += 15;
+  else if (act.level === 'steady') reach += 10;
+  else if (act.level === 'slowing') reach -= 5;
+  else if (act.level === 'stale') reach -= 30;   // probably gone
+  // Past a few hundred reviews there is a marketing manager, an agency on
+  // retainer and a procurement process. The owner no longer answers the phone,
+  // and nobody signs on a first call.
+  if (reviews > 2000) reach -= 45;
+  else if (reviews > 800) reach -= 30;
+  else if (reviews > 300) reach -= 15;
+
+  // ── Need: what is visibly broken that we sell the fix for? ───────────────
+  let need = 0;
+  // Nowhere to capture anything that does not phone. Still the strongest signal.
+  if (!p.websiteUri) need += 40;
+  // Invisible in local ranking, and they know it. This is the segment that
+  // actually buys: enough of a business to have money, not enough presence to
+  // feel safe.
+  if (reviews === 0) need += 30;
+  else if (reviews < 10) need += 32;
+  else if (reviews < 30) need += 25;
+  else if (reviews < 60) need += 12;
+  // Well reviewed and highly rated is a business with no felt problem. Say so
+  // in the score rather than rewarding it.
+  else if (reviews >= 120 && rating >= 4.7) need -= 15;
+  // Momentum falling off is the moment an owner starts taking calls about
+  // getting more work. The old scorer treated this purely as a risk.
+  if (act.level === 'slowing') need += 20;
+  // A listing nobody has touched: no photos, or no published hours.
+  if (photos === 0) need += 12;
+  if (!(p.regularOpeningHours?.weekdayDescriptions || []).length) need += 10;
+  // No number on a listing is a real gap, but it also means we cannot call
+  // them — it is scored as need and paid for in reach above.
+  if (!hasPhone) need += 8;
+
+  // Reachability gates; need orders. Weighted so a genuinely unreachable
+  // business cannot ride a big need score to the top of the list.
+  const score = Math.round(reach * 0.45 + need * 0.85);
+  return Math.max(1, Math.min(99, score));
 }
 
 /** Named, dollar-relevant gaps. Each one traces to a Places field. */

@@ -27,12 +27,15 @@ export const PRICING = {
   monthlyShareOfRevenue: 0.02,
   // Floors exist because below them the work is not worth doing. Caps exist
   // because past them you are talking to a procurement process, not an owner.
-  minMonthly: 150,
+  minMonthly: 250,
   maxMonthly: 1200,
   // Setup as a multiple of the monthly. Kept deliberately low: the deposit is
   // the thing that kills a cold deal, and recurring is where the value is.
   depositMultiple: 1.5,
-  minDeposit: 300,
+  // Floor raised deliberately. Below roughly $550 the setup does not cover the
+  // work, and a very cheap unsolicited quote reads as scam-adjacent to a wary
+  // owner rather than as a bargain — cheap is not the same as credible.
+  minDeposit: 550,
   maxDeposit: 2500,
   // A site build is real one-off work, so it carries its own floor.
   websiteBuildFloor: 850,
@@ -87,4 +90,37 @@ export function quoteLine(lead, opts) {
   return p.jobsToBreakEven
     ? `${base} — about ${p.jobsToBreakEven === 1 ? 'one recovered job' : `${p.jobsToBreakEven} recovered jobs`} a month`
     : base;
+}
+
+/**
+ * Why this number — in a sentence you can say out loud.
+ *
+ * A quote you cannot justify is a quote you discount the moment it is pushed on.
+ * This gives the operator the reasoning, built from the same signals the price
+ * was built from, so "why is it that much" has an answer that is about their
+ * business rather than about our rate card.
+ */
+export function priceRationale(lead, opts) {
+  const p = priceFor(lead, opts);
+  if (!p.monthly) {
+    return 'No public revenue signal on this listing, so quote after you have heard their numbers rather than guessing.';
+  }
+  const money = (n) => `$${n.toLocaleString('en-US')}`;
+  const parts = [];
+
+  const rev = lead?.revenueFormatted;
+  if (rev) parts.push(`Sized to an estimated ${rev} of turnover`);
+  else parts.push('Sized to their estimated turnover');
+
+  if (p.ticket) {
+    parts.push(`their own listed jobs run ${money(p.ticket.low)}–${money(p.ticket.high)}, so ${money(p.monthly)}/mo is ${p.jobsToBreakEven === 1 ? 'under one recovered job' : `about ${p.jobsToBreakEven} recovered jobs`}`);
+  }
+
+  if (opts?.includesBuild) {
+    parts.push(`the ${money(p.deposit)} covers the build itself, which is one-time`);
+  } else {
+    parts.push(`the ${money(p.deposit)} is setup only — the recurring is where the work is`);
+  }
+
+  return parts.join('; ') + '.';
 }
