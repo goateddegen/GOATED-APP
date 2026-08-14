@@ -14,7 +14,6 @@ const nav = [
   { id: 'home', icon: Home, label: 'Home', key: 'H' },
   { id: 'audit', icon: Award, label: 'Audit', key: 'U', badge: 'CLOSER' },
   { id: 'leads', icon: Users, label: 'Leads', key: 'L' },
-  { id: 'pulse', icon: Radio, label: 'Pulse', key: 'T' },
   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', key: 'D' },
   // Operator-only — filtered out below for everyone else. Dashboard is the
   // highest surface a normal user sees.

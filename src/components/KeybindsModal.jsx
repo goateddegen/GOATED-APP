@@ -14,7 +14,6 @@ const sections = [
       { key: 'H', label: 'Home', icon: Home, color: '#10b981' },
       { key: 'U', label: 'Audit', icon: Award, color: '#22d3ee' },
       { key: 'L', label: 'Leads', icon: Users, color: '#f59e0b' },
-      { key: 'T', label: 'Pulse', icon: Radio, color: '#10b981' },
       { key: 'D', label: 'Dashboard', icon: LayoutDashboard, color: '#06b6d4' },
       { key: 'X', label: 'Admin', icon: Shield, color: '#ef4444', page: 'admin' },
     ]

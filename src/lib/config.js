@@ -134,7 +134,7 @@ export const PRICING = {
 // TrendPulse + Wallet are parked here: TrendPulse ships crypto-market data that
 // doesn't match the agency positioning, and Wallet depends on Stripe Connect
 // endpoints that aren't built yet.
-export const NAV_PAGES = ['home', 'audit', 'leads', 'pulse', 'dashboard', 'admin'];
+export const NAV_PAGES = ['home', 'audit', 'leads', 'dashboard', 'admin'];
 export const DISABLED_PAGES = ['trends', 'market', 'wallet', 'managed', 'casino', 'launchpad'];
 
 // ─── Admin access ───────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ export const isPageEnabled = (id, verifiedEmail) => {
 
 // Keybind → page. Only enabled pages get a binding; `x` additionally requires
 // an admin session, enforced by isPageEnabled at every call site.
-export const PAGE_KEYBINDS = { h: 'home', u: 'audit', l: 'leads', d: 'dashboard', t: 'pulse', x: 'admin' };
+export const PAGE_KEYBINDS = { h: 'home', u: 'audit', l: 'leads', d: 'dashboard', x: 'admin' };
 
 // ─── Feature flags (flip without redeploying UI logic) ──────────────────────
 export const FLAGS = {
