@@ -75,7 +75,7 @@ function Coastlines({ radius = 1.002 }) {
     <group>
       {geometries.map((g, i) => (
         <line key={i} geometry={g}>
-          <lineBasicMaterial color="#3b82f6" transparent opacity={0.55} />
+          <lineBasicMaterial color="#f97316" transparent opacity={0.5} />
         </line>
       ))}
     </group>
@@ -133,7 +133,14 @@ function GlobeScene({ points, setPreview, setHover }) {
     >
       <mesh>
         <sphereGeometry args={[1, 48, 48]} />
-        <meshBasicMaterial color="#0b1220" transparent opacity={0.92} />
+        <meshBasicMaterial color="#1a0806" transparent opacity={0.94} />
+      </mesh>
+      {/* Atmosphere: a slightly larger back-facing shell. Gives the limb a red
+          glow that matches the rim on the frame, so the globe sits inside the
+          same palette as the rest of the app rather than looking bolted on. */}
+      <mesh>
+        <sphereGeometry args={[1.06, 48, 48]} />
+        <meshBasicMaterial color="#ef4444" transparent opacity={0.07} side={THREE.BackSide} />
       </mesh>
       <Coastlines />
       {points.map(({ lead, signal }) => (
