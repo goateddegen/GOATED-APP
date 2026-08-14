@@ -29,6 +29,9 @@ const WalletPage = React.memo(lazy(() => import('./pages/WalletPage')));
 const AdminPage = React.memo(lazy(() => import('./pages/AdminPage')));
 // Revenue Loss Auditor. Account-walled; permalinks at /#/a/{shareId}.
 const AuditPage = React.memo(lazy(() => import('./pages/AuditPage')));
+// Pulse — the lead book on a globe. Lazy because it pulls three.js, which no
+// one who never opens it should pay for.
+const PulsePage = React.memo(lazy(() => import('./pages/PulsePage')));
 // v7.5 cover page — shown until VITE_LAUNCH_READY === 'true' is set in env vars.
 // Eagerly imported (not lazy) so it shows instantly with no loading flash.
 import ComingSoonPage from './pages/ComingSoonPage';
@@ -564,7 +567,7 @@ export default function App() {
   // Routes that require login. Home is the only public page: the audit and its
   // permalinks are now account-walled too, so the homepage sells the auditor
   // and an account is the price of running one.
-  const PROTECTED_PAGES = new Set(['leads', 'audit', 'dashboard', 'wallet', 'admin', 'trends', 'market', 'managed']);
+  const PROTECTED_PAGES = new Set(['leads', 'audit', 'pulse', 'dashboard', 'wallet', 'admin', 'trends', 'market', 'managed']);
 
   // Lightweight auth gate — when launch-ready and visitor isn't logged in,
   // gently redirect them to homepage and pop the AccountModal.
@@ -600,6 +603,7 @@ export default function App() {
       switch (page) {
         case 'dashboard': return requireAuth(() => <DashboardPage onSelect={selectLead} />);
         case 'leads':     return requireAuth(() => <LeadsPage onSelect={selectLead} />);
+        case 'pulse':     return requireAuth(() => <PulsePage onSelect={selectLead} />);
         // A saved-audit permalink is the one public surface: it is what gets
         // sent to a prospect, and asking a stranger to create an account
         // before they can read a report about their own site defeats the

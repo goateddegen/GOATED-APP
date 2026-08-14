@@ -1,5 +1,6 @@
 import React from 'react';
-import { Home, LayoutDashboard, Users, TrendingUp, Zap, BarChart3, Target, Wallet, Bot, Keyboard, Search, ChevronLeft, ChevronRight, Menu, X, Sparkles, User, Shield, Flame, Rocket, Dice5, Award, Crown } from 'lucide-react';
+import {
+  Radio, Home, LayoutDashboard, Users, TrendingUp, Zap, BarChart3, Target, Wallet, Bot, Keyboard, Search, ChevronLeft, ChevronRight, Menu, X, Sparkles, User, Shield, Flame, Rocket, Dice5, Award, Crown } from 'lucide-react';
 import { useStore } from '../hooks/useStore';
 import { isPageEnabled } from '../lib/config';
 import { GoatIcon } from './GoatLogo';
@@ -13,6 +14,7 @@ const nav = [
   { id: 'home', icon: Home, label: 'Home', key: 'H' },
   { id: 'audit', icon: Award, label: 'Audit', key: 'U', badge: 'CLOSER' },
   { id: 'leads', icon: Users, label: 'Leads', key: 'L' },
+  { id: 'pulse', icon: Radio, label: 'Pulse', key: 'T' },
   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', key: 'D' },
   // Operator-only — filtered out below for everyone else. Dashboard is the
   // highest surface a normal user sees.

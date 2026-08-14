@@ -294,6 +294,34 @@ export function transformPlace(p, index = 0) {
     // six because photo media bills per request and nobody needs ten pictures
     // of a van to decide whether to call.
     photoRefs: Array.isArray(p.photos) ? p.photos.slice(0, 6).map(x => x.name).filter(Boolean) : [],
+    // Coordinates. places.location has been in the field mask — and therefore
+    // on the bill — since this file was written, and was never mapped onto the
+    // lead, so nothing could plot a lead on a map.
+    coords: (typeof p.location?.latitude === 'number' && typeof p.location?.longitude === 'number')
+      ? { lat: p.location.latitude, lng: p.location.longitude }
+      : null,
+    // The most recent review at 3 stars or below, kept whole.
+    //
+    // This is the best cold-call opener the data contains: a customer publicly
+    // saying they were let down, with a date and their own words. Places only
+    // returns five reviews and skews them positive, so this is absent more often
+    // than not — which is correct. An invented complaint would be worse than
+    // none, so the field is null unless a real one came back.
+    recentComplaint: (() => {
+      const rs = (Array.isArray(p.reviews) ? p.reviews : [])
+        .filter(r => typeof r.rating === 'number' && r.rating <= 3 && r.publishTime)
+        .sort((a, b) => String(b.publishTime).localeCompare(String(a.publishTime)));
+      if (!rs.length) return null;
+      const r = rs[0];
+      const text = (r.text?.text || r.originalText?.text || '').trim();
+      const days = Math.round((Date.now() - new Date(r.publishTime).getTime()) / 86400000);
+      return {
+        rating: r.rating,
+        publishTime: r.publishTime,
+        daysAgo: Number.isFinite(days) ? days : null,
+        text: text.slice(0, 400),
+      };
+    })(),
     // The review link is the one to hand a client; the rest are for us.
     reviewLink: p.googleMapsLinks?.writeAReviewUri || null,
     reviewsLink: p.googleMapsLinks?.reviewsUri || null,
