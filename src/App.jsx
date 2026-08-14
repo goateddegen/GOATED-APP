@@ -16,7 +16,7 @@ const LeadDetail = React.memo(lazy(() => import('./components/LeadDetail')));
 const AIOverlay = lazy(() => import('./components/AIOverlay'));
 import AccountModal from './components/AccountModal';
 import { onAuthStateChange, trackPerformance, trackPageView, startAutoSync, stopAutoSync, loadUserDataFromCloud, supabase, getUser, authedFetch } from './lib/supabase';
-import { PAGE_KEYBINDS, isPageEnabled, isAdminEmail } from './lib/config';
+import { PAGE_KEYBINDS, isPageEnabled, isAdminEmail, NAV_PAGES } from './lib/config';
 
 // Lazy-loaded pages wrapped in React.memo to reduce CSR overhead on re-renders
 const HomePage = React.memo(lazy(() => import('./pages/HomePage')));
@@ -399,7 +399,7 @@ export default function App() {
   //   /#/a/{shareId}        saved audit report
   //   /#/lead/{placeId}     one lead, resolved from Google's place id
   //   /#/for/{slug}         legacy audit link, re-runs live
-  //   /#/audit              the auditor itself
+  //   /#/{page}             any nav page — home, audit, leads, dashboard, admin
   //
   // Re-runs when the session resolves. Both targets are behind the account
   // wall, so an anonymous visitor gets bounced to Home with the login modal;
@@ -415,11 +415,26 @@ export default function App() {
         setPage('leads');
         return;
       }
-      if (/^#\/(a\/|for\/|audit)/i.test(h)) {
+      if (/^#\/(a\/|for\/)/i.test(h)) {
         setPage('audit');
-      } else if (/^#\/managed/i.test(h)) {
+        return;
+      }
+      if (/^#\/managed/i.test(h)) {
         // Managed consolidated into B2B leads v7.4
         setPage('leads');
+        return;
+      }
+      // Every nav page by name. setPage has been WRITING these to the address
+      // bar since the URL sync went in, but nothing read them back — so the bar
+      // showed #/dashboard and loading that same URL landed you on Home. The
+      // link was real in one direction only.
+      //
+      // isPageEnabled inside setPage still decides: an admin link opened by a
+      // non-admin redirects to Home rather than rendering, so a permalink
+      // cannot be used to reach a page the account is not entitled to.
+      const named = h.match(/^#\/([a-z]+)\/?$/i);
+      if (named && NAV_PAGES.includes(named[1].toLowerCase())) {
+        setPage(named[1].toLowerCase());
       }
     };
     resolveHash();
