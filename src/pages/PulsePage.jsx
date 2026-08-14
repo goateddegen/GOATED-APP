@@ -28,6 +28,7 @@ import { feature } from 'topojson-client';
 import landTopo from 'world-atlas/land-110m.json';
 import { Radio, Flame, Globe, PhoneCall, Map as MapIcon } from 'lucide-react';
 import { useStore, formatPhone } from '../hooks/useStore';
+import { quoteLine } from '../lib/pricing';
 
 // ─── Globe ──────────────────────────────────────────────────────────────────
 // three.js is already a dependency and this page is lazy-loaded, so the globe
@@ -104,7 +105,7 @@ function Marker({ position, colour, hot, onClick, onHover }) {
   );
 }
 
-function GlobeScene({ points, onSelect, setHover, dragging }) {
+function GlobeScene({ points, setPreview, setHover }) {
   const group = React.useRef();
 
   // Face the book. A globe that starts on the Atlantic makes the operator drag
@@ -117,11 +118,9 @@ function GlobeScene({ points, onSelect, setHover, dragging }) {
     };
   }, [points]);
 
-  // Auto-rotate, but yield to the hand. Spinning under a drag makes the globe
-  // feel like it is fighting you.
-  useFrame((state, delta) => {
-    if (group.current && !dragging) group.current.rotation.y += delta * 0.04;
-  });
+  // No auto-rotation. A globe that drifts on its own fights the hand and moves
+  // the point you were aiming at; OrbitControls' damping gives it weight and
+  // lets it coast to a stop instead.
 
   return (
     <group
@@ -143,7 +142,7 @@ function GlobeScene({ points, onSelect, setHover, dragging }) {
           position={toVec3(lead.coords.lat, lead.coords.lng, 1.012)}
           colour={signal.colour}
           hot={signal.id === 'complaint'}
-          onClick={() => onSelect?.(lead)}
+          onClick={() => setPreview(lead)}
           onHover={(on) => setHover(on ? lead : null)}
         />
       ))}
@@ -201,7 +200,7 @@ export default function PulsePage({ onSelect }) {
   const [active, setActive] = useState(null);       // signal id filter
   const [hover, setHover] = useState(null);
   const [view, setView] = useState('globe');   // globe | map
-  const [dragging, setDragging] = useState(false);
+  const [preview, setPreview] = useState(null);   // marker clicked: show a card first
 
   const points = useMemo(() => {
     const all = [...(liveLeads || []), ...(noWebsiteLeads || [])];
@@ -308,23 +307,29 @@ export default function PulsePage({ onSelect }) {
 
           <div className="grid lg:grid-cols-[1.6fr_1fr] gap-4">
             {/* ── Map ─────────────────────────────────────────────────── */}
-            <div className="relative rounded-2xl border border-white/[0.06] bg-[#05070a] overflow-hidden aspect-[4/3]">
+            <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-[#05070a] pulse-crt">
               {view === 'globe' ? (
                 <>
                   <Canvas camera={{ position: [0, 0, 2.6], fov: 45 }} dpr={[1, 1.75]}
                     style={{ background: 'transparent' }}>
                     <Suspense fallback={null}>
-                      <GlobeScene points={shown} onSelect={onSelect} setHover={setHover} dragging={dragging} />
+                      <GlobeScene points={shown} setPreview={setPreview} setHover={setHover} />
                     </Suspense>
                     <OrbitControls
                       enablePan={false}
+                      enableDamping
+                      dampingFactor={0.06}
                       minDistance={1.35}
                       maxDistance={4}
-                      rotateSpeed={0.5}
-                      onStart={() => setDragging(true)}
-                      onEnd={() => setDragging(false)}
+                      rotateSpeed={0.55}
+                      zoomSpeed={0.7}
                     />
                   </Canvas>
+                  {/* Analog-TV overlay: scanlines, a rolling bar and a faint red
+                      wash. Purely decorative, pointer-events-none so it never
+                      eats a click meant for a marker. */}
+                  <div className="pulse-scanlines" aria-hidden="true" />
+                  <div className="pulse-roll" aria-hidden="true" />
                   <div className="absolute top-3 left-4 text-[11px] text-slate-500 pointer-events-none">
                     {shown.length.toLocaleString()} plotted · drag to turn · scroll to zoom
                   </div>
@@ -346,7 +351,7 @@ export default function PulsePage({ onSelect }) {
                 return (
                   <button
                     key={lead._placeId || lead.id}
-                    onClick={() => onSelect?.(lead)}
+                    onClick={() => setPreview(lead)}
                     onMouseEnter={() => setHover(lead)}
                     onMouseLeave={() => setHover(null)}
                     className="absolute -translate-x-1/2 -translate-y-1/2 group"
@@ -370,7 +375,48 @@ export default function PulsePage({ onSelect }) {
               </>
               )}
 
-              {hover && (
+              {preview && (
+                <div className="absolute inset-x-3 bottom-3 rounded-xl border border-white/10 bg-black/90 backdrop-blur p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-bold text-white truncate">{preview.company}</div>
+                      <div className="text-[11px] text-slate-400 truncate">
+                        {preview.industry}{preview.location ? ` · ${preview.location}` : ''}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[11px]">
+                        <span className="text-slate-300">Score <b className="text-white">{preview.score}</b></span>
+                        {preview.revenueFormatted && <span className="text-slate-400">est. {preview.revenueFormatted}</span>}
+                        {typeof preview.reviewCount === 'number' && (
+                          <span className="text-slate-400">{preview.reviewCount} reviews{preview.rating ? ` · ${preview.rating}★` : ''}</span>
+                        )}
+                        {!preview.website && <span className="text-amber-400">no website</span>}
+                      </div>
+                      {preview.recentComplaint && (
+                        <p className="text-[11px] text-red-300/90 italic mt-1.5 line-clamp-2">
+                          {preview.recentComplaint.rating}★ {preview.recentComplaint.daysAgo}d ago — “{preview.recentComplaint.text}”
+                        </p>
+                      )}
+                      <div className="text-[11px] text-emerald-400 mt-1.5">{quoteLine(preview, { includesBuild: !preview.website })}</div>
+                    </div>
+                    <button onClick={() => setPreview(null)}
+                      className="text-slate-500 hover:text-white text-xs shrink-0">✕</button>
+                  </div>
+                  <div className="flex gap-2 mt-2.5">
+                    <button onClick={() => onSelect?.(preview)}
+                      className="flex-1 px-3 py-1.5 rounded-lg bg-brand text-black text-xs font-bold hover:bg-brand/90 transition">
+                      Open lead
+                    </button>
+                    {preview.phone && (
+                      <a href={`tel:${(preview.phone || '').replace(/[^+\d]/g, '')}`}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/25 transition flex items-center gap-1.5">
+                        <PhoneCall size={12} /> {formatPhone(preview.phone)}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {hover && !preview && (
                 <div className="absolute left-3 bottom-3 right-3 rounded-xl border border-white/10 bg-black/85 backdrop-blur px-3 py-2 pointer-events-none">
                   <div className="text-sm font-semibold text-white truncate">{hover.company}</div>
                   <div className="text-[11px] text-slate-400 truncate">

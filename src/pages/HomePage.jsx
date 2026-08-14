@@ -426,6 +426,12 @@ export default function HomePage() {
               <div className="text-sm text-slate-400 leading-snug flex-1">Ask for businesses in any city and get them back instantly. Scripts, objection handling and the exact quote, on demand.</div>
               <div className="flex items-center gap-1 text-xs text-red-400/70 mt-4 group-hover:text-red-400 transition-colors"><span>Talk to GOATED AI</span><ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" /></div>
             </button>
+            <button onClick={() => setPage('pulse')} className="h-full flex flex-col text-left p-6 rounded-2xl bg-black/40 border border-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300 group hover:-translate-y-1">
+              <div className="flex items-center gap-2 mb-2"><Radio size={16} className="text-cyan-400" /><span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">Pillar 04</span></div>
+              <div className="text-2xl font-black text-cyan-400 mb-1">PULSE</div>
+              <div className="text-sm text-slate-400 leading-snug flex-1">Your whole book on a live globe. Who just got a one-star review, who has gone quiet, who has no website — plotted where they actually are.</div>
+              <div className="flex items-center gap-1 text-xs text-cyan-400/70 mt-4 group-hover:text-cyan-400 transition-colors"><span>Open the globe</span><ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" /></div>
+            </button>
           </StaggeredCards>
         </div>
       </section>

@@ -37,6 +37,14 @@ export const PRICING = {
   // than as a bargain.
   minMonthly: 450,
   maxMonthly: 1200,
+  // Upscale tier. Above this turnover the buyer is not a van with a phone — it
+  // is a multi-site operator or an international firm where the engagement is a
+  // build plus retained management, and a $2,500 ceiling reads as unserious
+  // rather than as good value. Only reachable on genuinely large estimates, so
+  // it cannot leak into the local book.
+  upscaleRevenueFloor: 250000,
+  upscaleMonthly: 4000,
+  upscaleDeposit: 10000,
   // Setup as a multiple of the monthly. Kept deliberately low: the deposit is
   // the thing that kills a cold deal, and recurring is where the value is.
   depositMultiple: 1.5,
@@ -79,6 +87,14 @@ export function priceFor(lead, { includesBuild = false } = {}) {
     return { monthly: null, deposit: null, basis: 'unknown', jobsToBreakEven: null, ticket };
   }
 
+  // Upscale band first — it has its own ceiling, so clamping to the local caps
+  // would flatten every large operator to the same $1,200.
+  if (rev >= PRICING.upscaleRevenueFloor) {
+    const m = round(clamp(rev * PRICING.monthlyShareOfRevenue, PRICING.upscaleMonthly, 25000), 250);
+    const d = round(Math.max(PRICING.upscaleDeposit, m * 2), 500);
+    return { monthly: m, deposit: d, basis: 'upscale', tier: 'upscale', jobsToBreakEven: null, ticket, rev };
+  }
+
   const monthly = round(clamp(rev * PRICING.monthlyShareOfRevenue, PRICING.minMonthly, PRICING.maxMonthly));
 
   // The floor and the revenue share can disagree. When they do, the business is
@@ -104,6 +120,10 @@ export function priceFor(lead, { includesBuild = false } = {}) {
 /** "$850 to set up, then $250/mo" — or an honest hedge when we cannot price it. */
 export function quoteLine(lead, opts) {
   const p = priceFor(lead, opts);
+  if (p.tier === 'upscale') {
+    const money = (n) => `$${n.toLocaleString('en-US')}`;
+    return `${money(p.deposit)} build + ${money(p.monthly)}/mo retained — an operation this size buys management, not a widget.`;
+  }
   if (p.fit === 'too-small') {
     return 'Cannot carry a retainer at their size — sell the one-off build and stop there.';
   }

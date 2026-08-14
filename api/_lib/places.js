@@ -379,7 +379,36 @@ export function transformPlace(p, index = 0) {
  * @param {string} [opts.location] "Katy TX"
  * @param {number} [opts.limit]   max 20 per Places
  */
+// Rough country inference from the market string. Deliberately small: it only
+// needs to know when NOT to bias to the US, and Places does the real work.
+const COUNTRY_HINTS = [
+  [/\b(uk|united kingdom|england|scotland|wales|london|manchester|birmingham|leeds|glasgow)\b/i, 'GB'],
+  [/\b(canada|toronto|vancouver|montreal|calgary|ottawa)\b/i, 'CA'],
+  [/\b(australia|sydney|melbourne|brisbane|perth)\b/i, 'AU'],
+  [/\b(ireland|dublin)\b/i, 'IE'],
+  [/\b(new zealand|auckland|wellington)\b/i, 'NZ'],
+  [/\b(uae|dubai|abu dhabi)\b/i, 'AE'],
+  [/\b(singapore)\b/i, 'SG'],
+  [/\b(germany|berlin|munich|hamburg)\b/i, 'DE'],
+  [/\b(france|paris|lyon|marseille)\b/i, 'FR'],
+  [/\b(spain|madrid|barcelona)\b/i, 'ES'],
+  [/\b(netherlands|amsterdam|rotterdam)\b/i, 'NL'],
+];
+export function countryFor(location) {
+  const s = String(location || '');
+  for (const [re, cc] of COUNTRY_HINTS) if (re.test(s)) return cc;
+  // A US state code or ZIP in the string is a strong US signal; otherwise let
+  // Places decide rather than forcing a bias that could be wrong.
+  // A trailing two-letter state code ("Katy TX", "Austin, TX") or a five-digit
+  // ZIP. The comma is optional — operators type "Katy TX" far more often than
+  // "Katy, TX", and requiring it sent every such search to the no-bias path.
+  const US_STATE = /\b(A[KLRZ]|C[AOT]|D[CE]|FL|GA|HI|I[ADLN]|K[SY]|LA|M[ADEINOST]|N[CDEHJMVY]|O[HKR]|PA|RI|S[CD]|T[NX]|UT|V[AT]|W[AIVY])\s*$/i;
+  if (US_STATE.test(s.trim()) || /\b\d{5}\b/.test(s)) return 'US';
+  return s.trim() ? '' : 'US';   // empty market = the operator's own, which is US-first
+}
+
 export async function searchPlaces({ query, location = '', limit = 20, pageToken = '' }) {
+  const regionCode = countryFor(location);
   if (!placesConfigured()) return { error: 'GOOGLE_PLACES_API_KEY not set', fallback: true };
   if (!query) return { error: 'query is required', fallback: true };
 
@@ -401,7 +430,10 @@ export async function searchPlaces({ query, location = '', limit = 20, pageToken
         maxResultCount: Math.min(Math.max(limit, 1), 20),
         // Domestic only. Apollo without a country filter returned Dubai and
         // Belgrade for "hvac"; don't leave the same gap open here.
-        regionCode: 'US',
+        // Bias to the market being searched rather than always to the US.
+        // A search for "plumber in Manchester" biased to US returned New
+        // Hampshire, which is the wrong Manchester.
+        ...(regionCode ? { regionCode } : {}),
         ...(pageToken ? { pageToken } : {}),
       }),
       signal: AbortSignal.timeout(12000),
@@ -446,9 +478,15 @@ export async function searchPlaces({ query, location = '', limit = 20, pageToken
     // foreign market, so we serve it rather than handing back an empty page.
     // The automatic path can't reach here — it only sets a location for US
     // callers — so this is reachable only by typing a city in deliberately.
+    // Only meaningful when the US is the market. Applying it to a Dubai or
+    // London search discarded every correct result and then fell back to the
+    // unfiltered list anyway — noise with an extra step.
     const US_ADDRESS = /,\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?\s*$|,\s*USA\s*$/;
-    const domestic = open.filter(p => US_ADDRESS.test(p.formattedAddress || ''));
-    let candidates = domestic.length ? domestic : open;
+    let candidates = open;
+    if (regionCode === 'US') {
+      const domestic = open.filter(p => US_ADDRESS.test(p.formattedAddress || ''));
+      if (domestic.length) candidates = domestic;
+    }
     const cityToken = String(location || '').split(',')[0].trim().toLowerCase();
     if (cityToken.length >= 4) {
       const inCity = candidates.filter(p => {

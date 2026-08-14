@@ -424,3 +424,66 @@ body {
 @media (min-width: 640px) {
   .hero-rule { bottom: -0.1em; }
 }
+
+/* ─── Pulse: analog-TV globe ────────────────────────────────────────────────
+   Hot-red rim plus scanlines and a rolling bar, tinted red. Decorative only —
+   every layer is pointer-events-none so a click always reaches the marker
+   underneath. Honours prefers-reduced-motion: the tint and rim stay, the
+   moving parts stop. */
+.pulse-crt {
+  border: 1px solid rgba(239, 68, 68, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.18),
+    0 0 26px rgba(239, 68, 68, 0.28),
+    inset 0 0 60px rgba(239, 68, 68, 0.10);
+}
+.pulse-crt::after {          /* vignette + red wash */
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at center, transparent 55%, rgba(120, 8, 8, 0.35) 100%),
+    linear-gradient(rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.05));
+  mix-blend-mode: screen;
+}
+.pulse-scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 60, 60, 0.075) 0px,
+    rgba(255, 60, 60, 0.075) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  animation: pulse-flicker 3.2s steps(60) infinite;
+}
+.pulse-roll {
+  position: absolute;
+  left: 0; right: 0;
+  height: 14%;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(255, 80, 80, 0.10),
+    transparent
+  );
+  animation: pulse-rollband 7s linear infinite;
+}
+@keyframes pulse-flicker {
+  0%, 100% { opacity: 0.85; }
+  47%      { opacity: 1; }
+  48%      { opacity: 0.6; }
+  49%      { opacity: 0.95; }
+}
+@keyframes pulse-rollband {
+  0%   { top: -14%; }
+  100% { top: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulse-scanlines { animation: none; }
+  .pulse-roll { display: none; }
+}
