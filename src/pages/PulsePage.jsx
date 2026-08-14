@@ -197,6 +197,11 @@ const signalFor = (l) => SIGNALS.find(s => s.match(l)) || TRACKED;
 export default function PulsePage({ onSelect }) {
   const liveLeads = useStore(s => s.liveLeads);
   const noWebsiteLeads = useStore(s => s.noWebsiteLeads);
+  const hydrateStoredLeads = useStore(s => s.hydrateStoredLeads);
+  const fetchLiveLeads = useStore(s => s.fetchLiveLeads);
+  const buildLeadBook = useStore(s => s.buildLeadBook);
+  const isLoadingLeads = useStore(s => s.isLoadingLeads);
+  const backfillRunning = useStore(s => s.backfillRunning);
   const [active, setActive] = useState(null);       // signal id filter
   const [hover, setHover] = useState(null);
   const [view, setView] = useState('globe');   // globe | map
@@ -208,6 +213,32 @@ export default function PulsePage({ onSelect }) {
       .filter(l => l.coords && Number.isFinite(l.coords.lat) && Number.isFinite(l.coords.lng))
       .map(l => ({ lead: l, signal: signalFor(l) }));
   }, [liveLeads, noWebsiteLeads]);
+
+  // Fetch for itself rather than depending on someone having visited Leads.
+  //
+  // Coordinates were added after most books were built, so a stored lead from
+  // before then has none and this page rendered "0 of your leads" on a book of
+  // a thousand. The merge refreshes existing rows, so a single fetch backfills
+  // coords across the whole book — but only if something asks for one, and
+  // nothing here did.
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await hydrateStoredLeads?.();
+      if (cancelled) return;
+      const s = useStore.getState();
+      const held = [...s.liveLeads, ...s.noWebsiteLeads];
+      const withCoords = held.filter(l => l.coords).length;
+      // Nothing plottable: either the book is empty, or every row predates
+      // coords. One fetch fixes both, and the book build continues after.
+      if (!withCoords && !s.isLoadingLeads && !s.backfillRunning) {
+        await fetchLiveLeads?.();
+        if (!cancelled) buildLeadBook?.();
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const shown = useMemo(
     () => (active ? points.filter(p => p.signal.id === active) : points),
@@ -273,8 +304,14 @@ export default function PulsePage({ onSelect }) {
       {!points.length ? (
         <div className="rounded-2xl border border-white/[0.06] bg-black/30 p-10 text-center">
           <Globe size={28} className="text-slate-700 mx-auto mb-3" />
-          <div className="text-sm text-slate-400">No leads with coordinates yet.</div>
-          <div className="text-xs text-slate-600 mt-1">Open Leads and let the book build — points appear as they arrive.</div>
+          <div className="text-sm text-slate-400">
+            {(isLoadingLeads || backfillRunning) ? 'Placing your leads…' : 'No leads with coordinates yet.'}
+          </div>
+          <div className="text-xs text-slate-600 mt-1">
+            {(isLoadingLeads || backfillRunning)
+              ? 'Leads saved before coordinates were collected are being refreshed — points appear as they land.'
+              : 'Nothing to plot yet. Open Leads to build the book.'}
+          </div>
         </div>
       ) : (
         <>
