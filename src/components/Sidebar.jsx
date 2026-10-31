@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Radio, Home, LayoutDashboard, Users, TrendingUp, Zap, BarChart3, Target, Wallet, Bot, Keyboard, Search, ChevronLeft, ChevronRight, Menu, X, Sparkles, User, Shield, Flame, Rocket, Dice5, Award, Crown } from 'lucide-react';
-import { useStore } from '../hooks/useStore';
+import { useStore, initialsOf } from '../hooks/useStore';
 import { isPageEnabled } from '../lib/config';
 import { GoatIcon } from './GoatLogo';
 
@@ -138,7 +138,9 @@ export default function Sidebar() {
                 className="w-6 h-6 rounded-full object-cover flex-shrink-0 bg-gradient-to-br from-brand to-cyan-400"
                 onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             ) : (
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-brand to-cyan-400 flex-shrink-0" aria-hidden="true" />
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-brand to-cyan-400 flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-black" aria-hidden="true">
+                {initialsOf(user.name)}
+              </div>
             )
           ) : (
             <User size={20} className="flex-shrink-0" aria-hidden="true" />

@@ -362,8 +362,8 @@ export default function AuditPage() {
               <div className="text-xs uppercase tracking-widest font-bold text-amber-400 mb-3">Production config needed</div>
               <p className="text-sm text-slate-300 mb-3">The audit API requires at least one LLM provider env var in Vercel:</p>
               <ul className="space-y-1.5 text-xs text-slate-400 font-mono mb-3 pl-4 list-disc">
-                <li><span className="text-white">GROQ_API_KEY</span> — Llama 3.3 70B, free tier 30M tokens/mo (recommended primary)</li>
-                <li><span className="text-white">ANTHROPIC_API_KEY</span> — Claude Haiku fallback (recommended secondary)</li>
+                <li><span className="text-white">XAI_API_KEY</span> — Grok, preferred when the key is set</li>
+                <li><span className="text-white">GROQ_API_KEY</span> — live fallback model on Groq</li>
               </ul>
               <p className="text-xs text-slate-500">Set in Vercel → Project → Settings → Environment Variables. Redeploy after save.</p>
             </div>

@@ -1156,10 +1156,10 @@ export const useStore = create((set, get) => ({
   setAiModel: (m) => set({ aiModel: m }),
 
   // Commission & Fees
-  commissionRate: 0.12,
+  commissionRate: 0.13,
   withdrawalFee: 2.50,
   platformFees: {
-    dealCommission: 0.12,
+    dealCommission: 0.13,
     withdrawalFee: 2.50,
     predictionMarketFee: 0.015,
     degenModeFee: 0.02,

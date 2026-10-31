@@ -1093,11 +1093,10 @@ function ContextSummaryCard({ currentPage, leads, degenMode, onAction }) {
 
 // ─── CONTEXT TIPS PER PAGE ──────────────────────────────────────────────
 const CONTEXT_TIPS = {
-  leads: "I found 3 high-probability leads ready to close",
-  trends: "BTC sentiment shifted bullish \u2014 see alpha plays",
-  dashboard: "Your pipeline is empty \u2014 let me find leads",
+  leads: "Ask for a trade and a city — I'll pull live businesses.",
+  dashboard: "Pipeline is what you have saved. Ask me to find more.",
   audit: "Drop a URL and I'll find the leak",
-  home: "Welcome. Degen mode is on \u2014 Shift+D to flip to Chill.",
+  home: "Ask for HVAC in Tampa, or what to say on a cold call.",
 };
 
 // ─── CLOSE COACH STEPS ────────────────────────────────────────────────
@@ -1132,8 +1131,7 @@ export default function AIOverlay() {
   const aiOpen = useStore(s => s.aiOpen);
   const setAiOpen = useStore(s => s.setAiOpen);
   const setAuditPrefill = useStore(s => s.setAuditPrefill);
-  const rawLeads = useStore(s => s.leads);
-  const getLeads = useStore(s => s.getLeads);
+  const liveLeads = useStore(s => s.liveLeads);
   const currentPage = useStore(s => s.page);
   const setPage = useStore(s => s.setPage);
   const selectedLead = useStore(s => s.selectedLead);
@@ -1141,11 +1139,7 @@ export default function AIOverlay() {
   const setDetailOpen = useStore(s => s.setDetailOpen);
   const setPreviousPage = useStore(s => s.setPreviousPage);
   const degenMode = useStore(s => s.degenMode);
-  const leads = rawLeads || [];
-
-  useEffect(() => {
-    if (!rawLeads) getLeads();
-  }, [rawLeads, getLeads]);
+  const leads = Array.isArray(liveLeads) ? liveLeads : [];
 
   // One-shot notification permission prompt — 15s after mount, only if 'default'
   // and user is in Wolf mode (opted in by default anyway). Non-blocking.

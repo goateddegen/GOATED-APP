@@ -5,9 +5,7 @@
 import { TOOL_SCHEMAS, runTool } from './_lib/tools.js';
 import { formatPhone } from './_lib/phone.js';
 import { quoteLine, PRICING } from './_lib/pricing.js';
-
-// Overridable so a bad day on one model does not need a redeploy.
-const CHAT_MODEL = process.env.GROQ_CHAT_MODEL || 'llama-3.1-8b-instant';
+import { llmTargets, completeOnce } from './_lib/llm.js';
 
 // ─── Security: Input Sanitization ───────────────────────────────────────────
 function sanitizeInput(text) {
@@ -172,8 +170,18 @@ function stripUngroundedFigures(text, toolResultsJson) {
   // not enough here: "60%" matched `score: 60` in the tool output and
   // survived as a fabricated close rate. A percentage is only real if the
   // tool output actually expressed one.
+  // Drop the whole sentence when a percentage isn't in the tool output.
+  // Deleting only the digits left "roughly of inbound leads".
   const groundedHasPercent = grounded.includes('%');
-  out = out.replace(/\b\d{1,3}(?:\.\d+)?\s?%/g, (m) => (groundedHasPercent && isGrounded(m) ? m : ''));
+  if (!groundedHasPercent) {
+    out = out
+      .split('\n')
+      .map(line => line
+        .split(/(?<=[.!?])\s+/)
+        .filter(sentence => !/\b\d{1,3}(?:\.\d+)?\s?%/.test(sentence))
+        .join(' '))
+      .join('\n');
+  }
   // Tidy up what the removals left behind, or the line reads as broken
   // ("Rescue Air - - Call to recover"). Collapse runs of separators until
   // stable, then drop any that now dangle at the end of a line.
@@ -466,9 +474,7 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: 'Too many requests. Please wait a moment.', requestId, retryAfter: 60 });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  const groqKey = process.env.GROQ_API_KEY;
-  if (!apiKey && !groqKey) {
+  if (llmTargets().length === 0) {
     return res.status(200).json({ fallback: true, requestId, reason: 'no_llm_key' });
   }
 
@@ -675,14 +681,13 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
 
     const maxTokens = (mode === 'play_execute' || mode === 'play_generate' || isDeepResearch) ? 1200
       : (isOutreachIntent || isClosingIntent) ? 600
-      : 180; // ~135 words — enforce brevity rule
+      : 450;
 
     const chatMessages = contextMessages.map(m => ({ role: m.role, content: m.content }));
 
-    // Two live providers, tried in order. Anthropic first for quality; Groq is a
-    // real second engine (not a canned template) so an Anthropic outage, rate
-    // limit, or exhausted credit balance never silently degrades the product to
-    // static text. Only if BOTH are unavailable do we signal fallback.
+    // xAI Grok when XAI_API_KEY is set, otherwise the live Groq model.
+    // Claude is not called — that account has no credits, and the old Llama
+    // IDs 404. Only if every configured model fails do we signal fallback.
     let rawContent = null;
     let llmUsed = null;
     const providerErrors = [];
@@ -783,84 +788,36 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
       }
     }
 
-    if (apiKey) {
+    // ── Agentic loop ──────────────────────────────────────────────────────
+    // xAI Grok first (when XAI_API_KEY is set), then the live Groq model.
+    // "hvac leads in dallas" triggers search_leads — a fresh request — rather
+    // than being answered from whichever leads happened to be in page memory.
+    // Two rounds max: call a tool, then answer. A dead model falls through
+    // to the next target instead of ending the request.
+    targetLoop:
+    for (const target of llmTargets()) {
+      if (rawContent) break;
       try {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-6',
-            max_tokens: maxTokens,
-            temperature: activeMode.temperature,
-            system: systemPrompt,
-            messages: chatMessages,
-          }),
-          signal: AbortSignal.timeout(30000),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          rawContent = data.content?.[0]?.text || null;
-          llmUsed = 'anthropic:claude-sonnet-4-6';
-        } else {
-          providerErrors.push(`anthropic ${response.status}: ${(await response.text()).slice(0, 200)}`);
-        }
-      } catch (e) {
-        providerErrors.push(`anthropic threw: ${e.message}`);
-      }
-    }
-
-    if (!rawContent && groqKey) {
-      try {
-        // ── Agentic loop ──────────────────────────────────────────────────
-        // The model gets real tools and decides what to call. "hvac leads in
-        // dallas" now triggers a live search_leads({query:'hvac',
-        // location:'Dallas TX'}) — a fresh API request — rather than being
-        // answered from whichever leads happened to be in page memory.
-        //
-        // Two rounds maximum: enough to call a tool and then answer with the
-        // result, bounded so a confused model can't loop until the function
-        // times out.
         const convo = [{ role: 'system', content: systemPrompt }, ...chatMessages];
         const MAX_ROUNDS = 2;
 
         for (let round = 0; round < MAX_ROUNDS && !rawContent; round++) {
-          const gr = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${groqKey}`,
-            },
-            body: JSON.stringify({
-              // Groq meters each model separately, so the chat and the audit
-              // no longer compete for one allowance. 8b-instant carries a far
-              // larger daily budget and is more than enough for what reaches
-              // it — lead lists and the common questions are answered
-              // deterministically now, so the model only handles short prose
-              // and the occasional tool decision.
-              model: CHAT_MODEL,
-              max_tokens: maxTokens,
-              temperature: activeMode.temperature,
-              messages: convo,
-              // Only offer tools on the first round. After results are in, the
-              // model should be writing an answer, not calling again.
-              ...(round === 0 && offeredTools.length ? { tools: offeredTools, tool_choice: 'auto' } : {}),
-            }),
-            signal: AbortSignal.timeout(30000),
+          const turn = await completeOnce(target, {
+            messages: convo,
+            tools: round === 0 ? offeredTools : [],
+            toolChoice: round === 0 && offeredTools.length ? 'auto' : undefined,
+            maxTokens,
+            temperature: activeMode.temperature,
+            timeoutMs: 30000,
           });
 
-          if (!gr.ok) {
-            providerErrors.push(`groq ${gr.status}: ${(await gr.text()).slice(0, 200)}`);
-            break;
+          if (!turn.ok) {
+            providerErrors.push(turn.error);
+            continue targetLoop;
           }
 
-          const gd = await gr.json();
-          const msg = gd.choices?.[0]?.message;
-          const calls = msg?.tool_calls || [];
+          const msg = turn.message;
+          const calls = turn.toolCalls || [];
 
           if (calls.length) {
             convo.push(msg);
@@ -932,11 +889,11 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
             continue; // let the model answer from the tool output
           }
 
-          rawContent = msg?.content || null;
-          llmUsed = `groq:${CHAT_MODEL}`;
+          rawContent = turn.content || null;
+          llmUsed = `${target.id}:${target.model}`;
         }
       } catch (e) {
-        providerErrors.push(`groq threw: ${e.message}`);
+        providerErrors.push(`${target.id} threw: ${e.message}`);
       }
     }
 

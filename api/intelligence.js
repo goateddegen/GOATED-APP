@@ -1,4 +1,4 @@
-import { callLLM, MODELS } from './_lib/llm.js';
+import { callLLM } from './_lib/llm.js';
 // =============================================================================
 // GOATED Solutions - Real-Time Intelligence API
 // =============================================================================
@@ -195,48 +195,20 @@ async function handleAnalysisPost(req, res) {
     return res.status(200).json({ ...cached, metadata: { ...cached.metadata, cached: true } });
   }
 
-  // Try Claude API
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    const mock = generateMockAnalysis(type, data);
-    setCachedAnalysis(type, data, mock);
-    return res.status(200).json(mock);
+  const systemPrompt = SYSTEM_PROMPTS[type] + `\n\nRespond with structured analysis. Be specific, data-driven, and actionable. Reference specific numbers from the provided data. Format with **bold** for key metrics and clear section headers.`;
+
+  let userMessage = `Analyze the following ${type.replace('_', ' ')} data:\n\n\`\`\`json\n${dataStr}\n\`\`\``;
+  if (query) {
+    userMessage += `\n\nAdditional context/query: ${query}`;
   }
 
   try {
-    const systemPrompt = SYSTEM_PROMPTS[type] + `\n\nRespond with structured analysis. Be specific, data-driven, and actionable. Reference specific numbers from the provided data. Format with **bold** for key metrics and clear section headers.`;
-
-    let userMessage = `Analyze the following ${type.replace('_', ' ')} data:\n\n\`\`\`json\n${dataStr}\n\`\`\``;
-    if (query) {
-      userMessage += `\n\nAdditional context/query: ${query}`;
-    }
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: MODELS.anthropic,
-        max_tokens: 2048,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userMessage }],
-      }),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('[Intelligence] Claude API error:', errText);
-      // Fallback to mock
+    const analysisText = await callLLM(systemPrompt, userMessage, 2048, { temperature: 0.4, timeoutMs: 28000 });
+    if (!analysisText) {
       const mock = generateMockAnalysis(type, data);
       setCachedAnalysis(type, data, mock);
       return res.status(200).json(mock);
     }
-
-    const aiData = await response.json();
-    const analysisText = aiData.content?.[0]?.text || '';
 
     // Extract signals and recommendations from the AI response
     const signals = extractBulletPoints(analysisText, ['signal', 'key signal', 'indicator', 'key finding']);
@@ -248,7 +220,7 @@ async function handleAnalysisPost(req, res) {
       signals: signals.length > 0 ? signals : getDefaultSignals(type),
       recommendations: recommendations.length > 0 ? recommendations : getDefaultRecommendations(type),
       metadata: {
-        model: 'claude-sonnet',
+        model: 'goated-llm',
         timestamp: new Date().toISOString(),
         cached: false,
       },

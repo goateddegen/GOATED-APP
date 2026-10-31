@@ -5,17 +5,16 @@
 // Real flow: POST { url } -> fetch HTML live -> extract signals via regex
 // (cheerio skipped to keep cold start light) -> pass to LLM -> return JSON.
 //
-// LLM priority:
-//   1. Groq (Llama 3.3 70B Versatile) — sub-second, JSON mode, free tier
-//   2. Anthropic Claude Haiku — fallback if Groq fails or is rate-limited
+// LLM: xAI Grok when XAI_API_KEY is set, otherwise the live Groq model
+// (see api/_lib/llm.js). Claude is not called.
 //
-// Env vars required (set in Vercel → Project → Settings → Environment):
-//   GROQ_API_KEY          (https://console.groq.com/keys)
-//   ANTHROPIC_API_KEY     (https://console.anthropic.com/settings/keys)
-// Either one alone is enough; both = resilience.
+// Env vars (Vercel → Project → Settings → Environment):
+//   XAI_API_KEY           (https://console.x.ai) — preferred, Grok
+//   GROQ_API_KEY          (https://console.groq.com/keys) — works today
 // =============================================================================
 
 import { saveAudit, loadAudit, claimAudit, loadInboundAudits, userFromRequest } from './_lib/db.js';
+import { callJSON, llmTargets } from './_lib/llm.js';
 
 // ─── CORS whitelist ─────────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
@@ -443,50 +442,7 @@ SIGNALS:
 ${JSON.stringify(compact, null, 2)}`;
 }
 
-// ─── LLM call: Groq (primary) ────────────────────────────────────────────────
-async function callGroq(prompt, apiKey, model = 'llama-3.3-70b-versatile') {
-  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: 'You are GOATED AI. Always return strict JSON matching the schema specified in the user prompt. No markdown, no prose outside the JSON.' },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.35,
-      max_tokens: 2600,
-      response_format: { type: 'json_object' },
-    }),
-  });
-  if (!resp.ok) throw new Error(`Groq ${resp.status}: ${await resp.text()}`);
-  const j = await resp.json();
-  const content = j?.choices?.[0]?.message?.content;
-  if (!content) throw new Error('Groq: empty response');
-  return JSON.parse(content);
-}
-
-// ─── LLM call: Claude (fallback) ─────────────────────────────────────────────
-async function callClaude(prompt, apiKey) {
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2600,
-      system: 'You are GOATED AI. Return strict JSON matching the schema in the user prompt. No markdown, no prose outside the JSON. Begin your response directly with { and end with }.',
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-  if (!resp.ok) throw new Error(`Claude ${resp.status}: ${await resp.text()}`);
-  const j = await resp.json();
-  const text = j?.content?.[0]?.text;
-  if (!text) throw new Error('Claude: empty response');
-  // Strip any accidental code fences
-  const clean = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
-  return JSON.parse(clean);
-}
-
+const AUDIT_SYSTEM = 'You are GOATED AI. Always return strict JSON matching the schema specified in the user prompt. No markdown, no prose outside the JSON.';
 
 // ─── Result cache ───────────────────────────────────────────────────────────
 // Auditing the same URL twice should not cost twice. This is a public lead
@@ -750,9 +706,7 @@ export default async function handler(req, res) {
   if (norm.error) return res.status(400).json({ error: norm.error, retryable: false });
   const url = norm.url;
 
-  const GROQ_KEY = process.env.GROQ_API_KEY;
-  const CLAUDE_KEY = process.env.ANTHROPIC_API_KEY;
-  if (!GROQ_KEY && !CLAUDE_KEY) {
+  if (llmTargets().length === 0) {
     return res.status(500).json({
       error: 'The audit service is not fully configured yet. This is on our side, not your URL — try again shortly.',
       retryable: true,
@@ -863,30 +817,10 @@ export default async function handler(req, res) {
   let llmUsed = null;
   let llmError = null;
 
-  // Groq meters each model separately, so an exhausted 70b allowance does not
-  // mean no model is available. Falling straight to the rule-based report was
-  // leaving a whole second budget untouched — 8b writes a visibly thinner
-  // audit than 70b, but a thinner AI audit beats no AI audit, and it beats
-  // the rule-based one comfortably.
-  const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
-  if (GROQ_KEY) {
-    for (const model of GROQ_MODELS) {
-      try {
-        analysis = await callGroq(prompt, GROQ_KEY, model);
-        llmUsed = `groq:${model}`;
-        break;
-      } catch (e) {
-        llmError = `${llmError ? llmError + ' | ' : ''}${model}: ${e.message.slice(0, 120)}`;
-        // Only worth trying the next model if this one is rate limited;
-        // a malformed prompt or a parse failure will fail identically.
-        if (!/429|rate.?limit|tokens per day|TPD/i.test(e.message)) break;
-      }
-    }
-  }
-  if (!analysis && CLAUDE_KEY) {
-    try { analysis = await callClaude(prompt, CLAUDE_KEY); llmUsed = 'anthropic:haiku-3.5'; }
-    catch (e) { llmError = `${llmError || ''} | Claude failed: ${e.message}`; }
-  }
+  const ai = await callJSON(AUDIT_SYSTEM, prompt, 2600, { timeoutMs: 8000 });
+  analysis = ai.data;
+  llmUsed = ai.model ? `${ai.provider}:${ai.model}` : null;
+  llmError = ai.errors?.length ? ai.errors.join(' | ').slice(0, 400) : null;
 
   // Never fail the whole audit because the LLM tier is exhausted. We already
   // have real scraped signals — fall back to the rule-based report and label it.
