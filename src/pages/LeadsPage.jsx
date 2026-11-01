@@ -9,6 +9,7 @@ import {
   ExternalLink, MapPin, Crosshair, AlertTriangle, Radio, RefreshCw, Globe,
 } from 'lucide-react';
 import { useStore, fmt, priorities, industries, initialsOf, cityOf, formatPhone } from '../hooks/useStore';
+import { leadClickProps, leadTabUrl } from '../lib/leadLink';
 import { buildOutreachStrategy, deriveGaps, recommendTier, buildPackage } from '../lib/outreach';
 
 // ---------------------------------------------------------------------------
@@ -1161,10 +1162,13 @@ export default function LeadsPage({ onSelect }) {
             </div>
           </div>
           <div className="divide-y divide-white/[0.04] max-h-[460px] overflow-y-auto">
-            {callQueue.map((l) => (
+            {callQueue.map((l) => {
+              const href = leadTabUrl(l);
+              const Name = href ? 'a' : 'div';
+              return (
               <div key={l._placeId || l.id} className="px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <div className="min-w-0 flex-1 cursor-pointer" onClick={() => handleSelectLead(l)}>
+                  <Name href={href || undefined} {...leadClickProps(l, handleSelectLead)} className="min-w-0 flex-1 cursor-pointer no-underline text-inherit">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-white truncate">{l.company}</span>
                       {!l.website && (
@@ -1182,7 +1186,7 @@ export default function LeadsPage({ onSelect }) {
                         Unreachable {l.receptionist.uncoveredHoursPerWeek}h a week — open on that
                       </div>
                     )}
-                  </div>
+                  </Name>
                   <a href={`tel:${(l.phone || '').replace(/[^+\d]/g, '')}`}
                     className="shrink-0 flex items-center gap-1.5 px-3 h-10 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/25 active:bg-emerald-500/30">
                     <PhoneCall size={14} />
@@ -1191,7 +1195,7 @@ export default function LeadsPage({ onSelect }) {
                   </a>
                 </div>
               </div>
-            ))}
+            );})}
             {!callQueue.length && (
               <div className="px-4 py-6 text-center">
                 <p className="text-xs text-slate-400">
@@ -1234,9 +1238,11 @@ export default function LeadsPage({ onSelect }) {
             {noWebsiteShown.map((l) => {
               const act = l.activity || {};
               const live = act.level === 'active';
+              const href = leadTabUrl(l);
+              const Row = href ? 'a' : 'button';
               return (
-                <button key={l.id} onClick={() => handleSelectLead(l)}
-                  className="w-full text-left px-4 py-3 hover:bg-white/[0.03] transition-colors flex items-center gap-3">
+                <Row key={l.id} href={href || undefined} {...leadClickProps(l, handleSelectLead)}
+                  className="w-full text-left px-4 py-3 hover:bg-white/[0.03] transition-colors flex items-center gap-3 no-underline text-inherit">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-white truncate">{l.company}</span>
@@ -1262,7 +1268,7 @@ export default function LeadsPage({ onSelect }) {
                     <div className="text-[9px] text-slate-600 uppercase tracking-wider">score</div>
                   </div>
                   <ChevronRight size={14} className="text-slate-600 shrink-0" />
-                </button>
+                </Row>
               );
             })}
             {/* Say why it is empty. A section that simply vanishes reads as a
@@ -1404,7 +1410,7 @@ export default function LeadsPage({ onSelect }) {
             const act = l.activity || {};
             const isHot = l.score >= 85;
             return (
-              <div key={l.id} onClick={() => handleSelectLead(l)}
+              <div key={l.id} {...leadClickProps(l, handleSelectLead)}
                 className="p-4 active:bg-white/[0.04] transition-colors cursor-pointer">
                 <div className="flex items-start gap-3">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isHot ? 'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30' : 'bg-brand/15 text-brand'}`}>
@@ -1489,7 +1495,7 @@ export default function LeadsPage({ onSelect }) {
                 const isHot = l.score >= 85;
                 return (
                   <React.Fragment key={l.id}>
-                    <tr onClick={() => handleSelectLead(l)}
+                    <tr {...leadClickProps(l, handleSelectLead)}
                       className={`border-b border-white/[0.02] cursor-pointer hover:bg-white/[0.02] transition-colors ${isExpanded ? 'bg-brand/[0.03]' : ''}`}>
 
                       {/* Lead */}

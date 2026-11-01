@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Search, Home, Users, X, ArrowUp, ArrowDown, CornerDownLeft, Sparkles, Bot, Loader2, ArrowRight } from 'lucide-react';
 import { useStore, initialsOf } from '../hooks/useStore';
 import { isPageEnabled } from '../lib/config';
+import { leadClickProps, leadTabUrl } from '../lib/leadLink';
 
 // Natural-language markers — if the query has these, we surface "Ask AI" first.
 const NL_MARKERS = /\b(show|find|list|top|best|which|how many|compare|above|below|over|under|in .* industry|score |this week|this month|closing|hottest|coldest|biggest|smallest|what is|who is)\b|\?/i;
@@ -390,12 +391,15 @@ export default function SearchModal() {
                 <div className="px-3 py-1.5 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Leads ({results.leads.length})</div>
                 {results.leads.map(l => {
                   const idx = flatResults.findIndex(f => f.type === 'lead' && f.data.id === l.id);
+                  const href = leadTabUrl(l);
+                  const Row = href ? 'a' : 'button';
                   return (
-                    <button
+                    <Row
                       key={l.id}
-                      onClick={() => selectItem({ type: 'lead', data: l })}
+                      href={href || undefined}
+                      {...leadClickProps(l, () => selectItem({ type: 'lead', data: l }))}
                       data-active={idx === activeIdx}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${idx === activeIdx ? `${accentBg}` : 'hover:bg-white/[0.02]'}`}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left no-underline text-inherit transition-colors ${idx === activeIdx ? `${accentBg}` : 'hover:bg-white/[0.02]'}`}
                     >
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${idx === activeIdx ? `${accentBg} ${accentText}` : 'bg-brand/15 text-brand'}`}>
                         {initialsOf(l.company || l.name)}
@@ -409,7 +413,7 @@ export default function SearchModal() {
                         <div className="text-[10px] text-slate-500">score</div>
                       </div>
                       {idx === activeIdx && <CornerDownLeft size={14} className={`${accentText} opacity-50`} />}
-                    </button>
+                    </Row>
                   );
                 })}
               </div>

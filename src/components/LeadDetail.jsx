@@ -3,6 +3,7 @@ import {
   ArrowLeft, Phone, Mail, Calendar, Globe, Building2, AlertCircle, Copy, Check, TrendingUp, TrendingDown, Minus, Target, Shield, Zap, Star, ChevronRight, ChevronDown, Users, DollarSign, Clock, Award, BarChart3, Activity, Cpu, Eye, MessageSquare, Send, Package, Calculator, Flame, Crosshair, Brain, Timer, AlertTriangle, Keyboard, ExternalLink, Search, UserSearch, Crown, Sparkles, PhoneCall, FileText, CreditCard, Trophy, Rocket, ChevronUp, MapPin, Hash, Lightbulb, Swords, TrendingUp as TrendUp2, ArrowRight, Voicemail, Share2, CheckCircle2
 } from 'lucide-react';
 import { useStore, fmt, enrichLead, initialsOf, placeIdOf, formatPhone } from '../hooks/useStore';
+import { leadClickProps, leadTabUrl } from '../lib/leadLink';
 import { buildCallSheet, buildPackage, recommendStack, estimateMissedRevenue } from '../lib/outreach';
 import { priceFor, quoteLine } from '../lib/pricing';
 
@@ -1920,16 +1921,17 @@ Context:\n${ctx}`;
             if (!similar.length) return <div className="text-xs text-slate-500 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">No similar leads found in the same industry or location.</div>;
             return (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {similar.map(s => (
-                  <button key={s.id} onClick={() => {
-                    // Navigate to the similar lead
+                {similar.map(s => {
+                  const href = leadTabUrl(s);
+                  const Row = href ? 'a' : 'button';
+                  return (
+                  <Row key={s.id} href={href || undefined} {...leadClickProps(s, () => {
                     window.dispatchEvent(new CustomEvent('navigate-lead', { detail: s.id }));
-                    // Also directly update the store to open this lead
                     const store = useStore.getState();
                     if (store.setSelectedLead) store.setSelectedLead(s);
                     if (store.setDetailOpen) store.setDetailOpen(true);
-                  }}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-black/30 border border-white/[0.04] hover:border-brand/30 transition-colors text-left">
+                  })}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-black/30 border border-white/[0.04] hover:border-brand/30 transition-colors text-left no-underline text-inherit">
                     <div className="w-8 h-8 rounded-full bg-brand/15 flex items-center justify-center text-xs font-bold text-brand">
                       {s.name?.[0] || '?'}
                     </div>
@@ -1938,8 +1940,8 @@ Context:\n${ctx}`;
                       <div className="text-[10px] text-slate-500 truncate">{s.company} · {s.industry}</div>
                     </div>
                     <div className="text-[10px] font-bold text-brand">{s.score}</div>
-                  </button>
-                ))}
+                  </Row>
+                );})}
               </div>
             );
           })()}

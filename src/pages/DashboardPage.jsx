@@ -7,6 +7,7 @@ import {
   ArrowRight, ShieldCheck,
 } from 'lucide-react';
 import { useStore, fmt, computePipelineAnalytics } from '../hooks/useStore';
+import { leadClickProps, leadTabUrl } from '../lib/leadLink';
 
 // ============================================================================
 // DASHBOARD -- Pipeline Health & Revenue Intelligence
@@ -705,9 +706,12 @@ function DashboardContent({ onSelect }) {
                   <Eye size={16} className="text-orange-400" /> Whale Radar -- Top 5
                 </h3>
                 <div className="space-y-2">
-                  {whales.slice(0, 5).map((w, i) => (
-                    <div key={i} onClick={() => onSelect && onSelect(w)}
-                      className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:bg-orange-500/5 hover:border-orange-500/20 cursor-pointer transition-colors">
+                  {whales.slice(0, 5).map((w, i) => {
+                    const href = leadTabUrl(w);
+                    const Row = href ? 'a' : 'div';
+                    return (
+                    <Row key={i} href={href || undefined} {...leadClickProps(w, (lead) => onSelect && onSelect(lead))}
+                      className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:bg-orange-500/5 hover:border-orange-500/20 cursor-pointer transition-colors no-underline text-inherit">
                       <div className="w-7 h-7 rounded-full bg-orange-500/15 flex items-center justify-center text-xs font-bold text-orange-400">{i + 1}</div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-white truncate">{w.name}</div>
@@ -717,8 +721,8 @@ function DashboardContent({ onSelect }) {
                         <div className="text-sm font-bold text-brand">{fmt(w.dealValue || w.value || 0)}</div>
                         <div className="text-[10px] text-slate-500">Score: {w.score}</div>
                       </div>
-                    </div>
-                  ))}
+                    </Row>
+                  );})}
                 </div>
               </div>
 
@@ -728,9 +732,12 @@ function DashboardContent({ onSelect }) {
                   <Target size={16} className="text-yellow-400" /> Snipe Queue -- Act Now
                 </h3>
                 <div className="space-y-2">
-                  {snipeQueue.slice(0, 5).map((s, i) => (
-                    <div key={i} onClick={() => onSelect && onSelect(s)}
-                      className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:bg-yellow-500/5 hover:border-yellow-500/20 cursor-pointer transition-colors">
+                  {snipeQueue.slice(0, 5).map((s, i) => {
+                    const href = leadTabUrl(s);
+                    const Row = href ? 'a' : 'div';
+                    return (
+                    <Row key={i} href={href || undefined} {...leadClickProps(s, (lead) => onSelect && onSelect(lead))}
+                      className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:bg-yellow-500/5 hover:border-yellow-500/20 cursor-pointer transition-colors no-underline text-inherit">
                       <div className="w-7 h-7 rounded-full bg-yellow-500/15 flex items-center justify-center text-xs font-bold text-yellow-400">{i + 1}</div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-white truncate">{s.name}</div>
@@ -740,8 +747,8 @@ function DashboardContent({ onSelect }) {
                         <div className="text-sm font-bold text-yellow-400">{fmt(s.dealValue || s.value || 0)}</div>
                         <div className={`text-[10px] px-1.5 py-0.5 rounded-full ${s.status === 'new' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-cyan-500/15 text-cyan-400'}`}>{s.status}</div>
                       </div>
-                    </div>
-                  ))}
+                    </Row>
+                  );})}
                   {snipeQueue.length === 0 && <div className="text-center py-4 text-sm text-slate-500">No snipe opportunities right now</div>}
                 </div>
               </div>

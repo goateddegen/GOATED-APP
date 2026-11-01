@@ -4,6 +4,7 @@ import {
   X, Send, Minimize2, Globe, Users, TrendingUp, Lightbulb, ChevronRight, ChevronDown, Check, BarChart3, Wallet, Zap, Target, ArrowRight, MessageSquare, Sparkles, LayoutDashboard, ExternalLink, Phone, UserSearch, Trophy, Flame, DollarSign, Clock, Activity, Shield, ClipboardList, FileText, Brain, Newspaper, BookOpen, Crosshair, Bell, Copy, Eye, AlertTriangle, Award, Voicemail, Search
 } from 'lucide-react';
 import { useStore, fmt, initialsOf, placeIdOf, formatPhone } from '../hooks/useStore';
+import { leadClickProps, leadTabUrl } from '../lib/leadLink';
 import { GoatIcon } from './GoatLogo';
 import { notify, requestNotifPermission, getNotifPermission } from '../utils/notifications';
 import { isPageEnabled } from '../lib/config';
@@ -682,9 +683,11 @@ function ParsedMessage({ content, onNavigate, onOpenLead, onOpenPlace, onAudit, 
         if (leadCardMatch && leads) {
           const lead = leads.find(l => l.id === parseInt(leadCardMatch[1]));
           if (lead) {
+            const href = leadTabUrl(lead);
+            const Card = href ? 'a' : 'button';
             return (
-              <button key={i} onClick={() => onOpenLead(lead)}
-                className="flex items-center gap-2 my-1.5 px-3 py-2 rounded-lg w-full text-left
+              <Card key={i} href={href || undefined} {...leadClickProps(lead, () => onOpenLead(lead))}
+                className="flex items-center gap-2 my-1.5 px-3 py-2 rounded-lg w-full text-left no-underline text-inherit
                   bg-white/[0.03] hover:bg-brand/10 border border-white/[0.03] hover:border-brand/20 transition-colors group">
                 <div className="w-8 h-8 rounded-full bg-brand/15 flex items-center justify-center text-brand text-[10px] font-bold shrink-0">
                   {initialsOf(lead.company || lead.name)}
@@ -698,7 +701,7 @@ function ParsedMessage({ content, onNavigate, onOpenLead, onOpenPlace, onAudit, 
                   <div className="text-[10px] text-slate-500">{fmt(lead.dealValue)}</div>
                 </div>
                 <ArrowRight size={12} className="text-slate-600 group-hover:text-brand transition-colors shrink-0" />
-              </button>
+              </Card>
             );
           }
         }
@@ -711,14 +714,14 @@ function ParsedMessage({ content, onNavigate, onOpenLead, onOpenPlace, onAudit, 
           const leadHref = href.match(/^#\/lead\/([A-Za-z0-9_-]{10,})$/);
           if (leadHref && onOpenPlace) {
             return (
-              <button key={i} onClick={() => onOpenPlace(leadHref[1])}
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md font-bold
+              <a key={i} href={href} {...leadClickProps({ _placeId: leadHref[1] }, () => onOpenPlace(leadHref[1]))}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md font-bold no-underline
                   bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20
                   hover:border-purple-500/40 transition-colors duration-200 cursor-pointer mx-0.5">
                 <Users size={10} />
                 {label}
                 <ChevronRight size={9} className="opacity-60" />
-              </button>
+              </a>
             );
           }
           const auditHref = href.match(/^#\/audit\?u=(.+)$/);
@@ -783,18 +786,21 @@ function ParsedMessage({ content, onNavigate, onOpenLead, onOpenPlace, onAudit, 
               l.company.toLowerCase() === lowerInner
             );
             if (matchedLead) {
+              const href = leadTabUrl(matchedLead);
+              const Name = href ? 'a' : 'button';
               return (
-                <button
+                <Name
                   key={i}
-                  onClick={() => onOpenLead(matchedLead)}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md font-bold
+                  href={href || undefined}
+                  {...leadClickProps(matchedLead, () => onOpenLead(matchedLead))}
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md font-bold no-underline
                     bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20
                     hover:border-purple-500/40 transition-colors duration-200 cursor-pointer mx-0.5"
                 >
                   <Users size={10} />
                   {inner}
                   <ChevronRight size={9} className="opacity-60" />
-                </button>
+                </Name>
               );
             }
           }
