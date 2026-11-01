@@ -20,20 +20,21 @@ function isNestedControl(e) {
 /**
  * Plain click runs `select` in this tab.
  * Command, Control, Shift, and middle-click open the lead permalink in a new
- * tab and leave this page where it is. Anchors with an href are left to the
- * browser so it can open the tab itself.
+ * tab and leave this page where it is.
+ *
+ * The browser is not trusted with that gesture. A link whose only difference
+ * from the current page is the hash (`#/lead/…` vs `#/leads`) is a same-document
+ * fragment, and Chrome opens a new tab of the page you are already on. We
+ * always open the absolute permalink ourselves.
  */
 export function openLeadFromClick(e, lead, select) {
   if (e && isNestedControl(e)) return false;
   if (wantsNewTab(e)) {
-    const selfLink = e.currentTarget?.tagName === 'A' && e.currentTarget.getAttribute('href');
-    if (!selfLink) {
-      const url = leadTabUrl(lead);
-      if (url) {
-        e.preventDefault();
-        e.stopPropagation();
-        window.open(url, '_blank', 'noopener,noreferrer');
-      }
+    const url = leadTabUrl(lead);
+    if (url) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
     return true;
   }

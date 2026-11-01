@@ -48,10 +48,17 @@ function sanitizeInput(text) {
 function renderLeadResults(result, args) {
   let leads = Array.isArray(result?.leads) ? result.leads : [];
 
-  // Apply the no-website constraint here rather than pretending it was met.
-  const wantNoSite = !!args?.needsWebsite;
+  // Apply the solution constraint here rather than pretending it was met.
+  // Website clients are the ones with no site. Voice-agent clients are the
+  // ones still trading whose hours leave 40+ hours a week unanswered.
+  const wantVoice = args?.solution === 'voice';
+  const wantNoSite = !!args?.needsWebsite || args?.solution === 'website';
   const beforeFilter = leads.length;
   if (wantNoSite) leads = leads.filter(l => !l.website);
+  if (wantVoice) {
+    const active = leads.filter(l => l.receptionist?.qualified && l.activity?.level === 'active');
+    leads = active.length ? active : leads.filter(l => l.receptionist?.qualified);
+  }
   const titleCase = (t) => String(t || '').replace(/\b[a-z]/g, (c) => c.toUpperCase());
   const where = titleCase(result?.locationUsed || args?.location || '') || 'your area';
   // The tool strips non-trade words like "leads" or "businesses" from the
@@ -69,7 +76,7 @@ function renderLeadResults(result, args) {
   // Anything left that isn't a trade name. "who should I call today" was
   // reaching the renderer as the trade "to call", giving "11 to call
   // businesses in Houston TX".
-  const GENERIC = /^(leads?|businesses|business|companies|company|prospects?|clients?|customers?|places?|people|any(thing)?|stuff|multiple\s+\w+|various\s*\w*|all\s*\w*|trades?|services?|local\s+\w+|to\s+\w+|\w{1,2})$/i;
+  const GENERIC = /^(leads?|businesses|business|companies|company|prospects?|clients?|customers?|places?|people|any(thing)?|stuff|multiple\s+\w+|various\s*\w*|all\s*\w*|trades?|services?|local\s+\w+|to\s+\w+|\w{1,2}|website(\s+clients?)?|voice(\s+agents?)?(\s+clients?)?|ai\s+receptionist|receptionist(\s+clients?)?)$/i;
   const trade = GENERIC.test(rawTrade) ? '' : rawTrade;
 
   // Normalise to the singular trade, then let the following noun carry the
@@ -81,6 +88,10 @@ function renderLeadResults(result, args) {
     : (leads.length === 1 ? 'local business' : 'local businesses');
 
   if (!leads.length) {
+    if (wantVoice) {
+      return `No voice-agent clients in ${where} on this search. A fit is a business that is still trading and has 40 or more hours a week when nobody answers. `
+        + `Try plumbers, HVAC, dentists, or law firms — those are where the phone gap shows up.`;
+    }
     if (wantNoSite && beforeFilter > 0) {
       return `All ${beforeFilter} ${what} I found in ${where} already have a website. `
         + `Businesses with none are roughly one in ten, so try a trade where solo operators are common — `
@@ -95,6 +106,10 @@ function renderLeadResults(result, args) {
     const bits = [];
     if (l.reviews != null) bits.push(`${l.reviews} review${l.reviews === 1 ? '' : 's'}${l.rating ? ` at ${l.rating}★` : ''}`);
     if (!l.website) bits.push('**no website**');
+    if (l.receptionist?.qualified && l.receptionist.uncoveredHoursPerWeek) {
+      bits.push(`**${l.receptionist.uncoveredHoursPerWeek}h a week nobody answers**`);
+    }
+    if (l.activity?.level === 'active') bits.push('actively trading');
     if (!l.phone) bits.push('no published number');
     // `gaps` carries the placeholder string when nothing was found; only show
     // real ones so we never announce a gap that isn't there.
@@ -120,10 +135,18 @@ function renderLeadResults(result, args) {
   });
 
   const noSite = leads.filter(l => !l.website).length;
-  const head = wantNoSite
+  const voiceNoun = leads.length === 1 ? 'voice-agent client' : 'voice-agent clients';
+  const allTrading = leads.every(l => l.activity?.level === 'active');
+  const head = wantVoice
+    ? `${leads.length} ${trade ? what : voiceNoun} in ${where} — ${allTrading ? 'still trading, and ' : ''}the phone is uncovered long enough to sell the receptionist.`
+    : wantNoSite
     ? `${leads.length} ${what} in ${where} with no website${beforeFilter > leads.length ? ` (of ${beforeFilter} found)` : ''} — the build and the phone cover sell together.`
     : `${leads.length} ${what} in ${where}, ranked by how closable they are.`;
-  const tail = noSite
+  const tail = wantVoice
+    ? (allTrading
+      ? `\n\nOpen on the hours nobody answers. They are trading, so the number gets picked up during the day.`
+      : `\n\nOpen on the hours nobody answers.`)
+    : noSite
     ? `\n\n${noSite} ${noSite === 1 ? 'has' : 'have'} no website — lead with the build plus phone cover.`
     : `\n\nAll of them have a site and solid reviews, so there's no obvious gap to open on. `
       + `Pitch missed-call recovery: ask who answers after hours.`;
@@ -298,6 +321,14 @@ function staticAnswer(message) {
 // falls through to the model, because a wrong guess here would answer a
 // question the user didn't ask.
 const TRADE_WORDS = [
+  'law firm', 'lawfirm', 'personal injury', 'family law', 'estate planning',
+  'immigration attorney', 'criminal defense', 'lawyer', 'attorney',
+  'accounting firm', 'accountant', 'bookkeeping', 'tax preparer', 'cpa',
+  'marriage counselor', 'therapist', 'psychologist', 'counselor', 'counseling',
+  'cosmetic dentist', 'orthodontist', 'oral surgeon', 'periodontist',
+  'dermatologist', 'plastic surgeon', 'physical therapy', 'physical therapist',
+  'financial advisor', 'wealth management', 'insurance agency', 'mortgage broker',
+  'real estate', 'realtor', 'interior designer', 'architect', 'audiologist',
   'hvac', 'air conditioning', 'ac repair', 'heating', 'furnace',
   'plumber', 'plumbing', 'drain', 'water heater',
   'electrician', 'electrical', 'roofer', 'roofing', 'gutter',
@@ -323,11 +354,18 @@ function fastLeadSearchIntent(message) {
   // Must read as a request for businesses, not advice about them. "Who should
   // I call first?" is a request for businesses and was being caught by the
   // "should i" clause, so an explicit ask for businesses overrides the guard.
-  const wantsBusinesses = /\b(leads?|businesses|business|prospects?|companies|places?|to call|who (should|can) i call)\b/.test(lower);
+  // "find me website clients" / "find me voice agent clients" name a product,
+  // not a trade. Treat them as a search even though the word "leads" is absent.
+  const wantWebsite = /\b(website clients?|no website|without a website|no site|not? online|site builds?)\b/.test(lower);
+  const wantVoice = /\b(voice agents?(?:\s+clients?)?|ai receptionist|receptionist clients?|missed[- ]calls?)\b/.test(lower);
+  const wantsBusinesses = /\b(leads?|businesses|business|prospects?|clients?|companies|places?|to call|who (should|can) i call)\b/.test(lower)
+    || wantWebsite || wantVoice;
   if (!wantsBusinesses && /\b(how|why|should i|what should|explain|write|draft|script|objection|pitch|email)\b/.test(lower)) return null;
   // Even when businesses are mentioned, these are still advice. "Coach me on
   // closing this lead" contains "lead" and was running a search.
-  if (/\b(how (do|should) i|what (should|do) i say|what makes|what counts as|what is a|why (is|are|do)|explain|write me|draft me|talk track|coach me|help me close|walk me through|advice)\b/.test(lower)) return null;
+  // "what should I sell a roofer with no website" names the product and is still
+  // advice. The solution words above would otherwise force a search.
+  if (/\b(how (do|should) i|what (should|do) i|what makes|what counts as|what is a|why (is|are|do)|explain|write me|draft me|talk track|coach me|help me close|walk me through|advice)\b/.test(lower)) return null;
 
   // Allow the plural — people ask for "plumbers", not "plumber".
   const trade = TRADE_WORDS.find(t =>
@@ -356,10 +394,11 @@ function fastLeadSearchIntent(message) {
   if (location === null && /\bnear\s*me\b|\bmy\s*area\b|\baround\s*here\b|\bnearby\b|\blocal\b/.test(lower)) {
     location = '';                                       // caller's own city, resolved server-side
   }
-  // No place named at all. For a plain "businesses with no website" or "who
-  // should I call today" the caller's own city is the obvious answer, and
-  // refusing to guess just sent a working request to a model that was down.
-  if (location === null && asksForBusinesses) location = '';
+  // No place named at all. For a plain "businesses with no website", "who
+  // should I call today", or "find me law firms" the caller's own city is
+  // the obvious answer, and refusing to guess just sent a working request
+  // to a model that was down.
+  if (location === null && (asksForBusinesses || trade)) location = '';
   if (location === null) return null;                    // no place named — let the model handle it
 
   // "with no website" is the single most valuable filter we have, and it was
@@ -367,12 +406,17 @@ function fastLeadSearchIntent(message) {
   // as the trade and ignored the constraint, answering with businesses that
   // all had websites. Places cannot filter on it, but we can: fetch the trade
   // and drop anything with a site.
-  const needsWebsite = /\bno website\b|\bwithout a website\b|\bno site\b|\bnot? online\b/.test(lower);
+  const needsWebsite = wantWebsite;
 
   // Filters we genuinely cannot serve — leave those to the model.
   if (/\bbad reviews?\b|\bno reviews?\b|\blow rated\b/.test(lower)) return null;
 
-  return { query: trade || '', location, needsWebsite };
+  // A voice ask and a website ask in the same sentence is the no-website
+  // pitch (the build plus the receptionist). A voice ask on its own is the
+  // receptionist: still trading, and the phone is uncovered.
+  const solution = wantVoice && !wantWebsite ? 'voice' : wantWebsite ? 'website' : undefined;
+
+  return { query: trade || '', location, needsWebsite, ...(solution ? { solution } : {}) };
 }
 
 // ─── Security: Request ID Tracking ──────────────────────────────────────────
@@ -565,6 +609,10 @@ RULES — OBEY EVERY ONE:
   real domain the user gave you, do not call a tool that needs one.
 - Never state a deal value, close rate, commission or percentage that did not come back from
   a tool. If you do not have the number, leave it out — an answer without it is fine.
+- "Find me website clients" is a search for businesses with no website. "Find me voice
+  agent clients" is a search for businesses that are still trading and unreachable 40 or
+  more hours a week. Call search_leads with solution "website" or "voice". Do not answer
+  either from memory.
 - LINK BUSINESSES. When a tool result gives a business a placeId, write its name as
   [Name](#/lead/PLACEID) — never as bare text. If it also has a website, offer
   [audit their site](#/audit?u=WEBSITE) once for that business. The app turns both into
@@ -738,7 +786,11 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
     // that data is wanted — a domain, or a fetch verb, or a place. Everything
     // else is answered from what the model knows, which is what those
     // questions were asking for anyway.
-    const lastMsg = contextMessages[contextMessages.length - 1]?.content || '';
+    const lastMsgFull = contextMessages[contextMessages.length - 1]?.content || '';
+    // The client appends the open pipeline after the question. That blob is
+    // longer than the fast path allows, so "find me website clients" never
+    // searched and the model answered from the five leads already on screen.
+    const lastMsg = lastMsgFull.replace(/\n\n\[[\s\S]*$/, '').trim();
     const mentionsDomain = /\b[a-z0-9-]+\.(com|net|org|io|co|us|biz|info)\b/i.test(lastMsg);
     const wantsFetch = /\b(find|show|get|list|search|pull|give me|who (should|can) i call|leads?\b|businesses|prospects|near me|in my area)\b/i.test(lastMsg);
     // "What makes a good local lead" contains "lead" and is a question about

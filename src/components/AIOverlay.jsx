@@ -314,10 +314,10 @@ const FEATURE_LINKS = {
 // Trends and Market, which are disabled.
 const PAGE_PROMPTS = {
   home: [
-    { label: 'Find leads near me', icon: Globe },
+    { label: 'Find me website clients', icon: Globe },
+    { label: 'Find me voice agent clients', icon: Phone },
+    { label: 'Find leads near me', icon: Target },
     { label: 'What does GOATED sell?', icon: ClipboardList },
-    { label: 'Businesses with no website', icon: Target },
-    { label: 'Audit a website for me', icon: Sparkles },
   ],
   dashboard: [
     { label: 'Who should I call today?', icon: Users },
@@ -326,9 +326,9 @@ const PAGE_PROMPTS = {
     { label: 'Write me a voicemail', icon: ClipboardList },
   ],
   leads: [
+    { label: 'Find me website clients', icon: Globe },
+    { label: 'Find me voice agent clients', icon: Phone },
     { label: 'Who should I call first?', icon: Users },
-    { label: 'Close strategy for lead', icon: Target },
-    { label: 'Businesses with no website', icon: Globe },
     { label: 'Cold call opener', icon: ClipboardList },
   ],
   audit: [
@@ -368,7 +368,8 @@ const COACH_PROMPTS = {
 // ─── QUICK INSIGHT BUTTONS ─────────────────────────────────────────────
 const QUICK_INSIGHTS = [
   { label: "Who to call now", prompt: 'Which businesses should I call in the next hour? Prioritise ones that are open right now, have a phone number, and have an obvious gap I can open on.', icon: Phone },
-  { label: 'No-website leads', prompt: 'Find local service businesses near me with no website. Those are the ones I can sell a site build and the AI receptionist to together.', icon: Globe },
+  { label: 'Website clients', prompt: 'Find me website clients', icon: Globe },
+  { label: 'Voice agent clients', prompt: 'Find me voice agent clients', icon: Phone },
   { label: 'What do I say?', prompt: 'Give me a 15-second cold call opener for a local service business that is losing calls after hours. No fluff, no email.', icon: ClipboardList },
   { label: 'Handle the price push', prompt: 'A plumber just said "that is too expensive" to $2,000 setup plus $750 a month. Give me three ways to reframe it on the call.', icon: Crosshair },
 ];
@@ -382,8 +383,9 @@ const QUICK_INSIGHTS = [
 // ─── CONTEXTUAL QUICK ACTION BUTTONS (below chat input) ──────────────
 const QUICK_ACTIONS = {
   leads: [
+    { label: 'Website clients', prompt: 'Find me website clients', icon: Globe },
+    { label: 'Voice agent clients', prompt: 'Find me voice agent clients', icon: Phone },
     { label: 'Who to call now', prompt: 'Which businesses should I call in the next hour? Open right now, reachable by phone, best score first.', icon: Phone },
-    { label: 'No website', prompt: 'Find local service businesses near me with no website at all.', icon: Globe },
     { label: 'HVAC near me', prompt: 'Find HVAC contractors near me.', icon: Target },
     { label: 'Plumbers near me', prompt: 'Find plumbers near me.', icon: Target },
     { label: 'Coach me', prompt: 'Coach me on closing the lead I have open — what do I say first?', icon: Trophy },
@@ -398,12 +400,54 @@ const QUICK_ACTIONS = {
     { label: 'Open the call', prompt: 'I just audited a prospect site. Give me a 15-second opener that references what I found.', icon: Phone },
   ],
   home: [
+    { label: 'Website clients', prompt: 'Find me website clients', icon: Globe },
+    { label: 'Voice agent clients', prompt: 'Find me voice agent clients', icon: Phone },
     { label: 'Find me leads', prompt: 'Find local service businesses near me worth calling today.', icon: Target },
     { label: "What's the pitch?", prompt: 'What exactly does GOATED sell and what does it cost?', icon: ClipboardList },
   ],
 };
 
 // ─── TEMPLATE FALLBACK RESPONSES ───────────────────────────────────────
+// Used when the chat API is unreachable. The live path searches Places;
+// this answers from the book already loaded, with the same two filters.
+function localSolutionReply(msg, live, noSite) {
+  const lower = String(msg || '').toLowerCase();
+  if (/\b(what (should|do) i|how (do|should) i|explain)\b/.test(lower)) return null;
+  const website = /\b(website clients?|no website|without a website|no site)\b/.test(lower);
+  const voice = /\b(voice agents?(?:\s+clients?)?|ai receptionist|receptionist clients?|missed[- ]calls?)\b/.test(lower);
+  if (!website && !voice) return null;
+  const trading = (l) => l.activity?.level === 'active';
+  let pool = website
+    ? (noSite || []).filter(l => !l.website)
+    : [...(live || []), ...(noSite || [])].filter(l => l.receptionist?.qualified);
+  if (voice) {
+    const active = pool.filter(trading);
+    if (active.length) pool = active;
+  } else {
+    pool = [...pool].sort((a, b) => (trading(b) ? 1 : 0) - (trading(a) ? 1 : 0));
+  }
+  pool = pool.slice(0, 8);
+  if (!pool.length) {
+    return website
+      ? 'No website clients are loaded yet. Search on the Leads page, then ask again.'
+      : 'No voice-agent clients are loaded yet. That is a business still trading, with 40 or more hours a week nobody answers.';
+  }
+  const title = website
+    ? `**${pool.length} website clients** from the book already loaded — no site, so the build and the phone cover sell together.`
+    : `**${pool.length} voice-agent clients** from the book already loaded — still trading, and the phone is uncovered long enough to sell the receptionist.`;
+  const lines = pool.map((l, i) => {
+    const pid = placeIdOf(l);
+    const name = pid ? `[${l.company || l.name}](#/lead/${pid})` : `**${l.company || l.name}**`;
+    const bits = [];
+    if (!l.website) bits.push('**no website**');
+    if (l.receptionist?.qualified && l.receptionist.uncoveredHoursPerWeek) bits.push(`**${l.receptionist.uncoveredHoursPerWeek}h a week nobody answers**`);
+    if (trading(l)) bits.push('actively trading');
+    if (l.phone) bits.push(formatPhone(l.phone));
+    return `${i + 1}. ${name}${l.location ? ` — ${l.location}` : ''}\n   ${bits.join(' · ') || 'Open the lead for the number.'}`;
+  });
+  return `${title}\n\n${lines.join('\n')}`;
+}
+
 function getTemplateResponse(msg, leads, { coachMode, selectedLead, degenMode } = {}) {
   const lower = msg.toLowerCase();
   // The commission/MRR/goal/streak block that used to sit here was dead — every
@@ -658,7 +702,7 @@ function getTemplateResponse(msg, leads, { coachMode, selectedLead, degenMode } 
   const rising = leads.filter(l => l.momentum === 'rising');
   const won = leads.filter(l => l.status === 'won');
   return `I can pull real businesses or tell you what to say.\n\n`
-    + `**Find businesses** — "hvac in tampa", "plumbers near me", "roofers with no website", "who should I call first?"\n\n`
+    + `**Find businesses** — "hvac in tampa", "plumbers near me", "find me website clients", "find me voice agent clients"\n\n`
     + `**Know what to say** — "what should I say on a cold call", "handle a price objection", "write me a voicemail script"\n\n`
     + `**Price it** — "what does GOATED sell?"\n\n`
     + `**Audit a site** — paste any address, for example "audit joesplumbing.com"`;
@@ -713,8 +757,9 @@ function ParsedMessage({ content, onNavigate, onOpenLead, onOpenPlace, onAudit, 
           const [, label, href] = link;
           const leadHref = href.match(/^#\/lead\/([A-Za-z0-9_-]{10,})$/);
           if (leadHref && onOpenPlace) {
+            const abs = leadTabUrl({ _placeId: leadHref[1] }) || href;
             return (
-              <a key={i} href={href} {...leadClickProps({ _placeId: leadHref[1] }, () => onOpenPlace(leadHref[1]))}
+              <a key={i} href={abs} {...leadClickProps({ _placeId: leadHref[1] }, () => onOpenPlace(leadHref[1]))}
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md font-bold no-underline
                   bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20
                   hover:border-purple-500/40 transition-colors duration-200 cursor-pointer mx-0.5">
@@ -1138,6 +1183,7 @@ export default function AIOverlay() {
   const setAiOpen = useStore(s => s.setAiOpen);
   const setAuditPrefill = useStore(s => s.setAuditPrefill);
   const liveLeads = useStore(s => s.liveLeads);
+  const noWebsiteLeads = useStore(s => s.noWebsiteLeads);
   const currentPage = useStore(s => s.page);
   const setPage = useStore(s => s.setPage);
   const selectedLead = useStore(s => s.selectedLead);
@@ -1146,6 +1192,7 @@ export default function AIOverlay() {
   const setPreviousPage = useStore(s => s.setPreviousPage);
   const degenMode = useStore(s => s.degenMode);
   const leads = Array.isArray(liveLeads) ? liveLeads : [];
+  const noSiteLeads = Array.isArray(noWebsiteLeads) ? noWebsiteLeads : [];
 
   // One-shot notification permission prompt — 15s after mount, only if 'default'
   // and user is in Wolf mode (opted in by default anyway). Non-blocking.
@@ -1163,7 +1210,7 @@ export default function AIOverlay() {
   // even though its toggle was removed. The normal one was not much better: it
   // advertised a 250K pipeline, market sentiment and an "open wallet" command,
   // none of which exist.
-  const NORMAL_INTRO = "**GOATED AI**\n\n- **Find leads** — \"hvac in tampa\", \"plumbers near me\", \"roofers with no website\"\n- **Know what to say** — openers, objections, voicemails for any business\n- **Price it** — what to quote and why\n- **Audit a site** — paste a URL, get what it is costing them\n\nReal businesses, real numbers. Ask for a city and a trade.";
+  const NORMAL_INTRO = "**GOATED AI**\n\n- **Find leads** — \"hvac in tampa\", \"find me website clients\", \"find me voice agent clients\"\n- **Know what to say** — openers, objections, voicemails for any business\n- **Price it** — what to quote and why\n- **Audit a site** — paste a URL, get what it is costing them\n\nReal businesses, real numbers. Ask for a city and a trade, or for a solution.";
 
   const DEGEN_INTRO = NORMAL_INTRO;
 
@@ -1538,8 +1585,10 @@ export default function AIOverlay() {
       }
     }
 
-    // Instant template response — no artificial delay
-    const res = getTemplateResponse(msg, leads, { coachMode, selectedLead, degenMode });
+    // Instant template response — no artificial delay. A solution ask still
+    // lists the matching leads already loaded, rather than a generic reply.
+    const res = localSolutionReply(msg, leads, noSiteLeads)
+      || getTemplateResponse(msg, leads, { coachMode, selectedLead, degenMode });
 
     // Smart auto-navigate based on user intent
     const lower = msg.toLowerCase();
@@ -1557,7 +1606,7 @@ export default function AIOverlay() {
 
     setMessages(p => [...p, { role: 'assistant', content: res }]);
     setTyping(false);
-  }, [input, typing, messages, leads, useAI, degenMode, coachMode, selectedLead, aiOpen]);
+  }, [input, typing, messages, leads, noSiteLeads, useAI, degenMode, coachMode, selectedLead, aiOpen]);
 
   // Coach Mode: proactive suggestions when viewing a lead
   const prevSelectedRef = useRef(selectedLead?.id);
@@ -1657,18 +1706,20 @@ export default function AIOverlay() {
             throw new Error('fallback');
           })
           .catch(() => {
-            const res = getTemplateResponse(label, leads, { coachMode, selectedLead, degenMode });
+            const res = localSolutionReply(label, leads, noSiteLeads)
+              || getTemplateResponse(label, leads, { coachMode, selectedLead, degenMode });
             setMessages(p => [...p, { role: 'assistant', content: res }]);
             setTyping(false);
           });
       } else {
-        const res = getTemplateResponse(label, leads, { coachMode, selectedLead, degenMode });
+        const res = localSolutionReply(label, leads, noSiteLeads)
+          || getTemplateResponse(label, leads, { coachMode, selectedLead, degenMode });
         setMessages(p => [...p, { role: 'assistant', content: res }]);
         setTyping(false);
       }
       setInput('');
     }, 10);
-  }, [messages, leads, useAI, degenMode, coachMode, selectedLead, aiOpen]);
+  }, [messages, leads, noSiteLeads, useAI, degenMode, coachMode, selectedLead, aiOpen]);
 
   // ─── DRAG STATE FOR CHAT BUBBLE ────────────────────────────────────
   const [dragPos, setDragPos] = useState(null); // { x, y } or null for default

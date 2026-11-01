@@ -9,6 +9,20 @@
  * commercial contracts.
  */
 const TICKET_BY_TRADE = [
+  [/plastic surg/i, 6500],
+  [/lawyer|attorney|law firm|law office/i, 3500],
+  [/cpa|accountant|accounting|bookkeep|tax prepar/i, 2200],
+  [/orthodont|oral surg|periodont|cosmetic dent/i, 2800],
+  [/wealth management|financial advis/i, 2500],
+  [/mortgage/i, 3000],
+  [/real estate|realtor/i, 5000],
+  [/architect/i, 6000],
+  [/interior design/i, 3500],
+  [/dermatolog/i, 400],
+  [/physical therap/i, 160],
+  [/therap|psycholog|counsel|mental health/i, 180],
+  [/audiolog/i, 250],
+  [/insurance agency|insurance agent/i, 900],
   [/roof/i, 9000], [/foundation|underpin/i, 8000], [/solar/i, 15000],
   [/remodel|renovat/i, 12000], [/window|siding/i, 6000], [/paving|driveway/i, 5000],
   [/hvac|air condition|heating|furnace/i, 900], [/water damage|restoration|mold/i, 3500],

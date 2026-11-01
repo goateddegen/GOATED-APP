@@ -44,6 +44,14 @@ export const TOOL_SCHEMAS = [
               + 'companies. Digits only, e.g. "15000". Omit it entirely for ordinary local-business '
               + 'searches — setting it switches to a national B2B database and returns the wrong kind of company.',
           },
+          solution: {
+            type: 'string',
+            enum: ['website', 'voice'],
+            description: 'Which product the user wants prospects for. '
+              + '"website" = businesses with no website, the site-build clients ("website clients", "no website", "site build"). '
+              + '"voice" = businesses that are still trading and whose published hours leave 40 or more hours a week with nobody answering, the AI receptionist / voice-agent clients ("voice agent clients", "AI receptionist", "missed calls"). '
+              + 'Omit for an ordinary trade search. When set, query can be empty.',
+          },
         },
         required: ['query'],
       },
@@ -131,9 +139,17 @@ export async function runTool(name, args, ctx = {}) {
       // them straight through from phrasing like "leads in my area", which
       // searched Places for companies literally named that and returned
       // "LeadsNearby". Fall through to the default trade rotation instead.
-      const NOT_A_TRADE = /^(leads?|businesses|business|companies|company|prospects?|clients?|customers?|places?|people|any(thing)?|stuff|multiple\s+\w+|various\s*\w*|all\s*\w*|trades?|services?|local\s+\w+)$/i;
-      const trade = String(args.query || '').trim();
-      if (trade && !NOT_A_TRADE.test(trade)) p.set('search', trade);
+      const NOT_A_TRADE = /^(leads?|businesses|business|companies|company|prospects?|clients?|customers?|places?|people|any(thing)?|stuff|multiple\s+\w+|various\s*\w*|all\s*\w*|trades?|services?|local\s+\w+|website(\s+clients?)?|voice(\s+agents?)?(\s+clients?)?|ai\s+receptionist|receptionist(\s+clients?)?)$/i;
+      const tradeRaw = String(args.query || '').trim();
+      // "website clients" is a solution, not a trade. Searching Places for
+      // that string returns businesses named that, and it also skips the
+      // no-website partition below, which only runs when no trade was named.
+      const trade = tradeRaw && !NOT_A_TRADE.test(tradeRaw) ? tradeRaw : '';
+      if (args.solution === 'website') args = { ...args, needsWebsite: true };
+      if (trade) p.set('search', trade);
+      // No trade named for a voice-agent ask. The default blend is full of
+      // shops that answer the phone, so start on a trade where the gap shows.
+      if (args.solution === 'voice' && !trade) p.set('search', 'plumber');
       if (args.location) p.set('location', args.location);
       if (args.minDeal) p.set('minDeal', String(args.minDeal));
       p.set('limit', '20');   // Places caps here; the API sorts by closability
@@ -166,6 +182,69 @@ export async function runTool(name, args, ctx = {}) {
           }
         } catch { /* one page is still an answer */ }
       }
+
+      const activelyTrading = (l) => l.activity?.level === 'active';
+      const voiceFit = (l) => !!l.receptionist?.qualified;
+
+      // Voice-agent clients are the ones still taking jobs whose published
+      // hours leave 40+ hours a week with nobody answering. A general blend
+      // is mostly shops that pick up, so when no trade was named we go and
+      // pull the emergency trades where that gap actually shows up.
+      if (args.solution === 'voice') {
+        const pool = [];
+        const seen = new Set();
+        const take = (list) => {
+          for (const l of list || []) {
+            const id = l._placeId || l.company;
+            if (!id || seen.has(id)) continue;
+            seen.add(id);
+            pool.push(l);
+          }
+        };
+        take(j.leads);
+        take(j.noWebsiteLeads);
+        if (!trade) {
+          // Higher-end practices are part of the search, not a fallback. A
+          // plumber page that already fills the list used to end the hunt,
+          // so dentists and law firms never got pulled.
+          const extraTrades = ['dentist', 'law firm'];
+          if (pool.filter(l => voiceFit(l) && activelyTrading(l)).length < 6) {
+            extraTrades.push('hvac', 'electrician');
+          }
+          const extras = await Promise.all(extraTrades.map(async (t) => {
+            try {
+              const p2 = new URLSearchParams(p);
+              p2.set('search', t);
+              p2.delete('pageToken');
+              const r2 = await fetch(`${base}/api/leads?${p2}`, { headers, signal: AbortSignal.timeout(18000) });
+              return r2.ok ? await r2.json() : null;
+            } catch { return null; }
+          }));
+          for (const page of extras) {
+            if (page?._meta?.resolvedLocation) {
+              j._meta = { ...(j._meta || {}), resolvedLocation: j._meta?.resolvedLocation || page._meta.resolvedLocation, dataType: j._meta?.dataType || page._meta.dataType };
+            }
+            take(page?.leads);
+            take(page?.noWebsiteLeads);
+          }
+        }
+        const active = pool.filter(l => voiceFit(l) && activelyTrading(l));
+        const chosen = active.length >= 3 ? active : pool.filter(voiceFit);
+        chosen.sort((a, b) => {
+          const gap = (b.receptionist?.uncoveredHoursPerWeek || 0) - (a.receptionist?.uncoveredHoursPerWeek || 0);
+          if (activelyTrading(a) !== activelyTrading(b)) return activelyTrading(b) ? 1 : -1;
+          return gap || (b.score || 0) - (a.score || 0);
+        });
+        j.leads = chosen;
+        j._voiceActiveOnly = active.length >= 3 && chosen.every(activelyTrading);
+      } else if (args.needsWebsite) {
+        j.leads = [...(j.leads || [])].sort((a, b) => {
+          if (activelyTrading(a) !== activelyTrading(b)) return activelyTrading(b) ? 1 : -1;
+          return (b.score || 0) - (a.score || 0);
+        });
+      }
+
+      const slice = (j.leads || []).slice(0, args.solution === 'voice' ? 12 : args.needsWebsite ? 40 : 12);
       // Hand back a compact, decision-useful slice. Sending whole records burns
       // context and buries the fields that matter on a call.
       return {
@@ -173,12 +252,17 @@ export async function runTool(name, args, ctx = {}) {
         // Null rather than a placeholder string — the renderer title-cases
         // this and was printing "in Caller Location".
         locationUsed: j._meta?.resolvedLocation || args.location || null,
-        count: (j.leads || []).length,
-        note: (j.leads || []).some(l => (l.placeGaps || []).length)
-          ? undefined
-          : 'None of these show an obvious gap — they all have sites and solid reviews. '
-            + 'Say so honestly and pitch missed-call recovery rather than implying they are weak.',
-        leads: (j.leads || []).slice(0, args.needsWebsite ? 40 : 12).map(l => ({
+        count: slice.length,
+        voiceActiveOnly: j._voiceActiveOnly || false,
+        note: args.solution === 'voice'
+          ? (slice.length
+            ? undefined
+            : 'No voice-agent fit. None of these businesses are both still trading and unreachable 40 or more hours a week.')
+          : (slice.some(l => (l.placeGaps || []).length)
+            ? undefined
+            : 'None of these show an obvious gap — they all have sites and solid reviews. '
+              + 'Say so honestly and pitch missed-call recovery rather than implying they are weak.'),
+        leads: slice.map(l => ({
           // Carried so the chat can link each result to its lead page. Without
           // it the assistant could name a business but never point at it, and
           // the operator had to go and find it by hand on the Leads page.
@@ -194,6 +278,12 @@ export async function runTool(name, args, ctx = {}) {
           reviews: l.reviewCount ?? null,
           employees: l.employees ?? null,
           score: l.score,
+          receptionist: l.receptionist?.qualified
+            ? { qualified: true, uncoveredHoursPerWeek: l.receptionist.uncoveredHoursPerWeek ?? null }
+            : null,
+          activity: l.activity?.level
+            ? { level: l.activity.level, label: l.activity.label || null }
+            : null,
           // An empty array left the model to editorialise — it wrote "no gaps"
           // and "No website issues" while still recommending the business.
           // Say what the absence means so it has something true to repeat.

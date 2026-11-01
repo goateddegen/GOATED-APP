@@ -129,11 +129,28 @@ const SECONDARY_TRADES = [
   'remodeling contractor', 'gutter cleaning service', 'chimney sweep',
   'junk removal service', 'moving company', 'carpet cleaning service',
   'house cleaning service', 'paving contractor', 'solar installer',
-  'dentist', 'chiropractor', 'med spa', 'veterinarian', 'optometrist',
 ];
 
-// Core trades appear twice so a random draw favours them roughly 2:1 without
-// ever excluding the long tail — variety on the page still matters.
+// Higher-ticket practices. A missed call here is a retained client, not a
+// service call: a case, a tax engagement, a treatment plan. They almost
+// always have a website, so the pitch is the receptionist, and they were
+// missing from the rotation entirely — every reload came back HVAC and plumbing.
+const HIGH_END_TRADES = [
+  'personal injury attorney', 'family law attorney', 'estate planning attorney',
+  'immigration attorney', 'criminal defense attorney', 'law firm',
+  'cpa', 'accounting firm', 'tax preparation service', 'bookkeeping service',
+  'therapist', 'psychologist', 'counseling', 'marriage counselor',
+  'dentist', 'cosmetic dentist', 'orthodontist', 'oral surgeon',
+  'dermatologist', 'plastic surgeon', 'med spa',
+  'physical therapy', 'chiropractor', 'veterinarian', 'optometrist', 'audiologist',
+  'financial advisor', 'wealth management', 'insurance agency', 'mortgage broker',
+  'real estate agency', 'architect', 'interior designer',
+];
+
+// Core trades appear twice so a random draw still favours the phone-urgent
+// work. High-end practices are not in this pool — pickTrades reserves seats
+// for them, so a page is trades plus a few professional firms, not one or
+// the other.
 const DEFAULT_TRADES = [...CORE_TRADES, ...CORE_TRADES, ...SECONDARY_TRADES];
 
 // Trades that actually contain businesses with no website. Measured, not
@@ -174,11 +191,20 @@ function rotatingTrade() {
  * the whole page is wasted. Blending gives a mixed book to work.
  */
 function pickTrades(n) {
+  // A few seats are reserved for the professional practices. Leaving them to
+  // the weighted draw meant a page of eight trades was still HVAC, plumbing
+  // and roofing, and "load more" never surfaced a law firm or a dentist.
+  const highCount = Math.min(HIGH_END_TRADES.length, n >= 6 ? 3 : 2);
+  const highPool = [...HIGH_END_TRADES];
+  const out = [];
+  while (out.length < highCount && highPool.length) {
+    const t = highPool.splice(Math.floor(Math.random() * highPool.length), 1)[0];
+    if (!out.includes(t)) out.push(t);
+  }
   // DEFAULT_TRADES repeats the core trades to weight the draw, so drawing by
   // index alone could pick the same trade twice and hand back a page that is
   // half one vertical again. Skip anything already chosen.
   const pool = [...DEFAULT_TRADES];
-  const out = [];
   while (out.length < n && pool.length) {
     const t = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
     if (!out.includes(t)) out.push(t);
