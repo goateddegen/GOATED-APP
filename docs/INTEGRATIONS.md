@@ -45,31 +45,21 @@ The audit route (`/#/audit` and `/#/for/{slug}`) **stays public even before laun
 
 ## 1. AI providers (the audit + chat brain)
 
-### 1A. Groq (PRIMARY — free, fast)
+One caller, `api/_lib/llm.js`. Chat and the audit both use it. Claude is not called. The Anthropic account authenticates and then returns 400 for lack of credits, so wiring it back in makes the assistant look broken.
 
-🟢 **REQUIRED for audit.** Llama 3.3 70B in JSON mode — sub-second responses, free tier 30M tokens/mo.
+### 1A. xAI Grok (preferred)
 
-**Sign up:** https://console.groq.com/signup
-**Get key:** https://console.groq.com/keys → "Create API Key" → copy
-**Vercel env:**
-```env
-GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxx
-```
-**Cost:** $0/mo on free tier. Hard rate-limit at 30M tokens/mo (≈3000 audits).
+🟢 **REQUIRED for the best answers.** First model is `grok-4`, then `grok-3`.
 
-### 1B. Anthropic Claude (FALLBACK + AI overlay)
+**Console:** https://console.x.ai
+**Vercel env:** `XAI_API_KEY` (server only). Optional override: `XAI_MODEL`.
 
-🟢 **REQUIRED for AI chat overlay** (the right-side AI panel uses Haiku 3.5).
-🟡 **Recommended fallback for audit** if Groq rate-limits.
+### 1B. Groq (fallback)
 
-**Sign up:** https://console.anthropic.com/
-**Get key:** https://console.anthropic.com/settings/keys → "Create Key"
-**Add credit:** Settings → Billing → at least $5 to unlock production usage
-**Vercel env:**
-```env
-ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxxxxxxxxxxxx
-```
-**Cost:** Haiku 3.5 = $0.80/M input + $4/M output tokens. ~$5-15/mo for solo agency usage.
+🟡 **Used only when `XAI_API_KEY` is unset**, or when both Grok models fail. The model is `qwen/qwen3.8-27b`, then `openai/gpt-oss-120b`. Llama 3.3 and Llama 3.1 are not on this account's catalog and 404.
+
+**Console:** https://console.groq.com/keys
+**Vercel env:** `GROQ_API_KEY` (server only). Optional override: `GROQ_CHAT_MODEL`.
 
 ---
 
@@ -124,9 +114,9 @@ create policy "users insert own closes" on closes for insert with check (auth.ui
 
 ---
 
-## 3. Stripe (collect money)
+## 3. Stripe (not called)
 
-🟢 **REQUIRED to charge clients.** No money in without this.
+Checkout is not wired. `STRIPE_PAYMENT_LINKS` in `src/lib/config.js` are empty strings, and no file in `api/` reads a Stripe secret. The notes below are a later setup, not the current app.
 
 ### 3A. Stripe account + API key
 
@@ -266,26 +256,21 @@ localhost:5174              ← dev
 
 If you add a new custom domain (e.g., `getgoated.com`), edit `api/_lib/guard.js` and add it to `ALLOWED_ORIGINS`. Browsers from any origin not on this list will get CORS errors hitting `/api/*`.
 
-**Why this matters:** prevents random scrapers from burning your Anthropic/Groq budget by hitting your API from their domain.
+**Why this matters:** an origin that is not on the list cannot spend the Grok or Groq budget by calling the API from another site.
 
 ---
 
 ## 9. Active API surface (what's deployed)
 
-| Endpoint            | Purpose                              | Required keys                     |
-| ------------------- | ------------------------------------ | --------------------------------- |
-| `/api/audit`        | URL crawl + LLM revenue audit        | `GROQ_API_KEY` OR `ANTHROPIC_API_KEY` |
-| `/api/chat`         | AI overlay (Claude Haiku)            | `ANTHROPIC_API_KEY`               |
-| `/api/dashboard`    | Pipeline analytics                   | none (works on demo data)         |
-| `/api/goated-ai`    | Custom RSI/MACD analysis engine      | none                              |
-| `/api/intelligence` | TrendPulse intelligence aggregator   | none                              |
-| `/api/leads`        | Lead enrichment                      | `APOLLO_API_KEY` (optional)       |
-| `/api/market-data`  | Crypto price snapshot (CoinGecko)    | none                              |
-| `/api/plays`        | AI alpha plays (TrendPulse)          | `ANTHROPIC_API_KEY`               |
-| `/api/sentiment`    | News + Fear&Greed aggregator         | none                              |
-| `/api/trends`       | TrendPulse aggregator                | none                              |
+| Endpoint | Purpose | Keys |
+| --- | --- | --- |
+| `/api/audit` | Crawl a URL and write the revenue-loss report | `XAI_API_KEY`, or `GROQ_API_KEY` if xAI is unset |
+| `/api/chat` | GOATED AI. Same models as the audit | same |
+| `/api/leads` | Google Places search, place permalink, photo proxy | `GOOGLE_PLACES_API_KEY`. `APOLLO_API_KEY` only for a large-deal organization search |
+| `/api/dashboard` | Operator pipeline aggregation | session |
+| `/api/voice` | Vapi voice agent | `VAPI_PRIVATE_KEY` or `VAPI_API_KEY` |
 
-**10/12 Hobby plan slots used.** Two free for `/api/stripe-webhook` and `/api/supabase-bridge` when you wire them.
+`/api/goated-ai` and `/api/intelligence` are still deployed files. They are not a product page. `/api/trends`, `/api/sentiment`, `/api/plays`, and `/api/market-data` are gone. There is no Claude route and no CoinGecko route.
 
 ---
 
@@ -315,7 +300,7 @@ Sign-in is Google via Supabase. It is not required to use the product.
 
 Every API endpoint behind `api/_lib/guard.js`:
 - IP-based sliding window (10-30 req/min depending on endpoint)
-- Daily LLM budget cap (prevents runaway Anthropic spend)
+- Daily LLM budget cap (Grok, then Groq)
 - Body size cap (prevents large-payload DoS)
 
 ### What you should also do (manual):
@@ -331,8 +316,9 @@ Every API endpoint behind `api/_lib/guard.js`:
 
 The following must NEVER be `VITE_*` (those are public):
 ```env
-ANTHROPIC_API_KEY      # server-side only
+XAI_API_KEY            # server-side only
 GROQ_API_KEY           # server-side only
+GOOGLE_PLACES_API_KEY  # server-side only
 STRIPE_SECRET_KEY      # server-side only
 STRIPE_WEBHOOK_SECRET  # server-side only
 SUPABASE_SERVICE_KEY   # server-side only
@@ -353,8 +339,8 @@ VITE_SUPABASE_ANON_KEY # public, RLS-gated, designed to be in client
 ## 12. The 30-minute setup checklist (do this Sunday night)
 
 ```
-[ ] 5 min  — Sign up Groq, get free API key
-[ ] 5 min  — Sign up Anthropic, add $5 credit, get key
+[ ] 5 min  — Create an xAI key (Grok). Groq is only the fallback
+[ ] 5 min  — Create a Google Places (New) key
 [ ] 5 min  — Sign up Supabase, create project, copy 3 keys
 [ ] 5 min  — Run the SQL above in Supabase SQL Editor
 [ ] 5 min  — Sign up Stripe, get test API keys, create one Payment Link
@@ -362,7 +348,7 @@ VITE_SUPABASE_ANON_KEY # public, RLS-gated, designed to be in client
 [ ] 5 min  — Set VITE_LAUNCH_READY=true in Vercel
 [ ] 5 min  — Click "Redeploy" on Vercel
 ─────────────────────────────────────────────
-Total: 35 min. Cost: $5 (Anthropic credit). Result: live private app, secured, ready.
+Total: about half an hour. Result: the live app, with Grok and Places, not Claude.
 ```
 
 ---
@@ -373,9 +359,9 @@ The cover page falls away when:
 
 1. ✅ Build succeeds (Vercel green)
 2. ✅ `VITE_LAUNCH_READY=true` is set
-3. ✅ At least Anthropic OR Groq key is set (audit works)
+3. ✅ `XAI_API_KEY` is set (Groq is the fallback if it is not)
 4. ✅ Supabase keys set (Google sign-in works; dashboard, admin, and saved data can attach to a user)
-5. ✅ Stripe key set (you can collect money)
+5. Stripe is not required. No live route charges a card.
 
 That's the minimum bar. Apollo, Resend, Smartlead are all weeks 2-4. Don't gold-plate before you've closed deal #1.
 

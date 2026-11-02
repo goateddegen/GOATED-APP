@@ -60,17 +60,17 @@ A search with no session still returns leads. Those rows are not stored under a 
 
 | Layer | What runs it |
 |-------|----------------|
-| App | React 18, Vite 5, Tailwind CSS, Zustand, Framer Motion. Node 24. |
-| Routing | Hash routes in `src/App.jsx` (`#/leads`, `#/lead/{id}`, `#/a/{id}`). |
-| API | Vercel Serverless Functions in `api/` |
-| Leads | Google Places. Apollo organization search when the deal is large and `APOLLO_API_KEY` is set. |
-| Assistant and audit | xAI Grok (`grok-4`) when `XAI_API_KEY` is set. Otherwise Groq (`qwen/qwen3.8-27b`, then `openai/gpt-oss-120b`). Claude is not called. |
-| Voice agent API | Vapi (`api/voice.js`) |
-| Accounts and saved rows | Supabase Auth (Google) and Postgres. The browser only receives the publishable key. |
-| Product analytics | Vercel Analytics and Speed Insights |
-| Host | Vercel, [goated.solutions](https://www.goated.solutions) |
+| App | React 18, Vite 5, Tailwind 3, Zustand, Framer Motion, Lucide. Node 24. |
+| Routing | Hash routes in `src/App.jsx` (`#/leads`, `#/lead/{id}`, `#/a/{id}`, `#/for/{slug}`). `react-router-dom` is installed and unused. |
+| API | Vercel serverless functions: `audit`, `chat`, `leads`, `dashboard`, `voice`. |
+| Leads | Google Places (New). The visitor's city comes from the request IP (`x-vercel-ip-*`, then ipwho.is). A city they type overrides that. Apollo organization search only when the deal is large and `APOLLO_API_KEY` is set. |
+| Models | xAI `grok-4`, then `grok-3`, when `XAI_API_KEY` is set. Otherwise Groq `qwen/qwen3.8-27b`, then `openai/gpt-oss-120b`. Chat and the audit share `api/_lib/llm.js`. |
+| Voice | Vapi, through `api/voice.js`. |
+| Accounts | Supabase Auth, Google only, and Postgres for saved rows. The browser gets the publishable key. |
+| Analytics | Vercel Analytics and Speed Insights. |
+| Host | Vercel. Production is [goated.solutions](https://www.goated.solutions). |
 
-Stripe Payment Links are the intended checkout. The secret key is never read by the client. Twilio, Cal.com, Unipile, Hunter, and PostHog are named in `.env.example` and are not called by the running app.
+Not part of the running product: Claude, Llama, a CoinGecko or RSI market engine, and React Router. Three.js is a dependency of the unrouted Trends page. Checkout is not wired — the Stripe Payment Link fields in `src/lib/config.js` are empty, and no live route reads a Stripe secret. Twilio, Cal.com, Unipile, Hunter, and PostHog are names in `.env.example` only.
 
 ## Secrets
 

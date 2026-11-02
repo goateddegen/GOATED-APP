@@ -39,19 +39,15 @@ Single source of truth for what's fake, what's broken, what needs keys, and what
 
 | Service | Purpose | Key(s) needed | Status | Blocking? |
 |---|---|---|---|---|
-| **Groq** | Primary LLM (Llama 3.3 70B) | `GROQ_API_KEY` | Not set in Vercel env | YES — audit + chat fallback |
-| **Anthropic** | Claude Haiku fallback / chat | `ANTHROPIC_API_KEY` | Set but eating personal usage | Critical — see cost plan |
-| **Apollo.io** | Real lead database | `APOLLO_API_KEY` | Not set | YES — platform runs on demo PRNG otherwise |
-| **Supabase** | Auth + persistent user data | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Not set | YES — no login = no saved work |
-| **Stripe Connect** | Commission split + payouts | `STRIPE_SECRET_KEY`, `STRIPE_CONNECT_CLIENT_ID` | Not set | YES — can't take money |
-| **Vapi** | Outbound AI calls | `VAPI_API_KEY` | Not set | NO (Phase 2) |
-| **Twilio** | Cold SMS + call routing | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, from-number | Not set | NO (Phase 2) |
-| **Unipile** | LinkedIn outreach automation | `UNIPILE_API_KEY`, `UNIPILE_ACCOUNT_ID` | Not set | NO (Phase 2) |
-| **Cal.com** | Booking embed | Public embed URL | Configured in client | ✅ |
-| **CoinGecko** | Market data | None (public) | ✅ Live |
-| **CryptoCompare** | Crypto news | None (public) | ✅ Live |
-| **Fear & Greed Index** | Sentiment ticker | None (public) | ✅ Live |
-| **Kalshi / Polymarket** | Prediction markets | None (public) | ✅ Live |
+| **xAI Grok** | Chat and audit. `grok-4`, then `grok-3` | `XAI_API_KEY` | Called by `api/_lib/llm.js` | Preferred model |
+| **Groq** | Fallback only. `qwen/qwen3.8-27b`, then `openai/gpt-oss-120b`. Not Llama | `GROQ_API_KEY` | Called only when xAI is unset or both Grok calls fail | Fallback |
+| **Google Places** | The lead book | `GOOGLE_PLACES_API_KEY` | Called by `/api/leads` | Required for live leads |
+| **Apollo** | Organization search on a large deal | `APOLLO_API_KEY` | Optional | No |
+| **Supabase** | Google sign-in and saved rows | `VITE_SUPABASE_URL`, publishable key, service role | Called | Required for accounts |
+| **Vapi** | Voice agent route | `VAPI_PRIVATE_KEY` or `VAPI_API_KEY` | `api/voice.js` | No |
+| **Stripe** | Not called. Payment link fields are empty | none read | Not wired | No |
+| **Claude / Anthropic** | Not called | none read | Removed from the caller | No |
+| **Twilio, Cal.com, Unipile, CoinGecko** | Named in old docs or `.env.example` | — | Not called by a live route | No |
 
 ---
 

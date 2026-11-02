@@ -1,6 +1,6 @@
 # GOATED Solutions - API Routes
 
-Vercel Serverless Functions powering the GOATED Solutions B2B Sales Intelligence + Degen Alpha Platform (v5.1).
+Vercel serverless functions for the GOATED sales app. Node 24.
 
 ## API Endpoints
 
@@ -14,7 +14,7 @@ taking a slot of their own.
 | `/api/audit` | POST | Live crawl + LLM revenue-loss report |
 | `/api/audit` | POST | `action=claim` — attach a contact to a saved audit (inbound lead) |
 | `/api/audit` | GET | `?id={shareId}` — replay a saved report; `?inbound=1` — admin inbound queue |
-| `/api/chat` | POST | GOATED AI assistant (Groq) |
+| `/api/chat` | POST | GOATED AI. xAI `grok-4`, then Groq `qwen/qwen3.8-27b` if xAI is unset |
 | `/api/leads` | GET | Google Places lead sourcing |
 | `/api/leads` | GET | `action=whoami` — server-authoritative identity |
 | `/api/leads` | GET | `action=enrich` — contact extraction from the prospect's own site |
@@ -70,141 +70,8 @@ Claude is not called. ZoomInfo, Clearbit, Twitter, SerpAPI, and TikTok are not w
 
 ---
 
-## Endpoint Details
+## Leads
 
-### GET /api/leads
+`GET /api/leads` searches Google Places. With no `location` query, the city is the caller's. `source=saved` is the signed-in book and returns 401 otherwise. `action=place` loads one business for `#/lead/{id}`.
 
-Fetch lead data from various sources.
-
-```bash
-# Mock data (default)
-curl "http://localhost:3000/api/leads"
-
-# With filters
-curl "http://localhost:3000/api/leads?industry=Fintech&minScore=70&limit=10"
-
-# From Apollo (requires API key)
-curl "http://localhost:3000/api/leads?source=apollo&limit=25"
-```
-
-**Query Parameters:**
-- `source` - `mock` (default), `apollo`, `zoominfo`, `clearbit`
-- `limit` - Number of leads (1-100, default: 25)
-- `offset` - Pagination offset (default: 0)
-- `industry` - Filter by industry name
-- `minScore` - Minimum lead score (0-100)
-
----
-
-### GET /api/market-data
-
-Fetch real-time cryptocurrency prices.
-
-```bash
-# Default (BTC, ETH, SOL)
-curl "http://localhost:3000/api/market-data"
-
-# Custom coins
-curl "http://localhost:3000/api/market-data?coins=bitcoin,ethereum,dogecoin,cardano"
-
-# Different currency
-curl "http://localhost:3000/api/market-data?vs=eur"
-```
-
-**Query Parameters:**
-- `coins` - Comma-separated CoinGecko IDs (default: `bitcoin,ethereum,solana`)
-- `vs` - Fiat currency code (default: `usd`)
-
----
-
-### GET /api/trends
-
-Fetch trending topics with business relevance scoring.
-
-```bash
-# All categories
-curl "http://localhost:3000/api/trends"
-
-# Specific category
-curl "http://localhost:3000/api/trends?category=ai&limit=10"
-```
-
-**Query Parameters:**
-- `category` - `all`, `tech`, `finance`, `crypto`, `marketing`, `ai`
-- `limit` - Number of trends (1-50, default: 20)
-
----
-
-### GET /api/health
-
-System health and diagnostic information.
-
-```bash
-curl "http://localhost:3000/api/health"
-```
-
-Returns: memory usage, uptime, environment variable status, runtime info.
-
----
-
-### POST /api/analytics
-
-Track user events.
-
-```bash
-curl -X POST "http://localhost:3000/api/analytics" \
-  -H "Content-Type: application/json" \
-  -d '{"event": "page_view", "properties": {"page": "leads"}, "userId": "user_123"}'
-```
-
-### GET /api/analytics
-
-Retrieve aggregated analytics.
-
-```bash
-# Last 24 hours
-curl "http://localhost:3000/api/analytics?period=24h"
-
-# Last 7 days, filtered by event
-curl "http://localhost:3000/api/analytics?period=7d&event=page_view"
-```
-
-**Query Parameters (GET):**
-- `period` - `1h`, `24h`, `7d`, `30d`
-- `event` - Filter by event type
-
-**Valid Event Types:**
-`page_view`, `button_click`, `feature_used`, `lead_viewed`, `lead_contacted`, `ai_chat`, `ai_query`, `search`, `export`, `filter_applied`, `deal_updated`, `playbook_used`, `signup`, `login`, `logout`, `subscription_change`, `error`, `custom`
-
----
-
-### POST /api/webhook
-
-Receive webhooks from external services.
-
-```bash
-# Stripe webhook
-curl -X POST "http://localhost:3000/api/webhook?source=stripe" \
-  -H "Content-Type: application/json" \
-  -d '{"type": "checkout.session.completed", "data": {"object": {"id": "cs_test_123"}}}'
-
-# Custom webhook
-curl -X POST "http://localhost:3000/api/webhook?source=custom" \
-  -H "Content-Type: application/json" \
-  -d '{"event": "custom_event", "data": {"key": "value"}}'
-```
-
-**Query Parameters:**
-- `source` - `stripe`, `apollo`, `github`, `slack`, `custom`
-
----
-
-## Architecture Notes
-
-- All endpoints are Vercel Serverless Functions (Node.js runtime)
-- CORS is enabled on all endpoints
-- Error handling with try/catch on every route
-- In-memory storage is used for analytics and webhook logs (resets on cold start)
-- CoinGecko data is cached for 60 seconds to respect rate limits
-- Mock data generators match the exact shape of the frontend store objects
-- All real API integrations are commented out with full working code, ready to uncomment when API keys are configured
+There is no `/api/market-data`, `/api/trends`, `/api/health`, `/api/analytics`, or `/api/webhook`. Those were CoinGecko, mock analytics, and a Stripe webhook sketch. They are not deployed.

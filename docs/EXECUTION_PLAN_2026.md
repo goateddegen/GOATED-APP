@@ -103,13 +103,12 @@ This is the entire pitch. Don't deviate. Don't add bullet points. Don't pitch fe
 
 ## 5. The integration stack — what's wired vs. what's needed
 
-### Working today (no env keys needed)
-- `/api/audit` — live URL crawl + LLM analysis (needs `GROQ_API_KEY` OR `ANTHROPIC_API_KEY`)
-- `/api/sentiment` — CoinGecko + CryptoCompare + Fear&Greed (free public APIs)
-- `/api/chat` — Claude Haiku for AI overlay (needs `ANTHROPIC_API_KEY`)
-- `/api/goated-ai` — RSI/MACD/Bollinger engine (no external dep)
-- Lead engine — 250K seeded PRNG demo data (works, used internally for ICP browsing)
-- 3D Globe — works via Three.js (data-aware, no external dep)
+### What the app actually calls
+- `/api/chat` and `/api/audit` — xAI `grok-4`, then `grok-3`. Groq `qwen/qwen3.8-27b` only if `XAI_API_KEY` is unset. Claude is not called.
+- `/api/leads` — Google Places (New), biased to the visitor's IP city unless they type one. Apollo only for a large deal.
+- `/api/voice` — Vapi.
+- Accounts — Supabase, Google sign-in only.
+- The UI is React 18, Vite 5, Tailwind 3, Zustand. Routes are hashes in `src/App.jsx`. React Router is unused. Three.js only ships with the unrouted Trends page.
 
 ### Cover page, then an optional account
 - `src/pages/ComingSoonPage.jsx` — visitors see this until `VITE_LAUNCH_READY=true`
@@ -121,24 +120,17 @@ This is the entire pitch. Don't deviate. Don't add bullet points. Don't pitch fe
 
 ### Needs env vars in Vercel before Monday
 ```
-# REQUIRED (free or cheap)
-ANTHROPIC_API_KEY     — Claude Haiku/Sonnet for AI chat + audit fallback
-GROQ_API_KEY          — Llama 3.3 70B for audit primary (free 30M tokens/mo)
-
-# RECOMMENDED for v1 close-engine
-STRIPE_SECRET_KEY     — Stripe API key for Payment Links + Connect
-STRIPE_WEBHOOK_SECRET — to capture payment_intent.succeeded events
-SUPABASE_URL          — auth + persistence layer
-SUPABASE_ANON_KEY     — for client SDK
-SUPABASE_SERVICE_KEY  — for server-side webhook handlers
-
-# OPTIONAL (productizes scaling, not blocking for first $30K)
-APOLLO_API_KEY        — replaces seeded leads with real prospect search
-NEWSAPI_KEY           — adds business news to TrendPulse repurposing
-RESEND_API_KEY        — programmatic email send (for follow-up sequences)
+XAI_API_KEY                 — Grok for chat and audit
+GROQ_API_KEY                — fallback only (qwen/qwen3.8-27b)
+GOOGLE_PLACES_API_KEY       — the lead book
+VITE_SUPABASE_URL           — Google sign-in (public)
+VITE_SUPABASE_PUBLISHABLE_KEY
+SUPABASE_SERVICE_ROLE_KEY   — saving audits and leads, server only
+APOLLO_API_KEY              — optional, large-deal organization search
+VAPI_PRIVATE_KEY            — optional, /api/voice
 ```
 
-**Cost to wire all of the above: ~$0–50/mo for first 3 months** (Groq free, Anthropic $5 trial, Stripe transaction-based, Supabase free tier, Apollo free tier 50 emails/day).
+Stripe is not in this list. No live route reads a Stripe secret.
 
 ### Future, not for v1
 - Twilio (real SMS sending) — use Google Voice + Phone app for now

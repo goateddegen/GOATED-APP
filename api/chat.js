@@ -202,7 +202,12 @@ function stripUngroundedFigures(text, toolResultsJson) {
       .split('\n')
       .map(line => line
         .split(/(?<=[.!?])\s+/)
-        .filter(sentence => !/\b\d{1,3}(?:\.\d+)?\s?%/.test(sentence))
+        .filter(sentence => {
+          if (!/\b\d{1,3}(?:\.\d+)?\s?%/.test(sentence)) return true;
+          // A close rate we never computed is a fabrication. A sentence that
+          // merely says "40% of calls go unanswered" is the pitch.
+          return !/\b(close|conversion|win rate|commission)\b/i.test(sentence);
+        })
         .join(' '))
       .join('\n');
   }
@@ -229,11 +234,13 @@ function stripUngroundedFigures(text, toolResultsJson) {
 
 function sanitizeOutput(text) {
   if (typeof text !== 'string') return '';
-  // Remove any script tags or event handlers that might have leaked through
-  let clean = text.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  // Some models spend the whole reply inside a thinking block. The user
+  // should see the answer, not the scratch work.
+  let clean = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
+  clean = clean.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
   clean = clean.replace(/javascript:/gi, '');
   clean = clean.replace(/on\w+\s*=\s*["'][^"']*["']/gi, '');
-  return clean;
+  return clean.trim();
 }
 
 /**
@@ -250,12 +257,11 @@ function staticAnswer(message) {
 
   // What we sell and what it costs — fixed facts, straight from PRICING.
   if (/what (does|do) (goated|we|you) (sell|offer|do)\b|what('| i)?s the (pitch|offer|product)|how much (do|does) (we|you|it) (charge|cost)|what do we charge|pricing/.test(t)) {
-    return 'We sell two things to local service businesses:\n\n'
-      + '**AI receptionist** — priced per business, typically $300-$2,500 to set up and $150-$1,200/mo depending on their size. Answers missed calls in under 60 seconds, '
-      + 'qualifies the caller, books the job, texts you the transcript.\n\n'
-      + '**Website build** — add $2,000 deposit + $250/mo. For businesses with no site at all, '
-      + 'which is the strongest pitch we have: they are invisible outside Maps and have nowhere to send anyone.\n\n'
-      + 'Both together is $4,000 deposit + $1,000/mo. Deposit up front, retainer monthly.';
+    return 'We sell an AI receptionist to local businesses, and a website when they do not have one.\n\n'
+      + `**Receptionist** — sized to that business, about $${PRICING.minDeposit.toLocaleString()}-$${PRICING.maxDeposit.toLocaleString()} to set up and $${PRICING.minMonthly.toLocaleString()}-$${PRICING.maxMonthly.toLocaleString()}/mo. `
+      + 'It picks up missed calls in under a minute, qualifies the caller, books the job, and texts the owner.\n\n'
+      + `**Website** — from $${PRICING.websiteBuildFloor.toLocaleString()} on top, for a shop with no site. That is the strongest pitch: they are invisible off Maps, and the receptionist still covers the phone.\n\n`
+      + 'Open the lead and quote the number on that card. Do not give every owner the same price.';
   }
 
   // "Audit a website for me" — a request to start, not a question. Asking for
@@ -266,6 +272,9 @@ function staticAnswer(message) {
       + 'fixes it. That report is what you open the call with.\n\n'
       + 'The **Audit** page does the same thing with the full breakdown.';
   }
+
+  // A named trade or a specific business should be coached by the model.
+  if (hasSpecificSubject(t)) return null;
 
   // Objection handling. This is our own playbook, not something the model
   // should improvise differently each time — and it is one of the buttons the
@@ -282,6 +291,9 @@ function staticAnswer(message) {
       + '**"Call me next week"** — that is a no with a date on it. "Happy to, but tell me straight: is '
       + 'this a not-now or a not-interested? Either is fine."';
   }
+
+  // A named trade or a long question needs a tailored answer, not this card.
+  if (hasSpecificSubject(t)) return null;
 
   // Cold call opener.
   if (/cold call (opener|script)|what (should|do) i say (on|during)? ?(a|the)? ?(cold )?call|how do i open the call|opening line/.test(t)) {
@@ -309,6 +321,15 @@ function staticAnswer(message) {
   }
 
   return null;
+}
+
+/** A generic card is the wrong answer once they have named who they are calling. */
+function hasSpecificSubject(message) {
+  const lower = String(message || '').toLowerCase();
+  if (lower.length > 110) return true;
+  if (/\b(this|that|the) (lead|business|one|owner|shop|firm)\b/.test(lower)) return true;
+  return TRADE_WORDS.some(t =>
+    new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`).test(lower));
 }
 
 // ─── No-LLM fast path for lead searches ─────────────────────────────────────
@@ -579,13 +600,11 @@ export default async function handler(req, res) {
     const currentPage = req.body.currentPage || 'home';
 
     const PAGE_CONTEXT_MAP = {
-      leads: 'The user is on the LEADS page — focus on lead analysis, closing advice, outreach scripts, and pipeline optimization. When they ask general questions, tie answers back to their pipeline.',
-      trends: 'The user is on the TRENDS page — focus on market analysis, sector movements, sentiment signals, and actionable trading/positioning plays. Structure market insights as: Current State > Key Signals > Actionable Plays > Risk Assessment.',
-      dashboard: 'The user is on the DASHBOARD page — focus on pipeline optimization, KPI analysis, revenue forecasting, and deal velocity. Highlight bottlenecks and recommend specific actions to improve conversion rates.',
-      market: 'The user is on the MARKETS page — focus on prediction markets, competitive landscape, global macro signals, and investment opportunities.',
-      wallet: 'The user is on the WALLET page — focus on revenue tracking, commission analysis, earnings projections, and financial optimization.',
-      admin: 'The user is on the ADMIN page — focus on team performance, system health, user analytics, and platform optimization.',
-      home: 'The user is on the HOME page — give a broad overview and guide them to the most relevant features for their question.',
+      leads: 'The user is on LEADS. Tie the answer to a real business on screen when one fits. Tell them who to call and what to say first.',
+      audit: 'The user is on AUDIT. Help them read a report and turn a gap into the opening line of the call.',
+      dashboard: 'The user is on the DASHBOARD. Talk about their pipeline and the next call, not abstract KPIs.',
+      admin: 'The user is on ADMIN. Answer operational questions about the product.',
+      home: 'The user is on HOME. Answer the question, then point them at Leads or Audit if that is the next click.',
     };
     const pageContext = PAGE_CONTEXT_MAP[currentPage] || PAGE_CONTEXT_MAP.home;
 
@@ -597,55 +616,31 @@ export default async function handler(req, res) {
     // Detect deep research mode
     const isDeepResearch = /\b(research|analyze|deep dive|report|brief|investigation|breakdown)\b/i.test(latestUserMsg);
 
-    let systemPrompt = `You are GOATED AI — a B2B sales terminal. Tight, numeric, tactical. Zero fluff.
+    let systemPrompt = `You are GOATED AI, the closer sitting next to the person using this app. You sell an AI receptionist, and a website when the business does not have one, to owner-run local firms: trades, law, dental, accounting, therapy.
 
-${isDeepResearch ? `DEEP RESEARCH: structured report.
-## Title · **Summary** (2 lines) · **Findings** (5 numbered) · **Sentiment** (Bullish/Bearish + confidence) · **Risk** · **Plays** (3) · **Timeline**.
-Data-dense. Numbers and dollars throughout.` : ''}
+Think before you answer. Use the lead in view, the businesses on screen, and what they already asked. A follow-up means that same business, not a fresh generic script.
 
-RULES — OBEY EVERY ONE:
-- Tools are for fetching real data the user asked for, never for illustrating a point.
-  "Find me plumbers in Phoenix" is a search. "What should I sell a roofer with no website"
-  is advice — answer it yourself, from what we sell, with NO tool call. If you do not have a
-  real domain the user gave you, do not call a tool that needs one.
-- Never state a deal value, close rate, commission or percentage that did not come back from
-  a tool. If you do not have the number, leave it out — an answer without it is fine.
-- "Find me website clients" is a search for businesses with no website. "Find me voice
-  agent clients" is a search for businesses that are still trading and unreachable 40 or
-  more hours a week. Call search_leads with solution "website" or "voice". Do not answer
-  either from memory.
-- LINK BUSINESSES. When a tool result gives a business a placeId, write its name as
-  [Name](#/lead/PLACEID) — never as bare text. If it also has a website, offer
-  [audit their site](#/audit?u=WEBSITE) once for that business. The app turns both into
-  buttons. Only ever use a placeId that came back from a tool; never invent one, and never
-  link a business that did not come from a tool result.
-- NEVER mention commission, payouts or splits. We do not pay them and the UI does not show them.
-- Never write placeholder maths like "$X/year" or "$Y return". Either use a real figure or
-  describe the benefit in words.
-- Never leave a fill-in-the-blank bracket like [key benefits], [company name] or
-  [desirable outcome]. Write the actual words — if you do not know the specific, say the
-  general thing plainly instead of leaving a slot.
-- When you need an example business, use a real-sounding local trade — "Rodriguez Plumbing",
-  "A-1 Garage Door" — never "XYZ Corp", "Acme" or "John Smith at Company Inc". Our customers
-  call plumbers and roofers, not enterprises, and a corporate example reads as boilerplate.
-- Pricing is a one-time deposit plus a monthly retainer, SIZED PER BUSINESS from its estimated
-  revenue — roughly $300-$2,500 setup and $150-$1,200/mo. Never quote a flat figure; use the
-  quote that came back with the lead, or say it is priced on the call. For the AI
-  receptionist, $2,000 + $250/mo to add a website build. Quote those when asked what to sell.
-- 60 words MAX unless the user explicitly asks for a report / breakdown / deep dive.
-- Bullets beat paragraphs. Lead with the number or action — no "Sure, here's…" preambles.
-- Name + number is a complete answer. Say it and stop.
-- EXACT actions only. No "follow up soon" / "build rapport" — give the literal next move.
-- ONLY real businesses returned by a tool. Never invent a name, company, phone or dollar amount.
-- If a tool returns nothing: say so plainly and stop. Do not fill the gap.
-- Page refs bold: **Leads**, **Dashboard**, **Audit**.
-- Lead queries are answered from tool output, and the app formats that list itself —
-  do NOT restate deal values or close percentages. We do not compute them per business,
-  so any figure you write there is invented. This line used to ask you for exactly that.
-- Never emit [LEAD_CARD:id]; you have no real ids.
-- Nav phrases ("go to X", "open X", "take me to X"): respond with one line and [NAVIGATE:pageid]. No essay.
-- Never mention commission, payouts or splits — we do not pay them.
-- Sub-$20K deals: same-day follow-up + simplified proposal — speed wins.
+WHAT WE SELL
+- Receptionist: answers a missed call in under a minute, qualifies, books, texts the owner. Best for a business that is still trading and whose published hours leave 40 or more hours a week with nobody answering.
+- Website: for a business with no site. Pitch the build and the receptionist together. They are invisible off Maps and the phone is still leaking.
+- Price is a deposit plus a monthly retainer, sized to that business. About $${PRICING.minDeposit}-$${PRICING.maxDeposit} setup and $${PRICING.minMonthly}-$${PRICING.maxMonthly}/mo. A site build starts at $${PRICING.websiteBuildFloor}. If the lead card has a quote, use that number. If it does not, say it is priced on the call. Never one flat rate for everyone.
+
+HOW A GOOD ANSWER SOUNDS
+- Name the gap in the first sentence: no website, uncovered hours, thin reviews, or no published number.
+- When they ask what to say, write the actual words, then one diagnosing question, then stop so the owner can talk. Do not hand them a lecture.
+- When they ask who to call, say why that business and what to open with.
+- When they ask a why, answer it. Do not dodge into a list of leads.
+- Short paragraphs or a few bullets. No "Sure, here's" preamble. No essay unless they asked for a breakdown.
+- Fill every blank. If you do not know the owner's name, say "the owner". Never leave [brackets].
+
+RULES
+- Tools fetch real businesses the user asked for. "Find me plumbers in Phoenix" is a search. "What should I sell a roofer with no website" is advice — answer it, do not search.
+- "Find me website clients" searches businesses with no website. "Find me voice agent clients" searches businesses that are still trading and unreachable 40+ hours a week. Use search_leads with solution "website" or "voice".
+- Never invent a company, phone, place id, close rate, or dollar amount. If a tool returns nothing, say so.
+- When a tool result includes a placeId, link the name as [Name](#/lead/PLACEID). Offer [audit their site](#/audit?u=WEBSITE) only when a website came back.
+- Never mention commission, payouts, or splits.
+- Nav phrases ("go to leads"): one line and [NAVIGATE:pageid].
+${isDeepResearch ? '\nThey asked for a breakdown. Use a short title, the finding, why it matters, and the next call.' : ''}
 
 ${''/* DEGEN prompt removed. It injected "Wolf of Wall Street energy" — trading
 slang, "LETS FUCKING GO", insulting inaction, manufactured 48-hour urgency.
@@ -719,18 +714,12 @@ Always reference the lead's actual data (name, company, industry, pain points, b
     }
 
     if (isClosingIntent) {
-      systemPrompt += `\n\nCLOSING COACH MODE: The user wants tactical closing advice. Be a real sales coach — not generic. Provide:
-- Specific next action with exact words to say
-- Objection handling scripts with word-for-word responses
-- Urgency-building techniques tied to the lead's decision timeline
-- Commission/revenue impact numbers to motivate
-- Pattern-matched advice based on the lead's stage, score, and conversion probability
-Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT script, email, or action step.`;
+      systemPrompt += `\n\nCLOSING COACH: Write the words they should say next, then the one question that makes the owner describe the leak. If they push on price, ask what one job is worth and compare the retainer to that job. Do not invent a close rate.`;
     }
 
-    const maxTokens = (mode === 'play_execute' || mode === 'play_generate' || isDeepResearch) ? 1200
-      : (isOutreachIntent || isClosingIntent) ? 600
-      : 450;
+    const wantsDepth = mode === 'play_execute' || mode === 'play_generate' || isDeepResearch
+      || isOutreachIntent || isClosingIntent;
+    const maxTokens = wantsDepth ? 1100 : 700;
 
     const chatMessages = contextMessages.map(m => ({ role: m.role, content: m.content }));
 
@@ -803,8 +792,28 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
       ? (mentionsDomain ? TOOL_SCHEMAS : TOOL_SCHEMAS.filter(t => t.function?.name === 'search_leads'))
       : [];
 
+    // A lead on screen means "what do I say" is about that business. The
+    // generic card would throw the lead away.
+    const viewingLead = /Currently viewing lead:/i.test(lastMsgFull);
+    const viewed = lastMsgFull.match(/Currently viewing lead:\s*([^\]\n]+)/);
+    if (viewed) {
+      systemPrompt += `\n\nLEAD IN VIEW — answer about this business, not a generic shop:\n${viewed[1].trim()}`;
+    }
+    if (Array.isArray(leadData) && leadData.length) {
+      const lines = leadData.slice(0, 8).map(l => {
+        const bits = [l.company || l.name, l.industry, l.location].filter(Boolean);
+        if (!l.website) bits.push('no website');
+        else bits.push('has a site');
+        if (l.reviewCount != null) bits.push(`${l.reviewCount} reviews`);
+        if (l.phone) bits.push(l.phone);
+        if (l.revenueFormatted) bits.push(l.revenueFormatted);
+        return `- ${bits.join(' · ')}`;
+      });
+      systemPrompt += `\n\nBUSINESSES ALREADY ON SCREEN. Prefer these when they fit. Do not invent others.\n${lines.join('\n')}`;
+    }
+
     // Fixed-answer questions first — no model, no tokens, always available.
-    const canned = staticAnswer(lastMsg);
+    const canned = viewingLead ? null : staticAnswer(lastMsg);
     if (canned) {
       return res.status(200).json({
         content: canned,

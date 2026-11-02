@@ -1173,6 +1173,34 @@ function getCoachStepFromStatus(status) {
   return map[status] ?? 0;
 }
 
+// What the model is allowed to know about the open lead. Gaps only — no
+// invented close rate, and no flat "deal value" that is the same on every row.
+function describeOpenLead(lead) {
+  if (!lead) return '';
+  const gaps = [];
+  if (!lead.website && !lead.domain) gaps.push('no website');
+  if (lead.receptionist?.qualified) gaps.push(`nobody answers ${lead.receptionist.uncoveredHoursPerWeek}h a week`);
+  if (lead.reviewCount === 0) gaps.push('no reviews');
+  else if (lead.reviewCount != null) gaps.push(`${lead.reviewCount} reviews${lead.rating != null ? ` at ${lead.rating}★` : ''}`);
+  if (!lead.phone) gaps.push('no published number');
+  if (lead.activity?.label) gaps.push(lead.activity.label);
+  if (lead.revenueFormatted) gaps.push(`est. ${lead.revenueFormatted}`);
+  return `\n\nCurrently viewing lead: ${lead.company || lead.name} (${lead.industry || 'local service'}) in ${lead.location || 'their city'}. Phone: ${lead.phone ? formatPhone(lead.phone) : 'none'}. ${gaps.join('; ') || 'no listed gap'}.`;
+}
+
+function screenLeads(leads) {
+  return (leads || []).slice(0, 8).map(l => ({
+    company: l.company,
+    industry: l.industry,
+    location: l.location,
+    phone: l.phone ? formatPhone(l.phone) : null,
+    website: l.website || null,
+    reviewCount: l.reviewCount ?? null,
+    rating: l.rating ?? null,
+    revenueFormatted: l.revenueFormatted || null,
+  }));
+}
+
 // ─── MAIN COMPONENT ────────────────────────────────────────────────────
 export default function AIOverlay() {
   // ─── GRANULAR SELECTORS (avoid full-store subscription) ────────────
@@ -1533,11 +1561,9 @@ export default function AIOverlay() {
     // Auto-expand when sending
     if (!aiOpen) setAiOpen(true);
 
-    const leadCtx = selectedLead ? `\n\nCurrently viewing lead: ${selectedLead.name} at ${selectedLead.company} (${selectedLead.industry}), Score: ${selectedLead.score}/100, Deal: $${(selectedLead.dealValue||0).toLocaleString()}, Status: ${selectedLead.status}, Priority: ${selectedLead.priority}, Phone: ${selectedLead.phone ? formatPhone(selectedLead.phone) : 'N/A'}, Email: ${selectedLead.email||'N/A'}, Website: ${selectedLead.website||'N/A'}, Location: ${selectedLead.location||'N/A'}, Pain Points: ${(selectedLead.painPoints||[]).join(', ')}, Buying Signals: ${(selectedLead.buyingSignals||[]).join(', ')}, Best Method: ${selectedLead.bestMethod||'email'}` : '';
+    const leadCtx = describeOpenLead(selectedLead);
     const coachCtx = coachMode ? '\n\nCOACH MODE IS ON: Act as a closing coach for the lead in view. Work only from the fields given above — do not quote commission, MRR, quotas or streaks, none of which exist in this product. If a number is not in the context, do not state one.' : '';
-    const pipelineContext = `Pipeline context: ${leads.length} leads, top 5: ${leads.slice(0, 5).map(l =>
-      `${l.name} at ${l.company} (score: ${l.score}, value: ${fmt(l.dealValue)}, priority: ${l.priority}, status: ${l.status})`
-    ).join('; ')}${leadCtx}${coachCtx}`;
+    const pipelineContext = `Pipeline context: ${leads.length} leads on screen.${leadCtx}${coachCtx}`;
 
     if (useAI) {
       try {
@@ -1552,7 +1578,12 @@ export default function AIOverlay() {
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: apiMessages, degenMode, currentPage }),
+          body: JSON.stringify({
+            messages: apiMessages,
+            degenMode,
+            currentPage,
+            leadData: screenLeads(leads),
+          }),
         });
         const data = await res.json();
         // A rate-limited or unreachable provider now comes back with a plain
@@ -1652,26 +1683,9 @@ export default function AIOverlay() {
       setTyping(true);
 
       if (useAI) {
-        const leadCtx = selectedLead ? `\n\nCurrently viewing lead: ${selectedLead.name} at ${selectedLead.company} (${selectedLead.industry}), Score: ${selectedLead.score}/100, Deal: $${(selectedLead.dealValue||0).toLocaleString()}, Status: ${selectedLead.status}` : '';
+        const leadCtx = describeOpenLead(selectedLead);
         const coachCtx = coachMode ? '\n\nCOACH MODE IS ON: Act as a real-time closing coach.' : '';
-        const pipelineContext = `Pipeline context: ${leads.length} leads, top 5: ${leads.slice(0, 5).map(l =>
-          `${l.name} at ${l.company} (score: ${l.score}, value: ${fmt(l.dealValue)}, priority: ${l.priority}, status: ${l.status})`
-        ).join('; ')}${leadCtx}${coachCtx}`;
-
-        const slimLeadsQA = leads.slice(0, 25).map(l => ({
-          id: l.id, name: l.name, company: l.company, industry: l.industry,
-          location: l.location, score: l.score, dealValue: l.dealValue,
-          status: l.status, priority: l.priority,
-          // conversionProbability dropped: it is only ever set on the synthetic
-          // pool, so on live Places leads this sent the model a null it was
-          // free to fill in with a confident-sounding percentage.
-          bestMethod: l.bestMethod, email: l.email,
-          // Formatted, so a number the model repeats back is already readable.
-          phone: formatPhone(l.phone),
-          // Real, and far more useful to reason about than a made-up close rate.
-          reviewCount: l.reviewCount, rating: l.rating, website: l.website || null,
-          revenueFormatted: l.revenueFormatted || null,
-        }));
+        const pipelineContext = `Pipeline context: ${leads.length} leads on screen.${leadCtx}${coachCtx}`;
 
         fetch('/api/chat', {
           method: 'POST',
@@ -1684,7 +1698,7 @@ export default function AIOverlay() {
                 : m.content
             })),
             degenMode,
-            leadData: slimLeadsQA,
+            leadData: screenLeads(leads),
             currentPage,
           }),
         })

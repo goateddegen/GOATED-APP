@@ -1,6 +1,6 @@
 # GOATED — Documentation Index
 
-**Plan version:** v7.5.7 (agency-first)
+**Plan version:** v7.5.8 (agency-first)
 **Updated:** 2026-11-02
 **Owner:** Tarek
 
@@ -123,6 +123,7 @@ When you add docs:
 | v7.5.4 | April 24 2026 | Tier-based pricing locked, typography update |
 | v7.5.6 | April 25 2026 | Full tactical doc pack + opsec + finance + lifestyle |
 | v7.5.7 | November 2 2026 | Account is optional. Dashboard, admin, and saved data stay behind sign-in |
+| v7.5.8 | November 2 2026 | Stack docs match the running app: Grok, then Groq. No Claude, Llama, or React Router |
 
 ---
 
