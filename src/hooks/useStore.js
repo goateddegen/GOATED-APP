@@ -1082,7 +1082,12 @@ export const useStore = create((set, get) => ({
     // Hard gate: disabled pages (TrendPulse, Wallet) and admin-only pages are
     // unreachable from every caller — keybinds, search, AI overlay, deep links.
     // Redirect rather than no-op so the user never lands on a blank screen.
-    const target = isPageEnabled(page, get().verifiedEmail) ? page : 'home';
+    //
+    // Dashboard and admin are the account wall. A signed-out visitor is allowed
+    // onto those ids so the wall can open. A signed-in non-admin is still sent
+    // home — the admin tools never render for them.
+    const accountWall = !get().isLoggedIn && (page === 'dashboard' || page === 'admin');
+    const target = (accountWall || isPageEnabled(page, get().verifiedEmail)) ? page : 'home';
     // Close any open modals/detail views to prevent stale renders
     const current = get().page;
     if (current !== target) set({ page: target, mobileMenu: false });
@@ -1137,21 +1142,10 @@ export const useStore = create((set, get) => ({
   auditPrefill: null,
   setAuditPrefill: (u) => set({ auditPrefill: u }),
 
-  // AI Overlay
+  // AI Overlay. Usable without an account. Dashboard and admin are the
+  // pages that require one; saved-account data stays behind the session.
   aiOpen: false,
-  // The assistant is behind the account wall like the leads and dashboard
-  // pages. Gated here rather than at each call site because it opens from the
-  // G keybind, the sidebar, two homepage cards and the leads page — gating
-  // those individually means missing one.
-  setAiOpen: (v) => {
-    if (!v) { set({ aiOpen: false }); return; }
-    const s = get();
-    if (s.isLoggedIn) { set({ aiOpen: true }); return; }
-    // Session not resolved yet — do nothing rather than accuse them of being
-    // logged out.
-    if (!s.authChecked) return;
-    set({ accountModalOpen: true });
-  },
+  setAiOpen: (v) => set({ aiOpen: !!v }),
   aiModel: 'goated-v1',
   setAiModel: (m) => set({ aiModel: m }),
 
@@ -1332,6 +1326,9 @@ export const useStore = create((set, get) => ({
   // so the operator can see which metro they are being served rather than
   // having to infer it from the addresses.
   resolvedMarket: null,
+  // The visitor's own place, from their IP. Coordinates are rounded. Used to
+  // pull a fresh batch and to keep those businesses at the top of the book.
+  viewerPlace: null,
   setMarket: (city) => {
     const v = (city || '').trim();
     try {
@@ -1440,7 +1437,7 @@ export const useStore = create((set, get) => ({
         .sort((a, b) => b[1] - a[1])
         .slice(0, 8)
         .map(([c]) => c);
-      const home = s0.market || s0.resolvedMarket || '';
+      const home = s0.viewerPlace?.label || s0.market || s0.resolvedMarket || '';
       return [home, ...discovered.filter(c => c !== home)].filter(Boolean);
     };
 
@@ -1471,7 +1468,7 @@ export const useStore = create((set, get) => ({
     }
   },
 
-  fetchLiveLeads: async (attempt = 1, locationOverride = '') => {
+  fetchLiveLeads: async (attempt = 1, locationOverride = '', opts = {}) => {
     // More than one city ticked and no explicit market: fan out across them
     // rather than quietly prospecting only the first. Disjoint from the guard
     // in fetchLeadsForCities, which delegates back here when nothing is ticked,
@@ -1512,7 +1509,10 @@ export const useStore = create((set, get) => ({
       // Explicit market beats the ticked cities; the edge's guess is the last
       // resort, which is what `location` omitted means.
       const { market, selectedCities } = get();
-      const where = locationOverride || market || (selectedCities.length ? selectedCities[0] : '');
+      // nearMe skips a pinned city so the server uses the visitor's IP.
+      const where = opts.nearMe
+        ? ''
+        : (locationOverride || market || (selectedCities.length ? selectedCities[0] : ''));
       if (where) qs.set('location', where);
       if (exclude) qs.set('exclude', exclude);
       const res = await authedFetch(`/api/leads?${qs}`);
@@ -1546,7 +1546,8 @@ export const useStore = create((set, get) => ({
 
       const gained = addedCount + nwAdded.length;
       set({
-        resolvedMarket: data?._meta?.resolvedLocation || null,
+        resolvedMarket: data?._meta?.resolvedLocation || get().resolvedMarket,
+        ...(data?._meta?.viewer ? { viewerPlace: data._meta.viewer } : {}),
         liveLeads: merged,
         noWebsiteLeads: nwMerged,
         lastAddedLeadCount: gained,
@@ -1560,7 +1561,7 @@ export const useStore = create((set, get) => ({
       // spends the Places budget hunting for the last few rows in a market
       // we have already worked through.
       if (attempt < 2 && gained < LEADS_PER_VISIT) {
-        return get().fetchLiveLeads(attempt + 1, locationOverride);
+        return get().fetchLiveLeads(attempt + 1, locationOverride, opts);
       }
       return merged;
     } catch (err) {

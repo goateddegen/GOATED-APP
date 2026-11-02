@@ -81,7 +81,7 @@ Single source of truth for what's fake, what's broken, what needs keys, and what
 | HSTS | Vercel default | ✅ |
 | Secrets in env (never committed) | ✅ | `.env.example` is the template, `.env` gitignored |
 | Webhook signature verification | N/A (no webhooks yet) | Needed when Stripe added |
-| User auth | ❌ Not wired | Blocked on Supabase |
+| User auth | Google via Supabase. Optional. Dashboard, admin, saved leads, and cloud sync require a session | Leads, audit, outreach, and GOATED AI stay open |
 | Cloudflare / WAF layer | ❌ | Recommended before public launch |
 
 ---
@@ -104,7 +104,7 @@ Single source of truth for what's fake, what's broken, what needs keys, and what
 
 ## 🟪 MISSING FEATURES TO REACH PROD
 
-- [ ] Supabase auth (Google + GitHub OAuth buttons already coded — needs keys)
+- [x] Supabase auth (Google only). Sign-in is optional. Dashboard, admin, saved leads, and cloud sync require a session
 - [ ] Stripe Connect Express onboarding flow (partial)
 - [ ] Webhook handler for Stripe events (`charge.succeeded`, `transfer.paid`, `account.updated`)
 - [ ] Real Apollo integration with pagination + filters

@@ -407,8 +407,8 @@ export function countryFor(location) {
   return s.trim() ? '' : 'US';   // empty market = the operator's own, which is US-first
 }
 
-export async function searchPlaces({ query, location = '', limit = 20, pageToken = '' }) {
-  const regionCode = countryFor(location);
+export async function searchPlaces({ query, location = '', limit = 20, pageToken = '', bias = null, regionCode: regionOverride = '' }) {
+  const regionCode = regionOverride || countryFor(location);
   if (!placesConfigured()) return { error: 'GOOGLE_PLACES_API_KEY not set', fallback: true };
   if (!query) return { error: 'query is required', fallback: true };
 
@@ -435,6 +435,16 @@ export async function searchPlaces({ query, location = '', limit = 20, pageToken
         // Hampshire, which is the wrong Manchester.
         ...(regionCode ? { regionCode } : {}),
         ...(pageToken ? { pageToken } : {}),
+        // A circle around the visitor pulls the metro, not a same-named city
+        // in another state. 50km is the Places ceiling for this bias.
+        ...(bias && Number.isFinite(bias.lat) && Number.isFinite(bias.lng) ? {
+          locationBias: {
+            circle: {
+              center: { latitude: bias.lat, longitude: bias.lng },
+              radius: 50000,
+            },
+          },
+        } : {}),
       }),
       signal: AbortSignal.timeout(12000),
     });

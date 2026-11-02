@@ -24,6 +24,21 @@ taking a slot of their own.
 | `/api/intelligence` | GET | Market/company intelligence |
 | `/api/voice` | POST | Voice agent (Vapi) |
 
+## Auth
+
+Google sign-in (Supabase) is optional. The browser attaches the session token when one exists and still calls these routes without one.
+
+| Call | Session |
+|---|---|
+| `POST /api/chat` | None. The assistant works signed out. |
+| `GET /api/leads` (Places search), `action=place`, `action=photo`, `action=enrich` | None. Anonymous searches are returned and not stored. A signed-in search is saved under that user. |
+| `GET /api/leads?action=whoami` | None required. With no token the body is `{ signedIn: false, isAdmin: false }`. |
+| `GET /api/leads?source=saved` | Required. `401` without a session. |
+| `POST /api/audit`, `GET /api/audit?id=` | None. A signed-in scan is filed under that user; an anonymous scan is stored with no owner. |
+| `GET /api/audit?inbound=1` | Admin only. `403` unless the token's email is on `ADMIN_EMAILS`. |
+
+The dashboard and admin **pages** are the account wall in the client. Admin also checks the same allow-list. A signed-in visitor who is not on that list is sent home.
+
 **Removed in this revision:** `/api/trends`, `/api/sentiment`, `/api/plays` and
 `/api/market-data`. They existed only for the disabled Trends page, and three of
 the four returned `Math.random()` rather than real data. `src/pages/TrendsPage.jsx`
@@ -33,67 +48,25 @@ page means rebuilding the data layer first.
 
 ---
 
-## API Keys Required
+## API keys
 
-### Required (Core Functionality)
+Names only. Values go in `.env.local` (gitignored) or the Vercel project environment. Never commit them. `.env.example` is the blank template.
 
-| Service | Env Variable | Get Key At | Used By |
-|---|---|---|---|
-| **Anthropic (Claude AI)** | `ANTHROPIC_API_KEY` | https://console.anthropic.com/ | `/api/chat` - AI assistant |
-
-### Optional (Enhanced Data)
-
-| Service | Env Variable | Get Key At | Used By | Free Tier? |
-|---|---|---|---|---|
-| **CoinGecko** | None needed | https://www.coingecko.com/ | `/api/market-data` | Yes (30 req/min) |
-| **Apollo.io** | `APOLLO_API_KEY` | https://app.apollo.io/ | `/api/leads?source=apollo` | Yes (limited) |
-| **ZoomInfo** | `ZOOMINFO_API_KEY` | https://www.zoominfo.com/ | `/api/leads?source=zoominfo` | No |
-| | `ZOOMINFO_USERNAME` | | | |
-| | `ZOOMINFO_PASSWORD` | | | |
-| **Clearbit** | `CLEARBIT_API_KEY` | https://dashboard.clearbit.com/ | `/api/leads?source=clearbit` | Yes (limited) |
-| **Stripe** | `STRIPE_SECRET_KEY` | https://dashboard.stripe.com/apikeys | Payments | Yes (test mode) |
-| | `STRIPE_WEBHOOK_SECRET` | https://dashboard.stripe.com/webhooks | `/api/webhook?source=stripe` | |
-| **Twitter/X** | `TWITTER_BEARER_TOKEN` | https://developer.twitter.com/ | `/api/trends` | Yes (limited) |
-| **SerpAPI** (Google Trends) | `SERPAPI_KEY` | https://serpapi.com/ | `/api/trends` | Yes (100 searches/mo) |
-| **TikTok** | `TIKTOK_API_KEY` | https://developers.tiktok.com/ | `/api/trends` | Requires approval |
-| **GitHub** | `GITHUB_WEBHOOK_SECRET` | GitHub repo Settings | `/api/webhook?source=github` | Yes |
-| **Slack** | `SLACK_SIGNING_SECRET` | https://api.slack.com/apps | `/api/webhook?source=slack` | Yes |
-
-### Future / Database
-
-| Service | Env Variable | Notes |
+| Variable | Used by | Client-visible? |
 |---|---|---|
-| **Database** | `DATABASE_URL` | PostgreSQL, MySQL, etc. for persistent storage |
-| **Redis** | `REDIS_URL` | Caching layer (Upstash recommended for Vercel) |
-| **PostHog** | `POSTHOG_API_KEY` | Open-source analytics alternative |
+| `XAI_API_KEY` | Chat, audit, intelligence. Preferred model `grok-4`. | No |
+| `GROQ_API_KEY` | Same routes when xAI is unset. Model `qwen/qwen3.8-27b`, fallback `openai/gpt-oss-120b`. | No |
+| `GOOGLE_PLACES_API_KEY` | Lead search and place permalinks | No |
+| `APOLLO_API_KEY` | Organization search for larger deals | No |
+| `VAPI_PRIVATE_KEY` or `VAPI_API_KEY` | `/api/voice` | No |
+| `VAPI_ASSISTANT_ID`, `VAPI_PHONE_NUMBER_ID` | `/api/voice` | No |
+| `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY` | Saving audits and leads | No |
+| `VITE_SUPABASE_URL` | Browser auth client | Yes, public by design |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` or `VITE_SUPABASE_ANON_KEY` | Browser auth client | Yes, public by design. Row-level security is what protects the data. |
+| `VITE_LAUNCH_READY` | Cover page | Yes, a flag, not a secret |
+| `ADMIN_EMAILS` | `whoami` and the inbound audit queue | No |
 
----
-
-## Setting Environment Variables
-
-### In Vercel (Production)
-
-```bash
-# Using Vercel CLI
-vercel env add ANTHROPIC_API_KEY
-vercel env add APOLLO_API_KEY
-vercel env add STRIPE_SECRET_KEY
-# ... etc
-
-# Or set them in the Vercel Dashboard:
-# Project Settings -> Environment Variables
-```
-
-### Local Development
-
-Create a `.env.local` file in the project root (it is already gitignored):
-
-```env
-ANTHROPIC_API_KEY=sk-ant-...
-APOLLO_API_KEY=...
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-```
+Claude is not called. ZoomInfo, Clearbit, Twitter, SerpAPI, and TikTok are not wired to a live route.
 
 ---
 

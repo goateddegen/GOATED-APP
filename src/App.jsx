@@ -401,11 +401,9 @@ export default function App() {
   //   /#/for/{slug}         legacy audit link, re-runs live
   //   /#/{page}             any nav page — home, audit, leads, dashboard, admin
   //
-  // Re-runs when the session resolves. Both targets are behind the account
-  // wall, so an anonymous visitor gets bounced to Home with the login modal;
-  // the hash survives that bounce untouched, and this effect firing again on
-  // isLoggedIn is what carries them to the page they actually asked for
-  // instead of stranding them on the homepage after signing in.
+  // Re-runs when the session resolves. Dashboard and admin open the account
+  // wall for a signed-out visitor; a lead or audit permalink does not. This
+  // also has to fire once we know they are signed in and were waiting on that.
   useEffect(() => {
     const resolveHash = () => {
       const h = window.location.hash || '';
@@ -446,13 +444,13 @@ export default function App() {
   // covers the first render; this restores everything past its cap.
   useEffect(() => { hydrateStoredLeads?.(); }, [hydrateStoredLeads]);
 
-  // Resolve a lead permalink once we know who the visitor is.
+  // Resolve a lead permalink for anyone, signed in or not.
   //
   // Fetched by place id rather than looked up in the local store, so the link
   // opens for someone whose browser has never run a search — which is the whole
   // point of being able to send it to someone.
   useEffect(() => {
-    if (!pendingLeadId || !isLoggedIn || !authChecked) return;
+    if (!pendingLeadId) return;
     let cancelled = false;
     (async () => {
       try {
@@ -467,7 +465,7 @@ export default function App() {
       if (!cancelled) setPendingLeadId(null);
     })();
     return () => { cancelled = true; };
-  }, [pendingLeadId, isLoggedIn, authChecked, setPendingLeadId, setSelectedLead, setDetailOpen]);
+  }, [pendingLeadId, setPendingLeadId, setSelectedLead, setDetailOpen]);
 
   // Debounced page navigation — prevents choppy rapid-fire page switching
   // Also scrolls to top so pages never open mid-scroll
@@ -576,10 +574,9 @@ export default function App() {
   }, [page, setPreviousPage, setSelectedLead, setDetailOpen]);
   const mainML = isMobile ? 0 : (sidebar ? 240 : 72);
 
-  // Routes that require login. Home is the only public page: the audit and its
-  // permalinks are now account-walled too, so the homepage sells the auditor
-  // and an account is the price of running one.
-  const PROTECTED_PAGES = new Set(['leads', 'audit', 'dashboard', 'wallet', 'admin', 'trends', 'market', 'managed']);
+  // Account pages. Everything else is usable signed out. Data that belongs
+  // to an account (saved leads, cloud sync) still requires a session.
+  const PROTECTED_PAGES = new Set(['dashboard', 'admin']);
 
   // Lightweight auth gate — when launch-ready and visitor isn't logged in,
   // gently redirect them to homepage and pop the AccountModal.
@@ -594,37 +591,30 @@ export default function App() {
     return <HomePage />;
   };
 
-  // A saved audit report is the one public surface. It is the lead magnet — you
-  // send it to a prospect, and asking a stranger to make an account before
-  // reading a report about their own site defeats the point of sending it.
-  //
-  // Everything else needs a session, leads included. A lead permalink is an
-  // internal link: it survives the login bounce and opens once the session
-  // resolves, but it does not let anyone past the wall.
+  // A saved audit link is also a way through the public cover, so a prospect
+  // can open the report they were sent before the site is generally live.
   const isSavedAuditLink = (typeof window !== 'undefined' &&
     /^#\/a\/[a-z0-9]{6,32}/i.test(window.location.hash || ''));
 
   // No useMemo — prevents stale renders & black screen during rapid page switching
   const renderPage = () => {
-    // Final gate: anything not in NAV_PAGES — or an admin page without an admin
-    // session — renders Home, no matter how the store got set (stale persisted
-    // state, hash, programmatic setPage, a session that lost admin rights).
-    if (!isPageEnabled(page, verifiedEmail)) return <HomePage />;
+    // A signed-in non-admin never sees the admin tools, even if the page id
+    // was set while the session was still resolving.
+    if (page === 'admin' && isLoggedIn && !isPageEnabled(page, verifiedEmail)) return <HomePage />;
 
     if (PROTECTED_PAGES.has(page)) {
       switch (page) {
         case 'dashboard': return requireAuth(() => <DashboardPage onSelect={selectLead} />);
-        case 'leads':     return requireAuth(() => <LeadsPage onSelect={selectLead} />);
-        // A saved-audit permalink is the one public surface: it is what gets
-        // sent to a prospect, and asking a stranger to create an account
-        // before they can read a report about their own site defeats the
-        // point of sending it. Running a *new* audit still requires one.
-        case 'audit':     return isSavedAuditLink ? <AuditPage /> : requireAuth(() => <AuditPage />);
         case 'admin':     return requireAuth(() => <AdminPage />);
       }
     }
+
+    // Anything not in NAV_PAGES renders Home.
+    if (!isPageEnabled(page, verifiedEmail)) return <HomePage />;
     switch (page) {
       case 'home':  return <HomePage />;
+      case 'leads': return <LeadsPage onSelect={selectLead} />;
+      case 'audit': return <AuditPage />;
       default:      return <HomePage />;
     }
   };

@@ -758,6 +758,7 @@ import { guardRequest, setCacheHeaders } from './_lib/guard.js';
 import { extractContacts } from './_lib/contacts.js';
 import { userFromRequest, saveLeads, loadLeads, dbConfigured } from './_lib/db.js';
 import { searchPlaces, placesConfigured, getPlaceById } from './_lib/places.js';
+import { callerGeo } from './_lib/geo.js';
 
 export default async function handler(req, res) {
   // Apollo API passthrough — 30/min per IP is plenty, daily cap prevents quota burn
@@ -944,16 +945,26 @@ export default async function handler(req, res) {
     // Pass ?source=generated to force fallback data
     // -------------------------------------------------------------------
     const hasApolloKey = !!process.env.APOLLO_API_KEY;
-    // Caller's city, from Vercel's edge geo headers. Free, no lookup, and it
-    // means an operator in Dallas gets Dallas businesses without typing anything.
-    // Falls back to nothing rather than a guess — Places' own default is already
-    // sensible, and inventing a city would be worse than leaving it open.
-    const geoCity = req.headers?.['x-vercel-ip-city'] ? decodeURIComponent(req.headers['x-vercel-ip-city']) : '';
-    const geoRegion = req.headers?.['x-vercel-ip-country-region'] || '';
-    const geoCountry = req.headers?.['x-vercel-ip-country'] || '';
-    const impliedLocation = (geoCountry === 'US' && geoCity)
-      ? `${geoCity}${geoRegion ? ' ' + geoRegion : ''}`
-      : '';
+    // No city typed: prospect where this request came from. A typed city wins,
+    // so "plumbers in Tampa" is not pulled back to the visitor's own metro.
+    // Coordinates passed by chat are the visitor's, resolved before the
+    // function-to-function hop rewrote the edge headers.
+    const qLat = Number(req.query?.lat);
+    const qLng = Number(req.query?.lng);
+    const hasQueryPoint = Number.isFinite(qLat) && Number.isFinite(qLng)
+      && Math.abs(qLat) <= 90 && Math.abs(qLng) <= 180;
+    let geo = null;
+    if (!location) {
+      geo = hasQueryPoint
+        ? { lat: qLat, lng: qLng, label: '', city: '', region: '', country: '', source: 'query' }
+        : await callerGeo(req);
+    }
+    const impliedLocation = geo?.label || '';
+    const bias = hasQueryPoint
+      ? { lat: qLat, lng: qLng }
+      : (!location && geo?.lat != null && geo?.lng != null ? { lat: geo.lat, lng: geo.lng } : null);
+    const regionCode = !location && geo?.country ? geo.country : '';
+    const placeSearch = (opts) => searchPlaces({ ...opts, bias, regionCode });
 
     // ── Source routing: two different businesses, two different databases ───
     //
@@ -1015,7 +1026,7 @@ export default async function handler(req, res) {
 
       if (search || industry || pageToken) {
         // Explicit query, or paging through one — keep it single-trade.
-        pl = await searchPlaces({ query: effectiveQuery, location: loc, limit, pageToken });
+        pl = await placeSearch({ query: effectiveQuery, location: loc, limit, pageToken });
       } else {
         // Default view: blend several trades so the page isn't one vertical.
         // Places caps at 20 per query, so fan out and interleave.
@@ -1026,7 +1037,7 @@ export default async function handler(req, res) {
         // and partition it afterwards.
         const trades = pickTrades(Math.min(8, Math.max(4, Math.ceil(limit / 5))));
         const settled = await Promise.allSettled(
-          trades.map(t => searchPlaces({ query: t, location: loc, limit: 20 }))
+          trades.map(t => placeSearch({ query: t, location: loc, limit: 20 }))
         );
         const buckets = settled
           .map(r => (r.status === 'fulfilled' && r.value?.leads) ? r.value.leads : [])
@@ -1075,7 +1086,7 @@ export default async function handler(req, res) {
             .slice(0, 4);
           if (tokens.length) {
             const deeper = await Promise.allSettled(
-              tokens.map(t => searchPlaces({ query: t.query, location: loc, limit: 20, pageToken: t.token }))
+              tokens.map(t => placeSearch({ query: t.query, location: loc, limit: 20, pageToken: t.token }))
             );
             drain(deeper
               .map(r => (r.status === 'fulfilled' && r.value?.leads) ? r.value.leads : [])
@@ -1112,7 +1123,7 @@ export default async function handler(req, res) {
             hunt.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
           }
           const extra = await Promise.allSettled(
-            hunt.map(t => searchPlaces({ query: t, location: loc, limit: 20 }))
+            hunt.map(t => placeSearch({ query: t, location: loc, limit: 20 }))
           );
           for (const r of extra) {
             if (r.status !== 'fulfilled' || !r.value?.leads) continue;
@@ -1206,10 +1217,15 @@ export default async function handler(req, res) {
             query: pl.query,
             granularity: 'local-business',
             nextPageToken: pl.nextPageToken,
-            locationSource: location ? 'query' : (impliedLocation ? 'caller-ip' : 'places-default'),
+            locationSource: location ? 'query' : (impliedLocation || bias ? 'caller-ip' : 'places-default'),
             trade: effectiveQuery,
             tradeSource: (search || industry) ? 'query' : 'rotation',
             resolvedLocation: location || impliedLocation || null,
+            viewer: (!location && (impliedLocation || bias)) ? {
+              label: impliedLocation || null,
+              lat: bias ? Math.round(bias.lat * 100) / 100 : null,
+              lng: bias ? Math.round(bias.lng * 100) / 100 : null,
+            } : null,
             contactDataAvailable: false,
             contactDataNote: 'Listing-level data. Use ?action=enrich&website= to pull named humans off their site.',
             persistedCount: persistedPlaces,

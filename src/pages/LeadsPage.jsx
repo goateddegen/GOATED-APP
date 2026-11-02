@@ -12,6 +12,17 @@ import { useStore, fmt, priorities, industries, initialsOf, cityOf, formatPhone 
 import { leadClickProps, leadTabUrl } from '../lib/leadLink';
 import { buildOutreachStrategy, deriveGaps, recommendTier, buildPackage } from '../lib/outreach';
 
+// Miles between two { lat, lng } points. Missing coordinates sort as far away.
+function milesApart(a, b) {
+  if (a?.lat == null || b?.lat == null || a?.lng == null || b?.lng == null) return Infinity;
+  const rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad;
+  const dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) ** 2
+    + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * 3958.8 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -610,24 +621,26 @@ function CloseCoachRow({ lead, index, colSpan, onCallClick, showToast }) {
               )}
 
               <div className="space-y-2 mb-3">
-                <button onClick={() => intel.phone ? onCallClick(lead, intel.phone) : showToast('Connect Apollo.io API key to enrich contact data')}
+                <button onClick={() => {
+                  intel.phone ? onCallClick(lead, intel.phone) : showToast('Connect Apollo.io API key to enrich contact data');
+                }}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors text-left">
                   <Phone size={13} /> {intel.phone ? 'Call Now · Direct line' : 'Enrich to unlock phone'}
                 </button>
                 {/* Email intentionally absent — outreach is phone-first and
                     manual. Apollo's free plan returns no person-level address
                     anyway, so an email button would have been mailto:null. */}
-                <button onClick={() => setActiveOutreach(activeOutreach === 'call' ? null : 'call')}
+                <button onClick={() => { setActiveOutreach(activeOutreach === 'call' ? null : 'call'); }}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs font-medium text-cyan-400 hover:bg-cyan-500/20 transition-colors text-left">
                   <MessageSquare size={13} /> Call Opener
                 </button>
                 {lead.linkedin_url && (
-                  <button onClick={() => setActiveOutreach(activeOutreach === 'linkedin' ? null : 'linkedin')}
+                  <button onClick={() => { setActiveOutreach(activeOutreach === 'linkedin' ? null : 'linkedin'); }}
                     className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs font-medium text-blue-400 hover:bg-blue-500/20 transition-colors text-left">
                     <Linkedin size={13} /> LinkedIn Message
                   </button>
                 )}
-                <button onClick={() => setActiveOutreach(activeOutreach === 'sms' ? null : 'sms')}
+                <button onClick={() => { setActiveOutreach(activeOutreach === 'sms' ? null : 'sms'); }}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs font-medium text-amber-400 hover:bg-amber-500/20 transition-colors text-left">
                   <MessageSquare size={13} /> SMS Template
                 </button>
@@ -724,6 +737,7 @@ export default function LeadsPage({ onSelect }) {
   const setSelectedLead = useStore(s => s.setSelectedLead);
   const setDetailOpen = useStore(s => s.setDetailOpen);
   const market = useStore(s => s.market);
+  const viewerPlace = useStore(s => s.viewerPlace);
   const setMarket = useStore(s => s.setMarket);
   const selectedCities = useStore(s => s.selectedCities);
   const toggleCity = useStore(s => s.toggleCity);
@@ -754,7 +768,9 @@ export default function LeadsPage({ onSelect }) {
     if (currentPage !== 'leads' || detailOpen) return;
     // First page immediately so there is something to work, then keep filling
     // the book in the background until it is deep enough to be useful.
-    fetchLiveLeads().then(() => buildLeadBook?.());
+    // A fresh visit pulls businesses around the visitor. A city they typed
+    // still wins when they search for it; this pass does not.
+    fetchLiveLeads(1, '', { nearMe: true }).then(() => buildLeadBook?.());
   }, [currentPage, detailOpen, fetchLiveLeads, buildLeadBook]);
 
   const isLive = dataMode === 'live' && liveLeads.length > 0;
@@ -945,6 +961,13 @@ export default function LeadsPage({ onSelect }) {
     filtered.sort((a, b) => {
       const sf = aiFilters?.sort || sortField;
       const dir = (aiFilters?.order || sortDirection) === 'asc' ? 1 : -1;
+      // Default view: businesses around the visitor come first, even when the
+      // book still holds rows from a city they searched earlier.
+      if (!selectedCities.length && viewerPlace && sf === 'score' && !aiFilters?.sort) {
+        const nearA = milesApart(viewerPlace, a.coords) <= 50 ? 0 : 1;
+        const nearB = milesApart(viewerPlace, b.coords) <= 50 ? 0 : 1;
+        if (nearA !== nearB) return nearA - nearB;
+      }
       // On the default ranking, the batch you just pulled sits above the rest,
       // ordered by closability within it. Without this a "Load more" that added
       // forty leads scattered them through three hundred rows and looked like
@@ -964,7 +987,7 @@ export default function LeadsPage({ onSelect }) {
     });
 
     return filtered;
-  }, [activeLeads, search, filterPriority, aiFilters, sortField, sortDirection, selectedCities]);
+  }, [activeLeads, search, filterPriority, aiFilters, sortField, sortDirection, selectedCities, viewerPlace]);
 
   const filteredLeads = useMemo(() => allFilteredLeads.slice(0, visibleCount), [allFilteredLeads, visibleCount]);
   const totalFiltered = allFilteredLeads.length;
@@ -993,8 +1016,8 @@ export default function LeadsPage({ onSelect }) {
     if (selectedCities.length === 1) return selectedCities[0];
     if (selectedCities.length === 2) return selectedCities.join(' & ');
     if (selectedCities.length > 2) return `${selectedCities.length} cities`;
-    return market || resolvedMarket || '';
-  }, [selectedCities, market, resolvedMarket]);
+    return viewerPlace?.label || resolvedMarket || market || '';
+  }, [selectedCities, market, resolvedMarket, viewerPlace]);
 
   // Pipeline stats
   const stats = useMemo(() => {
@@ -1013,7 +1036,10 @@ export default function LeadsPage({ onSelect }) {
     setVisibleCount(50);
   }, [sortField, sortDirection, setSortField, setSortDirection]);
 
-  const handleCallClick = useCallback((lead, phone) => { setCallLead(lead); setCallPhone(phone || ''); }, []);
+  const handleCallClick = useCallback((lead, phone) => {
+    setCallLead(lead);
+    setCallPhone(phone || '');
+  }, []);
 
   const toggleRow = useCallback((id) => {
     setExpandedRows(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
@@ -1385,6 +1411,18 @@ export default function LeadsPage({ onSelect }) {
         {/* Ticking filters the table straight away; "Load these cities" goes
             and fetches more of those markets, which is the slower action and
             so is explicit rather than firing on every checkbox. */}
+        <button
+          type="button"
+          onClick={() => {
+            setMarket('');
+            setSelectedCities([]);
+            setVisibleCount(50);
+            fetchLiveLeads(1, '', { nearMe: true });
+          }}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs border border-white/[0.05] bg-surface-2 text-white hover:border-white/[0.12] transition-colors">
+          <MapPin size={12} className="shrink-0 text-emerald-400" />
+          Near me
+        </button>
         <CityFilter
           options={availableCities}
           selected={selectedCities}
@@ -1455,7 +1493,7 @@ export default function LeadsPage({ onSelect }) {
                   </div>
                   {l.phone && (
                     <a href={`tel:${(l.phone || '').replace(/[^+\d]/g, '')}`}
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); }}
                       className="shrink-0 flex items-center gap-1.5 px-3 h-10 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold active:bg-emerald-500/25">
                       <PhoneCall size={14} /> Call
                     </a>

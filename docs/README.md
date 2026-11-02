@@ -1,7 +1,7 @@
 # GOATED — Documentation Index
 
-**Plan version:** v7.5.6 (agency-first)
-**Updated:** 2026-04-25
+**Plan version:** v7.5.7 (agency-first)
+**Updated:** 2026-11-02
 **Owner:** Tarek
 
 This is the live index of all current documentation. Read top-to-bottom for full context, or jump to the section you need.
@@ -122,6 +122,7 @@ When you add docs:
 | v7.5 | April 24 2026 | Agency-first pivot |
 | v7.5.4 | April 24 2026 | Tier-based pricing locked, typography update |
 | v7.5.6 | April 25 2026 | Full tactical doc pack + opsec + finance + lifestyle |
+| v7.5.7 | November 2 2026 | Account is optional. Dashboard, admin, and saved data stay behind sign-in |
 
 ---
 

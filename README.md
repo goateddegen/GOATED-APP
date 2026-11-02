@@ -1,158 +1,113 @@
-# GOATED Solutions
+# GOATED
 
-**AI agency for local service businesses. We capture the calls and bookings they're losing — using AI voice agents, SMS automation, and custom integrations.**
+**The workspace for selling an AI receptionist to local businesses.**
 
-GOATED helps HVAC shops, dental practices, plumbing companies, med spas, roofing contractors, and other local service SMBs reclaim revenue they're leaking on missed calls, no-show appointments, and dormant customer lists. Two-tier productized service backed by a custom-built AI stack.
+## Elevator pitch
 
----
+Local shops lose jobs every time the phone rings and nobody picks up. GOATED finds those businesses, prices what the missed calls are costing them, and puts the number, the script, and the quote in one place. The product you sell is an AI receptionist that answers in under a minute, books the job, and texts the owner. Prospecting in the app is free. The client pays for Local Engine or Growth Engine.
 
-## What We Do
-
-Most local service businesses miss 30-60% of inbound calls. Each missed call is a $200-1,500 lost job. We deploy AI to answer those calls in <60 seconds, book appointments, follow up via SMS, generate Google reviews, and revive dormant customer lists.
-
-### Two tiers
-
-| Tier | Setup | Monthly | Target |
-|------|-------|---------|--------|
-| **Local Engine** | $2,000 | $750 | Solo + small SMBs |
-| **Growth Engine** | $10K-20K | $2.5K-5K + opt rev share | $2M+ revenue SMBs |
-
-Both tiers include a **30-day money-back guarantee.** Real risk reversal — if it doesn't work, you don't pay.
-
-### Core capabilities
-
-| Module | What it does |
-|--------|--------------|
-| **AI Voice Agent** | Picks up missed calls, qualifies leads, books appointments, texts owner a transcript |
-| **SMS Auto-Text-Back** | Every missed call triggers a 30-second follow-up text |
-| **Review Engine** | Auto-requests Google reviews from happy customers at the optimal moment |
-| **Reactivation Campaigns** | Mines dormant customer lists for recoverable revenue |
-| **GMB Optimization** | AI-generated posts to Google Business Profile 3×/week |
-| **Custom AI Builds** | Multi-location brain, custom RAG agents, owner copilots, photo-based estimators |
-
-Full module catalog: [`docs/UPSELL_CATALOG.md`](./docs/UPSELL_CATALOG.md) (35 modules with implementation specs).
+Live at [goated.solutions](https://www.goated.solutions).
 
 ---
 
-## Tech Stack
+## The app
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18 + Vite + Tailwind CSS |
-| State | Zustand |
-| Animation | Framer Motion |
-| 3D | Three.js + React Three Fiber |
-| Voice AI | VAPI (with Bland AI / Retell as alternatives) |
-| SMS / Phone | Twilio (HIPAA-eligible tier for healthcare) |
-| Calendar | Cal.com |
-| Auth | Supabase |
-| Payments | Stripe Payment Links + Stripe Connect (later) |
-| AI Reasoning | Claude (Anthropic API) — Haiku for high-volume, Sonnet for premium |
-| Custom AI Engine | GOATED AI v2 (`/api/goated-ai.js`) — RSI, MACD, Bollinger, regime detection |
-| Backend | Vercel Serverless Functions (11 endpoints, max 12 on Hobby) |
-| Hosting | Vercel |
-| Domain | goated-app-nine.vercel.app |
+GOATED is a sales app for an AI agency. You open it, find a business that needs the offer, and leave with something you can say on the phone. An account is optional until you want a saved pipeline.
+
+| Surface | What you do there |
+|---------|-------------------|
+| **Home** | The product, the two plans, and a way into the audit, the lead book, and GOATED AI. |
+| **Audit** | Paste any URL. The app crawls it and prices the gaps. The report has a link you can send. |
+| **Leads** | Real local businesses from Google Maps, ranked by how closable they are. Filter for businesses with no website, or for ones whose published hours leave 40+ hours a week with nobody answering. |
+| **Lead** | One business: phone, hours, reviews, the quote, and the opener. Command-click opens that lead in its own tab. |
+| **GOATED AI** | Ask in plain language. "Find me website clients" and "find me voice agent clients" return lead rows, not a product description. |
+| **Dashboard** | Your pipeline. Requires an account. |
+| **Admin** | Operator tools. Requires an account on the allow-list. |
+
+Website clients are businesses with no site. The pitch is the build plus the receptionist. Voice-agent clients are businesses that are still trading and unreachable 40 or more hours a week.
 
 ---
 
-## Repository Structure
+## Plans
 
-```
-goated-app/
-├── api/                    # Vercel serverless functions (11 endpoints)
-│   ├── chat.js             # Claude-powered AI chat
-│   ├── goated-ai.js        # Custom AI engine
-│   ├── intelligence.js     # Market/prospect intelligence
-│   ├── leads.js            # Lead aggregation
-│   └── ...
-├── src/
-│   ├── components/         # React components
-│   ├── hooks/              # Zustand store + custom hooks
-│   ├── pages/
-│   │   ├── HomePage.jsx
-│   │   ├── AuditPage.jsx   # Free public audit funnel (lead-gen front door)
-│   │   ├── LeadsPage.jsx
-│   │   ├── DashboardPage.jsx
-│   │   └── ...
-│   └── lib/
-│       ├── config.js       # PRICING.tiers (Tier 1 + Tier 2)
-│       └── supabase.js
-├── docs/                   # Business strategy + tactical playbooks
-│   ├── EXECUTION_PLAN_2026.md
-│   ├── SCALE_PLAYBOOK.md
-│   ├── CLOSING_PLAYBOOK.md
-│   ├── UPSELL_CATALOG.md   # 35 modules
-│   ├── OUTREACH_PLAYBOOK.md
-│   ├── OPSEC_PLAYBOOK.md
-│   ├── LIFESTYLE_AND_FINANCE.md
-│   ├── FINANCIAL_GROWTH_STRATEGY.md
-│   └── README.md           # Doc index
-└── README.md (this file)
-```
+Both plans include a 30-day refund if the work does not produce a measurable result.
 
-Full doc index: [`docs/README.md`](./docs/README.md)
+| Plan | Setup | Monthly | Who it's for |
+|------|-------|---------|--------------|
+| **Local Engine** | $2,000 | $750 | HVAC, dental, plumbing, roofing, med spas, and other owner-run shops that lose money when the phone goes unanswered |
+| **Growth Engine** | $10,000–$20,000 | $2,500–$5,000, optional revenue share | Larger SMBs, agencies, and online businesses that want the audit, outbound, the voice agent, and a custom build |
+
+Local Engine includes missed-call recovery, SMS follow-up, calendar booking, and a monthly recovered-revenue report. The module catalog is in [`docs/UPSELL_CATALOG.md`](./docs/UPSELL_CATALOG.md).
 
 ---
 
-## Quick Start
+## Accounts
+
+Sign-in is Google through Supabase. It is not required to use the product. The launch cover (`VITE_LAUNCH_READY`) is a separate switch that hides the app before go-live. Turning the cover off does not make an account mandatory.
+
+| Open with no account | Requires an account |
+|----------------------|---------------------|
+| Home | Dashboard |
+| Audit, including a new scan and a shared report link | Admin (also requires an allow-listed operator email) |
+| Leads, a lead's page, call, SMS, and scripts | Saved leads (`/api/leads?source=saved`) and cloud sync of that user's data |
+| GOATED AI | The inbound audit queue (`/api/audit?inbound=1`) |
+
+A search with no session still returns leads. Those rows are not stored under a user. A signed-in search is.
+
+---
+
+## Stack
+
+| Layer | What runs it |
+|-------|----------------|
+| App | React 18, Vite 5, Tailwind CSS, Zustand, Framer Motion. Node 24. |
+| Routing | Hash routes in `src/App.jsx` (`#/leads`, `#/lead/{id}`, `#/a/{id}`). |
+| API | Vercel Serverless Functions in `api/` |
+| Leads | Google Places. Apollo organization search when the deal is large and `APOLLO_API_KEY` is set. |
+| Assistant and audit | xAI Grok (`grok-4`) when `XAI_API_KEY` is set. Otherwise Groq (`qwen/qwen3.8-27b`, then `openai/gpt-oss-120b`). Claude is not called. |
+| Voice agent API | Vapi (`api/voice.js`) |
+| Accounts and saved rows | Supabase Auth (Google) and Postgres. The browser only receives the publishable key. |
+| Product analytics | Vercel Analytics and Speed Insights |
+| Host | Vercel, [goated.solutions](https://www.goated.solutions) |
+
+Stripe Payment Links are the intended checkout. The secret key is never read by the client. Twilio, Cal.com, Unipile, Hunter, and PostHog are named in `.env.example` and are not called by the running app.
+
+## Secrets
+
+Real keys live in `.env.local` on your machine and in the Vercel project environment. They are not committed.
+
+`.gitignore` ignores `.env`, `.env.local`, and every `.env.*` file except the empty template `.env.example`. That template has blank values. Do not paste a key into it, and do not `git add -f` an env file. `VITE_*` values are baked into the browser bundle, so only the Supabase URL, the Supabase publishable key, and `VITE_LAUNCH_READY` belong there. `XAI_API_KEY`, `GROQ_API_KEY`, `GOOGLE_PLACES_API_KEY`, `APOLLO_API_KEY`, `VAPI_PRIVATE_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` stay server-side.
+
+---
+
+## Run it
 
 ```bash
-# Install dependencies
 npm install
-
-# Set up environment variables
-cp .env.example .env.local
-# See INTEGRATIONS.md for required keys
-
-# Run development server
-npm run dev
-
-# Build for production
+cp .env.example .env.local   # fill this copy only; it is gitignored
+npm run dev                  # http://localhost:5173
 npm run build
 ```
 
----
-
-## Key Targets (Phase 0 → Phase 1)
-
-| Metric | Phase 0 (now) | Phase 1 (12 mo) |
-|--------|---------------|------------------|
-| Active clients | 0 | 30 mixed |
-| MRR | $0 | $30K |
-| Cumulative cash | $0 | $200-400K |
-| Team size | 1 (Tarek) | 2-3 (Tarek + VA + closer) |
-| Avg deal LTV | — | $20-90K (24 mo retention) |
-| Gross margin | — | 90%+ |
-
-Path to $1M MRR mapped in [`docs/SCALE_PLAYBOOK.md`](./docs/SCALE_PLAYBOOK.md).
+Pushing `master` deploys. Production is promoted separately on Vercel.
 
 ---
 
-## Security & Compliance
+## Repo
 
-- **CORS:** per-endpoint origin whitelist (no wildcards)
-- **Rate limiting:** sliding window per IP on all endpoints
-- **Input validation:** HTML/script stripping, length limits
-- **CSP headers, HSTS, X-Frame-Options DENY**
-- **No secrets in client bundle**
-- **HIPAA:** Twilio HIPAA-eligible tier available for healthcare deployments; BAAs on file
-- **A2P 10DLC:** registered for SMS compliance
+```
+api/            serverless routes (audit, chat, leads, dashboard)
+src/pages/      Home, Audit, Leads, Dashboard, Admin
+src/components/ lead detail, GOATED AI, account modal
+src/hooks/      Zustand store
+src/lib/        config, Supabase client
+docs/           sales, finance, and launch playbooks — index in docs/README.md
+```
 
----
-
-## Production
-
-- **Live URL:** https://goated-app-nine.vercel.app
-- **Deployment:** push to `master` → auto-deploy on Vercel
-- **Constraints:** Vercel Hobby plan — max 12 serverless functions (currently 11)
-- **Status:** private launch (cover gate via `VITE_LAUNCH_READY=false`); flip to `true` when going live
+API auth rules: [`api/README.md`](./api/README.md). Business playbooks stay in [`docs/`](./docs/README.md).
 
 ---
 
 ## License
 
 Proprietary. All rights reserved. © 2026 GOATED Solutions LLC.
-
----
-
-*Built in Texas. Bootstrapped. Brand-first. The brand speaks — the founder dials.*

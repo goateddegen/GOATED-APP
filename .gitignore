@@ -3,4 +3,12 @@ dist
 .DS_Store
 *.local
 .vercel
-.env*
+
+# Secrets. The only env file that belongs in git is the empty template.
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*credentials*.json
+*service-account*.json

@@ -135,6 +135,12 @@ export async function runTool(name, args, ctx = {}) {
       // resolved to Ashburn, Virginia for every user regardless of where they
       // actually were. Same mechanism that makes the headers unspoofable.
       if (!args.location && ctx.callerCity) p.set('location', ctx.callerCity);
+      // Coordinates travel with the city. The inner /api/leads request is a
+      // new edge hop, so its IP headers are the datacenter, not the visitor.
+      if (!args.location && ctx.callerLat != null && ctx.callerLng != null) {
+        p.set('lat', String(ctx.callerLat));
+        p.set('lng', String(ctx.callerLng));
+      }
       // "leads", "businesses", "prospects" are not trades. The model passes
       // them straight through from phrasing like "leads in my area", which
       // searched Places for companies literally named that and returned

@@ -6,6 +6,7 @@ import { TOOL_SCHEMAS, runTool } from './_lib/tools.js';
 import { formatPhone } from './_lib/phone.js';
 import { quoteLine, PRICING } from './_lib/pricing.js';
 import { llmTargets, completeOnce } from './_lib/llm.js';
+import { callerGeo } from './_lib/geo.js';
 
 // ─── Security: Input Sanitization ───────────────────────────────────────────
 function sanitizeInput(text) {
@@ -764,14 +765,13 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
       || (/^(localhost|127\.0\.0\.1)/.test(selfHost) ? 'http' : 'https');
     const selfOrigin = `${selfProto}://${selfHost}`;
 
-    // Resolve the caller's city here, where the edge headers are genuine, and
-    // hand it to tools as a value. Forwarding the headers themselves does not
-    // survive the hop — see the note in tools.js.
-    const cityHdr = req.headers['x-vercel-ip-city'] ? decodeURIComponent(req.headers['x-vercel-ip-city']) : '';
-    const regionHdr = req.headers['x-vercel-ip-country-region'] || '';
-    const callerCity = (req.headers['x-vercel-ip-country'] === 'US' && cityHdr)
-      ? `${cityHdr}${regionHdr ? ' ' + regionHdr : ''}`
-      : '';
+    // Resolve the caller here, where the edge headers are genuine, and hand
+    // the city and coordinates to tools as values. Forwarding the headers
+    // themselves does not survive the hop — see the note in tools.js.
+    const geo = await callerGeo(req);
+    const callerCity = geo.label || '';
+    const callerLat = geo.lat;
+    const callerLng = geo.lng;
 
     // Offer data tools only when the user is actually asking for data.
     //
@@ -823,6 +823,8 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
           origin: selfOrigin,
           authorization: req.headers.authorization,
           callerCity,
+          callerLat,
+          callerLng,
         });
         if (result && !result.error) {
           return res.status(200).json({
@@ -909,6 +911,8 @@ Do NOT give vague advice like "follow up" or "build rapport" — give the EXACT 
                 origin: selfOrigin,
                 authorization: req.headers.authorization,
                 callerCity,
+                callerLat,
+                callerLng,
               });
               toolsUsed.push({ name: c.function?.name, args });
 

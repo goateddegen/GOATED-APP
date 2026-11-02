@@ -75,7 +75,7 @@ ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxxxxxxxxxxxx
 
 ## 2. Supabase (auth + persistence)
 
-🟢 **REQUIRED for the auth wall.** Without these keys, anyone can hit `/leads` `/dashboard` `/admin` after VITE_LAUNCH_READY flips. With them, login is enforced.
+🟡 **REQUIRED for accounts.** Sign-in is optional. Home, the audit, leads, outreach (call, SMS, scripts), and GOATED AI work with no session. The dashboard and admin pages ask you to sign in. Saved leads (`/api/leads?source=saved`) and cloud sync of the operator's own data also require a session. Without these keys, the Account button cannot sign anyone in, and nothing is persisted to a user.
 
 **Sign up:** https://supabase.com/ → "Start your project" (free)
 **Create project:** Pick a region (US East), set a strong DB password, wait 90 sec
@@ -115,10 +115,10 @@ create policy "users see own closes" on closes for select using (auth.uid() = us
 create policy "users insert own closes" on closes for insert with check (auth.uid() = user_id);
 ```
 
-**OAuth setup (optional, recommended for low-friction signup):**
-- Google: Authentication → Providers → Google → enable, paste OAuth client ID + secret from https://console.cloud.google.com/apis/credentials
-- GitHub: Authentication → Providers → GitHub → enable, OAuth App from https://github.com/settings/developers
-- Redirect URL to add in both: `https://goated-app-nine.vercel.app/auth/callback` (and your custom domain)
+**OAuth setup (Google only):**
+- Authentication → Providers → Google → enable, paste the OAuth client ID + secret from https://console.cloud.google.com/apis/credentials
+- The Account modal offers Google and nothing else. Email/password and GitHub were removed from the UI.
+- Redirect URL: the production origin (`https://www.goated.solutions`) and `http://localhost:5173` for local sign-in. Supabase sends the user back to `window.location.origin`.
 
 **Cost:** Free tier — 50K MAU + 500MB DB. More than enough for v1.
 
@@ -302,12 +302,14 @@ If you add a new custom domain (e.g., `getgoated.com`), edit `api/_lib/guard.js`
 
 ## 11. Security hardening (paramount, per your note)
 
-### Auth wall (already wired in v7.5)
+### Accounts (optional)
 
-✅ **`/leads`, `/dashboard`, `/wallet`, `/admin`, `/trends`** all require login.
-✅ **`/audit`** stays public (lead magnet).
-✅ **`/`** (homepage) stays public.
-✅ Cover page hides everything before launch flag is flipped.
+Sign-in is Google via Supabase. It is not required to use the product.
+
+✅ **Open with no account:** home, audit (including a new scan and a shared `#/a/{id}` report), leads, a lead's overview, call / SMS / scripts, and GOATED AI.
+✅ **Account wall:** the dashboard page and the admin page. Admin also requires an email on `ADMIN_EMAILS`. A signed-in non-admin is sent home and never sees the admin tools.
+✅ **Account-bound data, not a page wall:** `GET /api/leads?source=saved` returns 401 without a session. A signed-in Places search is saved under that user; an anonymous search is returned and not stored. Cloud sync starts only after a session exists. `GET /api/audit?inbound=1` is 403 unless the caller is an allow-listed admin.
+✅ **Cover page is separate.** `VITE_LAUNCH_READY` hides the app before launch. A signed-in user, an in-progress Google redirect, operator preview, and a saved audit link bypass that cover. Flipping the cover off does not turn sign-in into a requirement.
 
 ### Rate limiting (already wired)
 
@@ -372,7 +374,7 @@ The cover page falls away when:
 1. ✅ Build succeeds (Vercel green)
 2. ✅ `VITE_LAUNCH_READY=true` is set
 3. ✅ At least Anthropic OR Groq key is set (audit works)
-4. ✅ Supabase keys set (auth wall works)
+4. ✅ Supabase keys set (Google sign-in works; dashboard, admin, and saved data can attach to a user)
 5. ✅ Stripe key set (you can collect money)
 
 That's the minimum bar. Apollo, Resend, Smartlead are all weeks 2-4. Don't gold-plate before you've closed deal #1.

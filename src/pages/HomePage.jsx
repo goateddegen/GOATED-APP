@@ -702,7 +702,7 @@ export default function HomePage() {
                   className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-black font-black text-lg hover:from-orange-400 hover:to-red-400 transition-all hover:scale-[1.02]">
                   <Bot size={20} /> Talk to GOATED AI <ArrowRight size={18} />
                 </button>
-                <p className="text-[11px] text-slate-500 mt-3">Free with an account · no card · press <kbd className="px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 font-bold">G</kbd> anywhere in the app</p>
+                <p className="text-[11px] text-slate-500 mt-3">No account needed · no card · press <kbd className="px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 font-bold">G</kbd> anywhere in the app</p>
               </div>
 
               <div className="lg:w-[340px] shrink-0 space-y-2">
