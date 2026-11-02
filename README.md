@@ -1,10 +1,12 @@
 # GOATED
 
-**The workspace for selling an AI receptionist to local businesses.**
+**A website, a voice on the phone, or a custom build. Sized to the business in front of you.**
 
 ## Elevator pitch
 
-Local shops lose jobs every time the phone rings and nobody picks up. GOATED finds those businesses, prices what the missed calls are costing them, and puts the number, the script, and the quote in one place. The product you sell is an AI receptionist that answers in under a minute, books the job, and texts the owner. Prospecting in the app is free. The client pays for Local Engine or Growth Engine.
+GOATED finds a business that is leaving work on the table and turns that gap into something you can sell the same day. Paste any URL and the audit prices what the site is missing. Open the lead book and you get real companies near you: owner-run shops, law firms, dental and medical practices, accountants, therapists, and businesses with no website at all. Ask GOATED AI what to say, and it writes the opener for that one company.
+
+The offer follows the gap. A website, when they are invisible off the map. An AI receptionist that answers in under a minute, books the job, and texts the owner, when the phone goes quiet. A custom build, when the company is bigger than a single location. Looking around the product is free. The client pays for Local Engine or Growth Engine.
 
 Live at [goated.solutions](https://www.goated.solutions).
 
