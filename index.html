@@ -44,6 +44,26 @@
   <meta name="twitter:image" content="https://goated.solutions/og-image.png" />
   <meta name="twitter:image:alt" content="GOATED Solutions — AI Agency for Local Service Businesses" />
   <meta name="twitter:site" content="@goaborealtime" />
+  <script>
+    if (location.hostname === 'recruiting.goated.solutions') {
+      document.title = 'GOATED Recruiting — Software engineering search';
+      var recruitingDesc = 'GOATED Recruiting is an engineer-led search for software engineers. A short list for teams that need someone who can build. Introductions are paid when we place them.';
+      var desc = document.querySelector('meta[name="description"]');
+      if (desc) desc.setAttribute('content', recruitingDesc);
+      var canon = document.querySelector('link[rel="canonical"]');
+      if (canon) canon.setAttribute('href', 'https://recruiting.goated.solutions/');
+      var ogTitle = document.querySelector('meta[property="og:title"]');
+      if (ogTitle) ogTitle.setAttribute('content', 'GOATED Recruiting — Software engineering search');
+      var ogDesc = document.querySelector('meta[property="og:description"]');
+      if (ogDesc) ogDesc.setAttribute('content', recruitingDesc);
+      var ogUrl = document.querySelector('meta[property="og:url"]');
+      if (ogUrl) ogUrl.setAttribute('content', 'https://recruiting.goated.solutions/');
+      var twTitle = document.querySelector('meta[name="twitter:title"]');
+      if (twTitle) twTitle.setAttribute('content', 'GOATED Recruiting — Software engineering search');
+      var twDesc = document.querySelector('meta[name="twitter:description"]');
+      if (twDesc) twDesc.setAttribute('content', recruitingDesc);
+    }
+  </script>
 
   <!-- Preconnect hints -->
   <link rel="preconnect" href="https://api.coingecko.com" />

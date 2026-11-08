@@ -32,6 +32,7 @@ const AuditPage = React.memo(lazy(() => import('./pages/AuditPage')));
 // v7.5 cover page — shown until VITE_LAUNCH_READY === 'true' is set in env vars.
 // Eagerly imported (not lazy) so it shows instantly with no loading flash.
 import ComingSoonPage from './pages/ComingSoonPage';
+const RecruitingPage = React.memo(lazy(() => import('./pages/RecruitingPage')));
 // ManagedPage removed v7.4 — "managed" is just the top B2B tier, not a separate product.
 // Enterprise sell moved into HomePage hero + Leads page CTA. No booking calls surface.
 // BuilderPage, WhopPage, LaunchPadPage removed
@@ -641,6 +642,25 @@ export default function App() {
   const isMidOAuthRedirect = (typeof window !== 'undefined' &&
     /access_token=|code=/.test(window.location.hash || window.location.search || ''));
 
+
+  // recruiting.goated.solutions is its own site: same theme, no sales app,
+  // and no launch cover. #/recruiting previews it on any host.
+  const isRecruitingSite = typeof window !== 'undefined' && (
+    window.location.hostname === 'recruiting.goated.solutions'
+    || (window.location.hash || '').startsWith('#/recruiting')
+  );
+  if (isRecruitingSite) {
+    return (
+      <div className="min-h-screen bg-black text-slate-100 font-sans">
+        {!isMobile && <CustomCursor />}
+        <Suspense fallback={<LoadingFallback />}>
+          <RecruitingPage />
+        </Suspense>
+        <Analytics />
+        <SpeedInsights />
+      </div>
+    );
+  }
 
   if (!launchReady && !isLoggedIn && !isMidOAuthRedirect && !operatorPreview && !isSavedAuditLink) {
     return <ComingSoonPage />;
