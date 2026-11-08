@@ -1,11 +1,8 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpRight, Code2, GitBranch, Sparkles, Users } from 'lucide-react';
+import { Code2, GitBranch, Sparkles, Users } from 'lucide-react';
 import { GoatIcon } from '../components/GoatLogo';
 import { CONTACT_EMAIL } from '../lib/config';
-
-const mail = (subject, body) =>
-  `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
 const roles = ['Founding engineer', 'Forward deployed engineer', 'Software engineer'];
 
@@ -101,10 +98,6 @@ export default function RecruitingPage() {
             <p className="bg-gradient-to-r from-red-300 to-orange-300 bg-clip-text text-xs font-bold uppercase tracking-[0.28em] text-transparent">Introductions</p>
             <h2 className="mt-3 max-w-2xl text-3xl font-black sm:text-5xl">Know an engineer who is better than their title?</h2>
             <p className="mt-4 max-w-xl text-slate-300">Introduce them. If we place them, you are paid. A name, a link, and why you would work with them again is enough.</p>
-            <a href={mail('GOATED Recruiting — an introduction', 'Who they are:\nWhy they are exceptional:\nHow you know them:\n')} className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-orange-300 hover:text-red-300">
-              <span className="bg-gradient-to-r from-red-400 to-orange-300 bg-clip-text text-transparent">Make an introduction</span>
-              <ArrowUpRight size={16} />
-            </a>
           </div>
         </section>
       </main>
