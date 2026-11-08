@@ -651,7 +651,7 @@ export default function App() {
   );
   if (isRecruitingSite) {
     return (
-      <div className="min-h-screen bg-black text-slate-100 font-sans">
+      <div className="min-h-screen bg-black text-slate-100 font-sans" style={{ '--brand-rgb': '239 68 68' }}>
         {!isMobile && <CustomCursor />}
         <Suspense fallback={<LoadingFallback />}>
           <RecruitingPage />

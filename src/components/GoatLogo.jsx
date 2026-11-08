@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { useStore } from '../hooks/useStore';
 
 const GoatLogo = React.memo(function GoatLogo({ size = 200, className = '' }) {
@@ -233,22 +233,23 @@ const GoatLogo = React.memo(function GoatLogo({ size = 200, className = '' }) {
 
 export default GoatLogo;
 
-export const GoatIcon = React.memo(function GoatIcon({ className = 'w-7 h-7' }) {
+export const GoatIcon = React.memo(function GoatIcon({ className = 'w-7 h-7', from = '#10b981', to = '#06b6d4' }) {
+  const gid = `goat-${useId().replace(/:/g, '')}`;
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.5">
       <defs>
-        <linearGradient id="iconGlow" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#10b981" />
-          <stop offset="100%" stopColor="#06b6d4" />
+        <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={from} />
+          <stop offset="100%" stopColor={to} />
         </linearGradient>
       </defs>
-      <path d="M7 10 Q5 6 3 2" stroke="url(#iconGlow)" strokeWidth="2" strokeLinecap="round" />
-      <path d="M17 10 Q19 6 21 2" stroke="url(#iconGlow)" strokeWidth="2" strokeLinecap="round" />
+      <path d={`M7 10 Q5 6 3 2`} stroke={`url(#${gid})`} strokeWidth="2" strokeLinecap="round" />
+      <path d="M17 10 Q19 6 21 2" stroke={`url(#${gid})`} strokeWidth="2" strokeLinecap="round" />
       <ellipse cx="12" cy="14" rx="7" ry="7" fill="currentColor" opacity="0.1" stroke="currentColor" strokeOpacity="0.2" />
-      <circle cx="9" cy="12" r="1.5" fill="#10b981">
+      <circle cx="9" cy="12" r="1.5" fill={from}>
         <animate attributeName="r" values="1.5;2;1.5" dur="2s" repeatCount="indefinite" />
       </circle>
-      <circle cx="15" cy="12" r="1.5" fill="#10b981">
+      <circle cx="15" cy="12" r="1.5" fill={to}>
         <animate attributeName="r" values="1.5;2;1.5" dur="2s" repeatCount="indefinite" begin="0.3s" />
       </circle>
     </svg>
