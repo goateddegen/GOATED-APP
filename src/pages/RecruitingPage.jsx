@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Code2, GitBranch, Sparkles, Users } from 'lucide-react';
 import { GoatIcon } from '../components/GoatLogo';
-import { CONTACT_EMAIL } from '../lib/config';
 
 const roles = ['Founding engineer', 'Forward deployed engineer', 'Software engineer'];
 
@@ -105,7 +104,6 @@ export default function RecruitingPage() {
       <footer className="relative z-10 border-t border-white/[0.04] px-6 py-8">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <span>GOATED Recruiting</span>
-          <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-white">{CONTACT_EMAIL}</a>
           <a href="https://www.goated.solutions" className="hover:text-white">goated.solutions</a>
         </div>
       </footer>
