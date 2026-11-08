@@ -1,19 +1,13 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowUpRight, Code2, GitBranch, Sparkles, Users } from 'lucide-react';
+import { ArrowUpRight, Code2, GitBranch, Sparkles, Users } from 'lucide-react';
 import { GoatIcon } from '../components/GoatLogo';
 import { CONTACT_EMAIL } from '../lib/config';
 
 const mail = (subject, body) =>
   `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
-const roles = [
-  { title: 'Founding engineer', detail: 'The first or second person who owns the product, the codebase, and the pace.' },
-  { title: 'Senior product engineer', detail: 'Ships features end to end. Comfortable in the product, the API, and the messy middle.' },
-  { title: 'Platform and infrastructure', detail: 'The person other engineers trust with deploys, data, and the systems that cannot fall over.' },
-  { title: 'Applied ML', detail: 'Models in production, not a slide. Evaluation, latency, and the product around the model.' },
-  { title: 'Frontend systems', detail: 'Interfaces that feel finished. Design sense plus the engineering to keep them fast.' },
-];
+const roles = ['Founding engineer', 'Forward deployed engineer', 'Software engineer'];
 
 const steps = [
   { n: '01', title: 'The bar', body: 'You tell us the work, the level, and what “good” has looked like on this team. We do not start from a keyword list.' },
@@ -44,7 +38,6 @@ export default function RecruitingPage() {
           <a href="#search" className="hover:text-white">The search</a>
           <a href="#roles" className="hover:text-white">Roles</a>
           <a href="#introduce" className="hover:text-white">Introduce someone</a>
-          <a href={mail('GOATED Recruiting — a search', 'The role:\nThe team:\nWhat good looks like:\n')} className="rounded-full bg-gradient-to-r from-red-600 via-red-500 to-orange-500 px-4 py-2 font-semibold text-white shadow-[0_0_24px_rgba(239,68,68,0.35)] hover:from-red-500 hover:to-orange-400">Start a search</a>
         </nav>
       </header>
 
@@ -59,14 +52,6 @@ export default function RecruitingPage() {
           <motion.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-400">
             An engineer-led search for teams that need someone who can build. A short list of exceptional people, not a pile of resumes. We work a small number of roles at a time.
           </motion.p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <a href={mail('GOATED Recruiting — a search', 'The role:\nThe team:\nWhat good looks like:\n')} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 via-red-500 to-orange-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_0_28px_rgba(239,68,68,0.35)] hover:from-red-500 hover:to-orange-400">
-              Hire an engineer <ArrowRight size={16} />
-            </a>
-            <a href={mail('GOATED Recruiting — I am an engineer', 'What I build:\nWhere I am now:\nA link to work:\n')} className="inline-flex items-center gap-2 rounded-full border border-red-500/40 px-5 py-3 text-sm font-semibold text-white hover:border-orange-400/70">
-              I am an engineer
-            </a>
-          </div>
         </section>
 
         <section id="search" className="border-y border-white/[0.04] bg-white/[0.02]">
@@ -103,12 +88,9 @@ export default function RecruitingPage() {
           <h2 className="mt-3 text-3xl font-black sm:text-4xl">Software engineering, across the stack.</h2>
           <div className="mt-8 divide-y divide-white/[0.06] border-y border-white/[0.06]">
             {roles.map(role => (
-              <div key={role.title} className="flex flex-col gap-2 py-5 sm:flex-row sm:items-baseline sm:justify-between">
-                <div className="flex items-center gap-3 font-semibold">
-                  <GitBranch size={14} className="text-red-400" />
-                  {role.title}
-                </div>
-                <p className="max-w-xl text-sm text-slate-400">{role.detail}</p>
+              <div key={role} className="flex items-center gap-3 py-5 font-semibold">
+                <GitBranch size={14} className="text-red-400" />
+                {role}
               </div>
             ))}
           </div>
